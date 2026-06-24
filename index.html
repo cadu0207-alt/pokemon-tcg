@@ -8,70 +8,110 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-  <div class="hbadge">Pokémon TCG • Megaevolução</div>
-  <h1>COLEÇÃO MEGAEVOLUÇÃO</h1>
-  <div class="hsub">ME04 · ME02 · MEG &nbsp;/&nbsp; MASTER SET TRACKER</div>
-  <div class="hstatus"><span id="status-dot" class="dot dot-ok"></span><span id="status-txt">Conectando...</span><span id="usd-brl" style="margin-left:16px;opacity:.6"></span></div>
-</header>
-<div class="stripe"></div>
-<nav class="tabs">
-  <div class="tab active" onclick="go('dash',this)">📊 Dashboard</div>
-  <div class="tab" onclick="go('gastos',this)">💸 Gastos</div>
-  <div class="tab" onclick="go('cartas',this)">🃏 Cartas Tiradas</div>
-  <div class="tab" onclick="go('fichario',this)">📚 Fichário</div>
-</nav>
 
-<!-- DASHBOARD -->
-<div id="dash" class="pane active">
-  <div class="kpi-grid" id="kpi-dash"></div>
-  <div class="sec-title">📚 Progresso Master Set</div>
-  <div id="progress-sets" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin-bottom:28px"></div>
-  <div class="dual">
-    <div class="panel"><div class="panel-t">📈 Raridades do Pull</div><div class="bc" id="chart-rarity"></div></div>
-    <div class="panel"><div class="panel-t">🛒 Gastos por Data</div><div class="bc" id="chart-gastos"></div></div>
+<!-- ===== PÁGINA INICIAL ===== -->
+<div id="pg-home" class="page active">
+  <div class="home-bg">
+    <div class="home-particles" id="particles"></div>
+    <div class="home-content">
+      <div class="home-badge">Pokémon TCG • Brasil</div>
+      <h1 class="home-title">MEGAEVOLUÇÃO</h1>
+      <p class="home-sub">Master Set Tracker · ME04 · ME02 · MEG</p>
+      <div class="home-sets">
+        <div class="hset" style="border-color:#e63946">
+          <img src="https://images.scrydex.com/pokemon/me4-22/large" alt="ME04" onerror="this.src='https://images.scrydex.com/pokemon/me4-1/large'">
+          <div class="hset-info"><div class="hset-name">CAOS ASCENDENTE</div><div class="hset-code">ME04 · 122 cartas</div></div>
+        </div>
+        <div class="hset" style="border-color:#9C27B0">
+          <img src="https://images.scrydex.com/pokemon/me2-13/large" alt="ME02" onerror="this.src='https://images.scrydex.com/pokemon/me2-1/large'">
+          <div class="hset-info"><div class="hset-name">FOGO FANTASMAGÓRICO</div><div class="hset-code">ME02 · 130 cartas</div></div>
+        </div>
+        <div class="hset" style="border-color:#4CAF50">
+          <img src="https://images.scrydex.com/pokemon/me1-3/large" alt="MEG" onerror="this.src='https://images.scrydex.com/pokemon/me1-1/large'">
+          <div class="hset-info"><div class="hset-name">MEGAEVOLUÇÃO</div><div class="hset-code">MEG · 188 cartas</div></div>
+        </div>
+      </div>
+      <button class="home-btn" onclick="goPage('app')">
+        <span>ENTRAR NA COLEÇÃO</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+      <div class="home-stats" id="home-stats">Carregando estatísticas...</div>
+    </div>
   </div>
-  <div class="sec-title">🌟 Destaques do Pull</div>
-  <div class="pulled-grid" id="dash-highlights"></div>
 </div>
 
-<!-- GASTOS -->
-<div id="gastos" class="pane">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-    <div class="sec-title" style="margin:0">📦 Compras</div>
-    <button class="btn-add" onclick="openModal('mp')">+ NOVA COMPRA</button>
-  </div>
-  <div id="gastos-resumo"></div>
-  <div id="gastos-cards" style="display:flex;flex-direction:column;gap:16px;margin-bottom:32px"></div>
-  <div class="sec-title">📅 Timeline</div>
-  <div class="tl" id="tlwrap"></div>
-</div>
+<!-- ===== APP PRINCIPAL ===== -->
+<div id="pg-app" class="page">
+  <header>
+    <div style="display:flex;align-items:center;gap:16px">
+      <button class="back-btn" onclick="goPage('home')" title="Página Inicial">⌂</button>
+      <div>
+        <div class="hbadge">Pokémon TCG • Megaevolução</div>
+        <h1>COLEÇÃO MEGAEVOLUÇÃO</h1>
+        <div class="hsub">ME04 · ME02 · MEG &nbsp;/&nbsp; MASTER SET TRACKER</div>
+      </div>
+    </div>
+    <div class="hstatus"><span id="status-dot" class="dot dot-warning"></span><span id="status-txt">Conectando...</span><span id="usd-brl" style="margin-left:16px;opacity:.6"></span></div>
+  </header>
+  <div class="stripe"></div>
+  <nav class="tabs">
+    <div class="tab active" onclick="go('dash',this)">📊 Dashboard</div>
+    <div class="tab" onclick="go('gastos',this)">💸 Gastos</div>
+    <div class="tab" onclick="go('cartas',this)">🃏 Cartas Tiradas</div>
+    <div class="tab" onclick="go('fichario',this)">📚 Fichário</div>
+  </nav>
 
-<!-- CARTAS TIRADAS -->
-<div id="cartas" class="pane">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
-    <div class="sec-title" style="margin:0">🃏 Cartas Tiradas</div>
-    <button class="btn-add" onclick="openModal('mc')">+ ADICIONAR</button>
+  <!-- DASHBOARD -->
+  <div id="dash" class="pane active">
+    <div class="kpi-grid" id="kpi-dash"></div>
+    <div class="sec-title">📚 Progresso Master Set</div>
+    <div id="progress-sets" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:28px"></div>
+    <div class="dual">
+      <div class="panel"><div class="panel-t">📈 Raridades do Pull</div><div class="bc" id="chart-rarity"></div></div>
+      <div class="panel"><div class="panel-t">🛒 Gastos por Data</div><div class="bc" id="chart-gastos"></div></div>
+    </div>
+    <div class="sec-title">🌟 Destaques do Pull</div>
+    <div class="pulled-grid" id="dash-highlights"></div>
   </div>
-  <div id="cards-hdr"></div>
-  <div id="cards-list"></div>
-</div>
 
-<!-- FICHÁRIO -->
-<div id="fichario" class="pane">
-  <div class="bstats" id="binder-stats"></div>
-  <div style="display:flex;gap:2px;margin-bottom:16px;border-bottom:1px solid var(--border);overflow-x:auto">
-    <div class="ctab active" onclick="switchSet('me04',this)">🔥 ME04 <span class="ctab-n">122</span></div>
-    <div class="ctab" onclick="switchSet('me02',this)">👻 ME02 <span class="ctab-n">130</span></div>
-    <div class="ctab" onclick="switchSet('meg',this)">🌿 MEG <span class="ctab-n">188</span></div>
+  <!-- GASTOS -->
+  <div id="gastos" class="pane">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div class="sec-title" style="margin:0">📦 Compras</div>
+      <button class="btn-add" onclick="openModal('mp')">+ NOVA COMPRA</button>
+    </div>
+    <div id="gastos-resumo"></div>
+    <div id="gastos-cards" style="display:flex;flex-direction:column;gap:16px;margin-bottom:32px"></div>
+    <div class="sec-title">📅 Timeline</div>
+    <div class="tl" id="tlwrap"></div>
   </div>
-  <div class="bctl">
-    <input class="bsrch" id="bsrch" placeholder="Buscar carta..." oninput="renderBinder()">
-    <label><input type="checkbox" id="fc" onchange="renderBinder()"> Só coletadas</label>
-    <label><input type="checkbox" id="fm" onchange="renderBinder()"> Só faltantes</label>
-    <label><input type="checkbox" id="fi2" onchange="renderBinder()"> Só importantes ★</label>
+
+  <!-- CARTAS TIRADAS -->
+  <div id="cartas" class="pane">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+      <div class="sec-title" style="margin:0">🃏 Cartas Tiradas</div>
+      <button class="btn-add" onclick="openModal('mc')">+ ADICIONAR</button>
+    </div>
+    <div id="cards-hdr"></div>
+    <div id="cards-list"></div>
   </div>
-  <div id="bwrap"></div>
+
+  <!-- FICHÁRIO -->
+  <div id="fichario" class="pane">
+    <div class="bstats" id="binder-stats"></div>
+    <div style="display:flex;gap:2px;margin-bottom:16px;border-bottom:1px solid var(--border);overflow-x:auto">
+      <div class="ctab active" onclick="switchSet('me04',this)">🔥 ME04 <span class="ctab-n">122</span></div>
+      <div class="ctab" onclick="switchSet('me02',this)">👻 ME02 <span class="ctab-n">130</span></div>
+      <div class="ctab" onclick="switchSet('meg',this)">🌿 MEG <span class="ctab-n">188</span></div>
+    </div>
+    <div class="bctl">
+      <input class="bsrch" id="bsrch" placeholder="Buscar carta..." oninput="renderBinder()">
+      <label><input type="checkbox" id="fc" onchange="renderBinder()"> Só coletadas</label>
+      <label><input type="checkbox" id="fm" onchange="renderBinder()"> Só faltantes</label>
+      <label><input type="checkbox" id="fi2" onchange="renderBinder()"> Só importantes ★</label>
+    </div>
+    <div id="bwrap"></div>
+  </div>
 </div>
 
 <!-- MODAL COMPRA -->
@@ -84,7 +124,7 @@
     <div class="ff"><label>Data</label><input type="date" id="m-data"></div>
     <div class="ff"><label>Preço (R$)</label><input type="number" id="m-preco" step="0.01" placeholder="0,00"></div>
     <div class="ff"><label>Nº Boosters</label><input type="number" id="m-boost" value="3"></div>
-    <div class="ff"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="m-acess"> É acessório (não conta no R$/booster)</label></div>
+    <div class="ff"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="m-acess"> É acessório</label></div>
     <div class="mact"><button class="btn-cx" onclick="closeModal('mp')">Cancelar</button><button class="btn-add" onclick="addPurchase()">Adicionar</button></div>
   </div>
 </div>
@@ -101,6 +141,14 @@
     <div class="ff"><label>Lote</label><input id="c-lote" placeholder="Ex: Lote 1 — ME04"></div>
     <div class="ff"><label>Valor (R$)</label><input type="number" id="c-val" step="0.01" placeholder="0,00"></div>
     <div class="mact"><button class="btn-cx" onclick="closeModal('mc')">Cancelar</button><button class="btn-add" onclick="addCard()">Adicionar</button></div>
+  </div>
+</div>
+
+<!-- MODAL CARTA EXPANDIDA (fichário + cartas tiradas) -->
+<div class="ov" id="card-modal" onclick="if(event.target===this)closeModal('card-modal')">
+  <div class="modal modal-card">
+    <button class="mc" onclick="closeModal('card-modal')">✕</button>
+    <div id="card-modal-content"></div>
   </div>
 </div>
 
