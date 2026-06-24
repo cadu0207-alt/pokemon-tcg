@@ -30,13 +30,16 @@ const PULL_RATES = {
 // Mapeamento de raridade normalizada
 function normalizeRare(rare) {
   const r = (rare||'').toLowerCase();
-  if (r.includes('hyper') || r.includes('gold'))     return 'Mega Hyper Rare';
-  if (r.includes('sar') || r.includes('especial'))   return 'Ilustr. Esp. Rara';
+  // 'Mega Attack Rare' (ME04) usa "rare" em inglês — precisa ser checado antes de 'hyper'/'gold'
+  if (r.includes('attack rare') || r.includes('hyper') || r.includes('gold')) return 'Mega Hyper Rare';
+  // 'Ilustr. Esp. Rara' contém 'esp', bloqueando o check de 'ilustr && !esp' — checar SAR antes
+  if (r.includes('sar') || r.includes('especial') || (r.includes('esp') && r.includes('ilustr'))) return 'Ilustr. Esp. Rara';
+  // 'Ilustr. Rara' e 'Ilustração Rara (IR)' — sem 'esp'
   if (r.includes(' ir') || (r.includes('ilustr') && !r.includes('esp'))) return 'Ilustr. Rara';
-  if (r.includes('ur') || r.includes('ultra'))       return 'Rara Ultra';
-  if (r.includes('dupla') || r.includes('rr') || r.includes('ex')) return 'Dupla Rara';
+  if (r.includes('ur') || r.includes('ultra'))                           return 'Rara Ultra';
+  if (r.includes('dupla') || r.includes('rr') || r.includes('ex'))      return 'Dupla Rara';
   if (r.includes('rara') && (r.includes('holo') || r.includes('foil'))) return 'Rara (Holo)';
-  if (r.includes('rara'))  return 'Rara';
+  if (r.includes('rara'))    return 'Rara';
   if (r.includes('incomum')) return 'Incomum';
   return 'Comum';
 }
