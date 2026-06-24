@@ -105,16 +105,17 @@ function calcEV(cards) {
 /* ─────────────────────────────────────────────
    INIT
 ───────────────────────────────────────────── */
-let evCurrentSet = 'me04';
-let evMargin = 15; // % margem de segurança
+// CORRIGIDO: usar var para que evSwitchSet() no HTML inline possa modificar
+// (let/const no topo de script regular não são acessíveis via closures externas)
+var evCurrentSet = 'me04';
 
 function initEV() {
   renderEV();
-  document.getElementById('ev-set-me04')?.addEventListener('click', () => { evCurrentSet='me04'; renderEV(); });
-  document.getElementById('ev-set-me02')?.addEventListener('click', () => { evCurrentSet='me02'; renderEV(); });
-  document.getElementById('ev-set-meg') ?.addEventListener('click', () => { evCurrentSet='meg';  renderEV(); });
-  document.getElementById('ev-margin')  ?.addEventListener('input', e => { evMargin=parseInt(e.target.value)||0; renderEV(); });
+  // Listeners redundantes (HTML já usa onclick="evSwitchSet()"), mas mantidos para segurança
 }
+
+// evSwitchSet é definido no HTML mas depende desta variável — manter compatibilidade
+window.evCurrentSet = evCurrentSet;
 
 /* ─────────────────────────────────────────────
    RENDER
@@ -123,7 +124,14 @@ function renderEV() {
   const wrap = document.getElementById('ev-wrap');
   if (!wrap) return;
 
-  // CORRIGIDO: window.cardsXxx não existe — usar variáveis globais declaradas nos arquivos de cartas
+  // Ler set ativo do DOM (robusto contra escopo de variáveis entre scripts)
+  const activeTab = document.querySelector('[id^="ev-set-"].active');
+  const curSet = activeTab?.id.replace('ev-set-','') || evCurrentSet || 'me04';
+
+  // Ler margem do slider diretamente (não depende de initEV ser chamado)
+  const evMargin = parseInt(document.getElementById('ev-margin')?.value) || 15;
+
+  // CORRIGIDO: usar variáveis globais dos arquivos de cartas (não window.cardsXxx)
   const sets = {
     me04: (typeof CARDS      !== 'undefined' ? CARDS      : []),
     me02: (typeof CARDS_ME02 !== 'undefined' ? CARDS_ME02 : []),
@@ -131,12 +139,12 @@ function renderEV() {
   };
   const setLabels = { me04:'🔥 ME04 — Caos Ascendente', me02:'👻 ME02 — Fogo Fantasmagórico', meg:'🌿 MEG — Megaevolução' };
 
-  // Atualizar tabs ativas
+  // Atualizar tabs ativas via DOM
   ['me04','me02','meg'].forEach(s => {
-    document.getElementById('ev-set-'+s)?.classList.toggle('active', s === evCurrentSet);
+    document.getElementById('ev-set-'+s)?.classList.toggle('active', s === curSet);
   });
 
-  const cards = sets[evCurrentSet].filter(c => c.price && c.price > 0);
+  const cards = sets[curSet].filter(c => c.price && c.price > 0);
   if (!cards.length) {
     wrap.innerHTML = `<div style="color:var(--muted);padding:40px;text-align:center">
       Cartas sem preço cadastrado — adicione preços ao arquivo de cartas para calcular o EV.</div>`;
