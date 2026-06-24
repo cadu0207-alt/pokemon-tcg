@@ -284,7 +284,7 @@ function renderEV() {
   wrap.innerHTML = kpiHtml + prodTable + bdBlock + nota;
 }
 
-function fmtR(v) { return (v||0).toFixed(2).replace('.',','); }
+// fmtR removida — já declarada como const em app.js (redeclarar causava SyntaxError que impedia o script de carregar)
 
 window.initEV    = initEV;
 window.renderEV  = renderEV;
