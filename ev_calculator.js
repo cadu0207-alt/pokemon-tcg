@@ -123,7 +123,12 @@ function renderEV() {
   const wrap = document.getElementById('ev-wrap');
   if (!wrap) return;
 
-  const sets = { me04: window.cardsMe04||[], me02: window.cardsMe02||[], meg: window.cardsMeg||[] };
+  // CORRIGIDO: window.cardsXxx não existe — usar variáveis globais declaradas nos arquivos de cartas
+  const sets = {
+    me04: (typeof CARDS      !== 'undefined' ? CARDS      : []),
+    me02: (typeof CARDS_ME02 !== 'undefined' ? CARDS_ME02 : []),
+    meg:  (typeof CARDS_MEG  !== 'undefined' ? CARDS_MEG  : []),
+  };
   const setLabels = { me04:'🔥 ME04 — Caos Ascendente', me02:'👻 ME02 — Fogo Fantasmagórico', meg:'🌿 MEG — Megaevolução' };
 
   // Atualizar tabs ativas

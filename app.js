@@ -100,6 +100,7 @@ async function loadAll(){
     collected=new Set((Array.isArray(col)?col:[]).map(r=>r.slot_key));
     setStatus('Online ✓','ok');
     renderAll();updateHomeStats();
+    if(typeof initFichario==='function')initFichario();// CORREÇÃO: init após collected ser carregado
   }catch(e){setStatus('Erro de conexão','error');console.error(e);}
 }
 function setStatus(txt,state){
