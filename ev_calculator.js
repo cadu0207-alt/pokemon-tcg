@@ -12,19 +12,38 @@
    PULL RATES PT-BR (estimados / fonte COPAG)
    por booster de 10 cartas
 ───────────────────────────────────────────── */
+/*
+ * PULL RATES — COPAG PT-BR (booster de 5 cartas: 3C + 1U + 1 slot raro)
+ *
+ * Estrutura do slot raro (1 por booster, mutuamente exclusivos):
+ *   Mega Hyper Rare  ~1/144 boosters  → 0.7%
+ *   Ilustr. Esp.     ~1/72  boosters  → 1.4%
+ *   Rara Ultra       ~1/18  boosters  → 5.6%
+ *   Ilustr. Rara     ~1/12  boosters  → 8.3%
+ *   Dupla Rara       ~1/4   boosters  → 25%
+ *   Rara (Holo)      ~1/3   boosters  → 33%
+ *   Rara base        restante         → ~25%  (100% – soma acima)
+ *
+ * Comum e Incomum excluídos do EV (sem mercado secundário real).
+ * Estimativas baseadas em aberturas PT-BR da comunidade.
+ */
 const PULL_RATES = {
-  // Garantido por booster
-  'Comum':    { minPer: 5.0, avgPer: 5.5, label: 'Comum' },
-  'Incomum':  { minPer: 2.5, avgPer: 3.0, label: 'Incomum' },
-  'Rara':     { minPer: 0.5, avgPer: 0.7, label: 'Rara' },
+  // Slot raro garantido (1 por booster de 5 cartas)
+  // Rara base ocupa ~25% dos slots (o resto vai para holo/RR/IR/UR/SAR/Hyper)
+  'Rara':     { prob: 0.25, label: 'Rara (não-holo)' },
 
-  // ~1 a cada N boosters
-  'Rara (Holo)':   { prob: 1/3,   label: 'Rara Holo (foil)' },
-  'Dupla Rara':    { prob: 1/4,   label: 'Dupla Rara (ex/RR)' },
-  'Ilustr. Rara':  { prob: 1/12,  label: 'Ilustração Rara (IR)' },
-  'Rara Ultra':    { prob: 1/18,  label: 'Rara Ultra (UR)' },
+  // Probabilidades por booster — slot único (mutuamente exclusivos na prática,
+  // mas matematicamente o EV por booster é idêntico modelando como independentes)
+  'Rara (Holo)':       { prob: 1/3,   label: 'Rara Holo (foil)' },
+  'Dupla Rara':        { prob: 1/4,   label: 'Dupla Rara (ex/RR)' },
+  'Ilustr. Rara':      { prob: 1/12,  label: 'Ilustração Rara (IR)' },
+  'Rara Ultra':        { prob: 1/18,  label: 'Rara Ultra (UR)' },
   'Ilustr. Esp. Rara': { prob: 1/72,  label: 'Ilustr. Especial (SAR)' },
-  'Mega Hyper Rare': { prob: 1/144, label: 'Mega Hyper Rare' },
+  'Mega Hyper Rare':   { prob: 1/144, label: 'Mega Hyper Rare' },
+
+  // Não utilizados no EV (excluídos em EV_EXCLUDE), mantidos para referência
+  'Comum':   { prob: 3.0, label: 'Comum' },
+  'Incomum': { prob: 1.0, label: 'Incomum' },
 };
 
 // Mapeamento de raridade normalizada
@@ -56,12 +75,24 @@ const PRODUCTS = [
 ];
 
 /* ─────────────────────────────────────────────
+   RARIDADES EXCLUÍDAS DO EV
+   Comum e Incomum têm preço de lista mas não
+   têm mercado secundário real — incluí-las
+   inflaria o EV com ~R$5/booster fictício.
+   O EV aqui mede o valor das "hits" do booster.
+───────────────────────────────────────────── */
+const EV_EXCLUDE = new Set(['Comum', 'Incomum']);
+
+/* ─────────────────────────────────────────────
    CÁLCULO DE EV
 ───────────────────────────────────────────── */
 function calcEV(cards) {
+  // Filtrar bulk sem mercado secundário real
+  const tradeable = cards.filter(c => !EV_EXCLUDE.has(normalizeRare(c.rare)));
+
   // Agrupar por raridade normalizada
   const byRare = {};
-  cards.forEach(c => {
+  tradeable.forEach(c => {
     const nr = normalizeRare(c.rare);
     if (!byRare[nr]) byRare[nr] = { cards: [], totalValue: 0 };
     byRare[nr].cards.push(c);
@@ -277,11 +308,12 @@ function renderEV() {
   <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 18px;
        font-size:11px;color:var(--muted);line-height:1.6">
     <strong style="color:var(--text)">ℹ️ Metodologia</strong><br>
-    EV calculado com base nos preços de mercado cadastrados e pull rates estimados para o PT-BR (Pokémon Copag).
-    Raridades "garantidas" (Comum/Incomum/Rara base) contribuem proporcionalmente à quantidade por booster.
-    Raridades de slot único (RR, IR, UR, SAR) contribuem com valor × probabilidade de saída.
+    EV calculado apenas sobre cartas com mercado secundário real — <strong style="color:var(--accent)">Comum e Incomum estão excluídas</strong>
+    pois seus preços de lista (~R$0,50) não refletem valor de revenda (bulk sem saída).
+    A Rara base é incluída pois tem slot próprio no booster e alguma liquidez.
+    Raridades de slot único (RR, IR, UR, SAR, Hyper) contribuem com valor × probabilidade de saída.
     <strong style="color:var(--gold)">O EV é uma média — não garante retorno individual por booster.</strong>
-    Pull rates reais podem variar; estes são estimativas baseadas em aberturas relatadas pela comunidade.
+    Pull rates são estimativas baseadas em aberturas PT-BR relatadas pela comunidade.
   </div>`;
 
   wrap.innerHTML = kpiHtml + prodTable + bdBlock + nota;
