@@ -1,0 +1,209 @@
+<!--
+  ═══════════════════════════════════════════════════════════
+  SNIPPET 1: Adicionar na navbar (dentro de <nav class="tabs">)
+  Cole APÓS a aba existente do Fichário
+  ═══════════════════════════════════════════════════════════
+-->
+
+<div class="tab" onclick="go('preco',this); initEV()">💰 Preço Justo</div>
+
+
+<!--
+  ═══════════════════════════════════════════════════════════
+  SNIPPET 2: Aba Preço Justo — colar após o fechamento da div#fichario
+  ═══════════════════════════════════════════════════════════
+-->
+
+<div id="preco" class="pane">
+
+  <!-- Header -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+    <div class="sec-title" style="margin:0">💰 Calculadora de Preço Justo / EV</div>
+  </div>
+
+  <!-- Seletor de set -->
+  <div style="display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--border)">
+    <div class="ctab active" id="ev-set-me04">🔥 ME04</div>
+    <div class="ctab" id="ev-set-me02">👻 ME02</div>
+    <div class="ctab" id="ev-set-meg">🌿 MEG</div>
+  </div>
+
+  <!-- Controle de margem -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;
+       padding:14px 18px;margin-bottom:22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <div>
+      <div style="font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);
+           text-transform:uppercase;margin-bottom:4px">Margem de segurança</div>
+      <div style="font-size:11px;color:var(--muted)">
+        Adiciona % ao EV para calcular o "preço justo" de compra (protege contra variação de pull rates)
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <input type="range" id="ev-margin" min="0" max="50" value="15" step="5"
+             style="width:120px;accent-color:var(--accent)">
+      <span id="ev-margin-lbl" style="font-family:'Bebas Neue',sans-serif;font-size:28px;
+            color:var(--gold);min-width:48px">15%</span>
+    </div>
+  </div>
+
+  <!-- Conteúdo dinâmico -->
+  <div id="ev-wrap">
+    <div style="color:var(--muted);font-size:12px;padding:20px;text-align:center">
+      Carregando calculadora...
+    </div>
+  </div>
+
+</div>
+
+
+<!--
+  ═══════════════════════════════════════════════════════════
+  SNIPPET 3: Substituir os controles do Fichário existente
+  Dentro de div#fichario, substituir os filtros / tabs por este bloco:
+  ═══════════════════════════════════════════════════════════
+-->
+
+<!-- Stats globais (mantém IDs existentes) -->
+<div class="bstats">
+  <div><div class="bsv" style="color:var(--teal)" id="bs-col">0</div><div class="bsl">Slots Preenchidos</div></div>
+  <div><div class="bsv" style="color:var(--gold)" id="bs-imp">0</div><div class="bsl">Importantes</div></div>
+  <div><div class="bsv" style="color:var(--muted)" id="bs-tot">0</div><div class="bsl">Total Slots</div></div>
+  <div style="flex:1;min-width:180px">
+    <div style="height:6px;background:var(--surface2);border-radius:3px;margin-bottom:5px;overflow:hidden">
+      <div class="prog-f f-teal" id="bs-bar" style="width:0%"></div>
+    </div>
+    <div class="bsl"><span id="bs-pct">0%</span> COMPLETO</div>
+  </div>
+</div>
+
+<!-- Tabs dos sets -->
+<div style="display:flex;gap:2px;margin-bottom:12px;border-bottom:1px solid var(--border);overflow-x:auto">
+  <div class="ctab active" id="fic-tab-me04">🔥 ME04 <span style="opacity:.6;font-size:9px">122</span></div>
+  <div class="ctab" id="fic-tab-me02">👻 ME02 <span style="opacity:.6;font-size:9px">130</span></div>
+  <div class="ctab" id="fic-tab-meg">🌿 MEG <span style="opacity:.6;font-size:9px">188</span></div>
+  <div class="ctab" id="fic-tab-mep">✨ MEP <span style="opacity:.6;font-size:9px">18</span></div>
+</div>
+
+<!-- Barra de controles -->
+<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+
+  <!-- Busca -->
+  <input class="bsrch" id="fic-search" placeholder="Buscar carta...">
+
+  <!-- Filtros -->
+  <label style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;display:flex;align-items:center;gap:6px;cursor:pointer">
+    <input type="checkbox" id="fic-only-col" style="accent-color:var(--accent);width:13px;height:13px"> Só coletadas
+  </label>
+  <label style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;display:flex;align-items:center;gap:6px;cursor:pointer">
+    <input type="checkbox" id="fic-only-mis" style="accent-color:var(--accent);width:13px;height:13px"> Só faltantes
+  </label>
+  <label style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;display:flex;align-items:center;gap:6px;cursor:pointer">
+    <input type="checkbox" id="fic-only-imp" style="accent-color:var(--accent);width:13px;height:13px"> Só importantes ★
+  </label>
+
+  <!-- Separador -->
+  <div style="width:1px;height:24px;background:var(--border);margin:0 4px"></div>
+
+  <!-- Modo de visualização -->
+  <div style="display:flex;gap:4px;align-items:center">
+    <span style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:1px">MODO:</span>
+    <button id="fic-view-grid" class="active"
+            style="padding:5px 10px;border-radius:5px;border:1px solid var(--border);
+                   background:var(--surface);color:var(--text);font-family:'Space Mono',monospace;
+                   font-size:10px;cursor:pointer;transition:all .2s"
+            title="Grade padrão">⊞ Grade</button>
+    <button id="fic-view-binder"
+            style="padding:5px 10px;border-radius:5px;border:1px solid var(--border);
+                   background:var(--surface);color:var(--text);font-family:'Space Mono',monospace;
+                   font-size:10px;cursor:pointer;transition:all .2s"
+            title="Fichário físico">📖 Fichário</button>
+  </div>
+
+  <!-- Controles de tamanho (só no modo fichário) -->
+  <div id="fic-binder-controls" class="hidden"
+       style="display:flex;gap:4px;align-items:center">
+    <span style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">TAMANHO:</span>
+    <button id="fic-binder-2"
+            style="padding:4px 8px;border-radius:4px;border:1px solid var(--border);
+                   background:var(--surface);color:var(--muted);font-family:'Space Mono',monospace;
+                   font-size:10px;cursor:pointer">2×2</button>
+    <button id="fic-binder-3" class="active"
+            style="padding:4px 8px;border-radius:4px;border:1px solid var(--border);
+                   background:var(--surface);color:var(--muted);font-family:'Space Mono',monospace;
+                   font-size:10px;cursor:pointer">3×3</button>
+    <button id="fic-binder-4"
+            style="padding:4px 8px;border-radius:4px;border:1px solid var(--border);
+                   background:var(--surface);color:var(--muted);font-family:'Space Mono',monospace;
+                   font-size:10px;cursor:pointer">4×4</button>
+    <button id="fic-print"
+            style="padding:4px 12px;border-radius:4px;border:1px solid var(--accent);
+                   background:rgba(230,57,70,.15);color:var(--accent);font-family:'Space Mono',monospace;
+                   font-size:10px;cursor:pointer;font-weight:700">🖨️ Imprimir PDF</button>
+  </div>
+
+  <span style="margin-left:auto;font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">
+    Clique na carta para editar slots
+  </span>
+</div>
+
+<!-- Progresso do set atual -->
+<div id="fic-set-info"
+     style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-family:'Space Mono',monospace;
+            font-size:10px;color:var(--muted);margin-bottom:14px;padding:10px 14px;
+            background:var(--surface2);border-radius:6px">
+</div>
+
+<!-- Conteúdo do binder -->
+<div class="bwrap" id="fic-binder-wrap"></div>
+
+
+<!--
+  ═══════════════════════════════════════════════════════════
+  SNIPPET 4: CSS adicional — adicionar dentro do <style> no <head>
+  ═══════════════════════════════════════════════════════════
+-->
+<style>
+/* Botões de modo ativo */
+#fic-view-grid.active,
+#fic-view-binder.active {
+  background: var(--accent) !important;
+  color: #fff !important;
+  border-color: var(--accent) !important;
+}
+#fic-binder-2.active,
+#fic-binder-3.active,
+#fic-binder-4.active {
+  background: var(--surface2) !important;
+  color: var(--gold) !important;
+  border-color: var(--gold) !important;
+}
+.hidden { display: none !important; }
+
+/* Tooltip hover no binder */
+.bc2:hover .tip,
+.fic-card:hover .tip { opacity: 1 !important; }
+
+/* Hover nas tabs de EV */
+#ev-set-me04.active, #ev-set-me02.active, #ev-set-meg.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+</style>
+
+
+<!--
+  ═══════════════════════════════════════════════════════════
+  SNIPPET 5: Scripts — adicionar antes do </body>
+  ═══════════════════════════════════════════════════════════
+-->
+<script src="fichario_patch.js"></script>
+<script src="ev_calculator.js"></script>
+<script>
+  // Integrar com o DOMContentLoaded existente:
+  // Dentro do seu addEventListener('DOMContentLoaded', ...) adicione:
+  //   initFichario();
+  //
+  // Na função go() existente, adicionar:
+  //   if(id==='fichario') renderFicharioUI();
+  //   if(id==='preco')    initEV();
+</script>
