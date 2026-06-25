@@ -201,6 +201,7 @@
 
     <!-- Tabs dos sets -->
     <div style="display:flex;gap:2px;margin-bottom:12px;border-bottom:1px solid var(--border);overflow-x:auto">
+      <div class="ctab" id="fic-tab-custom" onclick="switchSet('__custom__',this)" style="border-bottom:2px solid #a855f7;color:#a855f7">✨ Meus <span class="ctab-n">Fichários</span></div>
       <div class="ctab" id="fic-tab-me06" onclick="switchSet('me06',this)" style="opacity:.7">💎 ME06 <span class="ctab-n">breve</span></div>
       <div class="ctab" id="fic-tab-me05" onclick="switchSet('me05',this)" style="opacity:.7">🌑 ME05 <span class="ctab-n">breve</span></div>
       <div class="ctab active" id="fic-tab-me04" onclick="switchSet('me04',this)">🔥 ME04 <span class="ctab-n">122</span></div>
@@ -536,6 +537,14 @@
     <div class="ff"><label>Lote</label><input id="c-lote" placeholder="Ex: Lote 1 — ME04"></div>
     <div class="ff"><label>Valor (R$)</label><input type="number" id="c-val" step="0.01" placeholder="0,00"></div>
     <div class="mact"><button class="btn-cx" onclick="closeModal('mc')">Cancelar</button><button class="btn-add" onclick="addCard()">Salvar</button></div>
+  </div>
+</div>
+
+<!-- MODAL FICHÁRIO PERSONALIZADO (criar / editar) -->
+<div class="ov" id="mcustom" onclick="if(event.target===this)closeModal('mcustom')">
+  <div class="modal modal-wide" style="max-height:90vh;overflow-y:auto">
+    <button class="mc-btn" onclick="closeModal('mcustom')">✕</button>
+    <div id="mcustom-content"></div>
   </div>
 </div>
 

@@ -161,6 +161,7 @@ async function loadAll(){
     collected=new Set((Array.isArray(col)?col:[]).map(r=>r.slot_key));
     setStatus('Online ✓','ok');
     renderAll();updateHomeStats();
+    loadCustomBinders();
     if(typeof initFichario==='function')initFichario();
   }catch(e){setStatus('Erro de conexão','error');console.error(e);}
 }
@@ -192,7 +193,18 @@ function go(id,el){
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(id).classList.add('active');el.classList.add('active');
-  if(id==='fichario') renderBinder();
+  if(id==='fichario'){
+    // Restaura controles se estava em fichário personalizado
+    const bctl=document.querySelector('.bctl');if(bctl)bctl.style.display='';
+    const binderCtrl=document.getElementById('fic-binder-controls');
+    const setInfo=document.getElementById('fic-set-info');
+    const bstats=document.getElementById('binder-stats');
+    if(binderCtrl)binderCtrl.style.display='';
+    if(setInfo)setInfo.style.display='';
+    if(bstats)bstats.style.display='';
+    if(currentSet==='__custom__') renderCustomBindersHome();
+    else renderBinder();
+  }
   if(id==='dash') updateDashProgress();
 }
 function renderAll(){renderDash();renderGastos();renderCartas();updateDashProgress();}
@@ -497,7 +509,16 @@ let currentSet='me04';
 function switchSet(id,el){
   currentSet=id;
   document.querySelectorAll('.ctab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');renderBinder();
+  el.classList.add('active');
+  if(id==='__custom__'){renderCustomBindersHome();return;}
+  // Restore standard controls visibility
+  const binderCtrl=document.getElementById('fic-binder-controls');
+  const setInfo=document.getElementById('fic-set-info');
+  const bstats=document.getElementById('binder-stats');
+  if(binderCtrl)binderCtrl.style.display='';
+  if(setInfo)setInfo.style.display='';
+  if(bstats)bstats.style.display='';
+  renderBinder();
 }
 function getSetData(){
   const me03c=typeof CARDS_ME03!=='undefined'?CARDS_ME03:[];
@@ -915,4 +936,575 @@ async function addCard(){
   closeModal('mc');renderCartas();renderDash();
 }
 
-// ── INIT ────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+// FICHÁRIOS PERSONALIZADOS
+// ════════════════════════════════════════════════════════════════
+
+let customBinders=[];
+let _cbDraft={};
+let _cbManualSelected=new Set();
+let _currentCustomBinderId=null;
+
+// ── Presets temáticos ─────────────────────────────────────────────
+const BINDER_PRESETS=[
+  {key:'ilustr_esp_rara', name:'Galeria das Estrelas',emoji:'🌟',desc:'Todas as Ilustração Especial Rara',   filter:c=>c.rare==='Ilustr. Esp. Rara',              color:'#a855f7'},
+  {key:'ilustr_rara',     name:'Museu da Arte',       emoji:'🎨',desc:'Todas as Ilustração Rara',            filter:c=>c.rare==='Ilustr. Rara',                   color:'#118ab2'},
+  {key:'mega_attack',     name:'Coroa Dourada',       emoji:'👑',desc:'Mega Attack Rare e importantes ★',    filter:c=>c.important||c.rare==='Mega Attack Rare',  color:'#ffd166'},
+  {key:'vitrine',         name:'Minha Vitrine',       emoji:'⭐',desc:'Cartas marcadas como importantes ★', filter:c=>!!c.important,                             color:'#e63946'},
+  {key:'tipo_fogo',       name:'Chamas do Caos',      emoji:'🔥',desc:'Cartas de tipo Fogo',                filter:c=>c.type==='Fogo',                           color:'#ff6b35'},
+  {key:'tipo_aquatico',   name:'Abismo Oceânico',     emoji:'🌊',desc:'Cartas de tipo Aquático',            filter:c=>c.type==='Aquático',                       color:'#118ab2'},
+  {key:'tipo_grama',      name:'Floresta Primordial', emoji:'🌿',desc:'Cartas de tipo Grama',               filter:c=>c.type==='Grama',                          color:'#06d6a0'},
+  {key:'tipo_raio',       name:'Tempestade Elétrica', emoji:'⚡',desc:'Cartas de tipo Raio',                filter:c=>c.type==='Raio',                           color:'#ffd166'},
+  {key:'tipo_escuridao',  name:'Véu das Sombras',     emoji:'👻',desc:'Cartas de tipo Escuridão',           filter:c=>c.type==='Escuridão',                      color:'#a855f7'},
+  {key:'tipo_dragao',     name:'Dragões Ancestrais',  emoji:'🐉',desc:'Cartas de tipo Dragão',              filter:c=>c.type==='Dragão',                         color:'#e63946'},
+  {key:'tipo_lutador',    name:'Arena dos Titãs',     emoji:'⚔️',desc:'Cartas de tipo Lutador',             filter:c=>c.type==='Lutador',                        color:'#ff6b35'},
+  {key:'tipo_psiquico',   name:'Mente Cósmica',       emoji:'🧠',desc:'Cartas de tipo Psíquico',            filter:c=>c.type==='Psíquico',                       color:'#c084fc'},
+  {key:'tipo_metal',      name:'Aço Inabalável',      emoji:'🤖',desc:'Cartas de tipo Metal',               filter:c=>c.type==='Metal',                          color:'#8d96b5'},
+];
+
+const IMG_FNS={me04:imgMe04,me03:imgMe03,me02:imgMe02,meg:imgMeg,mep:imgMep,me05:imgMe05,me06:imgMe06};
+const CB_SET_LABELS={
+  me04:'🔥 ME04 — Caos Ascendente',
+  me03:'🔵 ME03 — Ordem Perfeita',
+  me02:'👻 ME02 — Fogo Fantasmagórico',
+  meg: '🌿 MEG — Megaevolução',
+  mep: '⭐ MEP — Promos',
+  me05:'🌑 ME05 — Negrura Absoluta',
+  me06:'💎 ME06 — Esmeralda Tempestuosa',
+};
+
+function getAllCardsWithSet(){
+  const sets=[
+    {id:'me04',cards:typeof CARDS!=='undefined'?CARDS:[]},
+    {id:'me03',cards:typeof CARDS_ME03!=='undefined'?CARDS_ME03:[]},
+    {id:'me02',cards:typeof CARDS_ME02!=='undefined'?CARDS_ME02:[]},
+    {id:'meg', cards:typeof CARDS_MEG!=='undefined'?CARDS_MEG:[]},
+    {id:'mep', cards:typeof CARDS_MEP!=='undefined'?CARDS_MEP:[]},
+    {id:'me05',cards:typeof CARDS_ME05!=='undefined'?CARDS_ME05:[]},
+    {id:'me06',cards:typeof CARDS_ME06!=='undefined'?CARDS_ME06:[]},
+  ];
+  const result=[];
+  sets.forEach(({id,cards})=>cards.forEach(c=>result.push({...c,_setId:id})));
+  return result;
+}
+
+function getBinderCards(binder){
+  const all=getAllCardsWithSet();
+  const cfg=binder.filter_config||{};
+  if(cfg.type==='manual'){
+    const ids=binder.card_ids||[];
+    return all.filter(c=>ids.some(id=>id.set===c._setId&&id.n===c.n));
+  }
+  if(cfg.type==='preset'){
+    const preset=BINDER_PRESETS.find(p=>p.key===cfg.key);
+    return preset?all.filter(preset.filter):[];
+  }
+  return[];
+}
+
+function binderProgress(binder){
+  const cards=getBinderCards(binder);
+  if(!cards.length)return 0;
+  let col=0;
+  cards.forEach(c=>{if(getSlots(c,c._setId).some(s=>collected.has(slotKey(c._setId+':',c.n,s.ver))))col++;});
+  return Math.round(col/cards.length*100);
+}
+
+// ── Supabase CRUD ─────────────────────────────────────────────────
+async function loadCustomBinders(){
+  if(!uid())return;
+  const{data}=await sbClient.from('custom_binders').select('*').eq('user_id',uid()).order('created_at',{ascending:false});
+  customBinders=data||[];
+}
+
+async function saveCustomBinder(binder){
+  if(!uid())return null;
+  const payload={...binder,user_id:uid(),updated_at:new Date().toISOString()};
+  if(payload.id){
+    await sbClient.from('custom_binders').update(payload).eq('id',payload.id).eq('user_id',uid());
+    const idx=customBinders.findIndex(b=>b.id===payload.id);
+    if(idx>=0)customBinders[idx]={...customBinders[idx],...payload};
+    return payload;
+  }else{
+    delete payload.id;
+    const{data}=await sbClient.from('custom_binders').insert(payload).select();
+    if(data?.[0])customBinders.unshift(data[0]);
+    return data?.[0]||null;
+  }
+}
+
+async function deleteCustomBinder(id){
+  if(!uid()||!confirm('Excluir este fichário?'))return;
+  await sbClient.from('custom_binders').delete().eq('id',id).eq('user_id',uid());
+  customBinders=customBinders.filter(b=>b.id!==id);
+  _currentCustomBinderId=null;
+  renderCustomBindersHome();
+}
+
+// ── GALERIA PRINCIPAL ─────────────────────────────────────────────
+function renderCustomBindersHome(){
+  _currentCustomBinderId=null;
+  ['fic-binder-controls','fic-set-info','binder-stats'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='none';
+  });
+  const bctl=document.querySelector('.bctl');if(bctl)bctl.style.display='none';
+
+  const all=getAllCardsWithSet();
+
+  const myHtml=customBinders.length===0
+    ?`<div style="text-align:center;padding:40px 20px;color:var(--muted);font-family:'Space Mono',monospace;font-size:11px;line-height:2.2">
+        Você ainda não criou nenhum fichário.<br>
+        <span style="color:var(--accent)">Use os presets abaixo ou crie o seu próprio ✨</span>
+      </div>`
+    :`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;margin-bottom:28px">
+      ${customBinders.map(b=>{
+        const cards=getBinderCards(b);
+        const pct=binderProgress(b);
+        const col=b.cover_color||'#a855f7';
+        return`<div onclick="openCustomBinderView(${safeJSON(b)})"
+          style="padding:16px;border-radius:10px;cursor:pointer;transition:all .2s;
+                 border:1px solid var(--border);background:var(--surface2);position:relative;
+                 border-left:3px solid ${col}"
+          onmouseover="this.style.transform='translateY(-2px)';this.style.borderColor='${col}'"
+          onmouseout="this.style.transform='';this.style.borderColor='var(--border)'">
+          <div style="font-size:26px;margin-bottom:6px">${b.emoji||'📚'}</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;word-break:break-word;line-height:1.3">${b.name}</div>
+          <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:8px">${cards.length} cartas</div>
+          <div style="height:3px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-bottom:4px">
+            <div style="height:100%;width:${pct}%;background:${col};border-radius:2px"></div>
+          </div>
+          <div style="font-size:9px;color:${col};font-family:'Space Mono',monospace">${pct}% coletado</div>
+          <div style="position:absolute;top:6px;right:6px;display:flex;gap:4px">
+            <button onclick="event.stopPropagation();openCreateBinderModal(${safeJSON(b)})"
+              style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px;
+                     opacity:.5;transition:opacity .15s" title="Editar"
+              onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.5'">✏️</button>
+            <button onclick="event.stopPropagation();deleteCustomBinder('${b.id}')"
+              style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px;
+                     opacity:.5;transition:opacity .15s" title="Excluir"
+              onmouseover="this.style.opacity='1';this.style.color='var(--accent)'"
+              onmouseout="this.style.opacity='.5';this.style.color='var(--muted)'">✕</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  const presetsHtml=BINDER_PRESETS.map(p=>{
+    const count=all.filter(p.filter).length;
+    const already=customBinders.some(b=>b.filter_config&&b.filter_config.key===p.key&&b.filter_config.type==='preset');
+    return`<div onclick="openPresetPreview('${p.key}')"
+      style="padding:14px;border-radius:10px;cursor:pointer;transition:all .2s;
+             border:1px solid var(--border);background:var(--surface2);
+             border-top:3px solid ${p.color};${already?'opacity:.55':''}position:relative"
+      onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 20px ${p.color}33'"
+      onmouseout="this.style.transform='';this.style.boxShadow=''">
+      <div style="font-size:22px;margin-bottom:8px">${p.emoji}</div>
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">${p.name}</div>
+      <div style="font-size:9px;color:var(--muted);line-height:1.5;margin-bottom:8px">${p.desc}</div>
+      <div style="font-size:9px;color:${p.color};font-family:'Space Mono',monospace">${count} cartas${already?' · Já criado':''}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('bwrap').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px">✨ MEUS FICHÁRIOS</div>
+      <button onclick="openCreateBinderModal()"
+        style="padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:6px;
+               font-family:'Space Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:1px;
+               transition:opacity .15s"
+        onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">+ NOVO FICHÁRIO</button>
+    </div>
+    ${myHtml}
+    <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;
+                margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+      SUGESTÕES TEMÁTICAS
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">
+      ${presetsHtml}
+    </div>`;
+}
+
+// ── VISUALIZADOR ──────────────────────────────────────────────────
+function openCustomBinderView(binder){
+  if(typeof binder==='string')binder=JSON.parse(binder);
+  _currentCustomBinderId=binder.id||'__preview__';
+  ['fic-binder-controls','fic-set-info','binder-stats'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='none';
+  });
+  const bctl=document.querySelector('.bctl');if(bctl)bctl.style.display='none';
+
+  const cards=getBinderCards(binder);
+  const layout=binder.layout||3;
+  const color=binder.cover_color||'#a855f7';
+
+  let colCount=0;
+  cards.forEach(c=>{if(getSlots(c,c._setId).some(s=>collected.has(slotKey(c._setId+':',c.n,s.ver))))colCount++;});
+  const pct=cards.length>0?Math.round(colCount/cards.length*100):0;
+
+  const bySets={};
+  cards.forEach(c=>{if(!bySets[c._setId])bySets[c._setId]=[];bySets[c._setId].push(c);});
+
+  window._cbCurrentBinder={...binder};
+
+  function buildGrid(lay){
+    const cols=lay===2?'1fr 1fr':lay===4?'repeat(4,1fr)':'repeat(3,1fr)';
+    return Object.entries(bySets).map(([setId,setCards])=>`
+      <div class="bsec-lbl">${CB_SET_LABELS[setId]||setId}</div>
+      <div style="display:grid;grid-template-columns:${cols};gap:8px;margin-bottom:18px">
+        ${setCards.map(c=>{
+          const anyCol=getSlots(c,setId).some(s=>collected.has(slotKey(setId+':',c.n,s.ver)));
+          const allCol=getSlots(c,setId).every(s=>collected.has(slotKey(setId+':',c.n,s.ver)));
+          const imgFn=IMG_FNS[setId];
+          const imgSrc=imgFn?imgFn(c.n):'';
+          return`<div onclick='openBinderModal(${safeJSON(c)},"${setId}")'
+            title="${c.name} #${c.n}"
+            style="aspect-ratio:2/3;border-radius:8px;overflow:hidden;cursor:pointer;position:relative;
+                   border:1px solid ${anyCol?color:'var(--border)'};
+                   box-shadow:${allCol?`0 0 14px ${color}55`:'none'};transition:all .2s"
+            onmouseover="this.style.transform='translateY(-2px) scale(1.02)'"
+            onmouseout="this.style.transform=''">
+            <img src="${imgSrc}" alt="${c.name}" loading="lazy"
+              style="width:100%;height:100%;object-fit:cover;
+                     filter:${allCol?'none':anyCol?'saturate(.55) brightness(.7)':'grayscale(80%) brightness(.45)'}">
+            ${allCol?`<div style="position:absolute;top:4px;right:4px;width:16px;height:16px;background:${color};
+                       border-radius:50%;display:flex;align-items:center;justify-content:center;
+                       font-size:8px;font-weight:700;color:#fff">✓</div>`:''}
+            <div style="position:absolute;bottom:0;left:0;right:0;padding:3px 5px;
+                        background:linear-gradient(transparent,rgba(0,0,0,.85));
+                        font-size:7px;color:rgba(255,255,255,.65);font-family:'Space Mono',monospace">${c.n}</div>
+          </div>`;
+        }).join('')}
+      </div>`).join('');
+  }
+
+  const isPreview=!!binder._preview;
+  const layoutBtns=[2,3,4].map(n=>`<button onclick="changeCustomLayout(${n})"
+    style="padding:4px 12px;border-radius:5px;border:1px solid ${n===layout?color:'var(--border)'};
+           background:${n===layout?color+'22':'var(--surface2)'};
+           color:${n===layout?color:'var(--muted)'};font-family:'Space Mono',monospace;font-size:10px;
+           cursor:pointer;font-weight:${n===layout?700:400};transition:all .15s">${n}×${n}</button>`).join('');
+
+  document.getElementById('bwrap').innerHTML=`
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+      <button onclick="renderCustomBindersHome()"
+        style="padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+               color:var(--muted);font-family:'Space Mono',monospace;font-size:10px;cursor:pointer">← Voltar</button>
+      <div style="font-size:26px;line-height:1">${binder.emoji||'📚'}</div>
+      <div style="flex:1;min-width:100px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--text)">${binder.name}</div>
+        <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${cards.length} cartas · ${colCount} coletadas</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;min-width:120px">
+        <div style="flex:1;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${color};border-radius:2px;transition:width .4s"></div>
+        </div>
+        <span style="font-size:10px;color:${color};font-family:'Space Mono',monospace;font-weight:700;white-space:nowrap">${pct}%</span>
+      </div>
+      ${isPreview
+        ?`<button onclick="createBinderFromPreset(${safeJSON(binder)})"
+            style="padding:8px 14px;background:var(--accent);color:#fff;border:none;border-radius:6px;
+                   font-family:'Space Mono',monospace;font-size:10px;font-weight:700;cursor:pointer;letter-spacing:1px">+ SALVAR</button>`
+        :`<button onclick="openCreateBinderModal(${safeJSON(binder)})"
+            style="padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+                   color:var(--muted);font-family:'Space Mono',monospace;font-size:10px;cursor:pointer">✏️ Editar</button>`
+      }
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:16px">${layoutBtns}</div>
+    <div id="cb-view-grid">
+      ${cards.length===0
+        ?'<div style="text-align:center;padding:50px;color:var(--muted);font-family:\'Space Mono\',monospace;font-size:11px">Nenhuma carta encontrada.</div>'
+        :buildGrid(layout)}
+    </div>`;
+}
+
+function changeCustomLayout(n){
+  const b=window._cbCurrentBinder;
+  if(!b)return;
+  b.layout=n;
+  window._cbCurrentBinder=b;
+  if(b.id&&!b._preview){
+    sbClient.from('custom_binders').update({layout:n,updated_at:new Date().toISOString()}).eq('id',b.id).eq('user_id',uid());
+    const idx=customBinders.findIndex(x=>x.id===b.id);
+    if(idx>=0)customBinders[idx].layout=n;
+  }
+  openCustomBinderView(b);
+}
+
+function openPresetPreview(key){
+  const p=BINDER_PRESETS.find(x=>x.key===key);
+  if(!p)return;
+  openCustomBinderView({id:null,name:p.emoji+' '+p.name,emoji:p.emoji,layout:3,
+    filter_config:{type:'preset',key},card_ids:[],cover_color:p.color,_preview:true});
+}
+
+async function createBinderFromPreset(previewBinder){
+  if(typeof previewBinder==='string')previewBinder=JSON.parse(previewBinder);
+  const{_preview,...payload}=previewBinder;
+  delete payload.id;
+  await saveCustomBinder(payload);
+  const saved=customBinders[0];
+  if(saved)openCustomBinderView(saved);
+}
+
+// ── MODAL CRIAR / EDITAR ──────────────────────────────────────────
+function openCreateBinderModal(editBinder){
+  if(typeof editBinder==='string')editBinder=JSON.parse(editBinder);
+  _cbDraft=editBinder?{...editBinder}:{
+    name:'',emoji:'📚',layout:3,
+    filter_config:{type:'preset',key:'ilustr_esp_rara'},
+    card_ids:[],cover_color:'#a855f7'
+  };
+  _cbManualSelected=new Set(
+    (_cbDraft.filter_config&&_cbDraft.filter_config.type==='manual'?(_cbDraft.card_ids||[]):[])
+    .map(id=>id.set+':'+id.n)
+  );
+  _renderCreateModal(!!editBinder,editBinder?editBinder.id:null);
+  openModal('mcustom');
+}
+
+function _renderCreateModal(isEdit,editId){
+  const colors=['#a855f7','#e63946','#ffd166','#06d6a0','#118ab2','#ff6b35','#c084fc','#8d96b5'];
+  const emojis=['📚','🌟','🎨','👑','🔥','🌊','🌿','⚡','👻','🐉','⚔️','🧠','🤖','💎','🏆','🎯','🌈','🦋'];
+  const ft=(_cbDraft.filter_config&&_cbDraft.filter_config.type)||'preset';
+  const presetKey=(_cbDraft.filter_config&&_cbDraft.filter_config.key)||'ilustr_esp_rara';
+  const curColor=_cbDraft.cover_color||'#a855f7';
+  const curLayout=_cbDraft.layout||3;
+  const all=getAllCardsWithSet();
+
+  const presetGrid=BINDER_PRESETS.map(p=>{
+    const cnt=all.filter(p.filter).length;
+    const active=p.key===presetKey&&ft!=='manual';
+    return`<div onclick="cbPickPreset('${p.key}')" id="cbp-${p.key}"
+      style="padding:10px;border-radius:8px;cursor:pointer;transition:all .2s;
+             border:1px solid ${active?p.color:'var(--border)'};
+             background:${active?p.color+'22':'var(--surface2)'};
+             ${active?'box-shadow:0 0 10px '+p.color+'44':''}">
+      <div style="font-size:18px;margin-bottom:4px">${p.emoji}</div>
+      <div style="font-size:10px;font-weight:700;color:${active?p.color:'var(--text)'};margin-bottom:2px;line-height:1.3">${p.name}</div>
+      <div style="font-size:8px;color:var(--muted);font-family:'Space Mono',monospace">${cnt} cartas</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('mcustom-content').innerHTML=`
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;margin-bottom:18px">
+      ${isEdit?'✏️ EDITAR FICHÁRIO':'✨ NOVO FICHÁRIO'}
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px">
+      <div id="cb-emoji-disp" onclick="cbToggleEmojiPicker()"
+        style="font-size:28px;cursor:pointer;padding:8px 10px;background:var(--surface2);
+               border-radius:8px;border:1px solid var(--border);line-height:1;flex-shrink:0;
+               transition:border-color .15s"
+        onmouseover="this.style.borderColor='var(--accent)'"
+        onmouseout="this.style.borderColor='var(--border)'">${_cbDraft.emoji||'📚'}</div>
+      <input id="cb-name-inp" type="text" placeholder="Nome do fichário..." maxlength="40"
+        value="${(_cbDraft.name||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}"
+        oninput="_cbDraft.name=this.value"
+        style="flex:1;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);
+               border-radius:8px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;
+               outline:none;transition:border-color .15s"
+        onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+    </div>
+    <div id="cb-emoji-pick" style="display:none;flex-wrap:wrap;gap:6px;margin-bottom:12px;padding:10px;
+                                    background:var(--surface2);border-radius:8px;border:1px solid var(--border)">
+      ${emojis.map(e=>`<span onclick="cbPickEmoji('${e}')"
+        style="font-size:20px;cursor:pointer;padding:4px;border-radius:4px;transition:background .15s"
+        onmouseover="this.style.background='var(--surface3)'"
+        onmouseout="this.style.background=''">${e}</span>`).join('')}
+    </div>
+    <div style="margin-bottom:16px">
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">COR DO FICHÁRIO</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${colors.map(col=>`<div onclick="cbPickColor('${col}')" id="cbcol-${col.replace('#','')}"
+          style="width:26px;height:26px;border-radius:50%;background:${col};cursor:pointer;
+                 border:2px solid ${col===curColor?'#fff':'transparent'};
+                 transition:all .15s;box-shadow:0 0 0 1px rgba(255,255,255,.1)"
+          onmouseover="this.style.transform='scale(1.2)'"
+          onmouseout="this.style.transform=''"></div>`).join('')}
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">VISUALIZAÇÃO PADRÃO</div>
+      <div style="display:flex;gap:6px">
+        ${[2,3,4].map(n=>`<button onclick="cbPickLayout(${n})" id="cblay-${n}"
+          style="padding:6px 14px;border-radius:6px;
+                 border:1px solid ${n===curLayout?'var(--accent)':'var(--border)'};
+                 background:${n===curLayout?'rgba(230,57,70,.15)':'var(--surface2)'};
+                 color:${n===curLayout?'var(--accent)':'var(--muted)'};
+                 font-family:'Space Mono',monospace;font-size:11px;cursor:pointer;transition:all .15s;
+                 font-weight:${n===curLayout?700:400}">${n}×${n}</button>`).join('')}
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:10px">TIPO DE COLEÇÃO</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button onclick="cbPickFilterType('preset')" id="cbft-preset"
+          style="padding:8px 14px;border-radius:6px;
+                 border:1px solid ${ft!=='manual'?'var(--accent)':'var(--border)'};
+                 background:${ft!=='manual'?'rgba(230,57,70,.15)':'var(--surface2)'};
+                 color:${ft!=='manual'?'var(--accent)':'var(--muted)'};
+                 font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .15s">
+          🏷️ Por tema / raridade
+        </button>
+        <button onclick="cbPickFilterType('manual')" id="cbft-manual"
+          style="padding:8px 14px;border-radius:6px;
+                 border:1px solid ${ft==='manual'?'var(--accent)':'var(--border)'};
+                 background:${ft==='manual'?'rgba(230,57,70,.15)':'var(--surface2)'};
+                 color:${ft==='manual'?'var(--accent)':'var(--muted)'};
+                 font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .15s">
+          🃏 Seleção manual
+        </button>
+      </div>
+      <div id="cbsec-preset" style="display:${ft==='manual'?'none':'block'}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;
+                    max-height:230px;overflow-y:auto;padding:4px">
+          ${presetGrid}
+        </div>
+      </div>
+      <div id="cbsec-manual" style="display:${ft==='manual'?'block':'none'}">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+          <input id="cb-msearch" type="text" placeholder="Buscar carta..." oninput="cbRenderManual()"
+            style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border);
+                   border-radius:6px;color:var(--text);font-size:12px;flex:1;min-width:100px;outline:none">
+          <select id="cb-mset" onchange="cbRenderManual()"
+            style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);
+                   border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">
+            <option value="">Todos os sets</option>
+            <option value="me04">🔥 ME04</option>
+            <option value="me03">🔵 ME03</option>
+            <option value="me02">👻 ME02</option>
+            <option value="meg">🌿 MEG</option>
+            <option value="mep">⭐ MEP</option>
+            <option value="me05">🌑 ME05</option>
+          </select>
+          <span id="cb-mcount" style="font-size:10px;color:var(--gold);font-family:'Space Mono',monospace;white-space:nowrap">${_cbManualSelected.size} selecionadas</span>
+        </div>
+        <div id="cb-mgrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));
+                                   gap:6px;max-height:240px;overflow-y:auto;padding:4px"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button onclick="cbConfirmSave('${isEdit?editId:''}')"
+        style="flex:1;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;
+               font-family:'Space Mono',monospace;font-size:12px;font-weight:700;cursor:pointer;
+               letter-spacing:1px;transition:opacity .15s"
+        onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+        ${isEdit?'✓ SALVAR':'✨ CRIAR FICHÁRIO'}
+      </button>
+      <button onclick="closeModal('mcustom')"
+        style="padding:12px 18px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);
+               border-radius:8px;font-family:'Space Mono',monospace;font-size:12px;cursor:pointer">CANCELAR</button>
+    </div>`;
+
+  if(ft==='manual')setTimeout(cbRenderManual,0);
+}
+
+function cbToggleEmojiPicker(){
+  const el=document.getElementById('cb-emoji-pick');
+  if(el)el.style.display=el.style.display==='none'?'flex':'none';
+}
+function cbPickEmoji(e){
+  _cbDraft.emoji=e;
+  const d=document.getElementById('cb-emoji-disp');if(d)d.textContent=e;
+  const p=document.getElementById('cb-emoji-pick');if(p)p.style.display='none';
+}
+function cbPickColor(col){
+  _cbDraft.cover_color=col;
+  document.querySelectorAll('[id^="cbcol-"]').forEach(el=>el.style.borderColor='transparent');
+  const el=document.getElementById('cbcol-'+col.replace('#',''));
+  if(el)el.style.borderColor='#fff';
+}
+function cbPickLayout(n){
+  _cbDraft.layout=n;
+  [2,3,4].forEach(x=>{
+    const btn=document.getElementById('cblay-'+x);if(!btn)return;
+    const a=x===n;
+    btn.style.borderColor=a?'var(--accent)':'var(--border)';
+    btn.style.background=a?'rgba(230,57,70,.15)':'var(--surface2)';
+    btn.style.color=a?'var(--accent)':'var(--muted)';
+    btn.style.fontWeight=a?'700':'400';
+  });
+}
+function cbPickFilterType(type){
+  _cbDraft.filter_config=type==='manual'
+    ?{type:'manual'}
+    :{type:'preset',key:(_cbDraft.filter_config&&_cbDraft.filter_config.key)||'ilustr_esp_rara'};
+  ['preset','manual'].forEach(t=>{
+    const btn=document.getElementById('cbft-'+t);if(!btn)return;
+    const a=t===type;
+    btn.style.borderColor=a?'var(--accent)':'var(--border)';
+    btn.style.background=a?'rgba(230,57,70,.15)':'var(--surface2)';
+    btn.style.color=a?'var(--accent)':'var(--muted)';
+  });
+  const ps=document.getElementById('cbsec-preset');
+  const ms=document.getElementById('cbsec-manual');
+  if(ps)ps.style.display=type==='manual'?'none':'block';
+  if(ms){ms.style.display=type==='manual'?'block':'none';if(type==='manual')setTimeout(cbRenderManual,0);}
+}
+function cbPickPreset(key){
+  _cbDraft.filter_config={type:'preset',key};
+  BINDER_PRESETS.forEach(p=>{
+    const el=document.getElementById('cbp-'+p.key);if(!el)return;
+    const a=p.key===key;
+    el.style.borderColor=a?p.color:'var(--border)';
+    el.style.background=a?p.color+'22':'var(--surface2)';
+    el.style.boxShadow=a?'0 0 10px '+p.color+'44':'';
+  });
+}
+function cbRenderManual(){
+  const q=(document.getElementById('cb-msearch')&&document.getElementById('cb-msearch').value||'').toLowerCase();
+  const sf=(document.getElementById('cb-mset')&&document.getElementById('cb-mset').value)||'';
+  const filtered=getAllCardsWithSet().filter(c=>{
+    if(sf&&c._setId!==sf)return false;
+    if(q&&!(c.name+c.n).toLowerCase().includes(q))return false;
+    return true;
+  }).slice(0,120);
+  const grid=document.getElementById('cb-mgrid');
+  if(!grid)return;
+  grid.innerHTML=filtered.map(c=>{
+    const k=c._setId+':'+c.n;
+    const sel=_cbManualSelected.has(k);
+    const imgFn=IMG_FNS[c._setId];
+    const src=imgFn?imgFn(c.n):'';
+    return`<div onclick="cbToggleManual('${c._setId}','${c.n}')" title="${c.name} #${c.n}"
+      style="border-radius:6px;overflow:hidden;cursor:pointer;position:relative;
+             border:2px solid ${sel?'var(--teal)':'transparent'};
+             background:${sel?'rgba(6,214,160,.1)':'var(--surface2)'};transition:all .15s">
+      <img src="${src}" alt="${c.n}"
+        style="width:100%;display:block;aspect-ratio:2/3;object-fit:cover;
+               filter:${sel?'none':'brightness(.5)'}">
+      ${sel?'<div style="position:absolute;top:3px;right:3px;width:14px;height:14px;background:var(--teal);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px;color:#000;font-weight:700">✓</div>':''}
+      <div style="font-size:7px;text-align:center;padding:2px;color:var(--muted);font-family:\'Space Mono\',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.n}</div>
+    </div>`;
+  }).join('');
+}
+function cbToggleManual(setId,n){
+  const k=setId+':'+n;
+  _cbManualSelected.has(k)?_cbManualSelected.delete(k):_cbManualSelected.add(k);
+  cbRenderManual();
+  const cnt=document.getElementById('cb-mcount');
+  if(cnt)cnt.textContent=_cbManualSelected.size+' selecionadas';
+}
+
+async function cbConfirmSave(editId){
+  const name=((document.getElementById('cb-name-inp')&&document.getElementById('cb-name-inp').value)||_cbDraft.name||'').trim();
+  if(!name){alert('Dê um nome ao fichário!');return;}
+  const isManual=_cbDraft.filter_config&&_cbDraft.filter_config.type==='manual';
+  const payload={
+    ...(editId?{id:editId}:{}),
+    name,
+    emoji:_cbDraft.emoji||'📚',
+    layout:_cbDraft.layout||3,
+    filter_config:_cbDraft.filter_config||{type:'preset',key:'ilustr_esp_rara'},
+    card_ids:isManual
+      ?Array.from(_cbManualSelected).map(k=>{const parts=k.split(':');return{set:parts[0],n:parts[1]};})
+      :[],
+    cover_color:_cbDraft.cover_color||'#a855f7',
+  };
+  closeModal('mcustom');
+  await saveCustomBinder(payload);
+  const binder=editId
+    ?customBinders.find(b=>b.id===editId)
+    :customBinders[0];
+  if(binder)openCustomBinderView(binder);
+  else renderCustomBindersHome();
+}
