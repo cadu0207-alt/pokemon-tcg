@@ -1508,3 +1508,86 @@ async function cbConfirmSave(editId){
   if(binder)openCustomBinderView(binder);
   else renderCustomBindersHome();
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   HOME PAGE — CARD ROTATION (top 3 por preço de cada coleção)
+   ═══════════════════════════════════════════════════════════════ */
+(function initHomeRotation(){
+  const INTERVAL = 3800; // ms entre cada card
+
+  // Formata preço BR
+  function fmtPriceBR(p){
+    if(p>=1000) return 'R$ '+Math.round(p).toLocaleString('pt-BR');
+    if(p>=100)  return 'R$ '+p.toFixed(0);
+    return 'R$ '+p.toFixed(2).replace('.',',');
+  }
+
+  function setupRotation(el){
+    let raw;
+    try{ raw=JSON.parse(el.dataset.cards); }catch(e){ return; }
+    if(!raw||raw.length<2) return;
+
+    const setId   = el.dataset.setid;
+    const imgEl   = el.querySelector('.hset-img-wrap img');
+    const badgeEl = el.querySelector('.hset-price-badge');
+    const rankEl  = el.querySelector('.hset-rank-badge');
+    const nameEl  = el.querySelector('.hset-card-name');
+    const dots    = el.querySelectorAll('.hset-dot');
+
+    let idx = 0;
+
+    function showCard(i, animate){
+      const c = raw[i];
+      const url = 'https://images.scrydex.com/pokemon/'+setId+'-'+c.n+'/large';
+
+      if(animate && imgEl){
+        imgEl.classList.add('fading');
+        setTimeout(()=>{
+          imgEl.src = url;
+          imgEl.classList.remove('fading');
+        }, 480);
+      } else if(imgEl){
+        imgEl.src = url;
+      }
+
+      if(badgeEl) badgeEl.textContent = fmtPriceBR(c.price);
+      if(rankEl)  rankEl.textContent  = i+1;
+      if(nameEl)  nameEl.textContent  = c.name;
+
+      dots.forEach((d,di)=>{
+        d.classList.toggle('active', di===i);
+      });
+    }
+
+    // Clique nos dots para navegar manualmente
+    dots.forEach((d,di)=>{
+      d.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        idx=di;
+        showCard(idx, true);
+      });
+    });
+
+    setInterval(()=>{
+      idx = (idx+1) % raw.length;
+      showCard(idx, true);
+    }, INTERVAL + Math.random()*600); // offset aleatório para não sincroni­zar
+  }
+
+  function init(){
+    document.querySelectorAll('.hset[data-cards]').forEach(setupRotation);
+  }
+
+  // Aguarda DOM pronto
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+
+/* goShop — helper para ir à aba shopping */
+function goShop(){
+  const shopTab = document.querySelector('.tabs .tab:last-child');
+  if(shopTab) go('shopping', shopTab);
+}

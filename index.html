@@ -74,42 +74,99 @@
       <h1 class="home-title">MyDeck</h1>
       <p class="home-sub">Master Set Tracker · Pokémon TCG Brasil</p>
       <div class="home-sets" id="home-sets">
+
+        <!-- ME05 — estático (em breve) -->
         <div class="hset-wrap" data-tilt>
           <div class="hset hset-me05" style="border-color:#42424288">
             <div class="hset-glow" style="background:radial-gradient(circle at 50% 50%,#424242,transparent 70%)"></div>
-            <img src="https://images.scrydex.com/pokemon/me5-61/large" alt="ME05" class="hset-img" onerror="this.style.opacity='.3'">
-            <div style="position:absolute;top:8px;right:8px;background:#f0932b;color:#fff;font-size:8px;padding:2px 6px;border-radius:4px;font-family:'Space Mono',monospace">EM BREVE</div>
+            <div class="hset-img-wrap">
+              <img src="https://images.scrydex.com/pokemon/me5-61/large" alt="ME05" onerror="this.style.opacity='.3'">
+            </div>
+            <div style="position:absolute;top:10px;right:10px;background:#f0932b;color:#fff;font-size:8px;padding:2px 8px;border-radius:4px;font-family:'Space Mono',monospace;z-index:4;transform:translateZ(25px)">EM BREVE</div>
             <div class="hset-info"><div class="hset-name">NEGRURA ABSOLUTA</div><div class="hset-code">ME05 · ago/2026</div></div>
           </div>
         </div>
+
+        <!-- ME04 — top 3 rotativos -->
         <div class="hset-wrap" data-tilt>
-          <div class="hset hset-me04">
+          <div class="hset hset-me04" id="hset-me04"
+               data-setid="me4"
+               data-cards='[{"n":122,"name":"Mega Greninja ex GOLD","price":1453.08},{"n":116,"name":"Mega Greninja ex SAR","price":1094.93},{"n":120,"name":"Tranquilidade do AZ","price":368.80}]'>
             <div class="hset-glow"></div>
-            <img src="https://images.scrydex.com/pokemon/me4-22/large" alt="ME04" class="hset-img" onerror="this.src='https://images.scrydex.com/pokemon/me4-1/large'">
-            <div class="hset-info"><div class="hset-name">CAOS ASCENDENTE</div><div class="hset-code">ME04 · 122 cartas</div></div>
+            <div class="hset-img-wrap">
+              <img src="https://images.scrydex.com/pokemon/me4-122/large" alt="ME04" onerror="this.src='https://images.scrydex.com/pokemon/me4-22/large'">
+            </div>
+            <div class="hset-price-badge">R$ 1.453</div>
+            <div class="hset-rank-badge">1</div>
+            <div class="hset-dots"><span class="hset-dot active"></span><span class="hset-dot"></span><span class="hset-dot"></span></div>
+            <div class="hset-info">
+              <div class="hset-name">CAOS ASCENDENTE</div>
+              <div class="hset-code">ME04 · 122 cartas</div>
+              <div class="hset-card-name" id="hset-me04-cname">Mega Greninja ex GOLD</div>
+            </div>
           </div>
         </div>
+
+        <!-- ME03 — top 3 rotativos -->
         <div class="hset-wrap" data-tilt>
-          <div class="hset hset-me03" style="border-color:#1565C088">
+          <div class="hset hset-me03" id="hset-me03" style="border-color:#1565C088"
+               data-setid="me3"
+               data-cards='[{"n":94,"name":"Clefairy (Stamp)","price":23.50},{"n":107,"name":"Meowth ex","price":15.34},{"n":113,"name":"Poké Pad","price":14.13}]'>
             <div class="hset-glow" style="background:radial-gradient(circle at 50% 50%,#1565C0,transparent 70%)"></div>
-            <img src="https://images.scrydex.com/pokemon/me3-63/large" alt="ME03" class="hset-img" onerror="this.src='https://images.scrydex.com/pokemon/me3-1/large'">
-            <div class="hset-info"><div class="hset-name">ORDEM PERFEITA</div><div class="hset-code">ME03 · 120 cartas</div></div>
+            <div class="hset-img-wrap">
+              <img src="https://images.scrydex.com/pokemon/me3-94/large" alt="ME03" onerror="this.src='https://images.scrydex.com/pokemon/me3-63/large'">
+            </div>
+            <div class="hset-price-badge">R$ 23,50</div>
+            <div class="hset-rank-badge">1</div>
+            <div class="hset-dots"><span class="hset-dot active"></span><span class="hset-dot"></span><span class="hset-dot"></span></div>
+            <div class="hset-info">
+              <div class="hset-name">ORDEM PERFEITA</div>
+              <div class="hset-code">ME03 · 120 cartas</div>
+              <div class="hset-card-name" id="hset-me03-cname">Clefairy (Stamp)</div>
+            </div>
           </div>
         </div>
+
+        <!-- ME02 — top 3 rotativos -->
         <div class="hset-wrap" data-tilt>
-          <div class="hset hset-me02">
+          <div class="hset hset-me02" id="hset-me02"
+               data-setid="me2"
+               data-cards='[{"n":125,"name":"Mega Charizard X ex SAR","price":1809},{"n":130,"name":"Mega Charizard X ex GOLD","price":1600},{"n":126,"name":"Mega Gengar ex SAR","price":400}]'>
             <div class="hset-glow"></div>
-            <img src="https://images.scrydex.com/pokemon/me2-13/large" alt="ME02" class="hset-img" onerror="this.src='https://images.scrydex.com/pokemon/me2-1/large'">
-            <div class="hset-info"><div class="hset-name">FOGO FANTASMAGÓRICO</div><div class="hset-code">ME02 · 130 cartas</div></div>
+            <div class="hset-img-wrap">
+              <img src="https://images.scrydex.com/pokemon/me2-125/large" alt="ME02" onerror="this.src='https://images.scrydex.com/pokemon/me2-13/large'">
+            </div>
+            <div class="hset-price-badge">R$ 1.809</div>
+            <div class="hset-rank-badge">1</div>
+            <div class="hset-dots"><span class="hset-dot active"></span><span class="hset-dot"></span><span class="hset-dot"></span></div>
+            <div class="hset-info">
+              <div class="hset-name">FOGO FANTASMAGÓRICO</div>
+              <div class="hset-code">ME02 · 130 cartas</div>
+              <div class="hset-card-name" id="hset-me02-cname">Mega Charizard X ex SAR</div>
+            </div>
           </div>
         </div>
+
+        <!-- MEG — top 3 rotativos -->
         <div class="hset-wrap" data-tilt>
-          <div class="hset hset-meg">
+          <div class="hset hset-meg" id="hset-meg"
+               data-setid="me1"
+               data-cards='[{"n":187,"name":"Mega Lucario ex GOLD","price":120},{"n":177,"name":"Mega Venusaur ex SAR","price":80},{"n":180,"name":"Mega Gardevoir ex SAR","price":80}]'>
             <div class="hset-glow"></div>
-            <img src="https://images.scrydex.com/pokemon/me1-3/large" alt="MEG" class="hset-img" onerror="this.src='https://images.scrydex.com/pokemon/me1-1/large'">
-            <div class="hset-info"><div class="hset-name">MEGAEVOLUÇÃO</div><div class="hset-code">MEG · 188 cartas</div></div>
+            <div class="hset-img-wrap">
+              <img src="https://images.scrydex.com/pokemon/me1-187/large" alt="MEG" onerror="this.src='https://images.scrydex.com/pokemon/me1-3/large'">
+            </div>
+            <div class="hset-price-badge">R$ 120</div>
+            <div class="hset-rank-badge">1</div>
+            <div class="hset-dots"><span class="hset-dot active"></span><span class="hset-dot"></span><span class="hset-dot"></span></div>
+            <div class="hset-info">
+              <div class="hset-name">MEGAEVOLUÇÃO</div>
+              <div class="hset-code">MEG · 188 cartas</div>
+              <div class="hset-card-name" id="hset-meg-cname">Mega Lucario ex GOLD</div>
+            </div>
           </div>
         </div>
+
       </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
         <button class="home-btn" onclick="goPage('app')">
@@ -150,6 +207,53 @@
     </div>
   </header>
   <div class="stripe"></div>
+
+  <!-- ═══ BANNER TOPO IWORLD TCG ═══ -->
+  <div class="ad-top" onclick="go('shopping',document.querySelector('.tab:last-child'))">
+    <div class="ad-top-logo">
+      <img src="https://ugc.production.linktr.ee/929ba8e6-3ff8-4f67-8973-e6f071b900cf_8567fd8ded86adcb458e6ac291267689-tplv-tiktokx-cropcenter-1080-1080.jpeg"
+           alt="iWorld TCG" onerror="this.style.display='none'">
+      <span class="ad-top-logo-name">iWorld TCG</span>
+    </div>
+    <div class="ad-top-marquee-wrap">
+      <div class="ad-top-marquee" id="ad-marquee">
+        <span class="ad-top-item"><span class="sep">★</span> <span class="hl">MAIOR ESTOQUE DE POKÉMON TCG</span> em Pereira Barreto · SP <span class="sep">★</span></span>
+        <span class="ad-top-item">Boosters &bull; Singles &bull; Packs Selados &bull; Entrega Nacional <span class="sep">⚡</span></span>
+        <span class="ad-top-item"><span class="hl">PULLS AO VIVO</span> no TikTok &bull; @iworldtcg <span class="sep">★</span></span>
+        <span class="ad-top-item">Cartas raras &bull; Ilustr. Esp. Raras &bull; Gold Cards &bull; Mega ex <span class="sep">⚡</span></span>
+        <span class="ad-top-item"><span class="hl">CONFIRA OS PREÇOS</span> e garanta a sua carta <span class="sep">★</span></span>
+        <!-- duplicado para loop contínuo -->
+        <span class="ad-top-item"><span class="sep">★</span> <span class="hl">MAIOR ESTOQUE DE POKÉMON TCG</span> em Pereira Barreto · SP <span class="sep">★</span></span>
+        <span class="ad-top-item">Boosters &bull; Singles &bull; Packs Selados &bull; Entrega Nacional <span class="sep">⚡</span></span>
+        <span class="ad-top-item"><span class="hl">PULLS AO VIVO</span> no TikTok &bull; @iworldtcg <span class="sep">★</span></span>
+        <span class="ad-top-item">Cartas raras &bull; Ilustr. Esp. Raras &bull; Gold Cards &bull; Mega ex <span class="sep">⚡</span></span>
+        <span class="ad-top-item"><span class="hl">CONFIRA OS PREÇOS</span> e garanta a sua carta <span class="sep">★</span></span>
+      </div>
+    </div>
+    <div class="ad-top-cta">
+      <button class="ad-top-btn" onclick="event.stopPropagation();go('shopping',document.querySelector('.tab:last-child'))">VER LOJA →</button>
+    </div>
+  </div>
+
+  <!-- ═══ SIDEBAR DIREITA IWORLD TCG ═══ -->
+  <div class="ad-side" id="ad-side" onclick="go('shopping',document.querySelector('.tab:last-child'))">
+    <button class="ad-side-close" onclick="event.stopPropagation();document.getElementById('ad-side').style.display='none'" title="Fechar">✕</button>
+    <div class="ad-side-glow"></div>
+    <img class="ad-side-logo"
+         src="https://ugc.production.linktr.ee/929ba8e6-3ff8-4f67-8973-e6f071b900cf_8567fd8ded86adcb458e6ac291267689-tplv-tiktokx-cropcenter-1080-1080.jpeg"
+         alt="iWorld TCG" onerror="this.style.display='none'">
+    <div class="ad-side-name">iWorld TCG</div>
+    <div class="ad-side-sub">Pereira Barreto · SP</div>
+    <div class="ad-side-div"></div>
+    <div class="ad-side-offers">
+      <div class="ad-side-offer"><span class="ad-side-offer-icon">★</span>Boosters &amp; Singles</div>
+      <div class="ad-side-offer"><span class="ad-side-offer-icon">★</span>Gold Cards raros</div>
+      <div class="ad-side-offer"><span class="ad-side-offer-icon">★</span>Pulls ao vivo</div>
+      <div class="ad-side-offer"><span class="ad-side-offer-icon">★</span>Entrega nacional</div>
+    </div>
+    <button class="ad-side-cta-btn">VER LOJA →</button>
+  </div>
+
   <nav class="tabs">
     <div class="tab active" onclick="go('dash',this)">📊 Dashboard</div>
     <div class="tab" onclick="go('gastos',this)">💸 Gastos</div>
