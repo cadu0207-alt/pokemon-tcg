@@ -150,10 +150,11 @@ async function loadAll(){
   setStatus('Conectando...','warning');
   if(!uid()){setStatus('Faça login','warning');return;}
   try{
+    const myUid=uid();
     const[{data:p},{data:c},{data:col}]=await Promise.all([
-      sbClient.from('purchases').select('*').order('date',{ascending:false}),
-      sbClient.from('pulled_cards').select('*').order('id',{ascending:true}),
-      sbClient.from('collection').select('slot_key')
+      sbClient.from('purchases').select('*').eq('user_id',myUid).order('date',{ascending:false}),
+      sbClient.from('pulled_cards').select('*').eq('user_id',myUid).order('id',{ascending:true}),
+      sbClient.from('collection').select('slot_key').eq('user_id',myUid)
     ]);
     purchases=Array.isArray(p)?p:[];
     pulledCards=Array.isArray(c)?c:[];
