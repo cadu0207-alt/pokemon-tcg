@@ -111,10 +111,16 @@
           </div>
         </div>
       </div>
-      <button class="home-btn" onclick="goPage('app')">
-        <span>ENTRAR NA COLEÇÃO</span>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </button>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+        <button class="home-btn" onclick="goPage('app')">
+          <span>ENTRAR NA COLEÇÃO</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+        <button class="home-btn" onclick="window.open('simulador.html','_blank')" style="background:linear-gradient(135deg,#7b2ff7,#f107a3);border-color:#9b4fff">
+          <span>🎰 SIMULADOR DE PACKS</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
       <div class="home-stats" id="home-stats">Carregando...</div>
     </div>
   </div>
@@ -151,6 +157,7 @@
     <div class="tab" onclick="go('fichario',this)">📚 Fichário</div>
     <div class="tab" onclick="go('preco',this)">💰 Preço Justo</div>
     <div class="tab" onclick="go('shopping',this)">🛒 Shopping</div>
+    <div class="tab" onclick="window.open('simulador.html','_blank')" style="background:linear-gradient(90deg,#7b2ff744,#f107a322);color:#c084fc">🎰 Simulador</div>
   </nav>
 
   <div id="dash" class="pane active">
