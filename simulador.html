@@ -109,9 +109,17 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
   font-family:'Bebas Neue',sans-serif;font-size:13px;
   background:rgba(0,0,0,.7);padding:2px 6px;border-radius:4px;
 }
+.qty-badge{
+  position:absolute;bottom:28px;right:4px;
+  background:rgba(0,0,0,.88);color:#fff;
+  font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:1px;
+  padding:1px 7px;border-radius:5px;z-index:2;
+  border:1px solid rgba(255,255,255,.25);
+}
 
 /* rarity colors */
 .card-face.r-comum{border-color:#3a4060;}
+.card-face.r-energia{border-color:#3a4060;opacity:.55;}
 .card-face.r-rh{border-color:var(--teal);box-shadow:0 0 8px rgba(0,180,216,.3);}
 .card-face.r-rd{border-color:var(--gold);box-shadow:0 0 16px rgba(247,183,49,.5);}
 .card-face.r-ir{border-color:#63b3ed;box-shadow:0 0 20px rgba(99,179,237,.6);}
@@ -245,41 +253,51 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 
 <div class="rates-wrap">
   <div class="rates-title">Pull Rates — ME04 Caos Ascendente</div>
+  <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:14px;line-height:1.6">
+    Pack BR: 6 cartas · 1 energia obrigatória + 4 comuns + 1 slot raro.<br>
+    Taxas do slot raro calibradas para 6–11 hits por display (36 packs).
+  </div>
   <div class="rate-row">
     <div class="rate-name" style="color:var(--gold)">⭐ Mega Hiper Raro</div>
-    <div class="rate-bar-wrap"><div class="rate-bar" style="width:.1046%;background:var(--gold)"></div></div>
-    <div class="rate-pct" style="color:var(--gold)">0,10%</div>
-    <div class="rate-1in">1 em 956</div>
+    <div class="rate-bar-wrap"><div class="rate-bar" style="width:.11%;background:var(--gold)"></div></div>
+    <div class="rate-pct" style="color:var(--gold)">0,11%</div>
+    <div class="rate-1in">1 em 909</div>
   </div>
   <div class="rate-row">
     <div class="rate-name" style="color:var(--pink)">✦ Ilustr. Rara Especial (SAR)</div>
-    <div class="rate-bar-wrap"><div class="rate-bar" style="width:1.2048%;background:var(--pink)"></div></div>
-    <div class="rate-pct" style="color:var(--pink)">1,20%</div>
-    <div class="rate-1in">1 em 83</div>
+    <div class="rate-bar-wrap"><div class="rate-bar" style="width:1%;background:var(--pink)"></div></div>
+    <div class="rate-pct" style="color:var(--pink)">1,00%</div>
+    <div class="rate-1in">1 em 100</div>
   </div>
   <div class="rate-row">
     <div class="rate-name" style="color:var(--purple)">◆ Rara Ultra (UR)</div>
-    <div class="rate-bar-wrap"><div class="rate-bar" style="width:8.3%;background:var(--purple)"></div></div>
-    <div class="rate-pct" style="color:var(--purple)">8,30%</div>
-    <div class="rate-1in">1 em 12</div>
+    <div class="rate-bar-wrap"><div class="rate-bar" style="width:3.5%;background:var(--purple)"></div></div>
+    <div class="rate-pct" style="color:var(--purple)">3,50%</div>
+    <div class="rate-1in">1 em 29</div>
   </div>
   <div class="rate-row">
     <div class="rate-name" style="color:#63b3ed">◇ Ilustr. Rara (IR)</div>
-    <div class="rate-bar-wrap"><div class="rate-bar" style="width:10.66%;background:#63b3ed"></div></div>
-    <div class="rate-pct" style="color:#63b3ed">10,66%</div>
-    <div class="rate-1in">1 em 9</div>
+    <div class="rate-bar-wrap"><div class="rate-bar" style="width:7%;background:#63b3ed"></div></div>
+    <div class="rate-pct" style="color:#63b3ed">7,00%</div>
+    <div class="rate-1in">1 em 14</div>
   </div>
   <div class="rate-row">
     <div class="rate-name" style="color:var(--gold)">◈ Rara Dupla (RD)</div>
-    <div class="rate-bar-wrap"><div class="rate-bar" style="width:20.3%;background:var(--gold)"></div></div>
-    <div class="rate-pct" style="color:var(--gold)">20,30%</div>
-    <div class="rate-1in">1 em 5</div>
+    <div class="rate-bar-wrap"><div class="rate-bar" style="width:12%;background:var(--gold)"></div></div>
+    <div class="rate-pct" style="color:var(--gold)">12,00%</div>
+    <div class="rate-1in">1 em 8</div>
   </div>
   <div class="rate-row">
     <div class="rate-name" style="color:var(--muted)">— Comum / Incomum / Rara</div>
-    <div class="rate-bar-wrap"><div class="rate-bar" style="width:59.44%;background:#3a4060"></div></div>
-    <div class="rate-pct" style="color:var(--muted)">59,44%</div>
+    <div class="rate-bar-wrap"><div class="rate-bar" style="width:76.39%;background:#3a4060"></div></div>
+    <div class="rate-pct" style="color:var(--muted)">76,39%</div>
     <div class="rate-1in">garantida</div>
+  </div>
+  <div class="rate-row" style="border-top:1px dashed var(--border);margin-top:4px">
+    <div class="rate-name" style="color:#3a4060">⚡ Energia (slot fixo)</div>
+    <div class="rate-bar-wrap"><div class="rate-bar" style="width:100%;background:#1c2238"></div></div>
+    <div class="rate-pct" style="color:#3a4060">sempre</div>
+    <div class="rate-1in">1 por pack</div>
   </div>
 </div>
 
@@ -291,8 +309,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 </div>
 
 <div class="disclaimer">
-  ⚠️ Simulador educativo. Cada pack é um sorteio independente pelas taxas do TCGplayer (8.500+ packs abertos em centro de autenticação). 
-  Preços das cartas baseados no mercado BR (MyDeck). Não garante resultado real. Serve para mostrar a dificuldade de tirar cartas raras na prática.
+  ⚠️ Simulador educativo. Pack BR: 6 cartas, sendo 1 energia obrigatória (sem valor) + 4 comuns + 1 slot raro.
+  Taxas do slot raro calibradas para refletir experiência real de 6–11 hits por display de 36 packs.
+  Preços baseados no mercado BR. Cada abertura é independente — não garante resultado real.
 </div>
 
 <script>
@@ -409,24 +428,33 @@ function selectProduct(p){
 
 // ═══════════════════════════════════════════════════════════════
 // PULL ENGINE
+// Estrutura do pack BR (ME series): 6 cartas
+//   1 Energia (obrigatória, slot fixo, sem chance de hit)
+//   4 Comuns/Incomuns
+//   1 Slot Raro (único roll de pull rate)
+// Taxas calibradas para 6-11 hits por display de 36 packs.
 // ═══════════════════════════════════════════════════════════════
 function rollRareSlot(){
   const r=Math.random()*100;
-  if(r<0.1046) return {pool:MHR_POOL,rare:'MHR'};
-  if(r<1.3094) return {pool:IRE_POOL,rare:'IRE'};
-  if(r<9.6082) return {pool:UR_POOL,rare:'UR'};
-  if(r<20.2682)return {pool:IR_POOL,rare:'IR'};
-  if(r<40.5682)return {pool:RD_POOL,rare:'RD'};
-  return {pool:BASE_NUMS,rare:'COMUM'};
+  // Cumulative: 0.11 | 1.11 | 4.61 | 11.61 | 23.61
+  if(r<0.11)  return {pool:MHR_POOL,rare:'MHR'};   // 0.11%  · 1 em ~909
+  if(r<1.11)  return {pool:IRE_POOL,rare:'IRE'};   // 1.00%  · 1 em 100
+  if(r<4.61)  return {pool:UR_POOL, rare:'UR'};    // 3.50%  · 1 em ~29
+  if(r<11.61) return {pool:IR_POOL, rare:'IR'};    // 7.00%  · 1 em ~14
+  if(r<23.61) return {pool:RD_POOL, rare:'RD'};    // 12.00% · 1 em ~8
+  return {pool:BASE_NUMS,rare:'COMUM'};              // 76.39% · garantida
 }
 
 function randomFrom(arr){return arr[Math.floor(Math.random()*arr.length)];}
 
+// Energias básicas do ME04 (cartas 123-128 aprox.)
+const ENERGIA_NUMS=[123,124,125,126,127,128];
+
 function openOnePack(){
-  // 4 commons + 1 reverse holo + 1 rare slot
+  // Estrutura BR: 1 energia + 4 comuns + 1 slot raro = 6 cartas
   const result=[];
+  result.push({num:randomFrom(ENERGIA_NUMS),rare:'ENERGIA'});
   for(let i=0;i<4;i++) result.push({num:randomFrom(BASE_NUMS),rare:'COMUM'});
-  result.push({num:randomFrom(BASE_NUMS),rare:'RH'});
   const rareSlot=rollRareSlot();
   result.push({num:randomFrom(rareSlot.pool),rare:rareSlot.rare});
   return result;
@@ -468,22 +496,51 @@ function fmtR(v){return(+v||0).toFixed(2).replace('.',',');}
 
 // ═══════════════════════════════════════════════════════════════
 // RENDER CARDS
+// Agrupa duplicatas, ordena por preço (maior→menor), badge xN
+// instant=true: todas viradas de uma vez (batch grande)
 // ═══════════════════════════════════════════════════════════════
-function renderCards(allCards,pricePerPack){
+const RAR_LABEL={'ENERGIA':'Energia','COMUM':'Comum','RH':'Rev. Holo','RD':'Rara Dupla','IR':'Ilustr. Rara','UR':'Rara Ultra','IRE':'Ilust. Rara Esp.','MHR':'Mega Hiper Raro'};
+const RAR_BG  ={'RD':'rgba(247,183,49,.2)','IR':'rgba(99,179,237,.2)','UR':'rgba(168,85,247,.2)','IRE':'rgba(236,72,153,.25)','MHR':'rgba(255,215,0,.3)'};
+const RAR_CLR ={'RD':'var(--gold)','IR':'#63b3ed','UR':'var(--purple)','IRE':'var(--pink)','MHR':'var(--gold)','RH':'var(--teal)','ENERGIA':'#3a4060'};
+
+function renderCards(allCards, instant=false){
   const row=document.getElementById('cards-row');
   row.innerHTML='';
-  allCards.forEach((c,i)=>{
+
+  // Agrupa pelo num da carta
+  const groups={};
+  allCards.forEach(c=>{
+    const key=c.num+'_'+c.rare;
+    if(!groups[key]) groups[key]={...c,qty:0};
+    groups[key].qty++;
+  });
+
+  // Ordena por preço decrescente (energia/comum ficam no fim)
+  const RARITY_ORDER={'MHR':0,'IRE':1,'UR':2,'IR':3,'RD':4,'RH':5,'COMUM':6,'ENERGIA':7};
+  const sorted=Object.values(groups).sort((a,b)=>{
+    const pa=CARD_DATA[a.num]?.price||(a.rare==='ENERGIA'?.15:.48);
+    const pb=CARD_DATA[b.num]?.price||(b.rare==='ENERGIA'?.15:.48);
+    if(pb!==pa) return pb-pa;
+    return (RARITY_ORDER[a.rare]??6)-(RARITY_ORDER[b.rare]??6);
+  });
+
+  sorted.forEach((c,i)=>{
     const data=CARD_DATA[c.num];
-    const name=data?data.name:'Carta #'+c.num;
-    const price=data?data.price:.48;
-    const img=`https://images.scrydex.com/pokemon/me4-${c.num}/large`;
+    const name=data?data.name:(c.rare==='ENERGIA'?'Energia':'Carta #'+c.num);
+    const price=data?data.price:(c.rare==='ENERGIA'?.15:.48);
+    const isEnergy=c.rare==='ENERGIA';
+    // Energias básicas ME04: cartas 123-128 usam imagem genérica (não há no scrydex)
+    const img=isEnergy
+      ?`https://images.scrydex.com/pokemon/me4-123/large`
+      :`https://images.scrydex.com/pokemon/me4-${c.num}/large`;
     const rarClass='r-'+c.rare.toLowerCase();
-    const rarLabel={'COMUM':'Comum','RH':'Reverse Holo','RD':'Rara Dupla','IR':'Ilustr. Rara','UR':'Rara Ultra','IRE':'Ilust. Rara Esp.','MHR':'Mega Hiper Raro'}[c.rare]||c.rare;
-    const rarBg={'RD':'rgba(247,183,49,.2)','IR':'rgba(99,179,237,.2)','UR':'rgba(168,85,247,.2)','IRE':'rgba(236,72,153,.25)','MHR':'rgba(255,215,0,.3)'}[c.rare]||'rgba(30,40,60,.5)';
-    const rarClr={'RD':'var(--gold)','IR':'#63b3ed','UR':'var(--purple)','IRE':'var(--pink)','MHR':'var(--gold)','RH':'var(--teal)'}[c.rare]||'var(--muted)';
+    const rarLabel=RAR_LABEL[c.rare]||c.rare;
+    const rarBg=RAR_BG[c.rare]||'rgba(30,40,60,.5)';
+    const rarClr=RAR_CLR[c.rare]||'var(--muted)';
+    const showPrice=!['COMUM','RH','ENERGIA'].includes(c.rare);
 
     const slot=document.createElement('div');
-    slot.className='card-slot';
+    slot.className='card-slot'+(instant?' flipped':'');
     slot.dataset.index=i;
     slot.innerHTML=`
       <div class="card-inner">
@@ -496,31 +553,35 @@ function renderCards(allCards,pricePerPack){
         <div class="card-face ${rarClass}">
           <img src="${img}" alt="${name}" onerror="this.style.display='none'">
           <div class="rarity-badge" style="background:${rarBg};color:${rarClr}">${rarLabel}</div>
-          ${c.rare!=='COMUM'&&c.rare!=='RH'?`<div class="price-badge" style="color:${rarClr}">R$${fmtR(price)}</div>`:''}
+          ${showPrice?`<div class="price-badge" style="color:${rarClr}">R$${fmtR(price)}</div>`:''}
+          ${c.qty>1?`<div class="qty-badge">x${c.qty}</div>`:''}
         </div>
       </div>`;
     row.appendChild(slot);
 
-    // Flip with delay
-    const delay=c.rare==='MHR'?i*400+600:i*250;
-    setTimeout(()=>{
-      slot.classList.add('flipped');
-      if(c.rare==='IRE') spawnParticles(slot,'pink');
-      if(c.rare==='MHR'){
-        spawnParticles(slot,'gold');
-        setTimeout(()=>showMHR(c.num,name,price),600);
-      }
-    },delay+300);
+    if(!instant){
+      const delay=c.rare==='MHR'?i*400+600:i*180;
+      setTimeout(()=>{
+        slot.classList.add('flipped');
+        if(c.rare==='IRE') spawnParticles(slot,'pink');
+        if(c.rare==='MHR'){
+          spawnParticles(slot,'gold');
+          setTimeout(()=>showMHR(c.num,name,price),600);
+        }
+      },delay+300);
+    } else {
+      if(c.rare==='IRE') setTimeout(()=>spawnParticles(slot,'pink'),i*30);
+    }
   });
 
-  // Add to history
-  const hit=allCards.find(c=>c.rare==='MHR')||allCards.find(c=>c.rare==='IRE')||
-    allCards.find(c=>c.rare==='UR')||allCards.find(c=>c.rare==='IR')||allCards.find(c=>c.rare==='RD');
-  if(hit){
-    const data=CARD_DATA[hit.num];
-    const name=data?data.name:'Carta #'+hit.num;
-    const price=data?data.price:.48;
-    addHistory(totalPacks,name,hit.rare,price);
+  // Registra melhor hit no histórico (apenas para abertura animada)
+  if(!instant){
+    const hit=sorted.find(c=>['MHR','IRE','UR','IR','RD'].includes(c.rare));
+    if(hit){
+      const data=CARD_DATA[hit.num];
+      addHistory(totalPacks,data?data.name:'Carta #'+hit.num,hit.rare,data?data.price:.48);
+      if(hit.rare==='MHR') showMHR(hit.num,data?data.name:'MHR',data?data.price:0);
+    }
   }
 }
 
@@ -567,6 +628,8 @@ function showMHR(num,name,price){
 
 // ═══════════════════════════════════════════════════════════════
 // OPEN PACKS
+// ≤3 packs → animado (flip um a um)
+// >3 packs → instant (todas agrupadas/ordenadas, sem delay)
 // ═══════════════════════════════════════════════════════════════
 let opening=false;
 async function openPacks(multiplier){
@@ -580,35 +643,39 @@ async function openPacks(multiplier){
   const totalPrice=parseFloat(priceInput.value)||selectedProduct.defaultPrice;
   const pricePerPack=totalPrice/selectedProduct.packs;
 
-  if(totalPacksToOpen<=6){
-    // Show cards animated
-    const allCards=[];
-    for(let i=0;i<totalPacksToOpen;i++) allCards.push(...openOnePack());
-    // Only show first 6 cards visually (rest in stats)
-    const showCards=allCards.slice(0,6);
-    renderCards(showCards,pricePerPack);
-    // Update stats for ALL
-    for(let i=0;i<totalPacksToOpen;i++){
-      const packCards=allCards.slice(i*6,i*6+6);
-      updateStats(pricePerPack,packCards);
+  // Abre todos os packs coletando TODAS as cartas
+  const allCards=[];
+  for(let i=0;i<totalPacksToOpen;i++){
+    const packCards=openOnePack();
+    updateStats(pricePerPack,packCards);
+    allCards.push(...packCards);
+  }
+
+  const isLarge=totalPacksToOpen>3;
+
+  if(isLarge){
+    // Batch: mostra tudo agrupado e ordenado, instantaneamente
+    renderCards(allCards,true);
+    // Registra os top 5 hits no histórico
+    const hits=allCards.filter(c=>['MHR','IRE','UR','IR','RD'].includes(c.rare));
+    hits.sort((a,b)=>(CARD_DATA[b.num]?.price||0)-(CARD_DATA[a.num]?.price||0));
+    hits.slice(0,5).forEach(c=>{
+      const d=CARD_DATA[c.num];
+      addHistory(totalPacks,d?d.name:'Carta #'+c.num,c.rare,d?d.price:0);
+    });
+    // MHR celebration
+    const mhr=hits.find(c=>c.rare==='MHR');
+    if(mhr){
+      const d=CARD_DATA[mhr.num];
+      spawnParticles({getBoundingClientRect:()=>({left:innerWidth/2,top:innerHeight/2,width:0,height:0})},'gold');
+      showMHR(mhr.num,d?d.name:'MHR',d?d.price:0);
     }
-    await wait(totalPacksToOpen*300+1500);
+    showBatchSummary(totalPacksToOpen,hits,totalPrice);
+    await wait(500);
   } else {
-    // Batch open - show results summary
-    const allHits=[];
-    for(let i=0;i<totalPacksToOpen;i++){
-      const packCards=openOnePack();
-      updateStats(pricePerPack,packCards);
-      const hit=packCards.find(c=>['MHR','IRE','UR','IR','RD'].includes(c.rare));
-      if(hit) allHits.push({...hit,packNum:totalPacks});
-    }
-    // Show last pack opened
-    const lastPack=openOnePack();
-    renderCards(lastPack,pricePerPack);
-    updateStats(pricePerPack,lastPack);
-    // Show summary banner
-    showBatchSummary(totalPacksToOpen,allHits,totalPrice);
-    await wait(2500);
+    // Animado: flip um a um
+    renderCards(allCards,false);
+    await wait(allCards.length*200+1500);
   }
 
   opening=false;
