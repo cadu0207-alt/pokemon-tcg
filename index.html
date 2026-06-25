@@ -16,13 +16,28 @@
     <div class="home-content">
       <div class="home-badge">Pokémon TCG • Brasil 🇧🇷</div>
       <h1 class="home-title">MEGAEVOLUÇÃO</h1>
-      <p class="home-sub">Master Set Tracker · ME04 · ME02 · MEG · MEP</p>
+      <p class="home-sub">Master Set Tracker · ME04 · ME03 · ME02 · MEG · MEP · ME05 · ME06</p>
       <div class="home-sets" id="home-sets">
+        <div class="hset-wrap" data-tilt>
+          <div class="hset hset-me05" style="border-color:#42424288">
+            <div class="hset-glow" style="background:radial-gradient(circle at 50% 50%,#424242,transparent 70%)"></div>
+            <img src="https://images.scrydex.com/pokemon/me5-61/large" alt="ME05" class="hset-img" onerror="this.style.opacity='.3'">
+            <div style="position:absolute;top:8px;right:8px;background:#f0932b;color:#fff;font-size:8px;padding:2px 6px;border-radius:4px;font-family:'Space Mono',monospace">EM BREVE</div>
+            <div class="hset-info"><div class="hset-name">NEGRURA ABSOLUTA</div><div class="hset-code">ME05 · ago/2026</div></div>
+          </div>
+        </div>
         <div class="hset-wrap" data-tilt>
           <div class="hset hset-me04">
             <div class="hset-glow"></div>
             <img src="https://images.scrydex.com/pokemon/me4-22/large" alt="ME04" class="hset-img" onerror="this.src='https://images.scrydex.com/pokemon/me4-1/large'">
             <div class="hset-info"><div class="hset-name">CAOS ASCENDENTE</div><div class="hset-code">ME04 · 122 cartas</div></div>
+          </div>
+        </div>
+        <div class="hset-wrap" data-tilt>
+          <div class="hset hset-me03" style="border-color:#1565C088">
+            <div class="hset-glow" style="background:radial-gradient(circle at 50% 50%,#1565C0,transparent 70%)"></div>
+            <img src="https://images.scrydex.com/pokemon/me3-63/large" alt="ME03" class="hset-img" onerror="this.src='https://images.scrydex.com/pokemon/me3-1/large'">
+            <div class="hset-info"><div class="hset-name">ORDEM PERFEITA</div><div class="hset-code">ME03 · 120 cartas</div></div>
           </div>
         </div>
         <div class="hset-wrap" data-tilt>
@@ -57,7 +72,7 @@
       <div>
         <div class="hbadge">Pokémon TCG • Megaevolução</div>
         <h1>COLEÇÃO MEGAEVOLUÇÃO</h1>
-        <div class="hsub">ME04 · ME02 · MEG · MEP &nbsp;/&nbsp; MASTER SET TRACKER</div>
+        <div class="hsub">ME06 · ME05 · ME04 · ME03 · ME02 · MEG · MEP &nbsp;/&nbsp; MASTER SET TRACKER</div>
       </div>
     </div>
     <div class="hstatus">
@@ -116,7 +131,10 @@
 
     <!-- Tabs dos sets -->
     <div style="display:flex;gap:2px;margin-bottom:12px;border-bottom:1px solid var(--border);overflow-x:auto">
+      <div class="ctab" id="fic-tab-me06" onclick="switchSet('me06',this)" style="opacity:.7">💎 ME06 <span class="ctab-n">breve</span></div>
+      <div class="ctab" id="fic-tab-me05" onclick="switchSet('me05',this)" style="opacity:.7">🌑 ME05 <span class="ctab-n">breve</span></div>
       <div class="ctab active" id="fic-tab-me04" onclick="switchSet('me04',this)">🔥 ME04 <span class="ctab-n">122</span></div>
+      <div class="ctab" id="fic-tab-me03" onclick="switchSet('me03',this)">🔵 ME03 <span class="ctab-n">120</span></div>
       <div class="ctab" id="fic-tab-me02" onclick="switchSet('me02',this)">👻 ME02 <span class="ctab-n">130</span></div>
       <div class="ctab" id="fic-tab-meg"  onclick="switchSet('meg',this)">🌿 MEG <span class="ctab-n">188</span></div>
       <div class="ctab" id="fic-tab-mep"  onclick="switchSet('mep',this)">⭐ MEP <span class="ctab-n">Promos</span></div>
@@ -269,7 +287,10 @@
   </div>
 </div>
 
+<script src="cards_me06.js"></script>
+<script src="cards_me05.js"></script>
 <script src="cards_me04.js"></script>
+<script src="cards_me03.js"></script>
 <script src="cards_me02.js"></script>
 <script src="cards_meg.js"></script>
 <script src="cards_mep.js"></script>

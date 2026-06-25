@@ -13,19 +13,24 @@ const sb={
 
 // ── IMAGENS ──────────────────────────────────────────────────────
 function imgMe04(n){return`https://images.scrydex.com/pokemon/me4-${parseInt(n)}/large`;}
+function imgMe03(n){return`https://images.scrydex.com/pokemon/me3-${parseInt(n)}/large`;}
 function imgMe02(n){return`https://images.scrydex.com/pokemon/me2-${parseInt(n)}/large`;}
+function imgMe05(n){return`https://images.scrydex.com/pokemon/me5-${parseInt(n)}/large`;}
+function imgMe06(n){return`https://images.scrydex.com/pokemon/me6-${parseInt(n)}/large`;}
 function imgMeg(n) {return`https://images.scrydex.com/pokemon/me1-${parseInt(n)}/large`;}
 function imgMep(n) {
-  // Promos MEP — usa pokemontcg.io ou scrydex
   const num=parseInt(n);
   return`https://images.scrydex.com/pokemon/mep-${num}/large`;
 }
 
 function getPurchaseImg(product){
   const p=product.toLowerCase();
-  if(p.includes('me04')||p.includes('caos')||p.includes('chaos')) return p.includes('quádr')||p.includes('quadr')?imgMe04(15):imgMe04(22);
-  if(p.includes('me02')||p.includes('fogo')||p.includes('phantasmal')) return imgMe02(13);
-  if(p.includes('meg')||p.includes('me01')&&!p.includes('me04')) return imgMeg(3);
+  if(p.includes('me06')||p.includes('esmeralda')||p.includes('storm'))  return imgMe06(1);
+  if(p.includes('me05')||p.includes('negrura')||p.includes('pitch'))    return imgMe05(61);
+  if(p.includes('me04')||p.includes('caos')||p.includes('chaos'))       return p.includes('quádr')||p.includes('quadr')?imgMe04(15):imgMe04(22);
+  if(p.includes('me03')||p.includes('ordem')||p.includes('perfect'))    return imgMe03(63);
+  if(p.includes('me02')||p.includes('fogo')||p.includes('phantasmal'))  return imgMe02(13);
+  if((p.includes('meg')||p.includes('me01'))&&!p.includes('me04'))      return imgMeg(3);
   if(p.includes('parceiros')||p.includes('partner')||p.includes('mep')) return imgMep(38);
   return imgMe04(22);
 }
@@ -34,15 +39,21 @@ function getCardImg(card){
   const num=(card.num||'').match(/(\d+)/);
   if(!num) return null;
   const n=num[1];const lote=(card.lote||'').toLowerCase();const ns=card.num||'';
-  if(lote.includes('me02')||lote.includes('phantasmal')||lote.includes('fogo')) return imgMe02(n);
-  if(lote.includes('meg')||lote.includes('me01')||ns.includes('/132')) return imgMeg(n);
+  if(lote.includes('me06')||lote.includes('esmeralda')||lote.includes('storm'))  return imgMe06(n);
+  if(lote.includes('me05')||lote.includes('negrura')||lote.includes('pitch'))    return imgMe05(n);
+  if(lote.includes('me03')||lote.includes('ordem')||lote.includes('perfect'))    return imgMe03(n);
+  if(lote.includes('me02')||lote.includes('phantasmal')||lote.includes('fogo'))  return imgMe02(n);
+  if(lote.includes('meg')||lote.includes('me01')||ns.includes('/132'))           return imgMeg(n);
   if(lote.includes('mep')||lote.includes('parceiros')||lote.includes('partner')) return imgMep(n);
-  if(lote.includes('me04')||lote.includes('caos')||lote.includes('chaos')) return imgMe04(n);
+  if(lote.includes('me04')||lote.includes('caos')||lote.includes('chaos'))       return imgMe04(n);
   return imgMe04(Math.min(parseInt(n)||1,122));
 }
 
 function getBinderImg(c,setId){
   const n=parseInt(c.n);
+  if(setId==='me06') return imgMe06(n);
+  if(setId==='me05') return imgMe05(n);
+  if(setId==='me03') return imgMe03(n);
   if(setId==='me02') return imgMe02(n);
   if(setId==='meg')  return imgMeg(n);
   if(setId==='mep')  return imgMep(n);
@@ -240,12 +251,23 @@ function renderDash(){
 
 // ── PROGRESS ────────────────────────────────────────────────────
 const SET_META={
+  me06:{label:'💎 ME06 — Esmeralda Tempestuosa',color:'#00c853',chase:'Mega Rayquaza ex Gold — R$1.500 (est.)',heroCard:1,imgFn:imgMe06,upcoming:true,releaseDate:'out/2026'},
+  me05:{label:'🌑 ME05 — Negrura Absoluta',color:'#424242',chase:'Mega Darkrai ex Gold — R$1.200 (est.)',heroCard:61,imgFn:imgMe05,upcoming:true,releaseDate:'ago/2026'},
   me04:{label:'🔥 ME04 — Caos Ascendente',color:'var(--accent)',chase:'Mega Greninja ex Gold — R$1.482',heroCard:22,imgFn:imgMe04},
+  me03:{label:'🔵 ME03 — Ordem Perfeita',color:'#1565C0',chase:'Mega Zygarde ex Gold — R$980',heroCard:63,imgFn:imgMe03},
   me02:{label:'👻 ME02 — Fogo Fantasmagórico',color:'#9C27B0',chase:'Mega Charizard X ex SAR — R$1.809',heroCard:13,imgFn:imgMe02},
   meg: {label:'🌿 MEG — Megaevolução',color:'#4CAF50',chase:'Mega Greninja ex UR — R$60',heroCard:3,imgFn:imgMeg},
   mep: {label:'⭐ MEP — Parceiros Iniciais',color:'#ffd166',chase:'Charmander MEP038 — R$36',heroCard:38,imgFn:imgMep},
 };
-const ALL_SETS={me04:()=>CARDS,me02:()=>CARDS_ME02,meg:()=>CARDS_MEG,mep:()=>CARDS_MEP};
+const ALL_SETS={
+  me06:()=>typeof CARDS_ME06!=='undefined'?CARDS_ME06:[],
+  me05:()=>typeof CARDS_ME05!=='undefined'?CARDS_ME05:[],
+  me04:()=>CARDS,
+  me03:()=>typeof CARDS_ME03!=='undefined'?CARDS_ME03:[],
+  me02:()=>CARDS_ME02,
+  meg:()=>CARDS_MEG,
+  mep:()=>CARDS_MEP
+};
 
 function countSlotsFor(cards,pfx){
   let total=0,col=0;
@@ -260,19 +282,21 @@ function updateDashProgress(){
     const sec=countSlotsFor(cards.filter(c=>!c.base),id);
     const tot=base.total+sec.total,col=base.col+sec.col;
     grand+=tot;grandC+=col;const pct=tot>0?(col/tot*100).toFixed(0):0;
-    return`<div class="panel" style="border-color:${meta.color}44;overflow:hidden;position:relative">
+    const upcomingBadge=meta.upcoming?`<div style="position:absolute;top:10px;right:10px;background:#f0932b;color:#fff;font-size:9px;letter-spacing:1px;padding:2px 8px;border-radius:4px;font-family:'Space Mono',monospace">EM BREVE ${meta.releaseDate||''}</div>`:'';
+    return`<div class="panel" style="border-color:${meta.color}44;overflow:hidden;position:relative;${meta.upcoming?'opacity:.8':''}">
+      ${upcomingBadge}
       <div style="position:absolute;right:-8px;top:-8px;width:70px;height:100px;opacity:.1;pointer-events:none">
         <img src="${meta.imgFn(meta.heroCard)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
       </div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
         <div style="flex:1"><div style="font-weight:700;font-size:13px">${meta.label}</div>
-        <div style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">${tot} slots · master set</div></div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;color:${meta.color};line-height:1">${pct}%</div>
+        <div style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">${meta.upcoming?'Lancamento previsto: '+(meta.releaseDate||'em breve'):(tot+' slots · master set')}</div></div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;color:${meta.color};line-height:1">${meta.upcoming?'?':pct+'%'}</div>
       </div>
-      <div class="prog"><div class="prog-lbl"><span>Base</span><span>${base.col}/${base.total}</span></div>
+      ${!meta.upcoming?`<div class="prog"><div class="prog-lbl"><span>Base</span><span>${base.col}/${base.total}</span></div>
         <div class="prog-t"><div class="prog-f" style="width:${base.total>0?(base.col/base.total*100).toFixed(1):0}%;background:${meta.color}"></div></div></div>
       ${sec.total>0?`<div class="prog" style="margin:0"><div class="prog-lbl"><span>Secretas</span><span>${sec.col}/${sec.total}</span></div>
-        <div class="prog-t"><div class="prog-f" style="width:${sec.total>0?(sec.col/sec.total*100).toFixed(1):0}%;background:${meta.color}88"></div></div></div>`:''}
+        <div class="prog-t"><div class="prog-f" style="width:${sec.total>0?(sec.col/sec.total*100).toFixed(1):0}%;background:${meta.color}88"></div></div></div>`:''}`:''}
       <div style="margin-top:10px;font-size:10px;font-family:'Space Mono',monospace;color:var(--muted)">Chase: <span style="color:${meta.color}">${meta.chase}</span></div>
     </div>`;
   }).join('');
@@ -356,7 +380,7 @@ function renderCartas(){
     ${kpiHTML('teal','💎 Valor Pull','R$'+fmtR(total),pulledCards.length+' cartas')}
     ${kpiHTML('gold','📊 % Investimento',roi+'%','de R$'+fmtR(invested))}
     ${kpiHTML('red','🛍️ Investido','R$'+fmtR(invested),purchases.length+' compras')}
-    ${kpiHTML('blue','📚 Sets','4','ME04 · ME02 · MEG · MEP')}
+    ${kpiHTML('blue','📚 Sets','7','ME04·ME03·ME02·MEG·MEP + ME05·ME06')}
   </div>`;
   const rl={'Dupla Rara (RR)':'RR','Ilustração Rara (SAR)':'SAR','Ilustracao Rara (SAR)':'SAR',
     'Ilustração Rara (IR)':'IR','Ilustracao Rara (IR)':'IR','Rara Ultra (UR)':'UR',
@@ -420,9 +444,18 @@ function switchSet(id,el){
   el.classList.add('active');renderBinder();
 }
 function getSetData(){
+  const me03c=typeof CARDS_ME03!=='undefined'?CARDS_ME03:[];
+  const me05c=typeof CARDS_ME05!=='undefined'?CARDS_ME05:[];
+  const me06c=typeof CARDS_ME06!=='undefined'?CARDS_ME06:[];
   const map={
+    me06:{cards:me06c,imgFn:imgMe06,label:'ME06 — Esmeralda Tempestuosa',upcoming:true,
+      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Secretas',filter:c=>!c.base}]},
+    me05:{cards:me05c,imgFn:imgMe05,label:'ME05 — Negrura Absoluta',upcoming:false,
+      sections:[{lbl:'📄 Base — 001 a 105',filter:c=>c.base},{lbl:'✨ Secretas',filter:c=>!c.base}]},
     me04:{cards:CARDS,imgFn:imgMe04,label:'ME04 — Caos Ascendente',
       sections:[{lbl:'📄 Base — 001 a 086',filter:c=>c.base},{lbl:'✨ Secretas — 087 a 122',filter:c=>!c.base}]},
+    me03:{cards:me03c,imgFn:imgMe03,label:'ME03 — Ordem Perfeita',
+      sections:[{lbl:'📄 Base — 001 a 070',filter:c=>c.base},{lbl:'✨ Secretas — 071 a 120',filter:c=>!c.base}]},
     me02:{cards:CARDS_ME02,imgFn:imgMe02,label:'ME02 — Fogo Fantasmagórico',
       sections:[{lbl:'📄 Base — 001 a 094',filter:c=>c.base},{lbl:'✨ Secretas — 095 a 130',filter:c=>!c.base}]},
     meg: {cards:CARDS_MEG,imgFn:imgMeg,label:'MEG — Megaevolução',
