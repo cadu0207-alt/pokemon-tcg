@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Simulador de Abertura — MyDeck</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#08090d;--surface:#0f1626;--surface2:#131929;--border:#1c2238;
+  --text:#dde1f0;--muted:#52597a;--teal:#00b4d8;--gold:#f7b731;
+  --red:#e63946;--green:#22c55e;--purple:#a855f7;--pink:#ec4899;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
+
+/* ── HEADER ── */
+.sim-header{
+  display:flex;align-items:center;gap:16px;padding:16px 32px;
+  border-bottom:1px solid var(--border);background:rgba(8,9,13,.9);
+  position:sticky;top:0;z-index:100;backdrop-filter:blur(12px);
+}
+.back-link{color:var(--muted);text-decoration:none;font-family:'Space Mono',monospace;font-size:11px;display:flex;align-items:center;gap:6px;}
+.back-link:hover{color:var(--teal);}
+.sim-title{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:2px;color:var(--text);}
+.sim-sub{font-family:'Space Mono',monospace;font-size:10px;color:var(--teal);margin-left:auto;}
+
+/* ── STATS BAR ── */
+.stats-bar{
+  display:flex;gap:0;border-bottom:1px solid var(--border);
+  background:var(--surface);
+}
+.stat-item{
+  flex:1;padding:14px 20px;border-right:1px solid var(--border);text-align:center;
+}
+.stat-item:last-child{border-right:none;}
+.stat-lbl{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:1px;}
+.stat-val.green{color:var(--green);}
+.stat-val.red{color:var(--red);}
+.stat-val.gold{color:var(--gold);}
+.stat-val.white{color:var(--text);}
+.stat-val.neg{color:var(--red);}
+.stat-val.pos{color:var(--green);}
+
+/* ── PRODUTO SELECTOR ── */
+.products-wrap{padding:24px 32px;border-bottom:1px solid var(--border);}
+.products-label{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;}
+.products-grid{display:flex;gap:10px;flex-wrap:wrap;}
+.product-card{
+  background:var(--surface);border:2px solid var(--border);border-radius:12px;
+  padding:14px 18px;cursor:pointer;transition:all .2s;min-width:140px;
+  display:flex;flex-direction:column;gap:4px;position:relative;
+}
+.product-card:hover{border-color:var(--teal);background:#0d1827;}
+.product-card.active{border-color:var(--teal);background:#071420;box-shadow:0 0 20px rgba(0,180,216,.2);}
+.product-card.active::after{content:'✓';position:absolute;top:8px;right:10px;color:var(--teal);font-size:12px;font-weight:700;}
+.pc-name{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;}
+.pc-packs{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);}
+.pc-price{
+  display:flex;align-items:center;gap:4px;margin-top:6px;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:4px 8px;
+}
+.pc-price-prefix{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);}
+.pc-price input{
+  background:none;border:none;color:var(--text);font-family:'Space Mono',monospace;font-size:13px;
+  font-weight:700;width:60px;outline:none;
+}
+
+/* ── ARENA ── */
+.arena{padding:32px;display:flex;flex-direction:column;align-items:center;gap:28px;}
+
+/* ── CARDS ROW ── */
+.cards-row{
+  display:flex;gap:12px;justify-content:center;flex-wrap:wrap;
+  min-height:200px;align-items:center;
+}
+.card-slot{
+  width:105px;height:148px;perspective:800px;cursor:pointer;
+  flex-shrink:0;
+}
+.card-inner{
+  width:100%;height:100%;position:relative;
+  transform-style:preserve-3d;transition:transform .6s cubic-bezier(.4,0,.2,1);
+}
+.card-slot.flipped .card-inner{transform:rotateY(180deg);}
+.card-face,.card-back{
+  position:absolute;inset:0;border-radius:10px;
+  backface-visibility:hidden;overflow:hidden;
+}
+.card-back{
+  background:linear-gradient(135deg,#0d1827,#1a2e4a);
+  border:2px solid #1c3050;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:6px;
+}
+.card-back-logo{font-family:'Bebas Neue',sans-serif;font-size:11px;color:#2a4060;letter-spacing:2px;}
+.card-back svg{opacity:.2;}
+.card-face{transform:rotateY(180deg);border:2px solid transparent;}
+.card-face img{width:100%;height:100%;object-fit:cover;display:block;}
+.card-face .rarity-badge{
+  position:absolute;bottom:4px;left:4px;right:4px;
+  font-family:'Space Mono',monospace;font-size:8px;font-weight:700;
+  text-align:center;padding:2px 4px;border-radius:4px;
+  text-transform:uppercase;letter-spacing:1px;
+}
+.card-face .price-badge{
+  position:absolute;top:4px;right:4px;
+  font-family:'Bebas Neue',sans-serif;font-size:13px;
+  background:rgba(0,0,0,.7);padding:2px 6px;border-radius:4px;
+}
+
+/* rarity colors */
+.card-face.r-comum{border-color:#3a4060;}
+.card-face.r-rh{border-color:var(--teal);box-shadow:0 0 8px rgba(0,180,216,.3);}
+.card-face.r-rd{border-color:var(--gold);box-shadow:0 0 16px rgba(247,183,49,.5);}
+.card-face.r-ir{border-color:#63b3ed;box-shadow:0 0 20px rgba(99,179,237,.6);}
+.card-face.r-ur{border-color:var(--purple);box-shadow:0 0 24px rgba(168,85,247,.7);}
+.card-face.r-ire{border-color:var(--pink);box-shadow:0 0 40px rgba(236,72,153,.9);animation:pulse-ire 1.5s ease-in-out infinite;}
+.card-face.r-mhr{border-color:var(--gold);box-shadow:0 0 60px rgba(255,215,0,1),0 0 120px rgba(255,200,0,.6);animation:pulse-mhr .6s ease-in-out infinite;}
+
+@keyframes pulse-ire{0%,100%{box-shadow:0 0 30px rgba(236,72,153,.7);}50%{box-shadow:0 0 60px rgba(236,72,153,1),0 0 90px rgba(168,85,247,.5);}}
+@keyframes pulse-mhr{0%,100%{box-shadow:0 0 60px rgba(255,215,0,.9);}50%{box-shadow:0 0 100px rgba(255,215,0,1),0 0 160px rgba(255,200,0,.7);}}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+@keyframes floatin{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+
+/* ── OPEN BUTTON ── */
+.open-btn{
+  padding:16px 56px;font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:3px;
+  background:linear-gradient(135deg,#0077b6,#00b4d8);
+  border:none;border-radius:12px;color:#fff;cursor:pointer;
+  transition:all .2s;box-shadow:0 4px 20px rgba(0,180,216,.3);
+  position:relative;overflow:hidden;
+}
+.open-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,180,216,.5);}
+.open-btn:active:not(:disabled){transform:translateY(0);}
+.open-btn:disabled{opacity:.4;cursor:not-allowed;}
+.open-btn.multi{background:linear-gradient(135deg,#7c3aed,#a855f7);}
+.open-btn.multi:hover:not(:disabled){box-shadow:0 8px 32px rgba(168,85,247,.5);}
+
+.btn-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;}
+
+/* ── MHR OVERLAY ── */
+#mhr-overlay{
+  display:none;position:fixed;inset:0;z-index:1000;
+  background:rgba(0,0,0,.85);align-items:center;justify-content:center;
+  flex-direction:column;gap:16px;text-align:center;
+}
+#mhr-overlay.active{display:flex;}
+#mhr-title{font-family:'Bebas Neue',sans-serif;font-size:72px;letter-spacing:4px;
+  color:var(--gold);text-shadow:0 0 40px rgba(255,215,0,.8);animation:floatin 2s ease-in-out infinite;}
+#mhr-img{width:200px;border-radius:14px;box-shadow:0 0 80px rgba(255,215,0,1);animation:floatin 2s ease-in-out infinite;}
+#mhr-sub{font-family:'Space Mono',monospace;font-size:13px;color:var(--gold);}
+#mhr-close{margin-top:12px;background:none;border:2px solid var(--gold);color:var(--gold);
+  font-family:'Bebas Neue',sans-serif;font-size:18px;padding:8px 32px;border-radius:8px;cursor:pointer;}
+
+/* ── PARTICLES ── */
+.particle{
+  position:fixed;pointer-events:none;border-radius:50%;z-index:999;
+  animation:particle-fall 2s ease-out forwards;
+}
+@keyframes particle-fall{
+  0%{transform:translateY(-20px) rotate(0deg);opacity:1;}
+  100%{transform:translateY(100vh) rotate(720deg);opacity:0;}
+}
+
+/* ── HISTORY ── */
+.history-wrap{padding:24px 32px;border-top:1px solid var(--border);}
+.history-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--muted);margin-bottom:14px;}
+.history-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;}
+.history-item{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  font-family:'Space Mono',monospace;font-size:11px;
+}
+.history-item.hi-rd{border-left:3px solid var(--gold);}
+.history-item.hi-ir{border-left:3px solid #63b3ed;}
+.history-item.hi-ur{border-left:3px solid var(--purple);}
+.history-item.hi-ire{border-left:3px solid var(--pink);}
+.history-item.hi-mhr{border-left:3px solid var(--gold);background:rgba(255,215,0,.05);}
+.hi-pack{color:var(--muted);min-width:60px;}
+.hi-name{flex:1;color:var(--text);}
+.hi-rarity{color:var(--muted);}
+.hi-price{color:var(--green);}
+
+/* ── PULL RATE TABLE ── */
+.rates-wrap{padding:24px 32px;border-top:1px solid var(--border);}
+.rates-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;margin-bottom:14px;}
+.rate-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.rate-row:last-child{border-bottom:none;}
+.rate-bar-wrap{flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.rate-bar{height:100%;border-radius:3px;transition:width 1s;}
+.rate-name{font-family:'Space Mono',monospace;font-size:10px;min-width:170px;}
+.rate-pct{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);min-width:80px;text-align:right;}
+.rate-1in{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);min-width:70px;}
+
+.disclaimer{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);padding:16px 32px 32px;opacity:.6;line-height:1.6;}
+</style>
+</head>
+<body>
+
+<div id="mhr-overlay">
+  <div id="mhr-title">⭐ MEGA HIPER RARO ⭐</div>
+  <img id="mhr-img" src="" alt="MHR">
+  <div id="mhr-sub"></div>
+  <button id="mhr-close" onclick="document.getElementById('mhr-overlay').classList.remove('active')">INCRÍVEL! FECHAR</button>
+</div>
+
+<header class="sim-header">
+  <a href="index.html" class="back-link">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    MyDeck
+  </a>
+  <div class="sim-title">🎴 Simulador de Abertura</div>
+  <div class="sim-sub">ME04 — Caos Ascendente · Taxas: TCGplayer (8.500+ packs)</div>
+</header>
+
+<div class="stats-bar">
+  <div class="stat-item"><div class="stat-lbl">Packs Abertos</div><div class="stat-val white" id="stat-packs">0</div></div>
+  <div class="stat-item"><div class="stat-lbl">Total Gasto</div><div class="stat-val red" id="stat-gasto">R$ 0,00</div></div>
+  <div class="stat-item"><div class="stat-lbl">Valor Puxado</div><div class="stat-val green" id="stat-valor">R$ 0,00</div></div>
+  <div class="stat-item"><div class="stat-lbl">Saldo</div><div class="stat-val" id="stat-saldo">R$ 0,00</div></div>
+  <div class="stat-item"><div class="stat-lbl">Rara Dupla</div><div class="stat-val gold" id="stat-rd">0</div></div>
+  <div class="stat-item"><div class="stat-lbl">IR / UR</div><div class="stat-val" id="stat-ir" style="color:#63b3ed">0 / 0</div></div>
+  <div class="stat-item"><div class="stat-lbl">SAR / MHR</div><div class="stat-val" id="stat-sar" style="color:var(--pink)">0 / 0</div></div>
+</div>
+
+<div class="products-wrap">
+  <div class="products-label">Escolha o produto para simular</div>
+  <div class="products-grid" id="products-grid"></div>
+</div>
+
+<div class="arena">
+  <div class="cards-row" id="cards-row">
+    <div style="font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);text-align:center;padding:40px 0">
+      Selecione um produto e clique em Abrir
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="open-btn" id="btn-open" onclick="openPacks(1)" disabled>ABRIR 1 PACK</button>
+    <button class="open-btn multi" id="btn-open10" onclick="openPacks(10)" disabled>ABRIR 10 PACKS</button>
+    <button class="open-btn" style="background:#1c2238;box-shadow:none;font-size:14px;padding:16px 24px" onclick="resetSim()">RESETAR</button>
+  </div>
+</div>
+
+<div class="rates-wrap">
+  <div class="rates-title">Pull Rates — ME04 Caos Ascendente</div>
+  <div class="rate-row">
+    <div class="rate-name" style="color:var(--gold)">⭐ Mega Hiper Raro</div>
+    <div class="rate-bar-wrap"><div class="rate-bar" style="width:.1046%;background:var(--gold)"></div></div>
+    <div class="rate-pct" style="color:var(--gold)">0,10%</div>
+    <div class="rate-1in">1 em 956</div>
+  </div>
+  <div class="rate-row">
+    <div class="rate-name" style="color:var(--pink)">✦ Ilustr. Rara Especial (SAR)</div>
+    <div class="rate-bar-wrap"><div class="rate-bar" style="width:1.2048%;background:var(--pink)"></div></div>
+    <div class="rate-pct" style="color:var(--pink)">1,20%</div>
+    <div class="rate-1in">1 em 83</div>
+  </div>
+  <div class="rate-row">
+    <div class="rate-name" style="color:var(--purple)">◆ Rara Ultra (UR)</div>
+    <div class="rate-bar-wrap"><div class="rate-bar" style="width:8.3%;background:var(--purple)"></div></div>
+    <div class="rate-pct" style="color:var(--purple)">8,30%</div>
+    <div class="rate-1in">1 em 12</div>
+  </div>
+  <div class="rate-row">
+    <div class="rate-name" style="color:#63b3ed">◇ Ilustr. Rara (IR)</div>
+    <div class="rate-bar-wrap"><div class="rate-bar" style="width:10.66%;background:#63b3ed"></div></div>
+    <div class="rate-pct" style="color:#63b3ed">10,66%</div>
+    <div class="rate-1in">1 em 9</div>
+  </div>
+  <div class="rate-row">
+    <div class="rate-name" style="color:var(--gold)">◈ Rara Dupla (RD)</div>
+    <div class="rate-bar-wrap"><div class="rate-bar" style="width:20.3%;background:var(--gold)"></div></div>
+    <div class="rate-pct" style="color:var(--gold)">20,30%</div>
+    <div class="rate-1in">1 em 5</div>
+  </div>
+  <div class="rate-row">
+    <div class="rate-name" style="color:var(--muted)">— Comum / Incomum / Rara</div>
+    <div class="rate-bar-wrap"><div class="rate-bar" style="width:59.44%;background:#3a4060"></div></div>
+    <div class="rate-pct" style="color:var(--muted)">59,44%</div>
+    <div class="rate-1in">garantida</div>
+  </div>
+</div>
+
+<div class="history-wrap">
+  <div class="history-title">📋 Histórico de Pulls</div>
+  <div class="history-list" id="history-list">
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);padding:8px">Nenhum pack aberto ainda.</div>
+  </div>
+</div>
+
+<div class="disclaimer">
+  ⚠️ Simulador educativo. Cada pack é um sorteio independente pelas taxas do TCGplayer (8.500+ packs abertos em centro de autenticação). 
+  Preços das cartas baseados no mercado BR (MyDeck). Não garante resultado real. Serve para mostrar a dificuldade de tirar cartas raras na prática.
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DADOS DAS CARTAS — ME04 Caos Ascendente
+// ═══════════════════════════════════════════════════════════════
+const CARD_DATA = {
+  // Rara Dupla (base)
+  3:{name:'Beedrill ex',price:11.99,rare:'RD'},
+  15:{name:'Mega Pyroar ex',price:5.53,rare:'RD'},
+  22:{name:'Mega Greninja ex',price:29.99,rare:'RD'},
+  35:{name:'Mega Floette ex',price:11.33,rare:'RD'},
+  41:{name:'Gourgeist ex',price:7.02,rare:'RD'},
+  48:{name:'Mega Gallade ex',price:6.89,rare:'RD'},
+  55:{name:'Krookodile ex',price:7.11,rare:'RD'},
+  64:{name:'Cobalion ex',price:7.61,rare:'RD'},
+  65:{name:'Mega Dragalge ex',price:6.99,rare:'RD'},
+  73:{name:'Cinccino ex',price:7.02,rare:'RD'},
+  // Ilustração Rara
+  87:{name:'Chespin (IR)',price:34.97,rare:'IR'},
+  88:{name:'Froakie (IR)',price:62.45,rare:'IR'},
+  89:{name:'Frogadier (IR)',price:82.33,rare:'IR'},
+  90:{name:'Ampharos (IR)',price:24.51,rare:'IR'},
+  91:{name:'Xerneas (IR)',price:34.99,rare:'IR'},
+  92:{name:'Claydol (IR)',price:18.08,rare:'IR'},
+  93:{name:'Crobat (IR)',price:28.36,rare:'IR'},
+  94:{name:'Metang (IR)',price:23.98,rare:'IR'},
+  95:{name:'Sliggoo (IR)',price:16.85,rare:'IR'},
+  96:{name:'Tauros (SAR)',price:31.00,rare:'IR'},
+  97:{name:'Watchog (IR)',price:15.32,rare:'IR'},
+  // Rara Ultra
+  98:{name:'Beedrill ex (UR)',price:35.67,rare:'UR'},
+  99:{name:'Mega Pyroar ex (UR)',price:16.33,rare:'UR'},
+  100:{name:'Mega Greninja ex (UR)',price:90.13,rare:'UR'},
+  101:{name:'Mega Floette ex (UR)',price:25.16,rare:'UR'},
+  102:{name:'Gourgeist ex (UR)',price:11.33,rare:'UR'},
+  103:{name:'Cobalion ex (UR)',price:13.99,rare:'UR'},
+  104:{name:'Mega Dragalge ex (UR)',price:22.31,rare:'UR'},
+  105:{name:'Cinccino ex (UR)',price:36.00,rare:'UR'},
+  106:{name:'Tranquilidade do AZ (UR)',price:27.33,rare:'UR'},
+  107:{name:'Emma (UR)',price:39.99,rare:'UR'},
+  108:{name:'Recuperação de Energia (UR)',price:49.00,rare:'UR'},
+  109:{name:'Sorvetão Jumbo (UR)',price:36.33,rare:'UR'},
+  110:{name:'Philippe (UR)',price:30.50,rare:'UR'},
+  111:{name:'Torre Prisma (UR)',price:39.00,rare:'UR'},
+  112:{name:'Show da Roxie (UR)',price:46.33,rare:'UR'},
+  113:{name:'Cartão Vermelho Esp. (UR)',price:70.00,rare:'UR'},
+  114:{name:'Praia de Surfista (UR)',price:47.68,rare:'UR'},
+  115:{name:'Sucateador de Ferr. (UR)',price:28.80,rare:'UR'},
+  // Ilustração Rara Especial (SAR)
+  116:{name:'Mega Greninja ex (SAR)',price:1094.93,rare:'IRE'},
+  117:{name:'Mega Floette ex (SAR)',price:263.46,rare:'IRE'},
+  118:{name:'Mega Dragalge ex (SAR)',price:212.66,rare:'IRE'},
+  119:{name:'Cinccino ex (SAR)',price:349.99,rare:'IRE'},
+  120:{name:'Tranquilidade do AZ (SAR)',price:368.80,rare:'IRE'},
+  121:{name:'Show da Roxie (SAR)',price:277.02,rare:'IRE'},
+  // Mega Hiper Raro
+  122:{name:'Mega Greninja ex GOLD',price:1453.08,rare:'MHR'},
+};
+// Base commons 1-86 que não são RD
+const BASE_NUMS=[1,2,4,5,6,7,8,9,10,11,12,13,14,16,17,18,19,20,21,23,24,25,26,
+  27,28,29,30,31,32,33,34,36,37,38,39,40,42,43,44,45,46,47,49,50,51,52,53,54,
+  56,57,58,59,60,61,62,63,66,67,68,69,70,71,72,74,75,76,77,78,79,80,81,82,83,84,85,86];
+
+const RD_POOL=[3,15,22,35,41,48,55,64,65,73];
+const IR_POOL=[87,88,89,90,91,92,93,94,95,96,97];
+const UR_POOL=[98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115];
+const IRE_POOL=[116,117,118,119,120,121];
+const MHR_POOL=[122];
+
+// ═══════════════════════════════════════════════════════════════
+// PRODUTOS
+// ═══════════════════════════════════════════════════════════════
+const PRODUCTS=[
+  {id:'avulso',   name:'Booster Avulso',  packs:1,  defaultPrice:14.99,  emoji:'📦'},
+  {id:'duplo',    name:'Blister Duplo',   packs:2,  defaultPrice:29.99,  emoji:'📦📦'},
+  {id:'triplo',   name:'Blister Triplo',  packs:3,  defaultPrice:39.99,  emoji:'📦📦📦'},
+  {id:'quaripack',name:'QuadriPack',       packs:4,  defaultPrice:54.99,  emoji:'🎁'},
+  {id:'box36',    name:'Box 36 Boosters', packs:36, defaultPrice:539.64, emoji:'📦✕36'},
+];
+
+let selectedProduct=null;
+const priceInputs={};
+
+function buildProducts(){
+  const grid=document.getElementById('products-grid');
+  PRODUCTS.forEach(p=>{
+    const card=document.createElement('div');
+    card.className='product-card';
+    card.id='pc-'+p.id;
+    card.innerHTML=`
+      <div class="pc-name">${p.emoji} ${p.name}</div>
+      <div class="pc-packs">${p.packs} pack${p.packs>1?'s':''}</div>
+      <div class="pc-price">
+        <div class="pc-price-prefix">R$</div>
+        <input type="number" id="price-${p.id}" value="${p.defaultPrice.toFixed(2)}" step="0.01" min="0" onclick="event.stopPropagation()">
+      </div>`;
+    card.addEventListener('click',()=>selectProduct(p));
+    grid.appendChild(card);
+    priceInputs[p.id]=card.querySelector('input');
+  });
+}
+
+function selectProduct(p){
+  selectedProduct=p;
+  document.querySelectorAll('.product-card').forEach(c=>c.classList.remove('active'));
+  document.getElementById('pc-'+p.id).classList.add('active');
+  document.getElementById('btn-open').disabled=false;
+  document.getElementById('btn-open10').disabled=false;
+  document.getElementById('btn-open').textContent=p.packs===1?'ABRIR 1 PACK':`ABRIR (${p.packs} PACKS)`;
+  document.getElementById('btn-open10').textContent=p.packs===36?'ABRIR 2 BOX (72 PACKS)':`ABRIR 10× (${p.packs*10} PACKS)`;
+  resetCards();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PULL ENGINE
+// ═══════════════════════════════════════════════════════════════
+function rollRareSlot(){
+  const r=Math.random()*100;
+  if(r<0.1046) return {pool:MHR_POOL,rare:'MHR'};
+  if(r<1.3094) return {pool:IRE_POOL,rare:'IRE'};
+  if(r<9.6082) return {pool:UR_POOL,rare:'UR'};
+  if(r<20.2682)return {pool:IR_POOL,rare:'IR'};
+  if(r<40.5682)return {pool:RD_POOL,rare:'RD'};
+  return {pool:BASE_NUMS,rare:'COMUM'};
+}
+
+function randomFrom(arr){return arr[Math.floor(Math.random()*arr.length)];}
+
+function openOnePack(){
+  // 4 commons + 1 reverse holo + 1 rare slot
+  const result=[];
+  for(let i=0;i<4;i++) result.push({num:randomFrom(BASE_NUMS),rare:'COMUM'});
+  result.push({num:randomFrom(BASE_NUMS),rare:'RH'});
+  const rareSlot=rollRareSlot();
+  result.push({num:randomFrom(rareSlot.pool),rare:rareSlot.rare});
+  return result;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATS STATE
+// ═══════════════════════════════════════════════════════════════
+let totalPacks=0,totalGasto=0,totalValor=0;
+let countRD=0,countIR=0,countUR=0,countIRE=0,countMHR=0;
+
+function updateStats(price,cards){
+  totalPacks++;totalGasto+=price;
+  let packVal=0;
+  cards.forEach(c=>{
+    const data=CARD_DATA[c.num];
+    const cardPrice=data?data.price:.48;
+    packVal+=cardPrice;
+    if(c.rare==='RD')countRD++;
+    if(c.rare==='IR')countIR++;
+    if(c.rare==='UR')countUR++;
+    if(c.rare==='IRE')countIRE++;
+    if(c.rare==='MHR')countMHR++;
+  });
+  totalValor+=packVal;
+  const saldo=totalValor-totalGasto;
+  document.getElementById('stat-packs').textContent=totalPacks;
+  document.getElementById('stat-gasto').textContent='R$ '+fmtR(totalGasto);
+  document.getElementById('stat-valor').textContent='R$ '+fmtR(totalValor);
+  const el=document.getElementById('stat-saldo');
+  el.textContent=(saldo>=0?'+ ':'- ')+'R$ '+fmtR(Math.abs(saldo));
+  el.style.color=saldo>=0?'var(--green)':'var(--red)';
+  document.getElementById('stat-rd').textContent=countRD;
+  document.getElementById('stat-ir').textContent=countIR+' / '+countUR;
+  document.getElementById('stat-sar').textContent=countIRE+' / '+countMHR;
+}
+
+function fmtR(v){return(+v||0).toFixed(2).replace('.',',');}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER CARDS
+// ═══════════════════════════════════════════════════════════════
+function renderCards(allCards,pricePerPack){
+  const row=document.getElementById('cards-row');
+  row.innerHTML='';
+  allCards.forEach((c,i)=>{
+    const data=CARD_DATA[c.num];
+    const name=data?data.name:'Carta #'+c.num;
+    const price=data?data.price:.48;
+    const img=`https://images.scrydex.com/pokemon/me4-${c.num}/large`;
+    const rarClass='r-'+c.rare.toLowerCase();
+    const rarLabel={'COMUM':'Comum','RH':'Reverse Holo','RD':'Rara Dupla','IR':'Ilustr. Rara','UR':'Rara Ultra','IRE':'Ilust. Rara Esp.','MHR':'Mega Hiper Raro'}[c.rare]||c.rare;
+    const rarBg={'RD':'rgba(247,183,49,.2)','IR':'rgba(99,179,237,.2)','UR':'rgba(168,85,247,.2)','IRE':'rgba(236,72,153,.25)','MHR':'rgba(255,215,0,.3)'}[c.rare]||'rgba(30,40,60,.5)';
+    const rarClr={'RD':'var(--gold)','IR':'#63b3ed','UR':'var(--purple)','IRE':'var(--pink)','MHR':'var(--gold)','RH':'var(--teal)'}[c.rare]||'var(--muted)';
+
+    const slot=document.createElement('div');
+    slot.className='card-slot';
+    slot.dataset.index=i;
+    slot.innerHTML=`
+      <div class="card-inner">
+        <div class="card-back">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#4060a0" stroke-width="1.5">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+          <div class="card-back-logo">MYDECK</div>
+        </div>
+        <div class="card-face ${rarClass}">
+          <img src="${img}" alt="${name}" onerror="this.style.display='none'">
+          <div class="rarity-badge" style="background:${rarBg};color:${rarClr}">${rarLabel}</div>
+          ${c.rare!=='COMUM'&&c.rare!=='RH'?`<div class="price-badge" style="color:${rarClr}">R$${fmtR(price)}</div>`:''}
+        </div>
+      </div>`;
+    row.appendChild(slot);
+
+    // Flip with delay
+    const delay=c.rare==='MHR'?i*400+600:i*250;
+    setTimeout(()=>{
+      slot.classList.add('flipped');
+      if(c.rare==='IRE') spawnParticles(slot,'pink');
+      if(c.rare==='MHR'){
+        spawnParticles(slot,'gold');
+        setTimeout(()=>showMHR(c.num,name,price),600);
+      }
+    },delay+300);
+  });
+
+  // Add to history
+  const hit=allCards.find(c=>c.rare==='MHR')||allCards.find(c=>c.rare==='IRE')||
+    allCards.find(c=>c.rare==='UR')||allCards.find(c=>c.rare==='IR')||allCards.find(c=>c.rare==='RD');
+  if(hit){
+    const data=CARD_DATA[hit.num];
+    const name=data?data.name:'Carta #'+hit.num;
+    const price=data?data.price:.48;
+    addHistory(totalPacks,name,hit.rare,price);
+  }
+}
+
+function addHistory(packN,name,rare,price){
+  const list=document.getElementById('history-list');
+  if(list.querySelector('[data-empty]'))list.innerHTML='';
+  const rarLabel={'RD':'Rara Dupla','IR':'Ilustr. Rara','UR':'Rara Ultra','IRE':'Ilust. Rara Esp.','MHR':'★ MEGA HIPER RARO'}[rare]||rare;
+  const rarClr={'RD':'gold','IR':'#63b3ed','UR':'var(--purple)','IRE':'var(--pink)','MHR':'var(--gold)'}[rare]||'var(--muted)';
+  const item=document.createElement('div');
+  item.className=`history-item hi-${rare.toLowerCase()}`;
+  item.innerHTML=`<div class="hi-pack">#${packN}</div>
+    <div class="hi-name">${name}</div>
+    <div class="hi-rarity" style="color:${rarClr}">${rarLabel}</div>
+    <div class="hi-price">R$ ${fmtR(price)}</div>`;
+  list.prepend(item);
+}
+
+function spawnParticles(anchor,color){
+  const rect=anchor.getBoundingClientRect();
+  const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
+  const colors=color==='gold'?['#FFD700','#FFA500','#FFFACD','#FFC107']:['#EC4899','#A855F7','#FF6EC7','#F97316'];
+  for(let i=0;i<(color==='gold'?40:16);i++){
+    const p=document.createElement('div');
+    const size=4+Math.random()*8;
+    p.className='particle';
+    p.style.cssText=`left:${cx+(-60+Math.random()*120)}px;top:${cy}px;
+      width:${size}px;height:${size}px;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      animation-duration:${1+Math.random()*1.5}s;
+      animation-delay:${Math.random()*0.3}s;`;
+    document.body.appendChild(p);
+    setTimeout(()=>p.remove(),3000);
+  }
+}
+
+function showMHR(num,name,price){
+  document.getElementById('mhr-img').src=`https://images.scrydex.com/pokemon/me4-${num}/large`;
+  document.getElementById('mhr-sub').textContent=`${name} · R$ ${fmtR(price)}`;
+  document.getElementById('mhr-overlay').classList.add('active');
+  // Screen shake
+  document.body.style.animation='none';
+  setTimeout(()=>{document.body.style.animation='';},10);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OPEN PACKS
+// ═══════════════════════════════════════════════════════════════
+let opening=false;
+async function openPacks(multiplier){
+  if(!selectedProduct||opening)return;
+  opening=true;
+  document.getElementById('btn-open').disabled=true;
+  document.getElementById('btn-open10').disabled=true;
+
+  const totalPacksToOpen=selectedProduct.packs*multiplier;
+  const priceInput=priceInputs[selectedProduct.id];
+  const totalPrice=parseFloat(priceInput.value)||selectedProduct.defaultPrice;
+  const pricePerPack=totalPrice/selectedProduct.packs;
+
+  if(totalPacksToOpen<=6){
+    // Show cards animated
+    const allCards=[];
+    for(let i=0;i<totalPacksToOpen;i++) allCards.push(...openOnePack());
+    // Only show first 6 cards visually (rest in stats)
+    const showCards=allCards.slice(0,6);
+    renderCards(showCards,pricePerPack);
+    // Update stats for ALL
+    for(let i=0;i<totalPacksToOpen;i++){
+      const packCards=allCards.slice(i*6,i*6+6);
+      updateStats(pricePerPack,packCards);
+    }
+    await wait(totalPacksToOpen*300+1500);
+  } else {
+    // Batch open - show results summary
+    const allHits=[];
+    for(let i=0;i<totalPacksToOpen;i++){
+      const packCards=openOnePack();
+      updateStats(pricePerPack,packCards);
+      const hit=packCards.find(c=>['MHR','IRE','UR','IR','RD'].includes(c.rare));
+      if(hit) allHits.push({...hit,packNum:totalPacks});
+    }
+    // Show last pack opened
+    const lastPack=openOnePack();
+    renderCards(lastPack,pricePerPack);
+    updateStats(pricePerPack,lastPack);
+    // Show summary banner
+    showBatchSummary(totalPacksToOpen,allHits,totalPrice);
+    await wait(2500);
+  }
+
+  opening=false;
+  document.getElementById('btn-open').disabled=false;
+  document.getElementById('btn-open10').disabled=false;
+}
+
+function showBatchSummary(numPacks,hits,totalPrice){
+  const mhr=hits.filter(h=>h.rare==='MHR');
+  const ire=hits.filter(h=>h.rare==='IRE');
+  const banner=document.createElement('div');
+  banner.style.cssText='position:fixed;top:80px;right:20px;background:#0f1626;border:1px solid #22c55e;border-radius:12px;padding:16px 20px;z-index:500;font-family:Space Mono,monospace;font-size:11px;max-width:280px;animation:floatin .3s ease-out;';
+  banner.innerHTML=`<div style="font-family:Bebas Neue,sans-serif;font-size:18px;color:#22c55e;margin-bottom:8px">ABERTURA DE ${numPacks} PACKS</div>
+    ${mhr.length?`<div style="color:var(--gold)">⭐ ${mhr.length}× Mega Hiper Raro!</div>`:''}
+    ${ire.length?`<div style="color:var(--pink)">✦ ${ire.length}× Ilustr. Rara Esp.</div>`:''}
+    <div style="color:#8892a4;margin-top:6px">Gasto: R$ ${fmtR(totalPrice)} · ${hits.length} hits</div>`;
+  document.body.appendChild(banner);
+  if(mhr.length) spawnParticles({getBoundingClientRect:()=>({left:window.innerWidth/2,top:window.innerHeight/2,width:0,height:0})},'gold');
+  setTimeout(()=>banner.remove(),4000);
+}
+
+function wait(ms){return new Promise(r=>setTimeout(r,ms));}
+
+function resetCards(){
+  const row=document.getElementById('cards-row');
+  row.innerHTML='<div style="font-family:Space Mono,monospace;font-size:12px;color:var(--muted);text-align:center;padding:40px 0">Clique em Abrir para simular</div>';
+}
+
+function resetSim(){
+  totalPacks=0;totalGasto=0;totalValor=0;
+  countRD=0;countIR=0;countUR=0;countIRE=0;countMHR=0;
+  document.getElementById('stat-packs').textContent='0';
+  document.getElementById('stat-gasto').textContent='R$ 0,00';
+  document.getElementById('stat-valor').textContent='R$ 0,00';
+  document.getElementById('stat-saldo').textContent='R$ 0,00';
+  document.getElementById('stat-saldo').style.color='var(--text)';
+  document.getElementById('stat-rd').textContent='0';
+  document.getElementById('stat-ir').textContent='0 / 0';
+  document.getElementById('stat-sar').textContent='0 / 0';
+  document.getElementById('history-list').innerHTML='<div data-empty style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);padding:8px">Nenhum pack aberto ainda.</div>';
+  resetCards();
+}
+
+// Init
+buildProducts();
+</script>
+</body>
+</html>
