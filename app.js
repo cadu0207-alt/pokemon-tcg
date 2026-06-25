@@ -308,9 +308,9 @@ function renderDash(){
 // ── PROGRESS ────────────────────────────────────────────────────
 const SET_META={
   me06:{label:'💎 ME06 — Esmeralda Tempestuosa',color:'#00c853',chase:'Mega Rayquaza ex Gold — R$1.500 (est.)',heroCard:1,imgFn:imgMe06,upcoming:true,releaseDate:'out/2026'},
-  me05:{label:'🌑 ME05 — Negrura Absoluta',color:'#424242',chase:'Mega Darkrai ex Gold — R$1.200 (est.)',heroCard:61,imgFn:imgMe05,upcoming:true,releaseDate:'ago/2026'},
+  me05:{label:'🌑 ME05 — Pitch Black',color:'#424242',chase:'Mega Darkrai ex Gold — R$1.200 (est.)',heroCard:61,imgFn:imgMe05,upcoming:true,releaseDate:'ago/2026'},
   me04:{label:'🔥 ME04 — Caos Ascendente',color:'var(--accent)',chase:'Mega Greninja ex Gold — R$1.482',heroCard:22,imgFn:imgMe04},
-  me03:{label:'🔵 ME03 — Ordem Perfeita',color:'#1565C0',chase:'Mega Zygarde ex Gold — R$980',heroCard:63,imgFn:imgMe03},
+  me03:{label:'🔵 ME03 — Ordem Perfeita',color:'#1565C0',chase:'Meowth ex SAR — R$870 · Mega Zygarde ex Gold — R$775',heroCard:62,imgFn:imgMe03},
   me02:{label:'👻 ME02 — Fogo Fantasmagórico',color:'#9C27B0',chase:'Mega Charizard X ex SAR — R$1.809',heroCard:13,imgFn:imgMe02},
   meg: {label:'🌿 MEG — Megaevolução',color:'#4CAF50',chase:'Mega Greninja ex UR — R$60',heroCard:3,imgFn:imgMeg},
   mep: {label:'⭐ MEP — Parceiros Iniciais',color:'#ffd166',chase:'Charmander MEP038 — R$36',heroCard:38,imgFn:imgMep},

@@ -1,4 +1,4 @@
-// ME05 — Negrura Absoluta (Pitch Black) — 119 cartas
+// ME05 — Pitch Black — 119 cartas
 // Lancamento EN: 17 jul 2026 | PT-BR: previsto ago 2026
 // Tema: Mega Darkrai ex, Mega Zeraora ex, Mega Chandelure ex, Mega Excadrill ex
 // NOTA: Precos estimados — set nao lancado ainda. Atualize apos o lancamento.
