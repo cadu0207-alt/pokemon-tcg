@@ -192,37 +192,8 @@
       <div class="sec-title" style="margin:0">💰 Calculadora de Preço Justo / EV</div>
     </div>
 
-    <!-- Seletor de set -->
-    <div style="display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid var(--border)">
-      <div class="ctab active" id="ev-set-me04" onclick="evSwitchSet('me04',this)">🔥 ME04</div>
-      <div class="ctab" id="ev-set-me02" onclick="evSwitchSet('me02',this)">👻 ME02</div>
-      <div class="ctab" id="ev-set-meg"  onclick="evSwitchSet('meg',this)">🌿 MEG</div>
-    </div>
-
-    <!-- Controle de margem -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;
-         padding:14px 18px;margin-bottom:22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-      <div style="flex:1;min-width:200px">
-        <div style="font-family:'Space Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);
-             text-transform:uppercase;margin-bottom:4px">Margem de segurança</div>
-        <div style="font-size:11px;color:var(--muted)">
-          Adiciona % ao EV para calcular o "preço justo" de compra (protege contra variação de pull rates)
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <input type="range" id="ev-margin" min="0" max="50" value="15" step="5"
-               oninput="renderEV()" style="width:120px;accent-color:var(--accent)">
-        <span id="ev-margin-lbl" style="font-family:'Bebas Neue',sans-serif;font-size:28px;
-              color:var(--gold);min-width:48px">15%</span>
-      </div>
-    </div>
-
-    <!-- Conteúdo dinâmico -->
-    <div id="ev-wrap">
-      <div style="color:var(--muted);font-size:12px;padding:20px;text-align:center">
-        Selecione um set para calcular o EV.
-      </div>
-    </div>
+    <!-- Conteúdo dinâmico (controles gerados pelo ev_calculator.js) -->
+    <div id="ev-wrap"></div>
   </div>
 </div>
 
@@ -306,16 +277,7 @@
 <script src="fichario_patch.js"></script>
 <script src="ev_calculator.js"></script>
 <script>
-// Integração: funções chamadas pelas tabs do EV
-function evSwitchSet(setId, el) {
-  document.querySelectorAll('[id^="ev-set-"]').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  evCurrentSet = setId;
-  renderEV();
-}
-// Garantir que ao abrir a aba Preço Justo o EV seja renderizado
-// (a função go() do app.js chama renderBinder quando id==='fichario';
-//  aqui capturamos a aba 'preco' via override suave)
+// Renderizar EV ao abrir a aba Preco Justo
 const _goOriginal = window.go;
 window.go = function(id, el) {
   _goOriginal && _goOriginal(id, el);
