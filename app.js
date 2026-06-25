@@ -1,15 +1,60 @@
 // ================================================================
-// Pokémon TCG Dashboard — app.js v3
+// Pokémon TCG Dashboard — app.js v4 (multi-user + Google Auth)
 // ================================================================
 const SUPABASE_URL='https://dvkiodmhtzlkvmyyzelx.supabase.co';
 const SUPABASE_KEY='sb_publishable_f4d1JHAzTWPWYAI0Vm6aRA_NwM-uzr3';
-const sb={
-  h:{'apikey':SUPABASE_KEY,'Authorization':`Bearer ${SUPABASE_KEY}`,'Content-Type':'application/json','Prefer':'return=representation'},
-  async get(t,p=''){return(await fetch(`${SUPABASE_URL}/rest/v1/${t}?${p}`,{headers:this.h})).json();},
-  async post(t,b){return(await fetch(`${SUPABASE_URL}/rest/v1/${t}`,{method:'POST',headers:this.h,body:JSON.stringify(b)})).json();},
-  async del(t,f){await fetch(`${SUPABASE_URL}/rest/v1/${t}?${f}`,{method:'DELETE',headers:this.h});},
-  async upsert(t,b){const h={...this.h,'Prefer':'resolution=merge-duplicates,return=representation'};return(await fetch(`${SUPABASE_URL}/rest/v1/${t}`,{method:'POST',headers:h,body:JSON.stringify(b)})).json();}
-};
+
+// Supabase JS client (CDN carregado antes deste script em index.html)
+const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let currentUser=null;
+
+// ── AUTH ────────────────────────────────────────────────────────
+function uid(){return currentUser?.id||null;}
+
+async function signInGoogle(){
+  await supabase.auth.signInWithOAuth({
+    provider:'google',
+    options:{redirectTo:window.location.href.split('?')[0].split('#')[0]}
+  });
+}
+async function signOut(){
+  await supabase.auth.signOut();
+  currentUser=null;
+  _showAuth(true);
+}
+
+function _showAuth(show){
+  const ov=document.getElementById('auth-overlay');
+  if(ov) ov.style.display=show?'flex':'none';
+}
+function _updateUserChip(user){
+  const chip=document.getElementById('user-chip');
+  if(!chip) return;
+  chip.style.display=user?'flex':'none';
+  if(!user) return;
+  const m=user.user_metadata||{};
+  const av=document.getElementById('user-avatar');
+  const nm=document.getElementById('user-display-name');
+  if(av) av.src=m.avatar_url||m.picture||'';
+  if(nm) nm.textContent=(m.full_name||m.name||user.email||'').split(' ')[0];
+}
+
+// Escuta mudanças de sessão (login/logout/refresh)
+supabase.auth.onAuthStateChange((_event,session)=>{
+  currentUser=session?.user??null;
+  _updateUserChip(currentUser);
+  if(currentUser){
+    _showAuth(false);
+    // Só carrega dados se o DOM estiver pronto
+    if(document.readyState==='complete'||document.readyState==='interactive'){
+      loadAll();
+    }else{
+      document.addEventListener('DOMContentLoaded',()=>loadAll());
+    }
+  }else{
+    _showAuth(true);
+  }
+});
 
 // ── IMAGENS ──────────────────────────────────────────────────────
 function imgMe04(n){return`https://images.scrydex.com/pokemon/me4-${parseInt(n)}/large`;}
@@ -100,18 +145,19 @@ function getVerFromRar(rar){
 // ── CARREGAR ──────────────────────────────────────────────────────
 async function loadAll(){
   setStatus('Conectando...','warning');
+  if(!uid()){setStatus('Faça login','warning');return;}
   try{
-    const[p,c,col]=await Promise.all([
-      sb.get('purchases','order=date.desc'),
-      sb.get('pulled_cards','order=id.asc'),
-      sb.get('collection','select=slot_key')
+    const[{data:p},{data:c},{data:col}]=await Promise.all([
+      supabase.from('purchases').select('*').order('date',{ascending:false}),
+      supabase.from('pulled_cards').select('*').order('id',{ascending:true}),
+      supabase.from('collection').select('slot_key')
     ]);
     purchases=Array.isArray(p)?p:[];
     pulledCards=Array.isArray(c)?c:[];
     collected=new Set((Array.isArray(col)?col:[]).map(r=>r.slot_key));
     setStatus('Online ✓','ok');
     renderAll();updateHomeStats();
-    if(typeof initFichario==='function')initFichario();// CORREÇÃO: init após collected ser carregado
+    if(typeof initFichario==='function')initFichario();
   }catch(e){setStatus('Erro de conexão','error');console.error(e);}
 }
 function setStatus(txt,state){
@@ -121,8 +167,14 @@ function setStatus(txt,state){
 
 // ── TOGGLE SLOT ──────────────────────────────────────────────────
 async function toggleSlot(key){
-  if(collected.has(key)){collected.delete(key);await sb.del('collection',`slot_key=eq.${encodeURIComponent(key)}`);}
-  else{collected.add(key);await sb.upsert('collection',{slot_key:key});}
+  if(!uid()) return;
+  if(collected.has(key)){
+    collected.delete(key);
+    await supabase.from('collection').delete().eq('slot_key',key).eq('user_id',uid());
+  }else{
+    collected.add(key);
+    await supabase.from('collection').upsert({slot_key:key,user_id:uid()},{onConflict:'user_id,slot_key'});
+  }
   renderBinder();updateDashProgress();
 }
 
@@ -607,9 +659,10 @@ function selectPulledVer(ver){
 }
 
 async function toggleVerCard(key,ver){
+  if(!uid()) return;
   const isCol=collected.has(key);
-  if(isCol){collected.delete(key);await sb.del('collection',`slot_key=eq.${encodeURIComponent(key)}`);}
-  else{collected.add(key);await sb.upsert('collection',{slot_key:key});}
+  if(isCol){collected.delete(key);await supabase.from('collection').delete().eq('slot_key',key).eq('user_id',uid());}
+  else{collected.add(key);await supabase.from('collection').upsert({slot_key:key,user_id:uid()},{onConflict:'user_id,slot_key'});}
   // Atualizar visual do card clicado
   const card=document.getElementById(`vcard-${ver}`);
   if(card){
@@ -647,7 +700,8 @@ async function saveBinderModal(card,setId){
       price:slot.price||card.price||null,
       psrc:'Fichário — preço estimado'
     };
-    const res=await sb.post('pulled_cards',row);
+    if(!uid()) return;
+    const {data:res}=await supabase.from('pulled_cards').insert({...row,user_id:uid()}).select();
     if(Array.isArray(res))pulledCards.push(...res);
     renderCartas();renderDash();
   }
@@ -784,17 +838,18 @@ async function saveBoosterOpening(){
   });
 
   // Salvar cartas tiradas
-  for(const row of rows){
-    const res=await sb.post('pulled_cards',row);
-    if(Array.isArray(res))pulledCards.push(...res);
-  }
-
-  // Marcar slots como coletados
-  for(const{card,setId,ver}of allItems){
-    const key=slotKey(setId+':',card.n,ver);
-    if(!collected.has(key)){
-      collected.add(key);
-      await sb.upsert('collection',{slot_key:key});
+  if(uid()){
+    for(const row of rows){
+      const{data:res}=await supabase.from('pulled_cards').insert({...row,user_id:uid()}).select();
+      if(Array.isArray(res))pulledCards.push(...res);
+    }
+    // Marcar slots como coletados
+    for(const{card,setId,ver}of allItems){
+      const key=slotKey(setId+':',card.n,ver);
+      if(!collected.has(key)){
+        collected.add(key);
+        await supabase.from('collection').upsert({slot_key:key,user_id:uid()},{onConflict:'user_id,slot_key'});
+      }
     }
   }
 
@@ -830,6 +885,7 @@ const rBC={'Dupla Rara (RR)':'br','Ilustração Rara (IR)':'bi','Ilustracao Rara
   'Ilustração Rara (SAR)':'bi','Ilustracao Rara (SAR)':'bi','Rara Ultra (UR)':'bi','Promocional':'bp'};
 
 async function addPurchase(){
+  if(!uid()) return;
   const prod=document.getElementById('m-prod').value.trim();
   const tipo=document.getElementById('m-tipo').value;
   const date=document.getElementById('m-data').value;
@@ -837,11 +893,12 @@ async function addPurchase(){
   const boost=parseInt(document.getElementById('m-boost').value)||0;
   const acess=document.getElementById('m-acess').checked;
   if(!prod||isNaN(price))return;
-  const res=await sb.post('purchases',{date,product:prod,tipo,boost,cards:boost*6,price,acessorio:acess});
-  if(Array.isArray(res))purchases.unshift(...res); // mais recente primeiro
+  const{data:res}=await supabase.from('purchases').insert({date,product:prod,tipo,boost,cards:boost*6,price,acessorio:acess,user_id:uid()}).select();
+  if(Array.isArray(res))purchases.unshift(...res);
   closeModal('mp');renderGastos();renderDash();
 }
 async function addCard(){
+  if(!uid()) return;
   const nome=document.getElementById('c-nome').value.trim();
   const num=document.getElementById('c-num').value.trim();
   const rar=document.getElementById('c-rar').value;
@@ -849,13 +906,14 @@ async function addCard(){
   const lote=document.getElementById('c-lote').value.trim();
   const price=parseFloat(document.getElementById('c-val').value)||0;
   if(!nome)return;
-  const res=await sb.post('pulled_cards',{name:nome,num,rar,src,lote,icon:rIC[rar]||'🃏',ic:'fp',bc:rBC[rar]||'bx',price,psrc:'Manual'});
+  const{data:res}=await supabase.from('pulled_cards').insert({name:nome,num,rar,src,lote,icon:rIC[rar]||'🃏',ic:'fp',bc:rBC[rar]||'bx',price,psrc:'Manual',user_id:uid()}).select();
   if(Array.isArray(res))pulledCards.push(...res);
   closeModal('mc');renderCartas();renderDash();
 }
 
 // ── INIT ─────────────────────────────────────────────────────────
 initParticles();
-(async()=>{await fetchCambio();await loadAll();})();
-// 3D cards precisam aguardar DOM + imagens
+fetchCambio();
+// loadAll() é chamado pelo onAuthStateChange quando o user loga
+_showAuth(true);
 setTimeout(init3DCards,500);
