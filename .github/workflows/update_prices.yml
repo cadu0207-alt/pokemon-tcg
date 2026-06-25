@@ -1,0 +1,53 @@
+name: Atualizar Preços das Cartas
+
+on:
+  schedule:
+    # Toda domingo às 10h UTC (7h BRT)
+    - cron: '0 10 * * 0'
+  workflow_dispatch:
+    # Permite rodar manualmente pela aba Actions do GitHub
+
+jobs:
+  update-prices:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # Necessário para fazer commit e push
+
+    steps:
+      - name: Checkout (branch Rotower)
+        uses: actions/checkout@v4
+        with:
+          ref: Rotower
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: scripts/requirements.txt
+
+      - name: Instalar dependências Python
+        run: pip install -r scripts/requirements.txt
+
+      - name: Instalar Chromium (Playwright)
+        run: playwright install chromium --with-deps
+
+      - name: Atualizar preços
+        run: python scripts/update_prices.py
+
+      - name: Commit e push (apenas se houver mudanças)
+        run: |
+          git config --global user.name  'Price Bot 🤖'
+          git config --global user.email 'actions@github.com'
+          if git diff --quiet cards_*.js; then
+            echo "Nenhuma mudança de preço detectada — nada a commitar."
+          else
+            CHANGED=$(git diff --name-only cards_*.js | tr '\n' ' ')
+            git add cards_*.js
+            git commit -m "chore: atualiza preços [$(date '+%Y-%m-%d')]
+
+Arquivos alterados: $CHANGED
+Fonte: tcgwatchtower.com (preços de mercado em USD)"
+            git push
+            echo "✅ Push realizado com sucesso."
+          fi
