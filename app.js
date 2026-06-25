@@ -5,20 +5,23 @@ const SUPABASE_URL='https://dvkiodmhtzlkvmyyzelx.supabase.co';
 const SUPABASE_KEY='sb_publishable_f4d1JHAzTWPWYAI0Vm6aRA_NwM-uzr3';
 
 // Supabase JS client (CDN carregado antes deste script em index.html)
-const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+if(!window.supabase){
+  console.error('❌ Supabase CDN não carregou — verifique conexão ou bloqueador de scripts');
+}
+const sbClient=window.supabase ? window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY) : null;
 let currentUser=null;
 
 // ── AUTH ────────────────────────────────────────────────────────
 function uid(){return currentUser?.id||null;}
 
 async function signInGoogle(){
-  await supabase.auth.signInWithOAuth({
+  await sbClient.auth.signInWithOAuth({
     provider:'google',
     options:{redirectTo:window.location.href.split('?')[0].split('#')[0]}
   });
 }
 async function signOut(){
-  await supabase.auth.signOut();
+  await sbClient.auth.signOut();
   currentUser=null;
   _showAuth(true);
 }
@@ -40,7 +43,7 @@ function _updateUserChip(user){
 }
 
 // Escuta mudanças de sessão (login/logout/refresh)
-supabase.auth.onAuthStateChange((_event,session)=>{
+sbClient.auth.onAuthStateChange((_event,session)=>{
   currentUser=session?.user??null;
   _updateUserChip(currentUser);
   if(currentUser){
@@ -148,9 +151,9 @@ async function loadAll(){
   if(!uid()){setStatus('Faça login','warning');return;}
   try{
     const[{data:p},{data:c},{data:col}]=await Promise.all([
-      supabase.from('purchases').select('*').order('date',{ascending:false}),
-      supabase.from('pulled_cards').select('*').order('id',{ascending:true}),
-      supabase.from('collection').select('slot_key')
+      sbClient.from('purchases').select('*').order('date',{ascending:false}),
+      sbClient.from('pulled_cards').select('*').order('id',{ascending:true}),
+      sbClient.from('collection').select('slot_key')
     ]);
     purchases=Array.isArray(p)?p:[];
     pulledCards=Array.isArray(c)?c:[];
@@ -170,10 +173,10 @@ async function toggleSlot(key){
   if(!uid()) return;
   if(collected.has(key)){
     collected.delete(key);
-    await supabase.from('collection').delete().eq('slot_key',key).eq('user_id',uid());
+    await sbClient.from('collection').delete().eq('slot_key',key).eq('user_id',uid());
   }else{
     collected.add(key);
-    await supabase.from('collection').upsert({slot_key:key,user_id:uid()},{onConflict:'user_id,slot_key'});
+    await sbClient.from('collection').upsert({slot_key:key,user_id:uid()},{onConflict:'user_id,slot_key'});
   }
   renderBinder();updateDashProgress();
 }
@@ -661,8 +664,8 @@ function selectPulledVer(ver){
 async function toggleVerCard(key,ver){
   if(!uid()) return;
   const isCol=collected.has(key);
-  if(isCol){collected.delete(key);await supabase.from('collection').delete().eq('slot_key',key).eq('user_id',uid());}
-  else{collected.add(key);await supabase.from('collection').upsert({slot_key:key,user_id:uid()},{onConflict:'user_id,slot_key'});}
+  if(isCol){collected.delete(key);await sbClient.from('collection').delete().eq('slot_key',key).eq('user_id',uid());}
+  else{collected.add(key);await sbClient.from('collection').upsert({slot_key:key,user_id:uid()},{onConflict:'user_id,slot_key'});}
   // Atualizar visual do card clicado
   const card=document.getElementById(`vcard-${ver}`);
   if(card){
@@ -701,7 +704,7 @@ async function saveBinderModal(card,setId){
       psrc:'Fichário — preço estimado'
     };
     if(!uid()) return;
-    const {data:res}=await supabase.from('pulled_cards').insert({...row,user_id:uid()}).select();
+    const {data:res}=await sbClient.from('pulled_cards').insert({...row,user_id:uid()}).select();
     if(Array.isArray(res))pulledCards.push(...res);
     renderCartas();renderDash();
   }
@@ -840,7 +843,7 @@ async function saveBoosterOpening(){
   // Salvar cartas tiradas
   if(uid()){
     for(const row of rows){
-      const{data:res}=await supabase.from('pulled_cards').insert({...row,user_id:uid()}).select();
+      const{data:res}=await sbClient.from('pulled_cards').insert({...row,user_id:uid()}).select();
       if(Array.isArray(res))pulledCards.push(...res);
     }
     // Marcar slots como coletados
@@ -848,7 +851,7 @@ async function saveBoosterOpening(){
       const key=slotKey(setId+':',card.n,ver);
       if(!collected.has(key)){
         collected.add(key);
-        await supabase.from('collection').upsert({slot_key:key,user_id:uid()},{onConflict:'user_id,slot_key'});
+        await sbClient.from('collection').upsert({slot_key:key,user_id:uid()},{onConflict:'user_id,slot_key'});
       }
     }
   }
@@ -893,7 +896,7 @@ async function addPurchase(){
   const boost=parseInt(document.getElementById('m-boost').value)||0;
   const acess=document.getElementById('m-acess').checked;
   if(!prod||isNaN(price))return;
-  const{data:res}=await supabase.from('purchases').insert({date,product:prod,tipo,boost,cards:boost*6,price,acessorio:acess,user_id:uid()}).select();
+  const{data:res}=await sbClient.from('purchases').insert({date,product:prod,tipo,boost,cards:boost*6,price,acessorio:acess,user_id:uid()}).select();
   if(Array.isArray(res))purchases.unshift(...res);
   closeModal('mp');renderGastos();renderDash();
 }
@@ -906,14 +909,9 @@ async function addCard(){
   const lote=document.getElementById('c-lote').value.trim();
   const price=parseFloat(document.getElementById('c-val').value)||0;
   if(!nome)return;
-  const{data:res}=await supabase.from('pulled_cards').insert({name:nome,num,rar,src,lote,icon:rIC[rar]||'🃏',ic:'fp',bc:rBC[rar]||'bx',price,psrc:'Manual',user_id:uid()}).select();
+  const{data:res}=await sbClient.from('pulled_cards').insert({name:nome,num,rar,src,lote,icon:rIC[rar]||'🃏',ic:'fp',bc:rBC[rar]||'bx',price,psrc:'Manual',user_id:uid()}).select();
   if(Array.isArray(res))pulledCards.push(...res);
   closeModal('mc');renderCartas();renderDash();
 }
 
-// ── INIT ─────────────────────────────────────────────────────────
-initParticles();
-fetchCambio();
-// loadAll() é chamado pelo onAuthStateChange quando o user loga
-_showAuth(true);
-setTimeout(init3DCards,500);
+// ── INIT ────────────────────────────────────────────────────────
