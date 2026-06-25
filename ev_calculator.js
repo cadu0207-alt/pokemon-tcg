@@ -1,16 +1,18 @@
 // ============================================================
 //  EV CALCULATOR — Metodologia 6 Passos
+//  Taxas calibradas para pack BR (6 cartas: 1 energia + 4 comuns + 1 slot raro)
+//  Meta: 6–11 hits por display de 36 packs
 // ============================================================
 var PULL_RATES = {
-  'Rara':              { prob: 0.5944, label: 'Rara base (~59%)' },
-  'Dupla Rara':        { prob: 1/5,   label: 'Dupla Rara (RR) 1/5' },
-  'Ilustr. Rara':      { prob: 1/9,   label: 'Ilustr. Rara (IR) 1/9' },
-  'Rara Ultra':        { prob: 1/12,  label: 'Rara Ultra (UR) 1/12' },
-  'Ilustr. Esp. Rara': { prob: 1/83,  label: 'Ilustr. Especial (SAR) 1/83' },
-  'Mega Hyper Rare':   { prob: 1/956, label: 'Mega Hiper Raro 1/956' },
-  'Rara (Holo)':       { prob: 0,     label: 'Rara Holo (nao existe)' },
-  'Comum':             { prob: 3.0,   label: 'Comum' },
-  'Incomum':           { prob: 1.0,   label: 'Incomum' }
+  'Rara':              { prob: 0.7639, label: 'Rara base (76,4%)' },
+  'Dupla Rara':        { prob: 0.12,   label: 'Dupla Rara (RD) 1/8' },
+  'Ilustr. Rara':      { prob: 0.07,   label: 'Ilustr. Rara (IR) 1/14' },
+  'Rara Ultra':        { prob: 0.035,  label: 'Rara Ultra (UR) 1/29' },
+  'Ilustr. Esp. Rara': { prob: 0.01,   label: 'Ilustr. Especial (SAR) 1/100' },
+  'Mega Hyper Rare':   { prob: 1/909,  label: 'Mega Hiper Raro 1/909' },
+  'Rara (Holo)':       { prob: 0,      label: 'Rara Holo (nao existe)' },
+  'Comum':             { prob: 3.0,    label: 'Comum' },
+  'Incomum':           { prob: 1.0,    label: 'Incomum' }
 };
 var EV_EXCLUDE = { 'Comum': true, 'Incomum': true };
 
@@ -61,27 +63,44 @@ function calcEV(cards) {
 //  CATALOGO DE PRODUTOS
 // ============================================================
 var CATALOG = [
-  { id:'me04-display', grupo:'ME04 — Caos Ascendente', nome:'Box Display (36 boosters)', boosters:36, varejo:539.99, set:'me04', extras:[], premium:0 },
-  { id:'me04-etb',     grupo:'ME04 — Caos Ascendente', nome:'Elite Trainer Box (9 boosters)', boosters:9,  varejo:199.99, set:'me04', extras:[], premium:5 },
-  { id:'me04-blister4',grupo:'ME04 — Caos Ascendente', nome:'Blister Quadruplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me04', extras:[], premium:0 },
-  { id:'me04-blister3',grupo:'ME04 — Caos Ascendente', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me04', extras:[], premium:0 },
-  { id:'me04-booster', grupo:'ME04 — Caos Ascendente', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me04', extras:[], premium:0 },
-  { id:'me03-display', grupo:'ME03 — Ordem Perfeita', nome:'Box Display (36 boosters)', boosters:36, varejo:539.99, set:'me03', extras:[], premium:0 },
-  { id:'me03-etb',     grupo:'ME03 — Ordem Perfeita', nome:'Elite Trainer Box (9 boosters)', boosters:9,  varejo:199.99, set:'me03', extras:[], premium:5 },
-  { id:'me03-booster', grupo:'ME03 — Ordem Perfeita', nome:'Booster Avulso', boosters:1, varejo:14.99, set:'me03', extras:[], premium:0 },
-  { id:'me02-display', grupo:'ME02 — Fogo Fantasmagorico', nome:'Box Display (36 boosters)', boosters:36, varejo:539.99, set:'me02', extras:[], premium:0 },
-  { id:'me02-booster', grupo:'ME02 — Fogo Fantasmagorico', nome:'Booster Avulso', boosters:1, varejo:14.99, set:'me02', extras:[], premium:0 },
-  { id:'clefable-box', grupo:'Outros Produtos', nome:'Box Mega Luar Clefable ex (8 boost.)', boosters:8, varejo:139.90,
+  // ── ME04 Caos Ascendente ──────────────────────────────────
+  { id:'me04-display',  grupo:'ME04 — Caos Ascendente', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me04', extras:[], premium:0 },
+  { id:'me04-etb',      grupo:'ME04 — Caos Ascendente', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me04', extras:[], premium:5 },
+  { id:'me04-blister4', grupo:'ME04 — Caos Ascendente', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me04', extras:[], premium:0 },
+  { id:'me04-blister3', grupo:'ME04 — Caos Ascendente', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me04', extras:[], premium:0 },
+  { id:'me04-blister2', grupo:'ME04 — Caos Ascendente', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me04', extras:[], premium:0 },
+  { id:'me04-booster',  grupo:'ME04 — Caos Ascendente', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me04', extras:[], premium:0 },
+  // ── ME03 Ordem Perfeita ───────────────────────────────────
+  { id:'me03-display',  grupo:'ME03 — Ordem Perfeita', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me03', extras:[], premium:0 },
+  { id:'me03-etb',      grupo:'ME03 — Ordem Perfeita', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me03', extras:[], premium:5 },
+  { id:'me03-blister4', grupo:'ME03 — Ordem Perfeita', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me03', extras:[], premium:0 },
+  { id:'me03-blister3', grupo:'ME03 — Ordem Perfeita', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me03', extras:[], premium:0 },
+  { id:'me03-blister2', grupo:'ME03 — Ordem Perfeita', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me03', extras:[], premium:0 },
+  { id:'me03-booster',  grupo:'ME03 — Ordem Perfeita', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me03', extras:[], premium:0 },
+  // ── ME02 Fogo Fantasmagorico ──────────────────────────────
+  { id:'me02-display',  grupo:'ME02 — Fogo Fantasmagorico', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me02', extras:[], premium:0 },
+  { id:'me02-etb',      grupo:'ME02 — Fogo Fantasmagorico', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me02', extras:[], premium:5 },
+  { id:'me02-blister4', grupo:'ME02 — Fogo Fantasmagorico', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me02', extras:[], premium:0 },
+  { id:'me02-blister3', grupo:'ME02 — Fogo Fantasmagorico', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me02', extras:[], premium:0 },
+  { id:'me02-blister2', grupo:'ME02 — Fogo Fantasmagorico', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me02', extras:[], premium:0 },
+  { id:'me02-booster',  grupo:'ME02 — Fogo Fantasmagorico', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me02', extras:[], premium:0 },
+  // ── MEG Megaevolucao ──────────────────────────────────────
+  { id:'meg-display',   grupo:'MEG — Megaevolucao', nome:'Box Display (36 boosters)',       boosters:36, varejo:499.99, set:'meg', extras:[], premium:0 },
+  { id:'meg-blister4',  grupo:'MEG — Megaevolucao', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:54.99,  set:'meg', extras:[], premium:0 },
+  { id:'meg-blister3',  grupo:'MEG — Megaevolucao', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:39.99,  set:'meg', extras:[], premium:0 },
+  { id:'meg-booster',   grupo:'MEG — Megaevolucao', nome:'Booster Avulso',                 boosters:1,  varejo:13.99,  set:'meg', extras:[], premium:0 },
+  // ── Caixas Especiais ──────────────────────────────────────
+  { id:'clefable-box', grupo:'Caixas Especiais', nome:'Box Mega Luar Clefable ex (8 boost.)', boosters:8, varejo:139.90,
     raridades:[
       {nome:'Rev. Holo', freq:1.00,valor:0.80},{nome:'Rara Holo',freq:0.33,valor:4.00},
-      {nome:'Dupla Rara',freq:0.20,valor:7.00},{nome:'IR',freq:0.083,valor:35.00},
-      {nome:'UR/SAR',freq:0.033,valor:120.00},{nome:'Hyper Rare',freq:0.00056,valor:1500.00}
+      {nome:'Dupla Rara',freq:0.12,valor:7.00},{nome:'IR',freq:0.07,valor:35.00},
+      {nome:'UR/SAR',freq:0.035,valor:120.00},{nome:'Hyper Rare',freq:0.0011,valor:1500.00}
     ], extras:[{descricao:'Promo Mega Clefable ex',valor:10.00}], premium:12 },
-  { id:'chary-box', grupo:'Outros Produtos', nome:'Box Charizard Y ex (9 boost.)', boosters:9, varejo:149.99,
+  { id:'chary-box', grupo:'Caixas Especiais', nome:'Box Charizard Y ex (9 boost.)', boosters:9, varejo:149.99,
     raridades:[
       {nome:'Rev. Holo',freq:1.00,valor:0.80},{nome:'Rara Holo',freq:0.33,valor:4.00},
-      {nome:'Dupla Rara',freq:0.20,valor:7.00},{nome:'IR',freq:0.083,valor:35.00},
-      {nome:'UR/SAR',freq:0.033,valor:120.00},{nome:'Hyper Rare',freq:0.00056,valor:1500.00}
+      {nome:'Dupla Rara',freq:0.12,valor:7.00},{nome:'IR',freq:0.07,valor:35.00},
+      {nome:'UR/SAR',freq:0.035,valor:120.00},{nome:'Hyper Rare',freq:0.0011,valor:1500.00}
     ], extras:[{descricao:'Promo Charizard Y ex',valor:15.00}], premium:8 }
 ];
 
@@ -301,7 +320,7 @@ function renderEVResults() {
       '</table>' +
     '</div>' +
     '<div style="font-size:10px;color:var(--muted);line-height:1.7;padding:12px;background:var(--surface);border-radius:8px;border-left:3px solid var(--accent)">' +
-      'Pull rates reais (TCGplayer 8.500+ aberturas · Deck Certo). Bulk excluido. Teto = EV - 15% (margem de seguranca).' +
+      'Pack BR: 6 cartas (1 energia + 4 comuns + 1 slot raro). Taxas calibradas para 6–11 hits por display · Teto = EV - 15% (margem de seguranca). Bulk excluido do calculo.' +
     '</div>';
 }
 
