@@ -69,16 +69,20 @@ function loadCollection() {
    Persiste extras (qty, origins) em localStorage
 ───────────────────────────────────────────── */
 async function saveSlot(key, qty, origins) {
+  if (!uid()) return; // não salva sem login
   if (qty <= 0) {
     if (collected.has(key)) {
       collected.delete(key);
-      await sb.del('collection', `slot_key=eq.${encodeURIComponent(key)}`);
+      await sbClient.from('collection').delete().eq('slot_key', key).eq('user_id', uid());
     }
     delete ficCollection[key];
   } else {
     if (!collected.has(key)) {
       collected.add(key);
-      await sb.upsert('collection', { slot_key: key });
+      await sbClient.from('collection').upsert(
+        { slot_key: key, user_id: uid() },
+        { onConflict: 'user_id,slot_key' }
+      );
     }
     ficCollection[key] = { qty, origins };
   }
