@@ -68,7 +68,10 @@ function imgMe06(n){return`https://images.scrydex.com/pokemon/me6-${parseInt(n)}
 function imgMeg(n) {return`https://images.scrydex.com/pokemon/me1-${parseInt(n)}/large`;}
 function imgMep(n) {
   const num=parseInt(n);
-  return`https://images.scrydex.com/pokemon/mep-${num}/large`;
+  // scrydex tem só MEP037–039 indexados; para demais tenta ligapokemon CDN
+  if(num>=37&&num<=39) return`https://images.scrydex.com/pokemon/mep-${num}/large`;
+  const pad=String(num).padStart(3,'0');
+  return`https://images.ligapokemon.com.br/cards/MEPBR/MEP${pad}.png`;
 }
 
 function getPurchaseImg(product){
@@ -748,7 +751,12 @@ function getSetData(){
     meg: {cards:CARDS_MEG,imgFn:imgMeg,label:'MEG — Megaevolução',
       sections:[{lbl:'📄 Base — 001 a 132',filter:c=>c.base},{lbl:'✨ Secretas — 133 a 188',filter:c=>!c.base}]},
     mep: {cards:CARDS_MEP,imgFn:imgMep,label:'MEP — Parceiros Iniciais (Promos)',
-      sections:[{lbl:'⭐ Série 1 — Kanto, Sinnoh, Alola (MEP037–045)',filter:c=>c.base},{lbl:'📦 Outros Promos',filter:c=>!c.base}]},
+      sections:[
+        {lbl:'⭐ Série 1 — Kanto · Sinnoh · Alola (MEP037–045)',  filter:c=>c.series&&c.series.includes('Série 1')},
+        {lbl:'⭐ Série 2 — Johto · Unova · Galar (MEP046–054)',   filter:c=>c.series&&c.series.includes('Série 2')},
+        {lbl:'⭐ Série 3 — Hoenn · Kalos · Paldea (em breve)',    filter:c=>c.series&&c.series.includes('Série 3')},
+        {lbl:'📦 Outros Promos',                                   filter:c=>!c.series||!c.series.includes('Série')},
+      ]},
     // ── Escarlate e Violeta (2023-2025) ─────────────────────────────
     sv10:  {cards:typeof CARDS_SV10!=='undefined'?CARDS_SV10:[],  label:'SV10 — Rivais do Destino',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
