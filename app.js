@@ -152,16 +152,29 @@ async function fetchLivePrices(setId,cards){
   _lp[setId]=ps;
   try{localStorage.setItem(LP_KEY+'_'+setId,JSON.stringify({ts:Date.now(),p:ps}));}catch(e){}
   renderBinder();
+  _updateModalPrice();
+}
+
+// Atualiza preço no modal se estiver aberto quando os preços ao vivo chegarem
+let _modalCard=null,_modalSet=null;
+function _updateModalPrice(){
+  const sub=document.querySelector('#mbinder-content .mbinder-sub');
+  if(!sub||!_modalCard||!_modalSet)return;
+  const dp=lprice(_modalSet,_modalCard.n,_modalCard.price);
+  const live=!!_lp[_modalSet]?.[_modalCard.n];
+  sub.innerHTML=`#${_modalCard.n} · ${_modalCard.type||''} · ${_modalCard.rare||''} ${dp?`· R$${fmtR(dp)}${live?' <span style="color:var(--teal);font-size:10px">● ao vivo</span>':''}`:''}`;
 }
 
 // Média das 3 fontes: CardMarket BRL, TCGPlayer BRL, preço hardcoded BRL
 function lprice(setId,n,fallback){
   const p=_lp[setId]?.[n];
+  if(!p)return fallback;  // sem dado ao vivo → preço hardcoded sem ajuste
   const vs=[];
-  if(p?.eur)vs.push(p.eur);
-  if(p?.usd)vs.push(p.usd);
+  if(p.eur)vs.push(p.eur);
+  if(p.usd)vs.push(p.usd);
   if(fallback)vs.push(fallback);
-  return vs.length?+(vs.reduce((a,b)=>a+b)/vs.length).toFixed(2):fallback;
+  const avg=vs.reduce((a,b)=>a+b)/vs.length;
+  return +(avg*0.67).toFixed(2);  // -33% para ajuste ao mercado BR
 }
 
 // ── ESTADO ──────────────────────────────────────────────────────
@@ -671,6 +684,7 @@ function renderBinder(){
 // ── MODAL FICHÁRIO — marcar versão + origem da compra ────────────
 function openBinderModal(card, setId){
   if(typeof card==='string') card=JSON.parse(card);
+  _modalCard=card;_modalSet=setId;
   const slots=getSlots(card,setId);
   const pfx=setId+':';
   const imgSrc=getBinderImg(card,setId);
