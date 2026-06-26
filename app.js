@@ -1898,10 +1898,18 @@ async function cbConfirmSave(editId){
       idx = (idx+1) % raw.length;
       showCard(idx, true);
     }, INTERVAL + Math.random()*600); // offset aleatório para não sincroni­zar
+
+    // Ouve preços ao vivo vindos de initHomePrices()
+    el.addEventListener('pricesUpdated', e=>{
+      raw = e.detail.raw;
+      idx = 0;
+      showCard(0, false);
+    });
   }
 
   function init(){
     document.querySelectorAll('.hset[data-cards]').forEach(setupRotation);
+    initHomePrices(); // dispara busca de preços ao vivo (async, fire-and-forget)
   }
 
   // Aguarda DOM pronto
@@ -1911,6 +1919,73 @@ async function cbConfirmSave(editId){
     init();
   }
 })();
+
+/* ═══════════════════════════════════════════════════════════════
+   HOME PAGE — PREÇOS AO VIVO (TCGDex) PARA CHASE CARDS
+   Descobre top 3 de cada set pelo SET_CARDS_MAP, busca TCGDex,
+   usa cache de 24h (LP_KEY), despacha pricesUpdated no carousel.
+   ═══════════════════════════════════════════════════════════════ */
+async function initHomePrices(){
+  // data-setid → app setId (usado em TCGDX + cache)
+  const ID_MAP={me4:'me04',me3:'me03',me2:'me02',me1:'meg',mep:'mep'};
+
+  const els=[...document.querySelectorAll('.hset[data-setid]')];
+  await Promise.all(els.map(async el=>{
+    const appId=ID_MAP[el.dataset.setid];if(!appId)return;
+    const tid=TCGDX[appId];if(!tid)return;
+
+    // top 3 por preço estático — corrige ME03 e futuros sets na hora
+    const allC=(SET_CARDS_MAP[appId]?.())||[];
+    const top3=[...allC].filter(c=>c.price>0)
+      .sort((a,b)=>b.price-a.price).slice(0,3)
+      .map(c=>({n:c.n,name:c.name,price:c.price}));
+    if(!top3.length)return;
+
+    // atualiza carousel imediatamente com preços estáticos ordenados
+    el.dataset.cards=JSON.stringify(top3);
+    el.dispatchEvent(new CustomEvent('pricesUpdated',{detail:{raw:[...top3]}}));
+
+    // tenta cache ao vivo (in-memory → localStorage → API)
+    let ps=_lp[appId]||null;
+    if(!ps){
+      try{
+        const c=localStorage.getItem(LP_KEY+'_'+appId);
+        if(c){const{ts,p}=JSON.parse(c);if(Date.now()-ts<LP_TTL){ps=p;_lp[appId]=p;}}
+      }catch(e){}
+    }
+    if(!ps){
+      // busca só as 3 cartas necessárias (não o set inteiro)
+      ps={};
+      await Promise.all(top3.map(async c=>{
+        try{
+          const r=await fetch(`https://api.tcgdex.net/v2/en/cards/${tid}-${c.n}`);
+          if(!r.ok)return;const d=await r.json();
+          const eu=d.pricing?.cardmarket?.trend||null;
+          const us=d.pricing?.tcgplayer?.holofoil?.marketPrice||null;
+          if(eu!=null||us!=null)ps[c.n]={eur:eu?eu*EUR_BRL:null,usd:us?us*USD_BRL:null};
+        }catch(e){}
+      }));
+      if(!_lp[appId])_lp[appId]={};
+      Object.assign(_lp[appId],ps);
+    }
+
+    // aplica preços ao vivo com a mesma fórmula de lprice()
+    let updated=false;
+    top3.forEach(c=>{
+      const lp=ps[c.n];if(!lp)return;
+      const vs=[];
+      if(lp.eur)vs.push(lp.eur);if(lp.usd)vs.push(lp.usd);if(c.price)vs.push(c.price);
+      if(!vs.length)return;
+      c.price=+(vs.reduce((a,b)=>a+b)/vs.length*0.67).toFixed(2);
+      c._live=true;updated=true;
+    });
+    if(!updated)return;
+
+    top3.sort((a,b)=>b.price-a.price);
+    el.dataset.cards=JSON.stringify(top3);
+    el.dispatchEvent(new CustomEvent('pricesUpdated',{detail:{raw:[...top3]}}));
+  }));
+}
 
 /* goShop — helper para ir à aba shopping */
 function goShop(){
