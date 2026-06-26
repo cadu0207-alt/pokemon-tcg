@@ -105,6 +105,8 @@ function getBinderImg(c,setId){
   if(setId==='me02') return imgMe02(n);
   if(setId==='meg')  return imgMeg(n);
   if(setId==='mep')  return imgMep(n);
+  // Sets Escarlate e Violeta — imagens via pokemontcg.io CDN (público)
+  if(setId.startsWith('sv')) return `https://images.pokemontcg.io/${setId}/${n}.png`;
   return imgMe04(n);
 }
 
@@ -124,7 +126,12 @@ async function fetchCambio(){
 }
 
 // ── PREÇOS AO VIVO (TCGDex — CardMarket EUR + TCGPlayer USD) ─────
-const TCGDX={me04:'me04',me03:'me03',me02:'me02',meg:'me01',mep:'mep'};
+const TCGDX={
+  me04:'me04',me03:'me03',me02:'me02',meg:'me01',mep:'mep',
+  sv1:'sv1',sv2:'sv2',sv3:'sv3',sv3pt5:'sv3pt5',sv4:'sv4',sv4pt5:'sv4pt5',
+  sv5:'sv5',sv6:'sv6',sv6pt5:'sv6pt5',sv7:'sv7',sv8:'sv8',sv8pt5:'sv8pt5',
+  sv9:'sv9',sv10:'sv10'
+};
 const LP_KEY='lp_v2',LP_TTL=24*3600*1000;
 const _lp={};  // {setId: {cardN: {eur:float|null, usd:float|null}}}
 
@@ -608,6 +615,35 @@ function getSetData(){
       sections:[{lbl:'📄 Base — 001 a 132',filter:c=>c.base},{lbl:'✨ Secretas — 133 a 188',filter:c=>!c.base}]},
     mep: {cards:CARDS_MEP,imgFn:imgMep,label:'MEP — Parceiros Iniciais (Promos)',
       sections:[{lbl:'⭐ Série 1 — Kanto, Sinnoh, Alola (MEP037–045)',filter:c=>c.base},{lbl:'📦 Outros Promos',filter:c=>!c.base}]},
+    // ── Escarlate e Violeta (2023-2025) ─────────────────────────────
+    sv10:  {cards:typeof CARDS_SV10!=='undefined'?CARDS_SV10:[],  label:'SV10 — Rivais do Destino',
+      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
+    sv9:   {cards:typeof CARDS_SV9!=='undefined'?CARDS_SV9:[],    label:'SV9 — Jornada Juntos',
+      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
+    sv8pt5:{cards:typeof CARDS_SV8PT5!=='undefined'?CARDS_SV8PT5:[],label:'SV8.5 — Evoluções Prismáticas',
+      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
+    sv8:   {cards:typeof CARDS_SV8!=='undefined'?CARDS_SV8:[],    label:'SV8 — Faíscas Furiosas',
+      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
+    sv7:   {cards:typeof CARDS_SV7!=='undefined'?CARDS_SV7:[],    label:'SV7 — Coroa Estelar',
+      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
+    sv6pt5:{cards:typeof CARDS_SV6PT5!=='undefined'?CARDS_SV6PT5:[],label:'SV6.5 — Véu das Sombras',
+      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
+    sv6:   {cards:typeof CARDS_SV6!=='undefined'?CARDS_SV6:[],    label:'SV6 — Máscara do Futuro',
+      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
+    sv5:   {cards:typeof CARDS_SV5!=='undefined'?CARDS_SV5:[],    label:'SV5 — Forças Triplas',
+      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
+    sv4pt5:{cards:typeof CARDS_SV4PT5!=='undefined'?CARDS_SV4PT5:[],label:'SV4.5 — Destinos de Paldea',
+      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
+    sv4:   {cards:typeof CARDS_SV4!=='undefined'?CARDS_SV4:[],    label:'SV4 — Fenda Temporal',
+      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
+    sv3pt5:{cards:typeof CARDS_SV3PT5!=='undefined'?CARDS_SV3PT5:[],label:'SV3.5 — Coleção 151',
+      sections:[{lbl:'📄 Base (001-165)',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
+    sv3:   {cards:typeof CARDS_SV3!=='undefined'?CARDS_SV3:[],    label:'SV3 — Obsidiana Chamejante',
+      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
+    sv2:   {cards:typeof CARDS_SV2!=='undefined'?CARDS_SV2:[],    label:'SV2 — Evolução em Paldea',
+      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
+    sv1:   {cards:typeof CARDS_SV1!=='undefined'?CARDS_SV1:[],    label:'SV1 — Escarlate e Violeta',
+      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
   };
   return map[currentSet]||map.me04;
 }
