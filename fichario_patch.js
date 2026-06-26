@@ -324,8 +324,9 @@ function renderBinderView(cards) {
     pages.push(slots.slice(i, i + slotsPerPage));
   }
 
-  const cellSize = N === 2 ? 130 : N === 3 ? 96 : 72;
-  const gap = N === 2 ? 12 : N === 3 ? 8 : 6;
+  const isMob = window.innerWidth <= 600;
+  const cellSize = N === 2 ? (isMob ? 130 : 160) : N === 3 ? (isMob ? 96 : 130) : (isMob ? 72 : 90);
+  const gap = N === 2 ? (isMob ? 12 : 14) : N === 3 ? (isMob ? 8 : 12) : (isMob ? 6 : 8);
 
   function slotHtml(slot) {
     if (!slot) return `<div style="width:${cellSize}px;height:${Math.round(cellSize*1.4)}px;
@@ -382,10 +383,12 @@ function renderBinderView(cards) {
         <span style="color:var(--accent2)">slots ${pi*slotsPerPage+1}–${Math.min((pi+1)*slotsPerPage, slots.length)}</span>
         <div style="flex:1;height:1px;background:var(--border)"></div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(${N},${cellSize}px);gap:${gap}px;
-           background:var(--surface);border:1px solid var(--border);border-radius:10px;
-           padding:16px;width:fit-content">
-        ${page.map(slotHtml).join('')}
+      <div style="display:flex;justify-content:center">
+        <div style="display:grid;grid-template-columns:repeat(${N},${cellSize}px);gap:${gap}px;
+             background:var(--surface);border:1px solid var(--border);border-radius:10px;
+             padding:16px">
+          ${page.map(slotHtml).join('')}
+        </div>
       </div>
     </div>`;
   }).join('');
