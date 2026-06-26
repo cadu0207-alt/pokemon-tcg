@@ -286,7 +286,9 @@ function go(id,el){
     if(currentSet==='__custom__') renderCustomBindersHome();
     else renderBinder();
   }
-  if(id==='dash') updateDashProgress();
+  if(id==='dash'){renderDash();updateDashProgress();}
+  if(id==='cartas'){renderCartas();}
+  if(id==='gastos'){renderGastos();}
 }
 function renderAll(){renderDash();renderGastos();renderCartas();updateDashProgress();}
 
@@ -1138,10 +1140,17 @@ async function saveBoosterOpening(){
 
   // Salvar cartas tiradas
   if(uid()){
+    const erros=[];
     for(const row of rows){
-      const{data:res}=await sbClient.from('pulled_cards').insert({...row,user_id:uid()}).select();
-      if(Array.isArray(res))pulledCards.push(...res);
+      const{data:res,error}=await sbClient.from('pulled_cards').insert({...row,user_id:uid()}).select();
+      if(error){erros.push(row.name+': '+error.message);console.error('[pulled_cards insert]',error,row);}
+      else if(Array.isArray(res))pulledCards.push(...res);
+      else{
+        // insert OK mas sem select retornado — adiciona versão local para UI
+        pulledCards.push({...row,user_id:uid(),id:Date.now()+'_'+row.num});
+      }
     }
+    if(erros.length){alert('⚠️ Erro ao salvar:\n'+erros.join('\n'));return;}
     // Marcar slots como coletados
     for(const{card,setId,ver}of allItems){
       const key=slotKey(setId+':',card.n,ver);
@@ -1150,6 +1159,8 @@ async function saveBoosterOpening(){
         await sbClient.from('collection').upsert({slot_key:key,user_id:uid()},{onConflict:'user_id,slot_key'});
       }
     }
+  }else{
+    alert('⚠️ Faça login para salvar cartas tiradas.');return;
   }
 
   _boosterSelected={};
@@ -1167,7 +1178,7 @@ function openModal(id){
     // Preencher lista de compras (mais recente primeiro, já está order=date.desc)
     const sel=document.getElementById('open-purchase');
     sel.innerHTML='<option value="">— Selecione a compra —</option>'+
-      purchases.filter(p=>!p.acessorio&&p.boost>0).map(p=>{
+      purchases.filter(p=>!p.acessorio).map(p=>{
         const d=new Date(p.date+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
         return`<option value="${p.id}">${d} — ${p.product.substring(0,50)}</option>`;
       }).join('');
