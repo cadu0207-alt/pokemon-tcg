@@ -379,23 +379,48 @@ function renderDash(){
   document.getElementById('chart-gastos').innerHTML=Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0]))
     .map(([d,v])=>barHTML(d.slice(5),v,dMax,'linear-gradient(90deg,var(--accent),var(--accent2))','R$'+fmtR(v))).join('');
 
-  // Highlights top 6
+  // Destaques do Fichário — cartas coletadas (aleatório, priorizando especiais e importantes)
   const rl={'Dupla Rara (RR)':'RR','Ilustração Rara (SAR)':'SAR','Ilustracao Rara (SAR)':'SAR',
     'Ilustração Rara (IR)':'IR','Ilustracao Rara (IR)':'IR','Rara Ultra (UR)':'UR',
     'Rara (Holo)':'HOLO','Incomum (RH)':'RH','Comum (RH)':'RH','Promocional':'PROMO'};
-  const top=[...pulledCards].sort((a,b)=>(b.price||0)-(a.price||0)).slice(0,6);
-  document.getElementById('dash-highlights').innerHTML=top.map(c=>{
-    const imgSrc=getCardImg(c);const ver=getVerFromRar(c.rar||'');
-    return`<div class="pc" onclick='openCardModal(${safeJSON(c)})'>
-      ${imgSrc?`<img class="pc-img" src="${imgSrc}" alt="${c.name}" onerror="this.style.display='none'">`:
-        `<div class="pc-icon ${c.ic||'fp'}">${c.icon||'🃏'}</div>`}
-      <div class="pc-info"><div class="pc-name">${c.name}</div><div class="pc-meta">${c.num||''}</div>
-        <div class="pc-src">${c.lote||''}</div>
+  const bcMap={SAR:'bs',UR:'bur',IR:'bi',RR:'brr',HOLO:'bh',RH:'brh',PROMO:'bp'};
+  const allFich=getAllCardsWithSet();
+  // cartas que o usuário coletou E têm algum destaque (importante, especial, ou preço ≥ R$20)
+  const colFich=allFich.filter(c=>{
+    const sid=c._setId;
+    const slots=getSlots(c,sid);
+    const hasCol=slots.some(s=>collected.has(slotKey(sid+':',c.n,s.ver)));
+    return hasCol&&(c.important||!c.base||(c.price>=20));
+  });
+  // se tiver poucos destaques, complementa com qualquer carta coletada com preço
+  const fallback=colFich.length<6?allFich.filter(c=>{
+    const sid=c._setId;
+    const slots=getSlots(c,sid);
+    return slots.some(s=>collected.has(slotKey(sid+':',c.n,s.ver)))&&c.price>0&&!colFich.includes(c);
+  }):[];
+  const pool=[...colFich,...fallback].sort(()=>Math.random()-0.5).slice(0,6);
+  document.getElementById('dash-highlights').innerHTML=pool.length>0?pool.map(c=>{
+    const sid=c._setId;
+    const slots=getSlots(c,sid);
+    const colSlot=slots.find(s=>collected.has(slotKey(sid+':',c.n,s.ver)));
+    const ver=colSlot?.ver||'N';
+    const imgSrc=getBinderImg(c,sid);
+    const catMeta=SET_CATALOG.find(s=>s.id===sid);
+    const setShort=sid.toUpperCase().replace('SV3PT5','151').replace('SV8PT5','SV8.5').replace('SV6PT5','SV6.5').replace('SV4PT5','SV4.5');
+    const rarLbl=rl[c.rare]||c.rare?.split(' ')[0]||'';
+    return`<div class="pc" onclick="switchSet('${sid}',null)">
+      <img class="pc-img" src="${imgSrc}" alt="${c.name}"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="fb" style="display:none"><div class="fb-n">${c.n}</div><div class="fb-name">${c.name}</div>
+        <div class="fb-stripe" style="background:${c.color||'#666'}"></div></div>
+      <div class="pc-info"><div class="pc-name">${c.name}</div>
+        <div class="pc-meta">${setShort} · ${c.n}</div>
+        <div class="pc-src">Fichário</div>
         <div class="ver-dots"><div class="ver-dot" style="background:${VER_COLOR[ver]};border-color:${VER_COLOR[ver]}" title="${VER_LABEL[ver]}"></div></div></div>
-      <div class="pc-right"><span class="rb ${c.bc||'bx'}">${rl[c.rar]||c.rar?.split(' ')[0]||''}</span>
+      <div class="pc-right"><span class="rb ${bcMap[rarLbl]||'bx'}">${rarLbl}</span>
         ${c.price?`<div class="pc-price">R$${fmtR(c.price)}</div>`:''}</div>
     </div>`;
-  }).join('');
+  }).join(''):`<div style="color:var(--muted);padding:16px;font-size:.85rem">Nenhuma carta coletada no fichário ainda.</div>`;
 }
 
 // ── PROGRESS ────────────────────────────────────────────────────
@@ -1229,17 +1254,12 @@ const CB_SET_LABELS={
 };
 
 function getAllCardsWithSet(){
-  const sets=[
-    {id:'me04',cards:typeof CARDS!=='undefined'?CARDS:[]},
-    {id:'me03',cards:typeof CARDS_ME03!=='undefined'?CARDS_ME03:[]},
-    {id:'me02',cards:typeof CARDS_ME02!=='undefined'?CARDS_ME02:[]},
-    {id:'meg', cards:typeof CARDS_MEG!=='undefined'?CARDS_MEG:[]},
-    {id:'mep', cards:typeof CARDS_MEP!=='undefined'?CARDS_MEP:[]},
-    {id:'me05',cards:typeof CARDS_ME05!=='undefined'?CARDS_ME05:[]},
-    {id:'me06',cards:typeof CARDS_ME06!=='undefined'?CARDS_ME06:[]},
-  ];
+  // usa myCollections para incluir todos os sets ativos (ME + SV)
   const result=[];
-  sets.forEach(({id,cards})=>cards.forEach(c=>result.push({...c,_setId:id})));
+  myCollections.forEach(id=>{
+    const cards=SET_CARDS_MAP[id]?.()??[];
+    cards.forEach(c=>result.push({...c,_setId:id}));
+  });
   return result;
 }
 
