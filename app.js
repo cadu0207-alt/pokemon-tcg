@@ -109,10 +109,59 @@ function getBinderImg(c,setId){
 }
 
 // ── CÂMBIO ──────────────────────────────────────────────────────
-let USD_BRL=5.70;
+let USD_BRL=5.70,EUR_BRL=6.30;
 async function fetchCambio(){
-  try{const r=await fetch('https://api.frankfurter.app/latest?from=USD&to=BRL');const d=await r.json();
-    USD_BRL=d.rates.BRL;const el=document.getElementById('usd-brl');if(el)el.textContent=`USD/BRL R$${USD_BRL.toFixed(2)}`;}catch(e){}
+  try{
+    const[ur,er]=await Promise.all([
+      fetch('https://api.frankfurter.app/latest?from=USD&to=BRL'),
+      fetch('https://api.frankfurter.app/latest?from=EUR&to=BRL')
+    ]);
+    const[ud,ed]=await Promise.all([ur.json(),er.json()]);
+    USD_BRL=ud.rates.BRL;EUR_BRL=ed.rates.BRL;
+    const el=document.getElementById('usd-brl');
+    if(el)el.textContent=`USD/BRL R$${USD_BRL.toFixed(2)}`;
+  }catch(e){}
+}
+
+// ── PREÇOS AO VIVO (TCGDex — CardMarket EUR + TCGPlayer USD) ─────
+const TCGDX={me04:'me04',me03:'me03',me02:'me02',meg:'me01',mep:'mep'};
+const LP_KEY='lp_v2',LP_TTL=24*3600*1000;
+const _lp={};  // {setId: {cardN: {eur:float|null, usd:float|null}}}
+
+async function fetchLivePrices(setId,cards){
+  const tid=TCGDX[setId];if(!tid)return;
+  // Tenta cache local (24h)
+  try{
+    const raw=localStorage.getItem(LP_KEY+'_'+setId);
+    if(raw){const{ts,p}=JSON.parse(raw);if(Date.now()-ts<LP_TTL){_lp[setId]=p;renderBinder();return;}}
+  }catch(e){}
+  // Apenas cards valiosos (>R$5) para minimizar chamadas API
+  const val=cards.filter(c=>(c.price||0)>5);
+  const ps={};const B=8;
+  for(let i=0;i<val.length;i+=B){
+    await Promise.all(val.slice(i,i+B).map(async c=>{
+      try{
+        const r=await fetch(`https://api.tcgdex.net/v2/en/cards/${tid}-${c.n}`);
+        if(!r.ok)return;const d=await r.json();
+        const eu=d.pricing?.cardmarket?.trend||null;
+        const us=d.pricing?.tcgplayer?.holofoil?.marketPrice||null;
+        if(eu!=null||us!=null)ps[c.n]={eur:eu?eu*EUR_BRL:null,usd:us?us*USD_BRL:null};
+      }catch(e){}
+    }));
+  }
+  _lp[setId]=ps;
+  try{localStorage.setItem(LP_KEY+'_'+setId,JSON.stringify({ts:Date.now(),p:ps}));}catch(e){}
+  renderBinder();
+}
+
+// Média das 3 fontes: CardMarket BRL, TCGPlayer BRL, preço hardcoded BRL
+function lprice(setId,n,fallback){
+  const p=_lp[setId]?.[n];
+  const vs=[];
+  if(p?.eur)vs.push(p.eur);
+  if(p?.usd)vs.push(p.usd);
+  if(fallback)vs.push(fallback);
+  return vs.length?+(vs.reduce((a,b)=>a+b)/vs.length).toFixed(2):fallback;
 }
 
 // ── ESTADO ──────────────────────────────────────────────────────
@@ -160,9 +209,13 @@ async function loadAll(){
     pulledCards=Array.isArray(c)?c:[];
     collected=new Set((Array.isArray(col)?col:[]).map(r=>r.slot_key));
     setStatus('Online ✓','ok');
+    fetchCambio();  // atualiza USD_BRL e EUR_BRL para conversão de preços
     renderAll();updateHomeStats();
     loadCustomBinders();
     if(typeof initFichario==='function')initFichario();
+    // Carrega preços ao vivo para o set inicial
+    const{cards:_initCards}=getSetData();
+    fetchLivePrices(currentSet,_initCards);
   }catch(e){setStatus('Erro de conexão','error');console.error(e);}
 }
 function setStatus(txt,state){
@@ -519,6 +572,9 @@ function switchSet(id,el){
   if(setInfo)setInfo.style.display='';
   if(bstats)bstats.style.display='';
   renderBinder();
+  // Carrega preços ao vivo para o novo set (background)
+  const{cards:_sc}=getSetData();
+  fetchLivePrices(id,_sc);
 }
 function getSetData(){
   const me03c=typeof CARDS_ME03!=='undefined'?CARDS_ME03:[];
@@ -570,10 +626,12 @@ function renderBinder(){
     const imgSrc=getBinderImg(c,pfx);
     const versBoxes=slots.map(s=>{
       const key=slotKey(pfx+':',c.n,s.ver);const isCol=collected.has(key);const col=VER_COLOR[s.ver];
-      const priceStr=s.price?`R$${fmtR(s.price)}`:'';
-      return`<div class="vslot${isCol?' vslot-col':''}" onclick="event.stopPropagation();toggleSlot('${key}')" title="${VER_LABEL[s.ver]}${priceStr?' — '+priceStr:''}">
+      const _dp=lprice(pfx,c.n,s.price);
+      const priceStr=_dp?`R$${fmtR(_dp)}`:'';
+      const _live=!!_lp[pfx]?.[c.n];
+      return`<div class="vslot${isCol?' vslot-col':''}" onclick="event.stopPropagation();toggleSlot('${key}')" title="${VER_LABEL[s.ver]}${priceStr?' — '+priceStr+''+(_live?' (ao vivo)':''):''}">
         <div class="vdot" style="background:${isCol?col:'transparent'};border-color:${col};color:${isCol?'#08090d':col}">${isCol?'✓':VER_SHORT[s.ver]}</div>
-        <div class="vnum">${numLabel}</div>${priceStr?`<div class="vprice">${priceStr}</div>`:''}
+        <div class="vnum">${numLabel}</div>${priceStr?`<div class="vprice">${priceStr}${_live?'<span style="font-size:8px;color:var(--teal);vertical-align:super">●</span>':''}</div>`:''}
       </div>`;
     }).join('');
     return`<div class="bc2${allCol?' collected':''}${anyCol&&!allCol?' bc2-partial':''}${c.important?' important':''}"
@@ -588,7 +646,7 @@ function renderBinder(){
       </div>
       <div class="chk">✓</div>
       <div class="tip"><div class="tip-n">${c.name}</div><div class="tip-nr">#${c.n} · ${c.type||''}</div>
-        <div class="tip-r">${c.rare||''}</div>${c.price?`<div class="tip-p">R$${fmtR(c.price)}</div>`:''}
+        <div class="tip-r">${c.rare||''}</div>${(()=>{const dp=lprice(pfx,c.n,c.price);return dp?`<div class="tip-p">R$${fmtR(dp)}</div>`:''})()}
         ${c.important?'<div class="tip-imp">★ Importante</div>':''}</div>
     </div>`;
   }
@@ -627,7 +685,7 @@ function openBinderModal(card, setId){
       style="${isCol?`border-color:${col};background:${col}18`:''}">
       <div class="ver-card-dot" style="background:${isCol?col:'transparent'};border-color:${col}"></div>
       <div class="ver-card-label" style="color:${isCol?col:'var(--text)'}">${VER_LABEL[s.ver]}</div>
-      <div class="ver-card-price">${s.price?'R$'+fmtR(s.price):''}</div>
+      <div class="ver-card-price">${(()=>{const dp=lprice(setId,card.n,s.price);return dp?'R$'+fmtR(dp):''})()}</div>
       ${isCol?`<div style="color:var(--teal);font-size:10px;margin-top:4px">✓ Coletada</div>`:''}
     </div>`;
   }).join('');
@@ -640,7 +698,7 @@ function openBinderModal(card, setId){
       `<div style="height:160px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:36px;border-radius:8px 8px 0 0">🃏</div>`}
     <div class="mbinder-body">
       <div class="mbinder-title">${card.name}</div>
-      <div class="mbinder-sub">#${card.n} · ${card.type||''} · ${card.rare||''} ${card.price?'· R$'+fmtR(card.price):''}</div>
+      <div class="mbinder-sub">#${card.n} · ${card.type||''} · ${card.rare||''} ${(()=>{const dp=lprice(setId,card.n,card.price);return dp?'· R$'+fmtR(dp):''})()}</div>
       <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:10px">MARCAR VERSÕES COLETADAS</div>
       <div class="ver-select-grid" id="ver-grid-${card.n}">${verHTML}</div>
       <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:8px;margin-top:14px">REGISTRAR CARTA TIRADA NESTA COMPRA</div>
