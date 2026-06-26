@@ -232,6 +232,7 @@ async function loadAll(){
     fetchCambio();  // atualiza USD_BRL e EUR_BRL para conversão de preços
     renderAll();updateHomeStats();
     loadCustomBinders();
+    renderTabs();
     if(typeof initFichario==='function')initFichario();
     // Carrega preços ao vivo para o set inicial
     const{cards:_initCards}=getSetData();
@@ -400,15 +401,74 @@ const SET_META={
   meg: {label:'🌿 MEG — Megaevolução',color:'#4CAF50',chase:'Mega Greninja ex UR — R$60',heroCard:3,imgFn:imgMeg},
   mep: {label:'⭐ MEP — Parceiros Iniciais',color:'#ffd166',chase:'Charmander MEP038 — R$36',heroCard:38,imgFn:imgMep},
 };
-const ALL_SETS={
+const SET_CARDS_MAP={
   me06:()=>typeof CARDS_ME06!=='undefined'?CARDS_ME06:[],
   me05:()=>typeof CARDS_ME05!=='undefined'?CARDS_ME05:[],
   me04:()=>CARDS,
   me03:()=>typeof CARDS_ME03!=='undefined'?CARDS_ME03:[],
   me02:()=>CARDS_ME02,
   meg:()=>CARDS_MEG,
-  mep:()=>CARDS_MEP
+  mep:()=>CARDS_MEP,
+  sv1: ()=>typeof CARDS_SV1!=='undefined'?CARDS_SV1:[],
+  sv2: ()=>typeof CARDS_SV2!=='undefined'?CARDS_SV2:[],
+  sv3: ()=>typeof CARDS_SV3!=='undefined'?CARDS_SV3:[],
+  sv3pt5:()=>typeof CARDS_SV3PT5!=='undefined'?CARDS_SV3PT5:[],
+  sv4: ()=>typeof CARDS_SV4!=='undefined'?CARDS_SV4:[],
+  sv4pt5:()=>typeof CARDS_SV4PT5!=='undefined'?CARDS_SV4PT5:[],
+  sv5: ()=>typeof CARDS_SV5!=='undefined'?CARDS_SV5:[],
+  sv6: ()=>typeof CARDS_SV6!=='undefined'?CARDS_SV6:[],
+  sv6pt5:()=>typeof CARDS_SV6PT5!=='undefined'?CARDS_SV6PT5:[],
+  sv7: ()=>typeof CARDS_SV7!=='undefined'?CARDS_SV7:[],
+  sv8: ()=>typeof CARDS_SV8!=='undefined'?CARDS_SV8:[],
+  sv8pt5:()=>typeof CARDS_SV8PT5!=='undefined'?CARDS_SV8PT5:[],
+  sv9: ()=>typeof CARDS_SV9!=='undefined'?CARDS_SV9:[],
+  sv10:()=>typeof CARDS_SV10!=='undefined'?CARDS_SV10:[],
 };
+
+// ── CATÁLOGO DE COLEÇÕES ─────────────────────────────────────────
+const SET_CATALOG=[
+  {id:'me06',label:'ME06 — Esmeralda Tempestuosa',emoji:'💎',cards:0,  color:'#00c853',series:'ME',upcoming:true},
+  {id:'me05',label:'ME05 — Negrura Absoluta',      emoji:'🌑',cards:105,color:'#757575',series:'ME',upcoming:true},
+  {id:'me04',label:'ME04 — Caos Ascendente',       emoji:'🔥',cards:122,color:'#FF5722',series:'ME'},
+  {id:'me03',label:'ME03 — Ordem Perfeita',        emoji:'🔵',cards:120,color:'#1565C0',series:'ME'},
+  {id:'me02',label:'ME02 — Fogo Fantasmagórico',   emoji:'👻',cards:130,color:'#9C27B0',series:'ME'},
+  {id:'meg', label:'MEG — Megaevolução',            emoji:'🌿',cards:188,color:'#4CAF50',series:'ME'},
+  {id:'mep', label:'MEP — Parceiros Iniciais',     emoji:'⭐',cards:45, color:'#ffd166',series:'ME'},
+  {id:'sv10',label:'SV10 — Rivais do Destino',     emoji:'⚔️',cards:244,color:'#E91E63',series:'SV'},
+  {id:'sv9', label:'SV9 — Jornada Juntos',          emoji:'🤝',cards:190,color:'#3F51B5',series:'SV'},
+  {id:'sv8pt5',label:'SV8.5 — Evoluções Prismáticas',emoji:'💫',cards:180,color:'#9C27B0',series:'SV'},
+  {id:'sv8', label:'SV8 — Faíscas Furiosas',        emoji:'⚡',cards:252,color:'#FF9800',series:'SV'},
+  {id:'sv7', label:'SV7 — Coroa Estelar',           emoji:'👑',cards:175,color:'#FFC107',series:'SV'},
+  {id:'sv6pt5',label:'SV6.5 — Véu das Sombras',   emoji:'🌑',cards:99, color:'#607D8B',series:'SV'},
+  {id:'sv6', label:'SV6 — Máscara do Futuro',      emoji:'🎭',cards:226,color:'#00BCD4',series:'SV'},
+  {id:'sv5', label:'SV5 — Forças Triplas',          emoji:'💥',cards:218,color:'#FF5722',series:'SV'},
+  {id:'sv4pt5',label:'SV4.5 — Destinos de Paldea', emoji:'✨',cards:245,color:'#FFD700',series:'SV'},
+  {id:'sv4', label:'SV4 — Fenda Temporal',          emoji:'⏰',cards:266,color:'#673AB7',series:'SV'},
+  {id:'sv3pt5',label:'SV3.5 — Coleção 151',        emoji:'💯',cards:207,color:'#E91E63',series:'SV'},
+  {id:'sv3', label:'SV3 — Obsidiana Chamejante',    emoji:'🌋',cards:230,color:'#BF360C',series:'SV'},
+  {id:'sv2', label:'SV2 — Evolução em Paldea',      emoji:'🏔️',cards:279,color:'#00ACC1',series:'SV'},
+  {id:'sv1', label:'SV1 — Escarlate e Violeta',     emoji:'🌿',cards:258,color:'#8E24AA',series:'SV'},
+];
+
+function _loadMyCollections(){
+  try{const v=JSON.parse(localStorage.getItem('myCollections'));
+    return Array.isArray(v)&&v.length?v:['me06','me05','me04','me03','me02','meg','mep'];}
+  catch(e){return['me06','me05','me04','me03','me02','meg','mep'];}
+}
+let myCollections=_loadMyCollections();
+function saveMyCollections(){try{localStorage.setItem('myCollections',JSON.stringify(myCollections));}catch(e){}}
+function toggleCollection(id){
+  if(myCollections.includes(id)){
+    myCollections=myCollections.filter(x=>x!==id);
+    if(currentSet===id){currentSet='__custom__';}
+  }else{
+    const order=SET_CATALOG.map(s=>s.id);
+    myCollections=[...myCollections,id].sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+  }
+  saveMyCollections();
+  renderTabs();
+  if(currentSet==='__custom__'||!myCollections.includes(currentSet))renderCustomBindersHome();
+}
 
 function countSlotsFor(cards,pfx){
   let total=0,col=0;
@@ -417,35 +477,77 @@ function countSlotsFor(cards,pfx){
 }
 function updateDashProgress(){
   let grand=0,grandC=0;
-  const html=Object.entries(SET_META).map(([id,meta])=>{
-    const cards=ALL_SETS[id]();
+
+  // Monta lista de sets ativos: usa myCollections se disponível, senão todos de SET_META
+  const activeIds=(typeof myCollections!=='undefined'&&myCollections.length)
+    ?myCollections
+    :Object.keys(SET_META);
+
+  const html=activeIds.map(id=>{
+    const meta=SET_META[id]||null;
+    const cat=SET_CATALOG?SET_CATALOG.find(s=>s.id===id):null;
+    const cards=SET_CARDS_MAP[id]?.()||[];
+    if(!meta&&!cat)return''; // set desconhecido
     const base=countSlotsFor(cards.filter(c=>c.base),id);
     const sec=countSlotsFor(cards.filter(c=>!c.base),id);
     const tot=base.total+sec.total,col=base.col+sec.col;
-    grand+=tot;grandC+=col;const pct=tot>0?(col/tot*100).toFixed(0):0;
-    const upcomingBadge=meta.upcoming?`<div style="position:absolute;top:10px;right:10px;background:#f0932b;color:#fff;font-size:9px;letter-spacing:1px;padding:2px 8px;border-radius:4px;font-family:'Space Mono',monospace">EM BREVE ${meta.releaseDate||''}</div>`:'';
-    return`<div class="panel" style="border-color:${meta.color}44;overflow:hidden;position:relative;${meta.upcoming?'opacity:.8':''}">
-      ${upcomingBadge}
-      <div style="position:absolute;right:-8px;top:-8px;width:70px;height:100px;opacity:.1;pointer-events:none">
-        <img src="${meta.imgFn(meta.heroCard)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <div style="flex:1"><div style="font-weight:700;font-size:13px">${meta.label}</div>
-        <div style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">${meta.upcoming?'Lancamento previsto: '+(meta.releaseDate||'em breve'):(tot+' slots · master set')}</div></div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;color:${meta.color};line-height:1">${meta.upcoming?'?':pct+'%'}</div>
-      </div>
-      ${!meta.upcoming?`<div class="prog"><div class="prog-lbl"><span>Base</span><span>${base.col}/${base.total}</span></div>
-        <div class="prog-t"><div class="prog-f" style="width:${base.total>0?(base.col/base.total*100).toFixed(1):0}%;background:${meta.color}"></div></div></div>
-      ${sec.total>0?`<div class="prog" style="margin:0"><div class="prog-lbl"><span>Secretas</span><span>${sec.col}/${sec.total}</span></div>
-        <div class="prog-t"><div class="prog-f" style="width:${sec.total>0?(sec.col/sec.total*100).toFixed(1):0}%;background:${meta.color}88"></div></div></div>`:''}`:''}
-      <div style="margin-top:10px;font-size:10px;font-family:'Space Mono',monospace;color:var(--muted)">Chase: <span style="color:${meta.color}">${meta.chase}</span></div>
-    </div>`;
-  }).join('');
-  document.getElementById('progress-sets').innerHTML=html;
+    grand+=tot;grandC+=col;
+    const pct=tot>0?(col/tot*100).toFixed(0):0;
+
+    if(meta){
+      // ── Display completo (sets ME com SET_META) ──
+      const color=meta.color;
+      const upBadge=meta.upcoming?`<div style="position:absolute;top:10px;right:10px;background:#f0932b;color:#fff;font-size:9px;letter-spacing:1px;padding:2px 8px;border-radius:4px;font-family:'Space Mono',monospace">EM BREVE ${meta.releaseDate||''}</div>`:'';
+      return`<div class="panel" style="border-color:${color}44;overflow:hidden;position:relative;${meta.upcoming?'opacity:.8':''}">
+        ${upBadge}
+        <div style="position:absolute;right:-8px;top:-8px;width:70px;height:100px;opacity:.1;pointer-events:none">
+          <img src="${meta.imgFn(meta.heroCard)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div style="flex:1"><div style="font-weight:700;font-size:13px">${meta.label}</div>
+          <div style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">${meta.upcoming?'Lançamento: '+(meta.releaseDate||'em breve'):(tot+' slots · master set')}</div></div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;color:${color};line-height:1">${meta.upcoming?'?':pct+'%'}</div>
+        </div>
+        ${!meta.upcoming?`<div class="prog"><div class="prog-lbl"><span>Base</span><span>${base.col}/${base.total}</span></div>
+          <div class="prog-t"><div class="prog-f" style="width:${base.total>0?(base.col/base.total*100).toFixed(1):0}%;background:${color}"></div></div></div>
+        ${sec.total>0?`<div class="prog" style="margin:0"><div class="prog-lbl"><span>Especiais</span><span>${sec.col}/${sec.total}</span></div>
+          <div class="prog-t"><div class="prog-f" style="width:${sec.total>0?(sec.col/sec.total*100).toFixed(1):0}%;background:${color}88"></div></div></div>`:''}`:''}
+        <div style="margin-top:10px;font-size:10px;font-family:'Space Mono',monospace;color:var(--muted)">Chase: <span style="color:${color}">${meta.chase}</span></div>
+      </div>`;
+    }else{
+      // ── Display simplificado (sets SV via SET_CATALOG) ──
+      const color=cat.color||'#666';
+      const upcoming=cat.upcoming||false;
+      return`<div class="panel" style="border-color:${color}44;overflow:hidden;position:relative;${upcoming?'opacity:.7':''}">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="font-size:28px;line-height:1">${cat.emoji||'📦'}</div>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:12px;line-height:1.3">${cat.label}</div>
+            <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:2px">
+              ${upcoming?'em breve':(tot>0?tot+' slots · SV':'sem dados carregados')}</div>
+          </div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:${color};line-height:1">${upcoming?'?':(tot>0?pct+'%':'–')}</div>
+        </div>
+        ${tot>0&&!upcoming?`
+        <div class="prog"><div class="prog-lbl"><span>Base</span><span>${base.col}/${base.total}</span></div>
+          <div class="prog-t"><div class="prog-f" style="width:${base.total>0?(base.col/base.total*100).toFixed(1):0}%;background:${color}"></div></div></div>
+        ${sec.total>0?`<div class="prog" style="margin:0"><div class="prog-lbl"><span>Especiais</span><span>${sec.col}/${sec.total}</span></div>
+          <div class="prog-t"><div class="prog-f" style="width:${(sec.col/sec.total*100).toFixed(1)}%;background:${color}88"></div></div></div>`:''}
+        `:`<div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;padding:6px 0">
+          ${upcoming?'Lançamento em breve':'Ative o set no Fichário para carregar as cartas'}</div>`}
+      </div>`;
+    }
+  }).filter(Boolean).join('');
+
+  document.getElementById('progress-sets').innerHTML=html||
+    `<div style="color:var(--muted);font-size:12px;font-family:'Space Mono',monospace;padding:20px;text-align:center">
+      Nenhuma coleção ativa — vá em Fichário → Minhas Coleções para selecionar sets.</div>`;
+
   const pct=grand>0?(grandC/grand*100).toFixed(1):0;
-  const allCards=Object.values(ALL_SETS).flatMap(fn=>fn());
+  const allCards=Object.values(SET_CARDS_MAP).flatMap(fn=>fn());
   const imp=allCards.filter(c=>c.important).length;
-  document.getElementById('binder-stats').innerHTML=`
+  const el=document.getElementById('binder-stats');
+  if(el)el.innerHTML=`
     <div><div class="bsv" style="color:var(--teal)">${grandC}</div><div class="bsl">Slots Coletados</div></div>
     <div><div class="bsv" style="color:var(--gold)">${imp}</div><div class="bsl">Importantes</div></div>
     <div><div class="bsv" style="color:var(--muted)">${grand}</div><div class="bsl">Total Slots</div></div>
@@ -579,12 +681,40 @@ function openCardModal(card){
 
 // ── FICHÁRIO ────────────────────────────────────────────────────
 let currentSet='me04';
+
+function renderTabs(){
+  const container=document.getElementById('binder-tabs');
+  if(!container)return;
+  const cur=currentSet;
+  const hasME=myCollections.some(id=>SET_CATALOG.find(s=>s.id===id&&s.series==='ME'));
+  const hasSV=myCollections.some(id=>SET_CATALOG.find(s=>s.id===id&&s.series==='SV'));
+  let html=`<div class="ctab${cur==='__custom__'?' active':''}" id="fic-tab-custom"
+    onclick="switchSet('__custom__',this)"
+    style="${cur==='__custom__'?'border-bottom:2px solid #a855f7;color:#a855f7':''}">
+    ✨ Meus <span class="ctab-n">Fichários</span></div>`;
+  let lastSeries='';
+  myCollections.forEach(id=>{
+    const s=SET_CATALOG.find(s=>s.id===id);
+    if(!s)return;
+    if(hasME&&hasSV&&lastSeries&&lastSeries!==s.series){
+      html+=`<div style="width:1px;background:var(--border);margin:4px 4px;flex-shrink:0"></div>`;
+    }
+    lastSeries=s.series;
+    const isActive=cur===id;
+    const lbl=id.toUpperCase().replace('SV8PT5','SV8.5').replace('SV6PT5','SV6.5')
+                .replace('SV4PT5','SV4.5').replace('SV3PT5','151');
+    html+=`<div class="ctab${isActive?' active':''}" id="fic-tab-${id}"
+      onclick="switchSet('${id}',this)"
+      ${s.upcoming?'style="opacity:.7"':''}>
+      ${s.emoji} ${lbl} <span class="ctab-n">${s.upcoming?'breve':s.cards}</span></div>`;
+  });
+  container.innerHTML=html;
+}
+
 function switchSet(id,el){
   currentSet=id;
-  document.querySelectorAll('.ctab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
+  renderTabs();
   if(id==='__custom__'){renderCustomBindersHome();return;}
-  // Restore standard controls visibility
   const binderCtrl=document.getElementById('fic-binder-controls');
   const setInfo=document.getElementById('fic-set-info');
   const bstats=document.getElementById('binder-stats');
@@ -592,7 +722,6 @@ function switchSet(id,el){
   if(setInfo)setInfo.style.display='';
   if(bstats)bstats.style.display='';
   renderBinder();
-  // Carrega preços ao vivo para o novo set (background)
   const{cards:_sc}=getSetData();
   fetchLivePrices(id,_sc);
 }
@@ -1213,6 +1342,37 @@ function renderCustomBindersHome(){
     </div>`;
   }).join('');
 
+  // ── Seletor de coleções ──────────────────────────────────────────
+  function setCard(s){
+    const on=myCollections.includes(s.id);
+    const lbl=s.id.toUpperCase().replace('SV8PT5','SV8.5').replace('SV6PT5','SV6.5')
+                  .replace('SV4PT5','SV4.5').replace('SV3PT5','SV3.5');
+    return`<div onclick="toggleCollection('${s.id}')"
+      style="padding:10px;border-radius:8px;cursor:pointer;transition:all .18s;
+             border:1px solid ${on?s.color:'var(--border)'};
+             background:${on?s.color+'1a':'var(--surface2)'};
+             border-left:3px solid ${s.color};user-select:none"
+      onmouseover="this.style.transform='translateY(-2px)'"
+      onmouseout="this.style.transform=''">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px">
+        <span style="font-size:18px;line-height:1">${s.emoji}</span>
+        <div style="width:15px;height:15px;border-radius:50%;flex-shrink:0;
+                    border:2px solid ${on?s.color:'var(--muted)'};
+                    background:${on?s.color:'transparent'};
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:8px;color:white;font-weight:700">
+          ${on?'✓':''}</div>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:${on?'var(--text)':'var(--muted)'};
+                  line-height:1.2;margin-bottom:2px">${lbl}</div>
+      <div style="font-size:8px;font-family:'Space Mono',monospace;
+                  color:${on?s.color:'var(--muted)'};line-height:1.3">
+        ${s.upcoming?'breve':s.cards+' cartas'}</div>
+    </div>`;
+  }
+  const meCards=SET_CATALOG.filter(s=>s.series==='ME').map(setCard).join('');
+  const svCards=SET_CATALOG.filter(s=>s.series==='SV').map(setCard).join('');
+
   document.getElementById('bwrap').innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px">✨ MEUS FICHÁRIOS</div>
@@ -1222,6 +1382,26 @@ function renderCustomBindersHome(){
                transition:opacity .15s"
         onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">+ NOVO FICHÁRIO</button>
     </div>
+
+    <!-- ── Seletor de Coleções ─────────────────────────────────── -->
+    <div style="margin-bottom:28px">
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);
+                  letter-spacing:2px;margin-bottom:12px;padding-bottom:8px;
+                  border-bottom:1px solid var(--border)">
+        MINHAS COLEÇÕES — TOQUE PARA ATIVAR NAS ABAS
+      </div>
+      <div style="font-size:9px;font-family:'Space Mono',monospace;color:var(--muted);
+                  text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">🇧🇷 Exclusivos BR</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:14px">
+        ${meCards}
+      </div>
+      <div style="font-size:9px;font-family:'Space Mono',monospace;color:var(--muted);
+                  text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">⚔️ Escarlate &amp; Violeta (2023–2025)</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
+        ${svCards}
+      </div>
+    </div>
+
     ${myHtml}
     <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;
                 margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)">

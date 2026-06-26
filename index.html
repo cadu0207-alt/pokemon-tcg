@@ -256,9 +256,9 @@
 
   <nav class="tabs">
     <div class="tab active" onclick="go('dash',this)">📊 Dashboard</div>
+    <div class="tab" onclick="go('fichario',this)">📚 Fichário</div>
     <div class="tab" onclick="go('gastos',this)">💸 Gastos</div>
     <div class="tab" onclick="go('cartas',this)">🃏 Cartas Tiradas</div>
-    <div class="tab" onclick="go('fichario',this)">📚 Fichário</div>
     <div class="tab" onclick="go('preco',this)">💰 Preço Justo</div>
     <div class="tab" onclick="go('shopping',this)">🛒 Shopping</div>
     <div class="tab" onclick="window.open('simulador.html','_blank')" style="background:linear-gradient(90deg,#7b2ff744,#f107a322);color:#c084fc">🎰 Simulador</div>
@@ -303,33 +303,8 @@
     <!-- Stats globais -->
     <div class="bstats" id="binder-stats"></div>
 
-    <!-- Tabs dos sets -->
-    <div style="display:flex;gap:2px;margin-bottom:12px;border-bottom:1px solid var(--border);overflow-x:auto">
-      <div class="ctab" id="fic-tab-custom" onclick="switchSet('__custom__',this)" style="border-bottom:2px solid #a855f7;color:#a855f7">✨ Meus <span class="ctab-n">Fichários</span></div>
-      <div class="ctab" id="fic-tab-me06" onclick="switchSet('me06',this)" style="opacity:.7">💎 ME06 <span class="ctab-n">breve</span></div>
-      <div class="ctab" id="fic-tab-me05" onclick="switchSet('me05',this)" style="opacity:.7">🌑 ME05 <span class="ctab-n">breve</span></div>
-      <div class="ctab active" id="fic-tab-me04" onclick="switchSet('me04',this)">🔥 ME04 <span class="ctab-n">122</span></div>
-      <div class="ctab" id="fic-tab-me03" onclick="switchSet('me03',this)">🔵 ME03 <span class="ctab-n">120</span></div>
-      <div class="ctab" id="fic-tab-me02" onclick="switchSet('me02',this)">👻 ME02 <span class="ctab-n">130</span></div>
-      <div class="ctab" id="fic-tab-meg"  onclick="switchSet('meg',this)">🌿 MEG <span class="ctab-n">188</span></div>
-      <div class="ctab" id="fic-tab-mep"  onclick="switchSet('mep',this)">⭐ MEP <span class="ctab-n">Promos</span></div>
-      <!-- Separador EV -->
-      <div style="width:1px;background:var(--border);margin:4px 4px;flex-shrink:0"></div>
-      <div class="ctab" id="fic-tab-sv10" onclick="switchSet('sv10',this)">⚔️ SV10 <span class="ctab-n">244</span></div>
-      <div class="ctab" id="fic-tab-sv9"  onclick="switchSet('sv9',this)">🤝 SV9 <span class="ctab-n">190</span></div>
-      <div class="ctab" id="fic-tab-sv8pt5" onclick="switchSet('sv8pt5',this)">💎 SV8.5 <span class="ctab-n">180</span></div>
-      <div class="ctab" id="fic-tab-sv8"  onclick="switchSet('sv8',this)">⚡ SV8 <span class="ctab-n">252</span></div>
-      <div class="ctab" id="fic-tab-sv7"  onclick="switchSet('sv7',this)">👑 SV7 <span class="ctab-n">175</span></div>
-      <div class="ctab" id="fic-tab-sv6pt5" onclick="switchSet('sv6pt5',this)">🌑 SV6.5 <span class="ctab-n">99</span></div>
-      <div class="ctab" id="fic-tab-sv6"  onclick="switchSet('sv6',this)">🎭 SV6 <span class="ctab-n">226</span></div>
-      <div class="ctab" id="fic-tab-sv5"  onclick="switchSet('sv5',this)">⚡ SV5 <span class="ctab-n">218</span></div>
-      <div class="ctab" id="fic-tab-sv4pt5" onclick="switchSet('sv4pt5',this)">✨ SV4.5 <span class="ctab-n">245</span></div>
-      <div class="ctab" id="fic-tab-sv4"  onclick="switchSet('sv4',this)">⏰ SV4 <span class="ctab-n">266</span></div>
-      <div class="ctab" id="fic-tab-sv3pt5" onclick="switchSet('sv3pt5',this)">💯 151 <span class="ctab-n">207</span></div>
-      <div class="ctab" id="fic-tab-sv3"  onclick="switchSet('sv3',this)">🔥 SV3 <span class="ctab-n">230</span></div>
-      <div class="ctab" id="fic-tab-sv2"  onclick="switchSet('sv2',this)">🏔️ SV2 <span class="ctab-n">279</span></div>
-      <div class="ctab" id="fic-tab-sv1"  onclick="switchSet('sv1',this)">🌿 SV1 <span class="ctab-n">258</span></div>
-    </div>
+    <!-- Tabs dos sets (populadas dinamicamente por renderTabs() em app.js) -->
+    <div id="binder-tabs" style="display:flex;gap:2px;margin-bottom:12px;border-bottom:1px solid var(--border);overflow-x:auto;padding-bottom:0"></div>
 
     <!-- Barra de controles -->
     <div class="bctl" style="gap:10px;flex-wrap:wrap;margin-bottom:10px">
