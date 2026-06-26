@@ -115,8 +115,25 @@ function getSetLabel() {
 }
 
 function imgUrl(n) {
+  // Delega para as funções de imagem do app.js quando disponíveis
+  if (typeof imgMe04 === 'function') {
+    switch (currentSet) {
+      case 'me06': return imgMe06(n);
+      case 'me05': return imgMe05(n);
+      case 'me04': return imgMe04(n);
+      case 'me03': return imgMe03(n);
+      case 'me02': return imgMe02(n);
+      case 'meg':  return imgMeg(n);
+      case 'mep':  return imgMep(n);
+      default:     return imgMe04(n);
+    }
+  }
+  // Fallback inline (caso app.js ainda não tenha carregado)
   const num = parseInt(n, 10);
   switch (currentSet) {
+    case 'me06': return `https://images.scrydex.com/pokemon/me6-${num}/large`;
+    case 'me05': return `https://images.scrydex.com/pokemon/me5-${num}/large`;
+    case 'me03': return `https://images.scrydex.com/pokemon/me3-${num}/large`;
     case 'me02': return `https://images.scrydex.com/pokemon/me2-${num}/large`;
     case 'meg':  return `https://images.scrydex.com/pokemon/me1-${num}/large`;
     case 'mep':  return `https://images.scrydex.com/pokemon/mep-${num}/large`;
