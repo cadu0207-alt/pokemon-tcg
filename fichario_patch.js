@@ -115,21 +115,16 @@ function getSetLabel() {
 }
 
 function imgUrl(n) {
-  // Delega para as funções de imagem do app.js quando disponíveis
-  if (typeof imgMe04 === 'function') {
-    switch (currentSet) {
-      case 'me06': return imgMe06(n);
-      case 'me05': return imgMe05(n);
-      case 'me04': return imgMe04(n);
-      case 'me03': return imgMe03(n);
-      case 'me02': return imgMe02(n);
-      case 'meg':  return imgMeg(n);
-      case 'mep':  return imgMep(n);
-      default:     return imgMe04(n);
-    }
+  // Delega para getBinderImg do app.js quando disponível (cobre todos os sets)
+  if (typeof getBinderImg === 'function') {
+    return getBinderImg({ n }, currentSet);
   }
   // Fallback inline (caso app.js ainda não tenha carregado)
   const num = parseInt(n, 10);
+  if (currentSet.startsWith('sv')) {
+    const safe = isNaN(num) ? n : num;
+    return `https://images.pokemontcg.io/${currentSet}/${safe}.png`;
+  }
   switch (currentSet) {
     case 'me06': return `https://images.scrydex.com/pokemon/me6-${num}/large`;
     case 'me05': return `https://images.scrydex.com/pokemon/me5-${num}/large`;
