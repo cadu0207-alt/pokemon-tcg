@@ -105,8 +105,13 @@ function getBinderImg(c,setId){
   if(setId==='me02') return imgMe02(n);
   if(setId==='meg')  return imgMeg(n);
   if(setId==='mep')  return imgMep(n);
+  if(setId==='me04') return imgMe04(n);
   // Sets Escarlate e Violeta — imagens via pokemontcg.io CDN (público)
-  if(setId.startsWith('sv')) return `https://images.pokemontcg.io/${setId}/${n}.png`;
+  // Usa número sem zero à esquerda (padrão do CDN) ou o valor original para cartas especiais (TG01, ACE01...)
+  if(setId.startsWith('sv')){
+    const num=isNaN(n)?c.n:n;
+    return `https://images.pokemontcg.io/${setId}/${num}.png`;
+  }
   return imgMe04(n);
 }
 
@@ -1184,6 +1189,12 @@ let _currentCustomBinderId=null;
 
 // ── Presets temáticos ─────────────────────────────────────────────
 const BINDER_PRESETS=[
+  {key:'sv151_pokedex',   name:'Pokédex 151',         emoji:'💯',desc:'Base 001–165 da Coleção 151 em ordem de Pokédex',
+    filter:c=>c._setId==='sv3pt5'&&c.base,                                                                   color:'#E91E63'},
+  {key:'sv151_arte',      name:'Galeria Kanto',       emoji:'🖼️',desc:'Ilustr. Rara + Esp. Rara da Coleção 151',
+    filter:c=>c._setId==='sv3pt5'&&(c.rare==='Rara Ilustrada'||c.rare==='Rara Ilustrada Especial'),          color:'#7C3AED'},
+  {key:'budget_151',      name:'151 de Pobre',        emoji:'🪙',desc:'Especiais abaixo de R$50 de qualquer coleção do site',
+    filter:c=>!c.base&&c.price>0&&c.price<50,                                                                color:'#10b981'},
   {key:'ilustr_esp_rara', name:'Galeria das Estrelas',emoji:'🌟',desc:'Todas as Ilustração Especial Rara',   filter:c=>c.rare==='Ilustr. Esp. Rara',              color:'#a855f7'},
   {key:'ilustr_rara',     name:'Museu da Arte',       emoji:'🎨',desc:'Todas as Ilustração Rara',            filter:c=>c.rare==='Ilustr. Rara',                   color:'#118ab2'},
   {key:'mega_attack',     name:'Coroa Dourada',       emoji:'👑',desc:'Mega Attack Rare e importantes ★',    filter:c=>c.important||c.rare==='Mega Attack Rare',  color:'#ffd166'},
