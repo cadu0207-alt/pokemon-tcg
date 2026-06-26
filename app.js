@@ -113,8 +113,8 @@ let USD_BRL=5.70,EUR_BRL=6.30;
 async function fetchCambio(){
   try{
     const[ur,er]=await Promise.all([
-      fetch('https://api.frankfurter.app/latest?from=USD&to=BRL'),
-      fetch('https://api.frankfurter.app/latest?from=EUR&to=BRL')
+      fetch('https://open.er-api.com/v6/latest/USD'),
+      fetch('https://open.er-api.com/v6/latest/EUR')
     ]);
     const[ud,ed]=await Promise.all([ur.json(),er.json()]);
     USD_BRL=ud.rates.BRL;EUR_BRL=ed.rates.BRL;
