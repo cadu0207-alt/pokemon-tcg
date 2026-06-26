@@ -67,11 +67,10 @@ function imgMe05(n){return`https://images.scrydex.com/pokemon/me5-${parseInt(n)}
 function imgMe06(n){return`https://images.scrydex.com/pokemon/me6-${parseInt(n)}/large`;}
 function imgMeg(n) {return`https://images.scrydex.com/pokemon/me1-${parseInt(n)}/large`;}
 function imgMep(n) {
-  const num=parseInt(n);
-  // scrydex tem só MEP037–039 indexados; para demais tenta ligapokemon CDN
-  if(num>=37&&num<=39) return`https://images.scrydex.com/pokemon/mep-${num}/large`;
-  const pad=String(num).padStart(3,'0');
-  return`https://images.ligapokemon.com.br/cards/MEPBR/MEP${pad}.png`;
+  // pkmncards.com tem todas as imagens MEP com URL previsível
+  // formato: mebsp_en_{número_com_zeros}_std.jpg
+  const pad=String(parseInt(n)).padStart(3,'0');
+  return`https://pkmncards.com/wp-content/uploads/mebsp_en_${pad}_std.jpg`;
 }
 
 function getPurchaseImg(product){
