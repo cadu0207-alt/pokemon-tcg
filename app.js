@@ -423,6 +423,133 @@ function renderDash(){
         ${c.price?`<div class="pc-price">R$${fmtR(c.price)}</div>`:''}</div>
     </div>`;
   }).join(''):`<div style="color:var(--muted);padding:16px;font-size:.85rem">Nenhuma carta coletada no fichário ainda.</div>`;
+
+  // 151 de Pobre
+  renderGen1Pobre();
+}
+
+// ── 151 DE POBRE ────────────────────────────────────────────────
+const GEN1=[
+  'Bulbasaur','Ivysaur','Venusaur','Charmander','Charmeleon','Charizard',
+  'Squirtle','Wartortle','Blastoise','Caterpie','Metapod','Butterfree',
+  'Weedle','Kakuna','Beedrill','Pidgey','Pidgeotto','Pidgeot',
+  'Rattata','Raticate','Spearow','Fearow','Ekans','Arbok',
+  'Pikachu','Raichu','Sandshrew','Sandslash','Nidoran','Nidorina',
+  'Nidoqueen','Nidorino','Nidoking','Clefairy','Clefable',
+  'Vulpix','Ninetales','Jigglypuff','Wigglytuff','Zubat','Golbat',
+  'Oddish','Gloom','Vileplume','Paras','Parasect','Venonat','Venomoth',
+  'Diglett','Dugtrio','Meowth','Persian','Psyduck','Golduck',
+  'Mankey','Primeape','Growlithe','Arcanine','Poliwag','Poliwhirl','Poliwrath',
+  'Abra','Kadabra','Alakazam','Machop','Machoke','Machamp',
+  'Bellsprout','Weepinbell','Victreebel','Tentacool','Tentacruel',
+  'Geodude','Graveler','Golem','Ponyta','Rapidash','Slowpoke','Slowbro',
+  'Magnemite','Magneton',"Farfetch'd",'Doduo','Dodrio','Seel','Dewgong',
+  'Grimer','Muk','Shellder','Cloyster','Gastly','Haunter','Gengar',
+  'Onix','Drowzee','Hypno','Krabby','Kingler','Voltorb','Electrode',
+  'Exeggcute','Exeggutor','Cubone','Marowak','Hitmonlee','Hitmonchan',
+  'Lickitung','Koffing','Weezing','Rhyhorn','Rhydon','Chansey','Tangela',
+  'Kangaskhan','Horsea','Seadra','Goldeen','Seaking','Staryu','Starmie',
+  'Mr. Mime','Scyther','Jynx','Electabuzz','Magmar','Pinsir','Tauros',
+  'Magikarp','Gyarados','Lapras','Ditto','Eevee','Vaporeon','Jolteon',
+  'Flareon','Porygon','Omanyte','Omastar','Kabuto','Kabutops','Aerodactyl',
+  'Snorlax','Articuno','Zapdos','Moltres','Dratini','Dragonair','Dragonite',
+  'Mewtwo','Mew'
+]; // 151 em ordem de Pokédex
+
+// Extrai o nome base do Pokémon de nomes como "Mega Charizard X ex" → "Charizard"
+function basePokeNames(name){
+  // strip prefixes
+  let n=name.replace(/^(Mega|Shadow|Dark|Light|Alolan|Galarian|Hisuian|Paldean)\s+/i,'');
+  // strip suffixes comuns do TCG
+  n=n.replace(/\s+(ex|EX|GX|V|VMAX|VSTAR|tera|tera\w+|[XY])$|\s+ex$|\s+EX$/i,'').trim();
+  // strip " X" e " Y" isolados (Charizard X)
+  n=n.replace(/\s+[XY]$/, '').trim();
+  return n;
+}
+
+function renderGen1Pobre(){
+  const el=document.getElementById('gen1-pobre');if(!el)return;
+  const LIMIT=50;
+
+  // Varre todas as coleções disponíveis
+  const allCards=[];
+  Object.entries(SET_CARDS_MAP).forEach(([setId,fn])=>{
+    const cards=fn();
+    cards.forEach(c=>{
+      if(!c.price||c.price<=0||c.price>=LIMIT)return;
+      const base=basePokeNames(c.name);
+      const idx=GEN1.findIndex(g=>g.toLowerCase()===base.toLowerCase()
+        ||base.toLowerCase().startsWith(g.toLowerCase())
+        ||c.name.toLowerCase().includes(g.toLowerCase()));
+      if(idx===-1)return;
+      allCards.push({...c,_setId:setId,_gen1idx:idx,_gen1name:GEN1[idx]});
+    });
+  });
+
+  if(!allCards.length){
+    el.innerHTML='<div style="color:var(--muted);font-size:.85rem;padding:16px">Nenhuma carta Gen 1 abaixo de R$50 encontrada nas coleções ativas.</div>';
+    return;
+  }
+
+  // Agrupa por Pokémon (Pokédex order), dentro de cada grupo ordena por preço asc
+  const byPoke={};
+  allCards.forEach(c=>{
+    const k=c._gen1idx;
+    if(!byPoke[k])byPoke[k]=[];
+    byPoke[k].push(c);
+  });
+
+  // Ordena entradas por índice Pokédex
+  const entries=Object.entries(byPoke)
+    .sort((a,b)=>Number(a[0])-Number(b[0]));
+
+  const setShortLabel=id=>id.toUpperCase()
+    .replace('SV3PT5','151').replace('SV8PT5','SV8.5')
+    .replace('SV6PT5','SV6.5').replace('SV4PT5','SV4.5');
+
+  let html=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px">`;
+  entries.forEach(([idxStr,cards])=>{
+    const dexN=Number(idxStr)+1; // 1-based
+    const pokeName=GEN1[Number(idxStr)];
+    // ordena por preço crescente
+    const sorted=[...cards].sort((a,b)=>a.price-b.price);
+    const cheapest=sorted[0];
+    const imgSrc=getBinderImg(cheapest,cheapest._setId);
+    const isCol=getSlots(cheapest,cheapest._setId)
+      .some(s=>collected.has(slotKey(cheapest._setId+':',cheapest.n,s.ver)));
+
+    html+=`<div class="panel" style="display:flex;gap:12px;align-items:flex-start;padding:12px;cursor:pointer"
+        onclick="switchSet('${cheapest._setId}',null)"
+        title="Ir para ${setShortLabel(cheapest._setId)}">
+      <div style="position:relative;flex-shrink:0">
+        <img src="${imgSrc}" alt="${cheapest.name}"
+          style="width:54px;height:76px;object-fit:cover;border-radius:5px;border:1px solid var(--border)"
+          onerror="this.style.display='none'">
+        ${isCol?`<div style="position:absolute;top:-4px;right:-4px;background:var(--teal);color:#000;
+          font-size:8px;font-weight:700;border-radius:50%;width:16px;height:16px;
+          display:flex;align-items:center;justify-content:center">✓</div>`:''}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:2px">
+          <span style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted)">#${String(dexN).padStart(3,'0')}</span>
+          <span style="font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${pokeName}</span>
+        </div>
+        <div style="font-size:11px;color:var(--teal);font-weight:700;margin-bottom:4px">R$${fmtR(cheapest.price)} — ${cheapest.name}</div>
+        <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:6px">${setShortLabel(cheapest._setId)} · #${cheapest.n} · ${cheapest.rare}</div>
+        ${sorted.length>1?`<div style="display:flex;flex-wrap:wrap;gap:4px">${sorted.slice(1,4).map(c=>
+          `<span style="font-size:8px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;
+            padding:2px 5px;font-family:'Space Mono',monospace;white-space:nowrap">
+            ${setShortLabel(c._setId)} R$${fmtR(c.price)}</span>`).join('')}
+          ${sorted.length>4?`<span style="font-size:8px;color:var(--muted);padding:2px 4px">+${sorted.length-4}</span>`:''}
+        </div>`:''}
+      </div>
+    </div>`;
+  });
+  html+=`</div>
+  <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-top:10px;text-align:right">
+    ${entries.length} Pokémon da Gen 1 encontrados · ${allCards.length} cartas ≤ R$${LIMIT}
+  </div>`;
+  el.innerHTML=html;
 }
 
 // ── PROGRESS ────────────────────────────────────────────────────
