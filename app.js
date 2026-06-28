@@ -1459,8 +1459,12 @@ const BINDER_PRESETS=[
     filter:c=>c._setId==='sv3pt5'&&c.base,                                                                   color:'#E91E63'},
   {key:'sv151_arte',      name:'Galeria Kanto',       emoji:'🖼️',desc:'Ilustr. Rara + Esp. Rara da Coleção 151',
     filter:c=>c._setId==='sv3pt5'&&(c.rare==='Rara Ilustrada'||c.rare==='Rara Ilustrada Especial'),          color:'#7C3AED'},
-  {key:'budget_151',      name:'151 de Pobre',        emoji:'🪙',desc:'Especiais abaixo de R$50 de qualquer coleção do site',
-    filter:c=>!c.base&&c.price>0&&c.price<50,                                                                color:'#10b981'},
+  {key:'budget_151',      name:'151 de Pobre',        emoji:'🪙',desc:'Gen 1 < R$50 — carta mais barata de cada Pokémon original',
+    filter:c=>{
+      if(!c.price||c.price<=0||c.price>=50)return false;
+      const nm=c.name.toLowerCase();
+      return GEN1.some(g=>nm.includes(g.toLowerCase()));
+    },color:'#10b981'},
   {key:'ilustr_esp_rara', name:'Galeria das Estrelas',emoji:'🌟',desc:'Todas as Ilustração Especial Rara',   filter:c=>c.rare==='Ilustr. Esp. Rara',              color:'#a855f7'},
   {key:'ilustr_rara',     name:'Museu da Arte',       emoji:'🎨',desc:'Todas as Ilustração Rara',            filter:c=>c.rare==='Ilustr. Rara',                   color:'#118ab2'},
   {key:'mega_attack',     name:'Coroa Dourada',       emoji:'👑',desc:'Mega Attack Rare e importantes ★',    filter:c=>c.important||c.rare==='Mega Attack Rare',  color:'#ffd166'},
@@ -1683,12 +1687,7 @@ function renderCustomBindersHome(){
       ${presetsHtml}
     </div>
 
-    <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;
-                margin-top:32px;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)">
-      🎮 151 DE POBRE — GEN 1 &lt; R$50
-    </div>
-    <div id="gen1-pobre" style="margin-bottom:28px"></div>`;
-  renderGen1Pobre();
+    `;
 }
 
 // ── VISUALIZADOR ──────────────────────────────────────────────────
