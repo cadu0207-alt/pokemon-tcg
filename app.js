@@ -861,6 +861,29 @@ function openCardModal(card){
 // ── FICHÁRIO ────────────────────────────────────────────────────
 let currentSet='me04';
 
+// ── NAVEGAÇÃO DE BUSCA ───────────────────────────────────────────
+let _binderNavIdx=0,_binderNavTotal=0,_lastBinderQuery='';
+
+function binderNavGo(dir){
+  if(_binderNavTotal===0)return;
+  _binderNavIdx=(_binderNavIdx+dir+_binderNavTotal)%_binderNavTotal;
+  _binderNavUpdate();
+  _binderNavScroll();
+}
+function _binderNavUpdate(){
+  const pos=document.querySelector('.bnav-pos');
+  if(pos)pos.textContent=`${_binderNavIdx+1} / ${_binderNavTotal}`;
+}
+function _binderNavScroll(){
+  const el=document.querySelector(`[data-nav-idx="${_binderNavIdx}"]`);
+  if(!el)return;
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+  el.classList.remove('nav-focused');
+  void el.offsetWidth; // reflow para reiniciar animação
+  el.classList.add('nav-focused');
+  setTimeout(()=>el.classList.remove('nav-focused'),1500);
+}
+
 function renderTabs(){
   const container=document.getElementById('binder-tabs');
   if(!container)return;
@@ -1027,6 +1050,27 @@ function renderBinder(){
     if(built.trim())html+=`<div class="bsec-lbl">${s.lbl}</div><div class="bgrid">${built}</div>`;
   });
   document.getElementById('bwrap').innerHTML=html;
+
+  // ── Navegação por setas (somente ao pesquisar) ────────────────
+  if(q!==_lastBinderQuery){_binderNavIdx=0;_lastBinderQuery=q;}
+  if(q){
+    const allCards=document.querySelectorAll('#bwrap .bc2');
+    _binderNavTotal=allCards.length;
+    allCards.forEach((el,i)=>el.setAttribute('data-nav-idx',i));
+    const navBar=document.createElement('div');
+    navBar.id='binder-nav-bar';
+    navBar.innerHTML=
+      `<span class="bnav-label">RESULTADO</span>`+
+      `<button class="bnav-btn" onclick="binderNavGo(-1)">&#8249;</button>`+
+      `<span class="bnav-pos">${_binderNavTotal===0?'0':_binderNavIdx+1} / ${_binderNavTotal}</span>`+
+      `<button class="bnav-btn" onclick="binderNavGo(1)">&#8250;</button>`+
+      `<span class="bnav-label">${_binderNavTotal} carta${_binderNavTotal!==1?'s':''} encontrada${_binderNavTotal!==1?'s':''}</span>`;
+    document.getElementById('bwrap').prepend(navBar);
+    if(_binderNavTotal>0)_binderNavScroll();
+  } else {
+    _binderNavTotal=0;_lastBinderQuery='';
+  }
+
   updateDashProgress();
 }
 
