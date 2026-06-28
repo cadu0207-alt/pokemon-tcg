@@ -442,8 +442,6 @@ function renderDash(){
     </div>`;
   }).join(''):`<div style="color:var(--muted);padding:16px;font-size:.85rem">Nenhuma carta coletada no fichário ainda.</div>`;
 
-  // 151 de Pobre
-  renderGen1Pobre();
 }
 
 // ── 151 DE POBRE ────────────────────────────────────────────────
@@ -1647,7 +1645,14 @@ function renderCustomBindersHome(){
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">
       ${presetsHtml}
-    </div>`;
+    </div>
+
+    <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;
+                margin-top:32px;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+      🎮 151 DE POBRE — GEN 1 &lt; R$50
+    </div>
+    <div id="gen1-pobre" style="margin-bottom:28px"></div>`;
+  renderGen1Pobre();
 }
 
 // ── VISUALIZADOR ──────────────────────────────────────────────────
