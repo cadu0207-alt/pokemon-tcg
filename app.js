@@ -369,7 +369,6 @@ function renderDash(){
     kpiHTML('red','💰 Total Investido','R$'+fmtR(invested),purchases.length+' compras')+
     kpiHTML('orange','📦 Boosters',''+tb,'~'+(tb*6)+' cartas')+
     kpiHTML('gold','💵 R$/Booster','R$'+apb.replace('.',','),'média ponderada')+
-    kpiHTML('teal','💎 Valor Pull','R$'+fmtR(pull),pulledCards.length+' cartas registradas')+
     kpiHTML('teal','📚 Valor Fichário','R$'+fmtR(fichVal),collected.size+' slots coletados')+
     kpiHTML('blue','📊 Retorno',roi+'%','fichário ÷ investido');
 
@@ -792,40 +791,77 @@ function renderGastos(){
 }
 
 // ── CARTAS TIRADAS ───────────────────────────────────────────────
+// Exibe cards coletados no fichário, agrupados por set, com seções colapsáveis
 function renderCartas(){
-  const total=pulledCards.reduce((s,c)=>s+Number(c.price||0),0);
+  const fichVal=calcCollectedValue();
   const invested=purchases.reduce((s,p)=>s+Number(p.price),0);
-  const roi=invested>0?(total/invested*100).toFixed(0):0;
+  const roi=invested>0?(fichVal/invested*100).toFixed(0):0;
   document.getElementById('cards-hdr').innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:22px">
-    ${kpiHTML('teal','💎 Valor Pull','R$'+fmtR(total),pulledCards.length+' cartas')}
+    ${kpiHTML('teal','📚 Valor Fichário','R$'+fmtR(fichVal),collected.size+' slots')}
     ${kpiHTML('gold','📊 % Investimento',roi+'%','de R$'+fmtR(invested))}
     ${kpiHTML('red','🛍️ Investido','R$'+fmtR(invested),purchases.length+' compras')}
-    ${kpiHTML('blue','📚 Sets','7','ME04·ME03·ME02·MEG·MEP + ME05·ME06')}
   </div>`;
-  const rl={'Dupla Rara (RR)':'RR','Ilustração Rara (SAR)':'SAR','Ilustracao Rara (SAR)':'SAR',
-    'Ilustração Rara (IR)':'IR','Ilustracao Rara (IR)':'IR','Rara Ultra (UR)':'UR',
-    'Rara (Holo)':'HOLO','Incomum (RH)':'RH','Comum (RH)':'RH','Promocional':'PROMO'};
-  const lotes={};
-  pulledCards.forEach(c=>{const l=c.lote||'Sem lote';if(!lotes[l])lotes[l]=[];lotes[l].push(c);});
+
+  // Agrupa slots coletados por set
+  const bySet={};
+  getAllCardsWithSet().forEach(c=>{
+    const sid=c._setId;
+    getSlots(c,sid).forEach(s=>{
+      const key=slotKey(sid+':',c.n,s.ver);
+      if(!collected.has(key))return;
+      if(!bySet[sid])bySet[sid]=[];
+      bySet[sid].push({c,ver:s.ver,price:s.price||c.price});
+    });
+  });
+
+  const setLbl=id=>id.toUpperCase()
+    .replace('SV3PT5','151').replace('SV8PT5','SV8.5')
+    .replace('SV6PT5','SV6.5').replace('SV4PT5','SV4.5');
+
+  const setOrder=['me04','me03','me02','meg','me05','me06','mep',
+    'sv1','sv2','sv3','sv3pt5','sv4','sv4pt5','sv5','sv6','sv6pt5','sv7','sv8','sv8pt5'];
+  const keys=[...setOrder.filter(k=>bySet[k]),...Object.keys(bySet).filter(k=>!setOrder.includes(k))];
+
+  if(!keys.length){
+    document.getElementById('cards-list').innerHTML=
+      `<div style="text-align:center;padding:60px 20px;color:var(--muted);font-family:'Space Mono',monospace;font-size:11px">
+        Nenhuma carta marcada no fichário ainda.<br>
+        <span style="color:var(--accent)">Acesse a aba Fichário e marque as cartas que você tem.</span>
+      </div>`;
+    return;
+  }
+
   let html='';
-  Object.entries(lotes).forEach(([lote,cards])=>{
-    const lTotal=cards.reduce((s,c)=>s+Number(c.price||0),0);
-    html+=`<div style="font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;padding:8px 0 6px;border-bottom:1px solid var(--border);margin-bottom:12px;display:flex;justify-content:space-between">
-      <span>📦 ${lote}</span><span style="color:var(--teal)">${cards.length} · R$${fmtR(lTotal)}</span></div><div class="pulled-grid">`;
-    cards.forEach(c=>{
-      const imgSrc=getCardImg(c);const ver=getVerFromRar(c.rar||'');
-      const mm=(c.pmin&&c.pmax)?`<div class="pc-minmax">mín <span style="color:var(--teal)">R$${fmtR(c.pmin)}</span> · máx <span style="color:var(--accent)">R$${fmtR(c.pmax)}</span></div>`:'';
-      html+=`<div class="pc" onclick='openCardModal(${safeJSON(c)})'>
+  keys.forEach(sid=>{
+    const slots=bySet[sid];
+    const sTotal=slots.reduce((s,e)=>s+Number(e.price||0),0);
+    html+=`<details open style="margin-bottom:14px">
+      <summary style="font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);
+                      text-transform:uppercase;padding:9px 12px;border-bottom:1px solid var(--border);
+                      display:flex;justify-content:space-between;align-items:center;cursor:pointer;
+                      background:var(--surface2);border-radius:6px;list-style:none;user-select:none">
+        <span>📦 ${setLbl(sid)}</span>
+        <span style="color:var(--teal)">${slots.length} slots · R$${fmtR(sTotal)}</span>
+      </summary>
+      <div class="pulled-grid" style="padding-top:12px">`;
+    slots.forEach(({c,ver,price})=>{
+      const imgSrc=getBinderImg(c,sid);
+      const col=VER_COLOR[ver]||'#888';
+      html+=`<div class="pc" onclick='switchSet("${sid}",null)' title="Ir para ${setLbl(sid)} no fichário">
         ${imgSrc?`<img class="pc-img" src="${imgSrc}" alt="${c.name}" onerror="this.style.display='none'">`:
-          `<div class="pc-icon ${c.ic||'fp'}">${c.icon||'🃏'}</div>`}
-        <div class="pc-info"><div class="pc-name">${c.name}</div><div class="pc-meta">${c.num||''}</div>
-          ${c.psrc?`<div class="pc-src">📊 ${c.psrc}</div>`:''}${mm}
-          <div class="ver-dots"><div class="ver-dot" style="background:${VER_COLOR[ver]};border-color:${VER_COLOR[ver]}" title="${VER_LABEL[ver]}"></div></div></div>
-        <div class="pc-right"><span class="rb ${c.bc||'bx'}">${rl[c.rar]||c.rar?.split(' ')[0]||''}</span>
-          ${c.price?`<div class="pc-price">R$${fmtR(c.price)}</div>`:''}</div>
+          `<div class="pc-icon fp">🃏</div>`}
+        <div class="pc-info">
+          <div class="pc-name">${c.name}</div>
+          <div class="pc-meta">${c.n} · ${setLbl(sid)}</div>
+          <div class="ver-dots"><div class="ver-dot" style="background:${col};border-color:${col}" title="${VER_LABEL[ver]||ver}"></div></div>
+        </div>
+        <div class="pc-right">
+          <span class="rb" style="background:${col}22;color:${col};border-color:${col}">${VER_SHORT[ver]||ver}</span>
+          ${price?`<div class="pc-price">R$${fmtR(price)}</div>`:''}
+        </div>
       </div>`;
     });
-    html+='</div>';
+    html+='</div></details>';
   });
   document.getElementById('cards-list').innerHTML=html;
 }

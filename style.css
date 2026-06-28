@@ -825,6 +825,13 @@ h1 {
   box-shadow: 0 0 8px currentColor;
 }
 
+/* ─── CARTAS TIRADAS — SEÇÕES COLAPSÁVEIS ───────────── */
+details summary::-webkit-details-marker,
+details summary::marker { display: none; }
+details summary::after { content: '▼'; font-size: 9px; margin-left: 8px; transition: transform .2s; display: inline-block; }
+details:not([open]) summary::after { transform: rotate(-90deg); }
+details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transparent; }
+
 /* ─── PULLED CARDS ───────────────────────────────────── */
 .pulled-grid {
   display: grid;
