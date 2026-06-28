@@ -340,20 +340,38 @@ function init3DCards(){
   });
 }
 
+// ── VALOR DO FICHÁRIO ────────────────────────────────────────────
+function calcCollectedValue(){
+  let total=0;
+  const all=getAllCardsWithSet();
+  all.forEach(c=>{
+    const sid=c._setId;
+    getSlots(c,sid).forEach(s=>{
+      if(collected.has(slotKey(sid+':',c.n,s.ver))){
+        const p=s.price||c.price;
+        if(p)total+=p;
+      }
+    });
+  });
+  return total;
+}
+
 // ── DASHBOARD ────────────────────────────────────────────────────
 function renderDash(){
   const invested=purchases.reduce((s,p)=>s+Number(p.price),0);
   const bst=purchases.filter(p=>!p.acessorio);
   const tb=bst.reduce((s,p)=>s+p.boost,0),tg=bst.reduce((s,p)=>s+Number(p.price),0);
   const pull=pulledCards.reduce((s,c)=>s+Number(c.price||0),0);
-  const roi=invested>0?(pull/invested*100).toFixed(0):0;
+  const fichVal=calcCollectedValue();
+  const roi=invested>0?(fichVal/invested*100).toFixed(0):0;
   const apb=tb>0?(tg/tb).toFixed(2):'0,00';
   document.getElementById('kpi-dash').innerHTML=
     kpiHTML('red','💰 Total Investido','R$'+fmtR(invested),purchases.length+' compras')+
     kpiHTML('orange','📦 Boosters',''+tb,'~'+(tb*6)+' cartas')+
     kpiHTML('gold','💵 R$/Booster','R$'+apb.replace('.',','),'média ponderada')+
-    kpiHTML('teal','💎 Valor Pull','R$'+fmtR(pull),pulledCards.length+' cartas')+
-    kpiHTML('blue','📊 Retorno',roi+'%','valor tirado ÷ gasto');
+    kpiHTML('teal','💎 Valor Pull','R$'+fmtR(pull),pulledCards.length+' cartas registradas')+
+    kpiHTML('teal','📚 Valor Fichário','R$'+fmtR(fichVal),collected.size+' slots coletados')+
+    kpiHTML('blue','📊 Retorno',roi+'%','fichário ÷ investido');
 
   // Gráfico raridades com dot colorido
   const rCount={},rVer={};
@@ -589,7 +607,7 @@ const SET_CARDS_MAP={
 // ── CATÁLOGO DE COLEÇÕES ─────────────────────────────────────────
 const SET_CATALOG=[
   {id:'me06',label:'ME06 — Esmeralda Tempestuosa',emoji:'💎',cards:0,  color:'#00c853',series:'ME',upcoming:true},
-  {id:'me05',label:'ME05 — Negrura Absoluta',      emoji:'🌑',cards:105,color:'#757575',series:'ME',upcoming:true},
+  {id:'me05',label:'ME05 — Negrura Absoluta',      emoji:'🌑',cards:119,color:'#757575',series:'ME',upcoming:true},
   {id:'me04',label:'ME04 — Caos Ascendente',       emoji:'🔥',cards:122,color:'#FF5722',series:'ME'},
   {id:'me03',label:'ME03 — Ordem Perfeita',        emoji:'🔵',cards:120,color:'#1565C0',series:'ME'},
   {id:'me02',label:'ME02 — Fogo Fantasmagórico',   emoji:'👻',cards:130,color:'#9C27B0',series:'ME'},
@@ -1508,7 +1526,7 @@ function renderCustomBindersHome(){
     return`<div onclick="openPresetPreview('${p.key}')"
       style="padding:14px;border-radius:10px;cursor:pointer;transition:all .2s;
              border:1px solid var(--border);background:var(--surface2);
-             border-top:3px solid ${p.color};${already?'opacity:.55':''}position:relative"
+             border-top:3px solid ${p.color};${already?'opacity:.55;':''}position:relative"
       onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 20px ${p.color}33'"
       onmouseout="this.style.transform='';this.style.boxShadow=''">
       <div style="font-size:22px;margin-bottom:8px">${p.emoji}</div>
@@ -1522,7 +1540,7 @@ function renderCustomBindersHome(){
   function setCard(s){
     const on=myCollections.includes(s.id);
     const lbl=s.id.toUpperCase().replace('SV8PT5','SV8.5').replace('SV6PT5','SV6.5')
-                  .replace('SV4PT5','SV4.5').replace('SV3PT5','SV3.5');
+                  .replace('SV4PT5','SV4.5').replace('SV3PT5','151');
     return`<div onclick="toggleCollection('${s.id}')"
       style="padding:10px;border-radius:8px;cursor:pointer;transition:all .18s;
              border:1px solid ${on?s.color:'var(--border)'};
