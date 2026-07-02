@@ -1,0 +1,1281 @@
+{
+ "nota": "Fila de sets legados. status: pending|done|erro. Processar em ordem, 5 por batch.",
+ "usd_brl_padrao": 5.7,
+ "queue": [
+  {
+   "id": "swsh12pt5",
+   "series": "SWSH",
+   "printed": 159,
+   "total": 160,
+   "year": "2023",
+   "name": "Crown Zenith",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 160
+  },
+  {
+   "id": "swsh12pt5gg",
+   "series": "SWSH",
+   "printed": 70,
+   "total": 70,
+   "year": "2023",
+   "name": "Crown Zenith Galarian Gallery",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 70
+  },
+  {
+   "id": "swsh12",
+   "series": "SWSH",
+   "printed": 195,
+   "total": 215,
+   "year": "2022",
+   "name": "Silver Tempest",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 215
+  },
+  {
+   "id": "swsh12tg",
+   "series": "SWSH",
+   "printed": 30,
+   "total": 30,
+   "year": "2022",
+   "name": "Silver Tempest Trainer Gallery",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 30
+  },
+  {
+   "id": "swsh11",
+   "series": "SWSH",
+   "printed": 196,
+   "total": 217,
+   "year": "2022",
+   "name": "Lost Origin",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 217
+  },
+  {
+   "id": "swsh11tg",
+   "series": "SWSH",
+   "printed": 30,
+   "total": 30,
+   "year": "2022",
+   "name": "Lost Origin Trainer Gallery",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 30
+  },
+  {
+   "id": "pgo",
+   "series": "SWSH",
+   "printed": 78,
+   "total": 88,
+   "year": "2022",
+   "name": "Pokémon GO",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 88
+  },
+  {
+   "id": "swsh10",
+   "series": "SWSH",
+   "printed": 189,
+   "total": 216,
+   "year": "2022",
+   "name": "Astral Radiance",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 216
+  },
+  {
+   "id": "swsh10tg",
+   "series": "SWSH",
+   "printed": 30,
+   "total": 30,
+   "year": "2022",
+   "name": "Astral Radiance Trainer Gallery",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 30
+  },
+  {
+   "id": "swsh9",
+   "series": "SWSH",
+   "printed": 172,
+   "total": 186,
+   "year": "2022",
+   "name": "Brilliant Stars",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 186
+  },
+  {
+   "id": "swsh9tg",
+   "series": "SWSH",
+   "printed": 30,
+   "total": 30,
+   "year": "2022",
+   "name": "Brilliant Stars Trainer Gallery",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 30
+  },
+  {
+   "id": "swsh8",
+   "series": "SWSH",
+   "printed": 264,
+   "total": 284,
+   "year": "2021",
+   "name": "Fusion Strike",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 284
+  },
+  {
+   "id": "cel25",
+   "series": "SWSH",
+   "printed": 25,
+   "total": 25,
+   "year": "2021",
+   "name": "Celebrations",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 25
+  },
+  {
+   "id": "cel25c",
+   "series": "SWSH",
+   "printed": 25,
+   "total": 25,
+   "year": "2021",
+   "name": "Celebrations: Classic Collection",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 25
+  },
+  {
+   "id": "swsh7",
+   "series": "SWSH",
+   "printed": 203,
+   "total": 237,
+   "year": "2021",
+   "name": "Evolving Skies",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 237
+  },
+  {
+   "id": "swsh6",
+   "series": "SWSH",
+   "printed": 198,
+   "total": 233,
+   "year": "2021",
+   "name": "Chilling Reign",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 233
+  },
+  {
+   "id": "swsh5",
+   "series": "SWSH",
+   "printed": 163,
+   "total": 183,
+   "year": "2021",
+   "name": "Battle Styles",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 183
+  },
+  {
+   "id": "swsh45",
+   "series": "SWSH",
+   "printed": 72,
+   "total": 73,
+   "year": "2021",
+   "name": "Shining Fates",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 73
+  },
+  {
+   "id": "swsh45sv",
+   "series": "SWSH",
+   "printed": 122,
+   "total": 122,
+   "year": "2021",
+   "name": "Shining Fates Shiny Vault",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 122
+  },
+  {
+   "id": "swsh4",
+   "series": "SWSH",
+   "printed": 185,
+   "total": 203,
+   "year": "2020",
+   "name": "Vivid Voltage",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 203
+  },
+  {
+   "id": "swsh35",
+   "series": "SWSH",
+   "printed": 73,
+   "total": 80,
+   "year": "2020",
+   "name": "Champion's Path",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 80
+  },
+  {
+   "id": "swsh3",
+   "series": "SWSH",
+   "printed": 189,
+   "total": 201,
+   "year": "2020",
+   "name": "Darkness Ablaze",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 201
+  },
+  {
+   "id": "swsh2",
+   "series": "SWSH",
+   "printed": 192,
+   "total": 209,
+   "year": "2020",
+   "name": "Rebel Clash",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 209
+  },
+  {
+   "id": "swsh1",
+   "series": "SWSH",
+   "printed": 202,
+   "total": 216,
+   "year": "2020",
+   "name": "Sword & Shield",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 216
+  },
+  {
+   "id": "swshp",
+   "series": "SWSH",
+   "printed": 307,
+   "total": 304,
+   "year": "2019",
+   "name": "SWSH Black Star Promos",
+   "file": "legacy_swsh.js",
+   "status": "done",
+   "cards_importados": 304
+  },
+  {
+   "id": "sm12",
+   "series": "SM",
+   "printed": 236,
+   "total": 272,
+   "year": "2019",
+   "name": "Cosmic Eclipse",
+   "file": "legacy_sm.js",
+   "status": "pending"
+  },
+  {
+   "id": "sm115",
+   "series": "SM",
+   "printed": 68,
+   "total": 69,
+   "year": "2019",
+   "name": "Hidden Fates",
+   "file": "legacy_sm.js",
+   "status": "pending"
+  },
+  {
+   "id": "sma",
+   "series": "SM",
+   "printed": 94,
+   "total": 94,
+   "year": "2019",
+   "name": "Hidden Fates Shiny Vault",
+   "file": "legacy_sm.js",
+   "status": "pending"
+  },
+  {
+   "id": "sm11",
+   "series": "SM",
+   "printed": 236,
+   "total": 260,
+   "year": "2019",
+   "name": "Unified Minds",
+   "file": "legacy_sm.js",
+   "status": "pending"
+  },
+  {
+   "id": "sm10",
+   "series": "SM",
+   "printed": 214,
+   "total": 234,
+   "year": "2019",
+   "name": "Unbroken Bonds",
+   "file": "legacy_sm.js",
+   "status": "pending"
+  },
+  {
+   "id": "det1",
+   "series": "SM",
+   "printed": 18,
+   "total": 18,
+   "year": "2019",
+   "name": "Detective Pikachu",
+   "file": "legacy_sm.js",
+   "status": "pending"
+  },
+  {
+   "id": "sm9",
+   "series": "SM",
+   "printed": 181,
+   "total": 198,
+   "year": "2019",
+   "name": "Team Up",
+   "file": "legacy_sm.js",
+   "status": "pending"
+  },
+  {
+   "id": "sm8",
+   "series": "SM",
+   "printed": 214,
+   "total": 240,
+   "year": "2018",
+   "name": "Lost Thunder",
+   "file": "legacy_sm.js",
+   "status": "pending"
+  },
+  {
+   "id": "sm75",
+   "series": "SM",
+   "printed": 70,
+   "total": 80,
+   "year": "2018",
+   "name": "Dragon Majesty",
+   "file": "legacy_sm.js",
+   "status": "pending"
+  },
+  {
+   "id": "sm7",
+   "series": "SM",
+   "printed": 168,
+   "total": 187,
+   "year": "2018",
+   "name": "Celestial Storm",
+   "file": "legacy_sm.js",
+   "status": "pending"
+  },
+  {
+   "id": "sm6",
+   "series": "SM",
+   "printed": 131,
+   "total": 150,
+   "year": "2018",
+   "name": "Forbidden Light",
+   "file": "legacy_sm.js",
+   "status": "pending"
+  },
+  {
+   "id": "sm5",
+   "series": "SM",
+   "printed": 156,
+   "total": 178,
+   "year": "2018",
+   "name": "Ultra Prism",
+   "file": "legacy_sm.js",
+   "status": "pending"
+  },
+  {
+   "id": "sm4",
+   "series": "SM",
+   "printed": 111,
+   "total": 126,
+   "year": "2017",
+   "name": "Crimson Invasion",
+   "file": "legacy_sm.js",
+   "status": "pending"
+  },
+  {
+   "id": "sm35",
+   "series": "SM",
+   "printed": 73,
+   "total": 81,
+   "year": "2017",
+   "name": "Shining Legends",
+   "file": "legacy_sm.js",
+   "status": "pending"
+  },
+  {
+   "id": "sm3",
+   "series": "SM",
+   "printed": 147,
+   "total": 177,
+   "year": "2017",
+   "name": "Burning Shadows",
+   "file": "legacy_sm.js",
+   "status": "pending"
+  },
+  {
+   "id": "sm2",
+   "series": "SM",
+   "printed": 145,
+   "total": 180,
+   "year": "2017",
+   "name": "Guardians Rising",
+   "file": "legacy_sm.js",
+   "status": "pending"
+  },
+  {
+   "id": "sm1",
+   "series": "SM",
+   "printed": 149,
+   "total": 173,
+   "year": "2017",
+   "name": "Sun & Moon",
+   "file": "legacy_sm.js",
+   "status": "pending"
+  },
+  {
+   "id": "smp",
+   "series": "SM",
+   "printed": 248,
+   "total": 250,
+   "year": "2017",
+   "name": "SM Black Star Promos",
+   "file": "legacy_sm.js",
+   "status": "pending"
+  },
+  {
+   "id": "xy12",
+   "series": "XY",
+   "printed": 108,
+   "total": 113,
+   "year": "2016",
+   "name": "Evolutions",
+   "file": "legacy_xy.js",
+   "status": "pending"
+  },
+  {
+   "id": "xy11",
+   "series": "XY",
+   "printed": 114,
+   "total": 116,
+   "year": "2016",
+   "name": "Steam Siege",
+   "file": "legacy_xy.js",
+   "status": "pending"
+  },
+  {
+   "id": "xy10",
+   "series": "XY",
+   "printed": 124,
+   "total": 129,
+   "year": "2016",
+   "name": "Fates Collide",
+   "file": "legacy_xy.js",
+   "status": "pending"
+  },
+  {
+   "id": "g1",
+   "series": "XY",
+   "printed": 83,
+   "total": 117,
+   "year": "2016",
+   "name": "Generations",
+   "file": "legacy_xy.js",
+   "status": "pending"
+  },
+  {
+   "id": "xy9",
+   "series": "XY",
+   "printed": 122,
+   "total": 126,
+   "year": "2016",
+   "name": "BREAKpoint",
+   "file": "legacy_xy.js",
+   "status": "pending"
+  },
+  {
+   "id": "xy8",
+   "series": "XY",
+   "printed": 162,
+   "total": 165,
+   "year": "2015",
+   "name": "BREAKthrough",
+   "file": "legacy_xy.js",
+   "status": "pending"
+  },
+  {
+   "id": "xy7",
+   "series": "XY",
+   "printed": 98,
+   "total": 100,
+   "year": "2015",
+   "name": "Ancient Origins",
+   "file": "legacy_xy.js",
+   "status": "pending"
+  },
+  {
+   "id": "xy6",
+   "series": "XY",
+   "printed": 108,
+   "total": 112,
+   "year": "2015",
+   "name": "Roaring Skies",
+   "file": "legacy_xy.js",
+   "status": "pending"
+  },
+  {
+   "id": "dc1",
+   "series": "XY",
+   "printed": 34,
+   "total": 34,
+   "year": "2015",
+   "name": "Double Crisis",
+   "file": "legacy_xy.js",
+   "status": "pending"
+  },
+  {
+   "id": "xy5",
+   "series": "XY",
+   "printed": 160,
+   "total": 164,
+   "year": "2015",
+   "name": "Primal Clash",
+   "file": "legacy_xy.js",
+   "status": "pending"
+  },
+  {
+   "id": "xy4",
+   "series": "XY",
+   "printed": 119,
+   "total": 124,
+   "year": "2014",
+   "name": "Phantom Forces",
+   "file": "legacy_xy.js",
+   "status": "pending"
+  },
+  {
+   "id": "xy3",
+   "series": "XY",
+   "printed": 111,
+   "total": 114,
+   "year": "2014",
+   "name": "Furious Fists",
+   "file": "legacy_xy.js",
+   "status": "pending"
+  },
+  {
+   "id": "xy2",
+   "series": "XY",
+   "printed": 106,
+   "total": 110,
+   "year": "2014",
+   "name": "Flashfire",
+   "file": "legacy_xy.js",
+   "status": "pending"
+  },
+  {
+   "id": "xy1",
+   "series": "XY",
+   "printed": 146,
+   "total": 146,
+   "year": "2014",
+   "name": "XY",
+   "file": "legacy_xy.js",
+   "status": "pending"
+  },
+  {
+   "id": "xy0",
+   "series": "XY",
+   "printed": 39,
+   "total": 39,
+   "year": "2013",
+   "name": "Kalos Starter Set",
+   "file": "legacy_xy.js",
+   "status": "pending"
+  },
+  {
+   "id": "bw11",
+   "series": "BW",
+   "printed": 113,
+   "total": 140,
+   "year": "2013",
+   "name": "Legendary Treasures",
+   "file": "legacy_bw.js",
+   "status": "pending"
+  },
+  {
+   "id": "xyp",
+   "series": "XY",
+   "printed": 211,
+   "total": 216,
+   "year": "2013",
+   "name": "XY Black Star Promos",
+   "file": "legacy_xy.js",
+   "status": "pending"
+  },
+  {
+   "id": "bw10",
+   "series": "BW",
+   "printed": 101,
+   "total": 105,
+   "year": "2013",
+   "name": "Plasma Blast",
+   "file": "legacy_bw.js",
+   "status": "pending"
+  },
+  {
+   "id": "bw9",
+   "series": "BW",
+   "printed": 116,
+   "total": 122,
+   "year": "2013",
+   "name": "Plasma Freeze",
+   "file": "legacy_bw.js",
+   "status": "pending"
+  },
+  {
+   "id": "bw8",
+   "series": "BW",
+   "printed": 135,
+   "total": 138,
+   "year": "2013",
+   "name": "Plasma Storm",
+   "file": "legacy_bw.js",
+   "status": "pending"
+  },
+  {
+   "id": "bw7",
+   "series": "BW",
+   "printed": 149,
+   "total": 153,
+   "year": "2012",
+   "name": "Boundaries Crossed",
+   "file": "legacy_bw.js",
+   "status": "pending"
+  },
+  {
+   "id": "dv1",
+   "series": "BW",
+   "printed": 20,
+   "total": 21,
+   "year": "2012",
+   "name": "Dragon Vault",
+   "file": "legacy_bw.js",
+   "status": "pending"
+  },
+  {
+   "id": "bw6",
+   "series": "BW",
+   "printed": 124,
+   "total": 128,
+   "year": "2012",
+   "name": "Dragons Exalted",
+   "file": "legacy_bw.js",
+   "status": "pending"
+  },
+  {
+   "id": "bw5",
+   "series": "BW",
+   "printed": 108,
+   "total": 111,
+   "year": "2012",
+   "name": "Dark Explorers",
+   "file": "legacy_bw.js",
+   "status": "pending"
+  },
+  {
+   "id": "bw4",
+   "series": "BW",
+   "printed": 99,
+   "total": 103,
+   "year": "2012",
+   "name": "Next Destinies",
+   "file": "legacy_bw.js",
+   "status": "pending"
+  },
+  {
+   "id": "bw3",
+   "series": "BW",
+   "printed": 101,
+   "total": 102,
+   "year": "2011",
+   "name": "Noble Victories",
+   "file": "legacy_bw.js",
+   "status": "pending"
+  },
+  {
+   "id": "bw2",
+   "series": "BW",
+   "printed": 98,
+   "total": 98,
+   "year": "2011",
+   "name": "Emerging Powers",
+   "file": "legacy_bw.js",
+   "status": "pending"
+  },
+  {
+   "id": "bw1",
+   "series": "BW",
+   "printed": 114,
+   "total": 115,
+   "year": "2011",
+   "name": "Black & White",
+   "file": "legacy_bw.js",
+   "status": "pending"
+  },
+  {
+   "id": "bwp",
+   "series": "BW",
+   "printed": 101,
+   "total": 101,
+   "year": "2011",
+   "name": "BW Black Star Promos",
+   "file": "legacy_bw.js",
+   "status": "pending"
+  },
+  {
+   "id": "col1",
+   "series": "HGSS",
+   "printed": 95,
+   "total": 106,
+   "year": "2011",
+   "name": "Call of Legends",
+   "file": "legacy_hgss.js",
+   "status": "pending"
+  },
+  {
+   "id": "hgss4",
+   "series": "HGSS",
+   "printed": 102,
+   "total": 103,
+   "year": "2010",
+   "name": "HS—Triumphant",
+   "file": "legacy_hgss.js",
+   "status": "pending"
+  },
+  {
+   "id": "hgss3",
+   "series": "HGSS",
+   "printed": 90,
+   "total": 91,
+   "year": "2010",
+   "name": "HS—Undaunted",
+   "file": "legacy_hgss.js",
+   "status": "pending"
+  },
+  {
+   "id": "hgss2",
+   "series": "HGSS",
+   "printed": 95,
+   "total": 96,
+   "year": "2010",
+   "name": "HS—Unleashed",
+   "file": "legacy_hgss.js",
+   "status": "pending"
+  },
+  {
+   "id": "hgss1",
+   "series": "HGSS",
+   "printed": 123,
+   "total": 124,
+   "year": "2010",
+   "name": "HeartGold & SoulSilver",
+   "file": "legacy_hgss.js",
+   "status": "pending"
+  },
+  {
+   "id": "hsp",
+   "series": "HGSS",
+   "printed": 25,
+   "total": 25,
+   "year": "2010",
+   "name": "HGSS Black Star Promos",
+   "file": "legacy_hgss.js",
+   "status": "pending"
+  },
+  {
+   "id": "pl4",
+   "series": "DP",
+   "printed": 99,
+   "total": 111,
+   "year": "2009",
+   "name": "Arceus",
+   "file": "legacy_dp.js",
+   "status": "pending"
+  },
+  {
+   "id": "pl3",
+   "series": "DP",
+   "printed": 147,
+   "total": 153,
+   "year": "2009",
+   "name": "Supreme Victors",
+   "file": "legacy_dp.js",
+   "status": "pending"
+  },
+  {
+   "id": "pl2",
+   "series": "DP",
+   "printed": 111,
+   "total": 120,
+   "year": "2009",
+   "name": "Rising Rivals",
+   "file": "legacy_dp.js",
+   "status": "pending"
+  },
+  {
+   "id": "pl1",
+   "series": "DP",
+   "printed": 127,
+   "total": 133,
+   "year": "2009",
+   "name": "Platinum",
+   "file": "legacy_dp.js",
+   "status": "pending"
+  },
+  {
+   "id": "dp7",
+   "series": "DP",
+   "printed": 100,
+   "total": 106,
+   "year": "2008",
+   "name": "Stormfront",
+   "file": "legacy_dp.js",
+   "status": "pending"
+  },
+  {
+   "id": "dp6",
+   "series": "DP",
+   "printed": 146,
+   "total": 146,
+   "year": "2008",
+   "name": "Legends Awakened",
+   "file": "legacy_dp.js",
+   "status": "pending"
+  },
+  {
+   "id": "dp5",
+   "series": "DP",
+   "printed": 100,
+   "total": 100,
+   "year": "2008",
+   "name": "Majestic Dawn",
+   "file": "legacy_dp.js",
+   "status": "pending"
+  },
+  {
+   "id": "dp4",
+   "series": "DP",
+   "printed": 106,
+   "total": 106,
+   "year": "2008",
+   "name": "Great Encounters",
+   "file": "legacy_dp.js",
+   "status": "pending"
+  },
+  {
+   "id": "dp3",
+   "series": "DP",
+   "printed": 132,
+   "total": 132,
+   "year": "2007",
+   "name": "Secret Wonders",
+   "file": "legacy_dp.js",
+   "status": "pending"
+  },
+  {
+   "id": "dp2",
+   "series": "DP",
+   "printed": 123,
+   "total": 124,
+   "year": "2007",
+   "name": "Mysterious Treasures",
+   "file": "legacy_dp.js",
+   "status": "pending"
+  },
+  {
+   "id": "dp1",
+   "series": "DP",
+   "printed": 130,
+   "total": 130,
+   "year": "2007",
+   "name": "Diamond & Pearl",
+   "file": "legacy_dp.js",
+   "status": "pending"
+  },
+  {
+   "id": "dpp",
+   "series": "DP",
+   "printed": 56,
+   "total": 56,
+   "year": "2007",
+   "name": "DP Black Star Promos",
+   "file": "legacy_dp.js",
+   "status": "pending"
+  },
+  {
+   "id": "ex16",
+   "series": "EX",
+   "printed": 108,
+   "total": 108,
+   "year": "2007",
+   "name": "Power Keepers",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "ex15",
+   "series": "EX",
+   "printed": 101,
+   "total": 101,
+   "year": "2006",
+   "name": "Dragon Frontiers",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "ex14",
+   "series": "EX",
+   "printed": 100,
+   "total": 100,
+   "year": "2006",
+   "name": "Crystal Guardians",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "ex13",
+   "series": "EX",
+   "printed": 110,
+   "total": 111,
+   "year": "2006",
+   "name": "Holon Phantoms",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "tk2a",
+   "series": "EX",
+   "printed": 12,
+   "total": 12,
+   "year": "2006",
+   "name": "EX Trainer Kit 2 Plusle",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "tk2b",
+   "series": "EX",
+   "printed": 12,
+   "total": 12,
+   "year": "2006",
+   "name": "EX Trainer Kit 2 Minun",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "ex12",
+   "series": "EX",
+   "printed": 92,
+   "total": 93,
+   "year": "2006",
+   "name": "Legend Maker",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "ex11",
+   "series": "EX",
+   "printed": 113,
+   "total": 114,
+   "year": "2005",
+   "name": "Delta Species",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "ex10",
+   "series": "EX",
+   "printed": 115,
+   "total": 145,
+   "year": "2005",
+   "name": "Unseen Forces",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "ex9",
+   "series": "EX",
+   "printed": 106,
+   "total": 107,
+   "year": "2005",
+   "name": "Emerald",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "ex8",
+   "series": "EX",
+   "printed": 107,
+   "total": 108,
+   "year": "2005",
+   "name": "Deoxys",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "ex7",
+   "series": "EX",
+   "printed": 109,
+   "total": 111,
+   "year": "2004",
+   "name": "Team Rocket Returns",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "ex6",
+   "series": "EX",
+   "printed": 112,
+   "total": 116,
+   "year": "2004",
+   "name": "FireRed & LeafGreen",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "ex5",
+   "series": "EX",
+   "printed": 101,
+   "total": 102,
+   "year": "2004",
+   "name": "Hidden Legends",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "tk1a",
+   "series": "EX",
+   "printed": 10,
+   "total": 10,
+   "year": "2004",
+   "name": "EX Trainer Kit Latias",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "tk1b",
+   "series": "EX",
+   "printed": 10,
+   "total": 10,
+   "year": "2004",
+   "name": "EX Trainer Kit Latios",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "ex4",
+   "series": "EX",
+   "printed": 95,
+   "total": 97,
+   "year": "2004",
+   "name": "Team Magma vs Team Aqua",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "ex3",
+   "series": "EX",
+   "printed": 97,
+   "total": 100,
+   "year": "2003",
+   "name": "Dragon",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "ex2",
+   "series": "EX",
+   "printed": 100,
+   "total": 100,
+   "year": "2003",
+   "name": "Sandstorm",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "ex1",
+   "series": "EX",
+   "printed": 109,
+   "total": 109,
+   "year": "2003",
+   "name": "Ruby & Sapphire",
+   "file": "legacy_ex.js",
+   "status": "pending"
+  },
+  {
+   "id": "ecard3",
+   "series": "CLASSIC",
+   "printed": 144,
+   "total": 182,
+   "year": "2003",
+   "name": "Skyridge",
+   "file": "legacy_classic.js",
+   "status": "pending"
+  },
+  {
+   "id": "ecard2",
+   "series": "CLASSIC",
+   "printed": 147,
+   "total": 182,
+   "year": "2003",
+   "name": "Aquapolis",
+   "file": "legacy_classic.js",
+   "status": "pending"
+  },
+  {
+   "id": "ecard1",
+   "series": "CLASSIC",
+   "printed": 165,
+   "total": 165,
+   "year": "2002",
+   "name": "Expedition Base Set",
+   "file": "legacy_classic.js",
+   "status": "pending"
+  },
+  {
+   "id": "neo4",
+   "series": "CLASSIC",
+   "printed": 105,
+   "total": 113,
+   "year": "2002",
+   "name": "Neo Destiny",
+   "file": "legacy_classic.js",
+   "status": "pending"
+  },
+  {
+   "id": "neo3",
+   "series": "CLASSIC",
+   "printed": 64,
+   "total": 66,
+   "year": "2001",
+   "name": "Neo Revelation",
+   "file": "legacy_classic.js",
+   "status": "pending"
+  },
+  {
+   "id": "neo2",
+   "series": "CLASSIC",
+   "printed": 75,
+   "total": 75,
+   "year": "2001",
+   "name": "Neo Discovery",
+   "file": "legacy_classic.js",
+   "status": "pending"
+  },
+  {
+   "id": "neo1",
+   "series": "CLASSIC",
+   "printed": 111,
+   "total": 111,
+   "year": "2000",
+   "name": "Neo Genesis",
+   "file": "legacy_classic.js",
+   "status": "pending"
+  },
+  {
+   "id": "gym2",
+   "series": "CLASSIC",
+   "printed": 132,
+   "total": 132,
+   "year": "2000",
+   "name": "Gym Challenge",
+   "file": "legacy_classic.js",
+   "status": "pending"
+  },
+  {
+   "id": "gym1",
+   "series": "CLASSIC",
+   "printed": 132,
+   "total": 132,
+   "year": "2000",
+   "name": "Gym Heroes",
+   "file": "legacy_classic.js",
+   "status": "pending"
+  },
+  {
+   "id": "base5",
+   "series": "CLASSIC",
+   "printed": 82,
+   "total": 83,
+   "year": "2000",
+   "name": "Team Rocket",
+   "file": "legacy_classic.js",
+   "status": "pending"
+  },
+  {
+   "id": "base4",
+   "series": "CLASSIC",
+   "printed": 130,
+   "total": 130,
+   "year": "2000",
+   "name": "Base Set 2",
+   "file": "legacy_classic.js",
+   "status": "pending"
+  },
+  {
+   "id": "base3",
+   "series": "CLASSIC",
+   "printed": 62,
+   "total": 62,
+   "year": "1999",
+   "name": "Fossil",
+   "file": "legacy_classic.js",
+   "status": "pending"
+  },
+  {
+   "id": "basep",
+   "series": "CLASSIC",
+   "printed": 53,
+   "total": 53,
+   "year": "1999",
+   "name": "Wizards Black Star Promos",
+   "file": "legacy_classic.js",
+   "status": "pending"
+  },
+  {
+   "id": "base2",
+   "series": "CLASSIC",
+   "printed": 64,
+   "total": 64,
+   "year": "1999",
+   "name": "Jungle",
+   "file": "legacy_classic.js",
+   "status": "pending"
+  },
+  {
+   "id": "base1",
+   "series": "CLASSIC",
+   "printed": 102,
+   "total": 102,
+   "year": "1999",
+   "name": "Base",
+   "file": "legacy_classic.js",
+   "status": "pending"
+  }
+ ]
+}

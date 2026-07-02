@@ -110,7 +110,7 @@ function getBinderImg(c,setId){
   if(setId==='me04') return imgMe04(n);
   // Sets Escarlate e Violeta — imagens via pokemontcg.io CDN (público)
   // Usa número sem zero à esquerda (padrão do CDN) ou o valor original para cartas especiais (TG01, ACE01...)
-  if(setId.startsWith('sv')){
+  if(setId.startsWith('sv')||(window.LEGACY_SETS||[]).some(s=>s.id===setId)){
     const num=isNaN(n)?c.n:n;
     return `https://images.pokemontcg.io/${setId}/${num}.png`;
   }
@@ -602,6 +602,8 @@ const SET_CARDS_MAP={
   sv9: ()=>typeof CARDS_SV9!=='undefined'?CARDS_SV9:[],
   sv10:()=>typeof CARDS_SV10!=='undefined'?CARDS_SV10:[],
 };
+// sets legados entram no mapa dinamicamente
+(window.LEGACY_SETS||[]).forEach(ls=>{if(!SET_CARDS_MAP[ls.id])SET_CARDS_MAP[ls.id]=()=>ls.data;});
 
 // ── CATÁLOGO DE COLEÇÕES ─────────────────────────────────────────
 const SET_CATALOG=[
@@ -627,6 +629,28 @@ const SET_CATALOG=[
   {id:'sv2', label:'SV2 — Evolução em Paldea',      emoji:'🏔️',cards:279,color:'#00ACC1',series:'SV'},
   {id:'sv1', label:'SV1 — Escarlate e Violeta',     emoji:'🌿',cards:258,color:'#8E24AA',series:'SV'},
 ];
+
+// ── SÉRIES (ordem de exibição na home e no gerenciador) ─────────
+const SERIES_META={
+  ME:    {t:'⚡ MEGA EVOLUÇÃO — SÉRIE ATUAL',           sub:'🇧🇷 Exclusivos BR'},
+  SV:    {t:'🌋 ESCARLATE & VIOLETA (2023–2025)',       sub:'⚔️ Escarlate & Violeta (2023–2025)'},
+  SWSH:  {t:'⚔️ ESPADA & ESCUDO (2020–2022)',           sub:'⚔️ Espada & Escudo (2020–2022)'},
+  SM:    {t:'🌙 SOL & LUA (2017–2019)',                 sub:'🌙 Sol & Lua (2017–2019)'},
+  XY:    {t:'🧬 XY (2014–2016)',                        sub:'🧬 XY (2014–2016)'},
+  BW:    {t:'⚫ PRETO & BRANCO (2011–2013)',            sub:'⚫ Preto & Branco (2011–2013)'},
+  HGSS:  {t:'💛 HEARTGOLD & SOULSILVER (2010–2011)',    sub:'💛 HeartGold & SoulSilver (2010–2011)'},
+  DP:    {t:'💎 DIAMANTE & PÉROLA / PLATINUM (2007–2010)',sub:'💎 Diamante & Pérola / Platinum (2007–2010)'},
+  EX:    {t:'🔷 ERA EX (2003–2007)',                    sub:'🔷 Era EX (2003–2007)'},
+  CLASSIC:{t:'🕰️ CLÁSSICOS — BASE A E-CARD (1999–2003)',sub:'🕰️ Clássicos (1999–2003)'},
+};
+
+// ── SETS LEGADOS (legacy_*.js, gerados automaticamente) ────────
+// Cada entrada: {id,label,emoji,cards,color,series,releaseDate,data:[{n,name,rare,price,base}]}
+// Preços legados = TCGplayer market (USD) convertido p/ BRL — estimativa, não Liga.
+(window.LEGACY_SETS||[]).forEach(ls=>{
+  if(SET_CATALOG.some(s=>s.id===ls.id))return;
+  SET_CATALOG.push({id:ls.id,label:ls.label,emoji:ls.emoji,cards:ls.cards,color:ls.color,series:ls.series});
+});
 
 function _loadMyCollections(){
   try{const v=JSON.parse(localStorage.getItem('myCollections'));
@@ -1018,6 +1042,11 @@ function getSetData(){
     sv1:   {cards:typeof CARDS_SV1!=='undefined'?CARDS_SV1:[],    label:'SV1 — Escarlate e Violeta',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
   };
+  if(!map[currentSet]){
+    const ls=(window.LEGACY_SETS||[]).find(x=>x.id===currentSet);
+    if(ls)return{cards:ls.data,label:ls.label,
+      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais / Secretas',filter:c=>!c.base}]};
+  }
   return map[currentSet]||map.me04;
 }
 
@@ -1649,8 +1678,15 @@ function renderCustomBindersHome(){
         ${s.upcoming?'breve':s.cards+' cartas'}</div>
     </div>`;
   }
-  const meCards=SET_CATALOG.filter(s=>s.series==='ME').map(setCard).join('');
-  const svCards=SET_CATALOG.filter(s=>s.series==='SV').map(setCard).join('');
+  const seriesSections=Object.keys(SERIES_META)
+    .map(sr=>({sr,sets:SET_CATALOG.filter(s=>s.series===sr)}))
+    .filter(x=>x.sets.length)
+    .map(x=>`
+      <div style="font-size:9px;font-family:'Space Mono',monospace;color:var(--muted);
+                  text-transform:uppercase;letter-spacing:.08em;margin:14px 0 8px">${(SERIES_META[x.sr]||{}).sub||x.sr}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
+        ${x.sets.map(setCard).join('')}
+      </div>`).join('');
 
   document.getElementById('bwrap').innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
@@ -1669,16 +1705,7 @@ function renderCustomBindersHome(){
                   border-bottom:1px solid var(--border)">
         MINHAS COLEÇÕES — TOQUE PARA ATIVAR NAS ABAS
       </div>
-      <div style="font-size:9px;font-family:'Space Mono',monospace;color:var(--muted);
-                  text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">🇧🇷 Exclusivos BR</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:14px">
-        ${meCards}
-      </div>
-      <div style="font-size:9px;font-family:'Space Mono',monospace;color:var(--muted);
-                  text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">⚔️ Escarlate &amp; Violeta (2023–2025)</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
-        ${svCards}
-      </div>
+      ${seriesSections}
     </div>
 
     ${myHtml}
@@ -2202,10 +2229,10 @@ function _fmtBadge(p){
 function renderHomeSets(){
   const box=document.getElementById('home-sets');
   if(!box)return;
-  const groups=[
-    {t:'⚡ MEGA EVOLUÇÃO — SÉRIE ATUAL',ids:SET_CATALOG.filter(s=>s.series==='ME').map(s=>s.id)},
-    {t:'🌋 ESCARLATE & VIOLETA',        ids:SET_CATALOG.filter(s=>s.series==='SV').map(s=>s.id)},
-  ];
+  const seriesOrder=Object.keys(SERIES_META);
+  const groups=seriesOrder
+    .map(sr=>({t:(SERIES_META[sr]||{}).t||sr,ids:SET_CATALOG.filter(s=>s.series===sr).map(s=>s.id)}))
+    .filter(g=>g.ids.length);
   let html='';
   groups.forEach(g=>{
     const cardsHtml=g.ids.map(id=>{
