@@ -97,7 +97,12 @@ async function saveSlot(key, qty, origins) {
    DADOS DO SET (usa variáveis globais dos arquivos de cartas)
 ───────────────────────────────────────────── */
 function getSetCards() {
-  switch (currentSet) {            // usa currentSet do app.js
+  // CORRIGIDO: delega para getSetData() do app.js, que cobre TODOS os sets
+  // (me03, me05, me06, sv1-sv10 etc). O switch antigo só conhecia me02/meg/mep
+  // e caía no "default: return CARDS" (me04) para qualquer outro set — por isso
+  // o fichário parecia "não atualizar" ao trocar de coleção.
+  if (typeof getSetData === 'function') return getSetData().cards;
+  switch (currentSet) {            // fallback caso getSetData() não exista
     case 'me02': return CARDS_ME02;
     case 'meg':  return CARDS_MEG;
     case 'mep':  return CARDS_MEP;
@@ -106,6 +111,8 @@ function getSetCards() {
 }
 
 function getSetLabel() {
+  // CORRIGIDO: mesma delegação — evita rótulo/coleção dessincronizados
+  if (typeof getSetData === 'function') return getSetData().label;
   return {
     me04: 'ME04 — Caos Ascendente',
     me02: 'ME02 — Fogo Fantasmagórico',
