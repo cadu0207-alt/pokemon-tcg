@@ -1,0 +1,9 @@
+{
+  "_instrucoes": "Cole em 'url' o endereço da página de busca da Liga Pokémon com o filtro do set aplicado (a mesma tela do print com os menores preços). Sets com url vazia são pulados. Para pegar a URL: ligapokemon.com.br → Cards → filtre pela edição → copie a URL do navegador.",
+  "sets": [
+    { "key": "me04", "file": "cards_me04.js", "url": "" },
+    { "key": "me03", "file": "cards_me03.js", "url": "" },
+    { "key": "me02", "file": "cards_me02.js", "url": "" },
+    { "key": "meg",  "file": "cards_meg.js",  "url": "" }
+  ]
+}

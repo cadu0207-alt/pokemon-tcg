@@ -1,0 +1,18 @@
+{
+  "name": "MyDeck — Pokémon TCG Brasil",
+  "short_name": "MyDeck",
+  "description": "Master Set Tracker · Pokémon TCG Brasil",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0d0f18",
+  "theme_color": "#0d0f18",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://images.scrydex.com/pokemon/me4-22/large",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -44,7 +44,7 @@ jobs:
           else
             CHANGED=$(git diff --name-only cards_*.js | tr '\n' ' ')
             git add cards_*.js
-            git commit -m "chore: atualiza preços [$(date '+%Y-%m-%d')] | $CHANGED | fonte: tcgwatchtower.com"
+            git commit -m "chore: atualiza preços [$(date '+%Y-%m-%d')] | $CHANGED | fonte: ligapokemon.com.br (menor preço)"
             git push
             echo "✅ Push realizado com sucesso."
           fi

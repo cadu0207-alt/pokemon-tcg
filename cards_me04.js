@@ -1,4 +1,5 @@
 // ME04 — Caos Ascendente (122 cartas)
+// Precos: minimo Liga Pokemon (BRL) para chases — atualizado 01/07/2026 via print Eduardo
 const CARDS = [
   {n:'001',name:'Weedle',type:'Grama',color:'#4CAF50',rare:'Comum',price:.48,base:true},
   {n:'002',name:'Kakuna',type:'Grama',color:'#4CAF50',rare:'Comum',price:.49,base:true},
@@ -88,7 +89,7 @@ const CARDS = [
   {n:'086',name:'Energia Nitro Fogo (F)',type:'Energia',color:'#FF5722',rare:'Rara',price:4.9,base:true},
   // SECRETAS
   {n:'087',name:'Chespin (IR)',type:'Grama',color:'#4CAF50',rare:'Ilustr. Rara',price:34.97,base:false},
-  {n:'088',name:'Froakie (IR)',type:'Aquático',color:'#2196F3',rare:'Ilustr. Rara',price:62.45,base:false},
+  {n:'088',name:'Froakie (IR)',type:'Aquático',color:'#2196F3',rare:'Ilustr. Rara',price:47.95,base:false},
   {n:'089',name:'Frogadier (IR)',type:'Aquático',color:'#2196F3',rare:'Ilustr. Rara',price:82.33,base:false},
   {n:'090',name:'Ampharos (IR)',type:'Raio',color:'#FFEB3B',rare:'Ilustr. Rara',price:24.51,base:false},
   {n:'091',name:'Xerneas (IR)',type:'Psíquico',color:'#9C27B0',rare:'Ilustr. Rara',price:34.99,base:false},
@@ -100,7 +101,7 @@ const CARDS = [
   {n:'097',name:'Watchog (IR)',type:'Incolor',color:'#78909C',rare:'Ilustr. Rara',price:15.32,base:false},
   {n:'098',name:'Beedrill ex (UR)',type:'Grama',color:'#4CAF50',rare:'Rara Ultra',price:35.67,base:false},
   {n:'099',name:'Mega Pyroar ex (UR)',type:'Fogo',color:'#F44336',rare:'Rara Ultra',price:16.33,base:false},
-  {n:'100',name:'Mega Greninja ex (UR)',type:'Aquático',color:'#2196F3',rare:'Rara Ultra',price:18.66,base:false},
+  {n:'100',name:'Mega Greninja ex (UR)',type:'Aquático',color:'#2196F3',rare:'Rara Ultra',price:69.75,base:false},
   {n:'101',name:'Mega Floette ex (UR)',type:'Psíquico',color:'#9C27B0',rare:'Rara Ultra',price:5.74,base:false},
   {n:'102',name:'Gourgeist ex (UR)',type:'Psíquico',color:'#9C27B0',rare:'Rara Ultra',price:1.67,base:false},
   {n:'103',name:'Cobalion ex (UR)',type:'Metal',color:'#9E9E9E',rare:'Rara Ultra',price:2.18,base:false},
@@ -113,15 +114,15 @@ const CARDS = [
   {n:'110',name:'Philippe (UR)',type:'Suporte',color:'#E91E63',rare:'Rara Ultra',price:2.05,base:false},
   {n:'111',name:'Torre Prisma (UR)',type:'Estádio',color:'#795548',rare:'Rara Ultra',price:3.44,base:false},
   {n:'112',name:'Show da Roxie (UR)',type:'Suporte',color:'#E91E63',rare:'Rara Ultra',price:2.71,base:false},
-  {n:'113',name:'Cartão Vermelho Esp. (UR)',type:'Item',color:'#5C6BC0',rare:'Rara Ultra',price:6.55,base:false},
+  {n:'113',name:'Cartão Vermelho Esp. (UR)',type:'Item',color:'#5C6BC0',rare:'Rara Ultra',price:54.80,base:false},
   {n:'114',name:'Praia de Surfista (UR)',type:'Estádio',color:'#795548',rare:'Rara Ultra',price:6.81,base:false},
   {n:'115',name:'Sucateador de Ferr. (UR)',type:'Item',color:'#5C6BC0',rare:'Rara Ultra',price:1.76,base:false},
-  {n:'116',name:'Mega Greninja ex (SAR)',type:'Aquático',color:'#2196F3',rare:'Ilustr. Esp. Rara',price:280.28,base:false},
-  {n:'117',name:'Mega Floette ex (SAR)',type:'Psíquico',color:'#9C27B0',rare:'Ilustr. Esp. Rara',price:44.29,base:false},
-  {n:'118',name:'Mega Dragalge ex (SAR)',type:'Dragão',color:'#00BCD4',rare:'Ilustr. Esp. Rara',price:51.75,base:false},
-  {n:'119',name:'Cinccino ex (SAR)',type:'Incolor',color:'#78909C',rare:'Ilustr. Esp. Rara',price:80.49,base:false},
-  {n:'120',name:'Tranquilidade do AZ (SAR)',type:'Suporte',color:'#E91E63',rare:'Ilustr. Esp. Rara',price:39.40,base:false},
-  {n:'121',name:'Show da Roxie (SAR)',type:'Suporte',color:'#E91E63',rare:'Ilustr. Esp. Rara',price:30.31,base:false},
-  {n:'122',name:'Mega Greninja ex GOLD',type:'Aquático',color:'#FFD700',rare:'Mega Attack Rare',price:247.74,base:false},
+  {n:'116',name:'Mega Greninja ex (SAR)',type:'Aquático',color:'#2196F3',rare:'Ilustr. Esp. Rara',price:884.89,base:false},
+  {n:'117',name:'Mega Floette ex (SAR)',type:'Psíquico',color:'#9C27B0',rare:'Ilustr. Esp. Rara',price:143.00,base:false},
+  {n:'118',name:'Mega Dragalge ex (SAR)',type:'Dragão',color:'#00BCD4',rare:'Ilustr. Esp. Rara',price:144.90,base:false},
+  {n:'119',name:'Cinccino ex (SAR)',type:'Incolor',color:'#78909C',rare:'Ilustr. Esp. Rara',price:198.75,base:false},
+  {n:'120',name:'Tranquilidade do AZ (SAR)',type:'Suporte',color:'#E91E63',rare:'Ilustr. Esp. Rara',price:189.90,base:false},
+  {n:'121',name:'Show da Roxie (SAR)',type:'Suporte',color:'#E91E63',rare:'Ilustr. Esp. Rara',price:164.89,base:false},
+  {n:'122',name:'Mega Greninja ex GOLD',type:'Aquático',color:'#FFD700',rare:'Mega Attack Rare',price:939.90,base:false},
 
 ];

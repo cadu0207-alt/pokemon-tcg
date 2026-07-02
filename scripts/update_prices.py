@@ -1,57 +1,37 @@
 #!/usr/bin/env python3
 """
-update_prices.py — Atualiza preços das cartas via TCGWatchtower
-Roda via GitHub Actions toda semana (domingo 10h UTC).
+update_prices.py — Atualiza preços das cartas com o MENOR PREÇO da Liga Pokémon (BRL).
 
-Usa Playwright porque o TCGWatchtower renderiza cards via JavaScript:
-- HTML inicial: ~36 cards (chase section)
-- Após JS renderizar: ~96 cards
-- Após clicar "Load More": 124 cards (todos)
+MUDANÇA (jul/2026): a fonte anterior (TCGWatchtower, USD convertido) refletia o
+mercado americano, que fica 3-4x ABAIXO do praticado no Brasil para chase cards
+(ex.: Mega Greninja ex GOLD — US$43 convertido ≈ R$248 vs. R$939 mínimo na Liga).
+Agora o campo `price` dos cards_*.js representa o menor preço listado na Liga.
+
+Configuração: scripts/liga_sets.json — cole a URL da busca da Liga por set.
+Sets sem URL são pulados (preço atual permanece intacto — nunca regride para USD).
+
+Roda via GitHub Actions todo domingo 10h UTC, ou manualmente:
+    python scripts/update_prices.py            # atualiza os arquivos
+    python scripts/update_prices.py --dry-run  # só mostra o que faria
 """
 
-import re
+import json
 import os
+import re
 import sys
 import time
 from datetime import datetime
 
-# ── Configuração dos sets ────────────────────────────────────────────────────
-BASE = "https://tcgwatchtower.com"
+MIN_CARDS_PARA_GRAVAR = 20   # segurança: menos que isso = extração falhou, não grava
+ALERTA_VARIACAO = 4.0        # loga aviso se preço novo divergir mais de 4x do atual
 
-SETS = [
-    {
-        "key": "me04",
-        "file": "cards_me04.js",
-        "url": f"{BASE}/pokemon/sets/mega-evolution/chaos-rising/cards",
-    },
-    {
-        "key": "me03",
-        "file": "cards_me03.js",
-        "url": f"{BASE}/pokemon/sets/mega-evolution/perfect-order/cards",
-    },
-    {
-        "key": "me02",
-        "file": "cards_me02.js",
-        "url": f"{BASE}/phantasmal-flames-card-list",
-    },
-    {
-        "key": "meg",
-        "file": "cards_meg.js",
-        "url": f"{BASE}/pokemon/sets/mega-evolution/base-set/cards",
-    },
-]
 
-# ── Busca de preços via Playwright ───────────────────────────────────────────
+# ── Extração via Playwright ──────────────────────────────────────────────────
 
-def fetch_prices(url: str) -> dict:
+def fetch_liga_prices(url: str) -> dict:
     """
-    Abre a página com Playwright (headless Chromium), clica em "Load More"
-    e extrai todos os preços. Retorna {card_num_padded: price_float}.
-
-    Por que Playwright? O TCGWatchtower renderiza cards via JS:
-    - HTML puro (requests): só ~36 cartas no HTML inicial
-    - Após JS: ~96 cartas renderizadas automaticamente
-    - Após clicar Load More: 100% das cartas (ex: 124/124 no ME03)
+    Abre a página de busca da Liga Pokémon e extrai {numero_3dig: menor_preco}.
+    A Liga renderiza a grade via JS e pagina — rola até o fim antes de extrair.
     """
     from playwright.sync_api import sync_playwright
 
@@ -62,146 +42,143 @@ def fetch_prices(url: str) -> dict:
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
                 "Chrome/124.0.0.0 Safari/537.36"
-            )
+            ),
+            viewport={"width": 1600, "height": 1000},
         )
+        page.goto(url, wait_until="domcontentloaded", timeout=45000)
+        page.wait_for_timeout(3500)
 
-        page.goto(url, wait_until="domcontentloaded", timeout=30000)
-        page.wait_for_timeout(2000)  # Deixa o JS renderizar
+        # Rola para carregar todos os cards (grade com lazy-load / paginação)
+        prev = -1
+        for _ in range(30):
+            page.mouse.wheel(0, 2500)
+            page.wait_for_timeout(700)
+            # clica "mostrar mais / carregar mais" se existir
+            for txt in ("Mostrar mais", "Carregar mais", "Ver mais"):
+                btn = page.locator(f"button:has-text('{txt}'), a:has-text('{txt}')")
+                if btn.count() > 0:
+                    try:
+                        btn.first.click()
+                        page.wait_for_timeout(900)
+                    except Exception:
+                        pass
+            count = page.locator("a[href*='view=cards/card']").count()
+            if count == prev:
+                break
+            prev = count
 
-        # Clica em "Load More Cards" se existir
-        btn = page.locator("button:has-text('Load More')")
-        if btn.count() > 0:
-            btn.first.click()
-            page.wait_for_timeout(1000)
-
-        # Extrai preços do DOM estruturado (mais confiável que innerText)
-        prices = page.evaluate("""
+        # Extrai número da carta + menor preço de cada tile
+        prices = page.evaluate(r"""
             () => {
-                const results = {};
-                document.querySelectorAll('*').forEach(el => {
-                    if (el.children.length > 0) return;
-                    const text = (el.innerText || '').trim();
-                    const numM = text.match(/^#?(\\d{3})(?:\\/\\d+)?$/);
-                    if (!numM) return;
-                    const n = numM[1];
-                    if (results[n]) return;
-                    // Procura preço nas 3 linhas vizinhas do DOM
-                    let sib = el.nextElementSibling;
-                    for (let i = 0; i < 5 && sib; i++, sib = sib.nextElementSibling) {
-                        const p = (sib.innerText || '').trim().match(/^\\$(\\d+\\.\\d{2})$/);
-                        if (p) { results[n] = parseFloat(p[1]); break; }
-                    }
-                    sib = el.previousElementSibling;
-                    if (!results[n]) {
-                        for (let i = 0; i < 5 && sib; i++, sib = sib.previousElementSibling) {
-                            const p = (sib.innerText || '').trim().match(/^\\$(\\d+\\.\\d{2})$/);
-                            if (p) { results[n] = parseFloat(p[1]); break; }
+                const out = {};
+                // Cada carta na grade é (ou contém) um link para a página da carta.
+                document.querySelectorAll("a[href*='view=cards/card']").forEach(a => {
+                    const href = decodeURIComponent(a.getAttribute('href') || '');
+                    // número da carta: "(Edição 122)" no fim do parâmetro card=, ou &num=122
+                    let n = null;
+                    let m = href.match(/[&?]num=(\d{1,3})\b/);
+                    if (!m) m = href.match(/\((?:[^()]*\s)?(\d{1,3})\)\s*$/);
+                    if (!m) m = href.match(/\s(\d{1,3})\)/);
+                    if (m) n = m[1].padStart(3, '0');
+                    if (!n) return;
+
+                    // menor preço: primeiro "R$ x,xx" dentro do tile (container pai)
+                    let tile = a;
+                    for (let i = 0; i < 4 && tile.parentElement; i++) {
+                        tile = tile.parentElement;
+                        const txt = tile.innerText || '';
+                        const pm = txt.match(/R\$\s?([\d.]+,\d{2})/);
+                        if (pm) {
+                            const val = parseFloat(pm[1].replace(/\./g, '').replace(',', '.'));
+                            if (val > 0 && (!(n in out) || val < out[n])) out[n] = val;
+                            break;
                         }
                     }
                 });
-                return results;
+                return out;
             }
         """)
 
-        # Fallback: extrai por innerText se DOM estruturado falhar
-        if len(prices) < 10:
-            text = page.inner_text("body")
-            prices = _parse_prices_from_text(text)
-
         browser.close()
-        return prices
-
-
-def _parse_prices_from_text(text: str) -> dict:
-    """Extrai preços de texto plano (fallback)."""
-    lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
-    prices = {}
-    for i, line in enumerate(lines):
-        m = re.match(r"^#?(\d{3})(?:/\d+)?$", line)
-        if not m or m.group(1) in prices:
-            continue
-        n = m.group(1)
-        for j in range(max(0, i - 2), min(len(lines), i + 3)):
-            if j != i:
-                pm = re.match(r"^\$(\d+\.\d{2})$", lines[j])
-                if pm:
-                    prices[n] = float(pm.group(1))
-                    break
-    return prices
+        return {k: float(v) for k, v in prices.items()}
 
 
 # ── Atualização dos arquivos JS ──────────────────────────────────────────────
 
-def update_js_file(filepath: str, prices: dict) -> tuple:
-    """
-    Atualiza price: em cada linha do arquivo JS.
-    Retorna (updates_count, skipped_list).
-    """
+def update_js_file(filepath: str, prices: dict, dry: bool) -> tuple:
+    """Atualiza price: em cada linha. Retorna (updates, skipped, alertas)."""
     with open(filepath, "r", encoding="utf-8") as f:
         original_lines = f.readlines()
 
-    new_lines = []
-    updates = 0
-    skipped = []
+    new_lines, updates, skipped, alertas = [], 0, [], []
 
     for line in original_lines:
-        replaced = False
-        for card_num, price in prices.items():
-            if f"n:'{card_num}'" in line and "price:" in line:
-                new_price_str = f"{price:.2f}"
-                new_line = re.sub(r"price:[\d.]+", f"price:{new_price_str}", line)
-                new_lines.append(new_line)
-                updates += 1
-                replaced = True
-                break
-        if not replaced:
+        m = re.search(r"n:'(\d{3})'", line)
+        if m and "price:" in line and m.group(1) in prices:
+            n = m.group(1)
+            new_price = prices[n]
+            old_m = re.search(r"price:([\d.]+)", line)
+            old_price = float(old_m.group(1)) if old_m else 0
+            if old_price > 0 and (new_price > old_price * ALERTA_VARIACAO or
+                                  new_price < old_price / ALERTA_VARIACAO):
+                alertas.append(f"#{n}: R${old_price:.2f} → R${new_price:.2f}")
+            new_lines.append(re.sub(r"price:[\d.]+", f"price:{new_price:.2f}", line))
+            updates += 1
+        else:
+            if m and "price:" in line and m.group(1) not in prices:
+                skipped.append(m.group(1))
             new_lines.append(line)
 
-    # Detecta cards no arquivo sem preço encontrado
-    for orig_line in original_lines:
-        m = re.search(r"n:'(\d{3})'", orig_line)
-        if m and m.group(1) not in prices and "price:" in orig_line:
-            skipped.append(m.group(1))
+    if not dry:
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.writelines(new_lines)
 
-    with open(filepath, "w", encoding="utf-8") as f:
-        f.writelines(new_lines)
-
-    return updates, skipped
+    return updates, skipped, alertas
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
+    dry = "--dry-run" in sys.argv
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    cfg_path = os.path.join(repo_root, "scripts", "liga_sets.json")
+
+    with open(cfg_path, encoding="utf-8") as f:
+        cfg = json.load(f)
+
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    print(f"[{now}] Atualizando preços — MyDeck Pokémon TCG Pocket")
-    print(f"Repo: {repo_root}\n")
+    print(f"[{now}] Atualizando preços — fonte: Liga Pokémon (menor preço, BRL)")
+    if dry:
+        print("MODO DRY-RUN — nada será gravado\n")
 
-    total_updates = 0
-    all_ok = True
+    total, all_ok = 0, True
 
-    for s in SETS:
+    for s in cfg["sets"]:
         filepath = os.path.join(repo_root, s["file"])
+        if not s.get("url"):
+            print(f"  ⏭️  [{s['key'].upper()}] sem URL em liga_sets.json — pulado (preços atuais preservados)")
+            continue
         if not os.path.exists(filepath):
             print(f"  ⚠️  {s['file']} não encontrado — pulando")
             continue
 
-        print(f"  📡 [{s['key'].upper()}] {s['url']} ...")
+        print(f"  📡 [{s['key'].upper()}] {s['url']}")
         try:
-            prices = fetch_prices(s["url"])
-            n_found = len(prices)
-            print(f"     → {n_found} preços encontrados")
+            prices = fetch_liga_prices(s["url"])
+            print(f"     → {len(prices)} preços extraídos")
 
-            if n_found < 10:
-                print(f"     ⚠️  Poucos resultados — site pode ter mudado. Pulando.")
+            if len(prices) < MIN_CARDS_PARA_GRAVAR:
+                print(f"     ⚠️  Menos de {MIN_CARDS_PARA_GRAVAR} cards — layout da Liga pode ter mudado. NÃO gravando.")
                 all_ok = False
                 continue
 
-            updates, skipped = update_js_file(filepath, prices)
-            total_updates += updates
-            print(f"     ✅ {updates} preços atualizados em {s['file']}")
+            updates, skipped, alertas = update_js_file(filepath, prices, dry)
+            total += updates
+            print(f"     ✅ {updates} preços {'simulados' if dry else 'atualizados'} em {s['file']}")
+            if alertas:
+                print(f"     🔔 Variações >4x (conferir): {alertas[:8]}")
             if skipped:
-                print(f"     ℹ️  {len(skipped)} cards sem preço no TCGWatchtower: {skipped[:5]}")
+                print(f"     ℹ️  {len(skipped)} cards sem preço na Liga: {skipped[:6]}")
 
         except Exception as e:
             print(f"     ❌ Erro em {s['key']}: {type(e).__name__}: {e}")
@@ -209,7 +186,7 @@ def main():
 
         time.sleep(2)
 
-    print(f"\n{'✅' if all_ok else '⚠️ '} Concluído: {total_updates} preços atualizados.")
+    print(f"\n{'✅' if all_ok else '⚠️ '} Concluído: {total} preços.")
     return 0
 
 

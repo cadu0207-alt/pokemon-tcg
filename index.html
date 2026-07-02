@@ -62,6 +62,8 @@
 .amrow.paused { animation-play-state: paused !important; }
 #pg-app .pane { position: relative; z-index: 1; }
 </style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d0f18">
 </head>
 <body>
 
@@ -73,101 +75,7 @@
       <div class="home-badge">MyDeck • Pokémon TCG 🇧🇷</div>
       <h1 class="home-title">MyDeck</h1>
       <p class="home-sub">Master Set Tracker · Pokémon TCG Brasil</p>
-      <div class="home-sets" id="home-sets">
-
-        <!-- ME05 — estático (em breve) -->
-        <div class="hset-wrap" data-tilt>
-          <div class="hset hset-me05" style="border-color:#42424288">
-            <div class="hset-glow" style="background:radial-gradient(circle at 50% 50%,#424242,transparent 70%)"></div>
-            <div class="hset-img-wrap">
-              <img src="https://images.scrydex.com/pokemon/me5-61/large" alt="ME05" onerror="this.style.opacity='.3'">
-            </div>
-            <div style="position:absolute;top:10px;right:10px;background:#f0932b;color:#fff;font-size:8px;padding:2px 8px;border-radius:4px;font-family:'Space Mono',monospace;z-index:4;transform:translateZ(25px)">EM BREVE</div>
-            <div class="hset-info"><div class="hset-name">NEGRURA ABSOLUTA</div><div class="hset-code">ME05 · ago/2026</div></div>
-          </div>
-        </div>
-
-        <!-- ME04 — top 3 rotativos -->
-        <div class="hset-wrap" data-tilt>
-          <div class="hset hset-me04" id="hset-me04"
-               data-setid="me4"
-               data-cards='[{"n":122,"name":"Mega Greninja ex GOLD","price":1453.08},{"n":116,"name":"Mega Greninja ex SAR","price":1094.93},{"n":120,"name":"Tranquilidade do AZ","price":368.80}]'>
-            <div class="hset-glow"></div>
-            <div class="hset-img-wrap">
-              <img src="https://images.scrydex.com/pokemon/me4-122/large" alt="ME04" onerror="this.src='https://images.scrydex.com/pokemon/me4-22/large'">
-            </div>
-            <div class="hset-price-badge">R$ 1.453</div>
-            <div class="hset-rank-badge">1</div>
-            <div class="hset-dots"><span class="hset-dot active"></span><span class="hset-dot"></span><span class="hset-dot"></span></div>
-            <div class="hset-info">
-              <div class="hset-name">CAOS ASCENDENTE</div>
-              <div class="hset-code">ME04 · 122 cartas</div>
-              <div class="hset-card-name" id="hset-me04-cname">Mega Greninja ex GOLD</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ME03 — top 3 rotativos -->
-        <div class="hset-wrap" data-tilt>
-          <div class="hset hset-me03" id="hset-me03" style="border-color:#1565C088"
-               data-setid="me3"
-               data-cards='[{"n":94,"name":"Clefairy (Stamp)","price":23.50},{"n":107,"name":"Meowth ex","price":15.34},{"n":113,"name":"Poké Pad","price":14.13}]'>
-            <div class="hset-glow" style="background:radial-gradient(circle at 50% 50%,#1565C0,transparent 70%)"></div>
-            <div class="hset-img-wrap">
-              <img src="https://images.scrydex.com/pokemon/me3-94/large" alt="ME03" onerror="this.src='https://images.scrydex.com/pokemon/me3-63/large'">
-            </div>
-            <div class="hset-price-badge">R$ 23,50</div>
-            <div class="hset-rank-badge">1</div>
-            <div class="hset-dots"><span class="hset-dot active"></span><span class="hset-dot"></span><span class="hset-dot"></span></div>
-            <div class="hset-info">
-              <div class="hset-name">ORDEM PERFEITA</div>
-              <div class="hset-code">ME03 · 120 cartas</div>
-              <div class="hset-card-name" id="hset-me03-cname">Clefairy (Stamp)</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ME02 — top 3 rotativos -->
-        <div class="hset-wrap" data-tilt>
-          <div class="hset hset-me02" id="hset-me02"
-               data-setid="me2"
-               data-cards='[{"n":125,"name":"Mega Charizard X ex SAR","price":1809},{"n":130,"name":"Mega Charizard X ex GOLD","price":1600},{"n":126,"name":"Mega Gengar ex SAR","price":400}]'>
-            <div class="hset-glow"></div>
-            <div class="hset-img-wrap">
-              <img src="https://images.scrydex.com/pokemon/me2-125/large" alt="ME02" onerror="this.src='https://images.scrydex.com/pokemon/me2-13/large'">
-            </div>
-            <div class="hset-price-badge">R$ 1.809</div>
-            <div class="hset-rank-badge">1</div>
-            <div class="hset-dots"><span class="hset-dot active"></span><span class="hset-dot"></span><span class="hset-dot"></span></div>
-            <div class="hset-info">
-              <div class="hset-name">FOGO FANTASMAGÓRICO</div>
-              <div class="hset-code">ME02 · 130 cartas</div>
-              <div class="hset-card-name" id="hset-me02-cname">Mega Charizard X ex SAR</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- MEG — top 3 rotativos -->
-        <div class="hset-wrap" data-tilt>
-          <div class="hset hset-meg" id="hset-meg"
-               data-setid="me1"
-               data-cards='[{"n":187,"name":"Mega Lucario ex GOLD","price":120},{"n":177,"name":"Mega Venusaur ex SAR","price":80},{"n":180,"name":"Mega Gardevoir ex SAR","price":80}]'>
-            <div class="hset-glow"></div>
-            <div class="hset-img-wrap">
-              <img src="https://images.scrydex.com/pokemon/me1-187/large" alt="MEG" onerror="this.src='https://images.scrydex.com/pokemon/me1-3/large'">
-            </div>
-            <div class="hset-price-badge">R$ 120</div>
-            <div class="hset-rank-badge">1</div>
-            <div class="hset-dots"><span class="hset-dot active"></span><span class="hset-dot"></span><span class="hset-dot"></span></div>
-            <div class="hset-info">
-              <div class="hset-name">MEGAEVOLUÇÃO</div>
-              <div class="hset-code">MEG · 188 cartas</div>
-              <div class="hset-card-name" id="hset-meg-cname">Mega Lucario ex GOLD</div>
-            </div>
-          </div>
-        </div>
-
-      </div>
+      <div class="home-sets" id="home-sets"><!-- preenchido por renderHomeSets() em app.js --></div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
         <button class="home-btn" onclick="goPage('app')">
           <span>ENTRAR NA COLEÇÃO</span>
@@ -192,7 +100,7 @@
       <div>
         <div class="hbadge">MyDeck • Pokémon TCG</div>
         <h1>MyDeck</h1>
-        <div class="hsub">ME06 · ME05 · ME04 · ME03 · ME02 · MEG · MEP &nbsp;/&nbsp; MASTER SET TRACKER</div>
+        <div class="hsub" id="hsub-dyn">MASTER SET TRACKER</div>
       </div>
     </div>
     <div class="hstatus">
@@ -272,6 +180,7 @@
       <div class="panel"><div class="panel-t">📈 Raridades do Pull</div><div class="bc" id="chart-rarity"></div></div>
       <div class="panel"><div class="panel-t">🛒 Gastos por Data</div><div class="bc" id="chart-gastos"></div></div>
     </div>
+    <div class="panel" style="margin-bottom:28px"><div class="panel-t">📊 Evolução Mensal — Investido × Pulls</div><div class="bc" id="chart-evolucao"></div></div>
     <div class="sec-title">🌟 Destaques do Pull</div>
     <div class="pulled-grid" id="dash-highlights"></div>
   </div>
@@ -704,7 +613,7 @@
   for(let i=cards.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cards[i],cards[j]]=[cards[j],cards[i]];}
   const mosaic=document.getElementById('auth-mosaic');
   if(!mosaic) return;
-  const N=80;
+  const N=40;
   for(let i=0;i<N;i++){
     const card=cards[i%cards.length];
     const delay=(Math.random()*10).toFixed(2);
@@ -756,8 +665,8 @@
     // Para scrollRight começa em -50%→0, também sem offset extra (o keyframe cuida)
 
     // Imagens: triplicar para loop suave em telas largas
-    const pool=makePool(i);
-    const imgs=[...pool,...pool,...pool];
+    const pool=makePool(i).slice(0,24); // pool enxuto: menos requests
+    const imgs=[...pool,...pool];
     imgs.forEach(card=>{
       const img=document.createElement('img');
       img.src=`https://images.scrydex.com/pokemon/${card}/large`;
@@ -769,53 +678,61 @@
   }
 
   // Pausa por proximidade do mouse
+  let _mmPending=false,_mmY=0;
   document.addEventListener('mousemove',function(e){
-    const rows=container.querySelectorAll('.amrow');
-    const my=e.clientY;
-    rows.forEach(row=>{
-      const rect=row.getBoundingClientRect();
-      const cy=rect.top+rect.height/2;
-      const dist=Math.abs(my-cy);
-      row.style.animationPlayState=dist<PAUSE_DISTANCE?'paused':'running';
+    _mmY=e.clientY;
+    if(_mmPending)return;_mmPending=true;
+    requestAnimationFrame(function(){
+      _mmPending=false;
+      container.querySelectorAll('.amrow').forEach(row=>{
+        const rect=row.getBoundingClientRect();
+        const dist=Math.abs(_mmY-(rect.top+rect.height/2));
+        row.style.animationPlayState=dist<PAUSE_DISTANCE?'paused':'running';
+      });
     });
   });
 })();
 </script>
 
 <!-- Supabase JS v2 — deve vir ANTES de app.js -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="cards_me06.js"></script>
-<script src="cards_me05.js"></script>
-<script src="cards_me04.js"></script>
-<script src="cards_me03.js"></script>
-<script src="cards_me02.js"></script>
-<script src="cards_meg.js"></script>
-<script src="cards_mep.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script defer src="cards_me06.js"></script>
+<script defer src="cards_me05.js"></script>
+<script defer src="cards_me04.js"></script>
+<script defer src="cards_me03.js"></script>
+<script defer src="cards_me02.js"></script>
+<script defer src="cards_meg.js"></script>
+<script defer src="cards_mep.js"></script>
 <!-- Escarlate e Violeta (2023-2025) -->
-<script src="cards_sv1.js"></script>
-<script src="cards_sv2.js"></script>
-<script src="cards_sv3.js"></script>
-<script src="cards_sv3pt5.js"></script>
-<script src="cards_sv4.js"></script>
-<script src="cards_sv4pt5.js"></script>
-<script src="cards_sv5.js"></script>
-<script src="cards_sv6.js"></script>
-<script src="cards_sv6pt5.js"></script>
-<script src="cards_sv7.js"></script>
-<script src="cards_sv8.js"></script>
-<script src="cards_sv8pt5.js"></script>
-<script src="cards_sv9.js"></script>
-<script src="cards_sv10.js"></script>
-<script src="app.js"></script>
-<script src="fichario_patch.js"></script>
-<script src="ev_calculator.js"></script>
+<script defer src="cards_sv1.js"></script>
+<script defer src="cards_sv2.js"></script>
+<script defer src="cards_sv3.js"></script>
+<script defer src="cards_sv3pt5.js"></script>
+<script defer src="cards_sv4.js"></script>
+<script defer src="cards_sv4pt5.js"></script>
+<script defer src="cards_sv5.js"></script>
+<script defer src="cards_sv6.js"></script>
+<script defer src="cards_sv6pt5.js"></script>
+<script defer src="cards_sv7.js"></script>
+<script defer src="cards_sv8.js"></script>
+<script defer src="cards_sv8pt5.js"></script>
+<script defer src="cards_sv9.js"></script>
+<script defer src="cards_sv10.js"></script>
+<script defer src="app.js"></script>
+<script defer src="fichario_patch.js"></script>
+<script defer src="ev_calculator.js"></script>
 <script>
-// Renderizar EV ao abrir a aba Preco Justo
-const _goOriginal = window.go;
-window.go = function(id, el) {
-  _goOriginal && _goOriginal(id, el);
-  if (id === 'preco') renderEV();
-};
+// Renderizar EV ao abrir a aba Preco Justo (após scripts deferidos)
+document.addEventListener('DOMContentLoaded', function(){
+  const _goOriginal = window.go;
+  window.go = function(id, el) {
+    _goOriginal && _goOriginal(id, el);
+    if (id === 'preco') renderEV();
+  };
+});
+</script>
+<script>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 </script>
 </body>
 </html>
