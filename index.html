@@ -214,6 +214,11 @@
                        font-size:10px;cursor:pointer;font-weight:700;margin-left:4px">🖨️ Imprimir PDF</button>
       </div>
 
+      <button id="fic-share" onclick="openShareModal()"
+              style="padding:5px 10px;border-radius:5px;border:1px solid var(--teal);
+                     background:rgba(6,163,127,.1);color:var(--teal);font-family:'Space Mono',monospace;
+                     font-size:10px;cursor:pointer;font-weight:700">🔗 Compartilhar</button>
+
       <span style="margin-left:auto;font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">
         Clique na carta para editar slots
       </span>
@@ -316,6 +321,36 @@
   <div class="modal modal-card">
     <button class="mc-btn" onclick="closeModal('card-modal')">✕</button>
     <div id="card-modal-content"></div>
+  </div>
+</div>
+
+<!-- MODAL COMPARTILHAR FICHÁRIO (link público + QR code) -->
+<div class="ov" id="mshare" onclick="if(event.target===this)closeModal('mshare')">
+  <div class="modal">
+    <button class="mc-btn" onclick="closeModal('mshare')">✕</button>
+    <h3>🔗 Compartilhar Fichário</h3>
+    <div class="ff">
+      <label>Coleção</label>
+      <div id="share-set-label" style="font-size:13px;color:var(--text2);font-weight:600"></div>
+    </div>
+    <div class="ff">
+      <label>Modo de visualização do link</label>
+      <select id="share-mode">
+        <option value="grid">⊞ Grade</option>
+        <option value="binder">📖 Fichário</option>
+      </select>
+    </div>
+    <div style="text-align:center;margin:16px 0">
+      <canvas id="share-qr" width="220" height="220" style="max-width:100%;border-radius:8px;background:#fff"></canvas>
+    </div>
+    <div class="ff">
+      <label>Link público (somente leitura)</label>
+      <input id="share-url" readonly placeholder="Clique em gerar..." onclick="this.select()">
+    </div>
+    <div class="mact">
+      <button class="btn-cx" id="share-copy-btn" onclick="copyShareUrl()">Copiar link</button>
+      <button class="btn-add" id="share-gen-btn" onclick="generateShareLink()">🔗 Gerar Link e QR Code</button>
+    </div>
   </div>
 </div>
 
@@ -450,6 +485,8 @@
 
 <!-- Supabase JS v2 — deve vir ANTES de app.js -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<!-- QRCode.js — usado no botão Compartilhar do Fichário -->
+<script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script defer src="cards_me06.js"></script>
 <script defer src="cards_me05.js"></script>
 <script defer src="cards_me04.js"></script>

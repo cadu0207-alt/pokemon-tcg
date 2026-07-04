@@ -11,6 +11,16 @@ if(!window.supabase){
 const sbClient=window.supabase ? window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY) : null;
 let currentUser=null;
 
+// ── MODO COMPARTILHAMENTO (link público / QR code) ────────────────
+// Se a URL tiver ?share=<token>, o visitante entra direto no fichário
+// compartilhado, sem precisar de login — somente leitura.
+let shareMode=false, shareToken=null;
+(function(){
+  const qp=new URLSearchParams(location.search);
+  const t=qp.get('share');
+  if(t){shareMode=true;shareToken=t;}
+})();
+
 // ── AUTH ────────────────────────────────────────────────────────
 function uid(){return currentUser?.id||null;}
 
@@ -44,6 +54,7 @@ function _updateUserChip(user){
 
 // Escuta mudanças de sessão (login/logout/refresh)
 sbClient.auth.onAuthStateChange((_event,session)=>{
+  if(shareMode) return; // visitante de link compartilhado: não mexe na tela de login
   currentUser=session?.user??null;
   _updateUserChip(currentUser);
   if(currentUser){
@@ -2371,4 +2382,78 @@ function renderEvolucao(){
     <span>Valor tirado: <b style="color:var(--teal)">R$${fmtR(accP)}</b></span>
     <span>ROI: <b style="color:${accP>=accI?'var(--teal)':'var(--gold)'}">${accI>0?((accP/accI-1)*100).toFixed(0):0}%</b></span>
   </div>`;
+}
+
+// ── COMPARTILHAMENTO PÚBLICO DE FICHÁRIO (link + QR code) ─────────
+async function loadSharedBinder(){
+  _showAuth(false);
+  goPage('app');
+  setStatus('Coleção compartilhada · somente leitura','ok');
+  document.body.classList.add('share-view');
+  try{
+    const{data,error}=await sbClient.rpc('get_share_collection',{p_token:shareToken});
+    const row=Array.isArray(data)?data[0]:data;
+    if(error||!row||!row.set_key){
+      setStatus('Link inválido ou expirado','error');
+      return;
+    }
+    currentSet=row.set_key;
+    collected=new Set(row.slot_keys||[]);
+    fetchCambio();
+    const fichTab=[...document.querySelectorAll('.tab')].find(t=>(t.getAttribute('onclick')||'').includes("'fichario'"));
+    go('fichario', fichTab||document.querySelector('.tab'));
+    if(typeof setFicView==='function') setFicView(row.view_mode==='binder'?'binder':'grid');
+    if(row.view_mode==='binder' && typeof setBinderSize==='function') setBinderSize(row.layout||3);
+  }catch(e){console.error(e);setStatus('Erro ao carregar link','error');}
+}
+if(shareMode){
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',loadSharedBinder);
+  else loadSharedBinder();
+}
+
+function openShareModal(){
+  if(currentSet==='__custom__'){
+    alert('Compartilhar fichários personalizados ainda não é suportado — em breve!');
+    return;
+  }
+  if(!uid()){ alert('Faça login para gerar um link de compartilhamento.'); return; }
+  const lbl=document.getElementById('share-set-label');
+  if(lbl){ const sd=getSetData(); lbl.textContent = (sd&&sd.label)||currentSet; }
+  const urlInp=document.getElementById('share-url'); if(urlInp) urlInp.value='';
+  const qr=document.getElementById('share-qr'); if(qr){ const ctx=qr.getContext&&qr.getContext('2d'); if(ctx) ctx.clearRect(0,0,qr.width,qr.height); }
+  const modeSel=document.getElementById('share-mode'); if(modeSel) modeSel.value=ficViewMode||'grid';
+  document.getElementById('mshare').classList.add('open');
+}
+
+async function generateShareLink(){
+  const btn=document.getElementById('share-gen-btn');
+  const modeSel=document.getElementById('share-mode');
+  const view_mode=(modeSel&&modeSel.value==='binder')?'binder':'grid';
+  const layout=ficBinderSize||3;
+  if(btn){btn.disabled=true;btn.textContent='Gerando...';}
+  try{
+    const{data,error}=await sbClient.from('binder_shares')
+      .insert({user_id:uid(), set_key:currentSet, view_mode, layout})
+      .select('token').single();
+    if(error||!data){ alert('Erro ao gerar link. Verifique se rodou o SQL binder_shares_setup.sql no Supabase.'); return; }
+    const url=`${location.origin}${location.pathname}?share=${data.token}`;
+    const urlInp=document.getElementById('share-url'); if(urlInp) urlInp.value=url;
+    const qr=document.getElementById('share-qr');
+    if(qr && window.QRCode){
+      QRCode.toCanvas(qr, url, {width:220,margin:1,color:{dark:'#1c1f2e',light:'#ffffff'}}, err=>{ if(err) console.error(err); });
+    }
+  }catch(e){ console.error(e); alert('Erro ao gerar link.'); }
+  finally{ if(btn){btn.disabled=false;btn.text='🔗 Gerar Link e QR Code';} }
+}
+
+function copyShareUrl(){
+  const inp=document.getElementById('share-url');
+  if(!inp||!inp.value) return;
+  inp.select(); inp.setSelectionRange(0,99999);
+  try{ document.execCommand('copy'); }catch(e){}
+  if(navigator.clipboard) navigator.clipboard.writeText(inp.value).catch(()=>{});
+  const btn=document.getElementById('share-copy-btn');
+  if(btn){ const old=btn.textContent; btn.textContent='Copiado ✓'; setTimeout(()=>btn.textContent=old,1500); }
+}
+); }
 }
