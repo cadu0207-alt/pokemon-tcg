@@ -41,7 +41,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(8,9,13,0.82);
+  background: rgba(247,247,250,0.9);
   z-index: 1;
 }
 .amrow {
@@ -60,10 +60,10 @@
   transition: opacity .3s;
 }
 .amrow.paused { animation-play-state: paused !important; }
-#pg-app .pane { position: relative; z-index: 1; }
+#pg-app .pane { position: relative; z-index: 1; background: var(--bg); }
 </style>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0d0f18">
+<meta name="theme-color" content="#f7f7fa">
 </head>
 <body>
 
@@ -107,60 +107,14 @@
       <span id="status-dot" class="dot dot-warning"></span>
       <span id="status-txt">Conectando...</span>
       <span id="usd-brl" style="margin-left:14px;opacity:.6"></span>
-      <div id="user-chip" style="display:none;align-items:center;gap:8px;margin-left:12px;padding:4px 10px 4px 4px;background:#101422;border:1px solid #1c2238;border-radius:30px">
-        <img id="user-avatar" style="width:26px;height:26px;border-radius:50%;object-fit:cover;background:#1c2238" src="" onerror="this.style.display='none'">
-        <span id="user-display-name" style="font-family:'Space Mono',monospace;font-size:10px;color:#dde1f0;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-        <button onclick="signOut()" title="Sair" style="background:none;border:none;color:#52597a;font-size:14px;cursor:pointer;padding:0;line-height:1" onmouseover="this.style.color='#e63946'" onmouseout="this.style.color='#52597a'">⏻</button>
+      <div id="user-chip" style="display:none;align-items:center;gap:8px;margin-left:12px;padding:4px 10px 4px 4px;background:#f0f1f6;border:1px solid #dcdfe8;border-radius:30px">
+        <img id="user-avatar" style="width:26px;height:26px;border-radius:50%;object-fit:cover;background:#dcdfe8" src="" onerror="this.style.display='none'">
+        <span id="user-display-name" style="font-family:'Space Mono',monospace;font-size:10px;color:#1c1f2e;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+        <button onclick="signOut()" title="Sair" style="background:none;border:none;color:#6b7288;font-size:14px;cursor:pointer;padding:0;line-height:1" onmouseover="this.style.color='#e63946'" onmouseout="this.style.color='#6b7288'">⏻</button>
       </div>
     </div>
   </header>
   <div class="stripe"></div>
-
-  <!-- ═══ BANNER TOPO IWORLD TCG ═══ -->
-  <div class="ad-top" onclick="go('shopping',document.querySelector('.tab:last-child'))">
-    <div class="ad-top-logo">
-      <img src="https://ugc.production.linktr.ee/929ba8e6-3ff8-4f67-8973-e6f071b900cf_8567fd8ded86adcb458e6ac291267689-tplv-tiktokx-cropcenter-1080-1080.jpeg"
-           alt="iWorld TCG" onerror="this.style.display='none'">
-      <span class="ad-top-logo-name">iWorld TCG</span>
-    </div>
-    <div class="ad-top-marquee-wrap">
-      <div class="ad-top-marquee" id="ad-marquee">
-        <span class="ad-top-item"><span class="sep">★</span> <span class="hl">MAIOR ESTOQUE DE POKÉMON TCG</span> em Pereira Barreto · SP <span class="sep">★</span></span>
-        <span class="ad-top-item">Boosters &bull; Singles &bull; Packs Selados &bull; Entrega Nacional <span class="sep">⚡</span></span>
-        <span class="ad-top-item"><span class="hl">PULLS AO VIVO</span> no TikTok &bull; @iworldtcg <span class="sep">★</span></span>
-        <span class="ad-top-item">Cartas raras &bull; Ilustr. Esp. Raras &bull; Gold Cards &bull; Mega ex <span class="sep">⚡</span></span>
-        <span class="ad-top-item"><span class="hl">CONFIRA OS PREÇOS</span> e garanta a sua carta <span class="sep">★</span></span>
-        <!-- duplicado para loop contínuo -->
-        <span class="ad-top-item"><span class="sep">★</span> <span class="hl">MAIOR ESTOQUE DE POKÉMON TCG</span> em Pereira Barreto · SP <span class="sep">★</span></span>
-        <span class="ad-top-item">Boosters &bull; Singles &bull; Packs Selados &bull; Entrega Nacional <span class="sep">⚡</span></span>
-        <span class="ad-top-item"><span class="hl">PULLS AO VIVO</span> no TikTok &bull; @iworldtcg <span class="sep">★</span></span>
-        <span class="ad-top-item">Cartas raras &bull; Ilustr. Esp. Raras &bull; Gold Cards &bull; Mega ex <span class="sep">⚡</span></span>
-        <span class="ad-top-item"><span class="hl">CONFIRA OS PREÇOS</span> e garanta a sua carta <span class="sep">★</span></span>
-      </div>
-    </div>
-    <div class="ad-top-cta">
-      <button class="ad-top-btn" onclick="event.stopPropagation();go('shopping',document.querySelector('.tab:last-child'))">VER LOJA →</button>
-    </div>
-  </div>
-
-  <!-- ═══ SIDEBAR DIREITA IWORLD TCG ═══ -->
-  <div class="ad-side" id="ad-side" onclick="go('shopping',document.querySelector('.tab:last-child'))">
-    <button class="ad-side-close" onclick="event.stopPropagation();document.getElementById('ad-side').style.display='none'" title="Fechar">✕</button>
-    <div class="ad-side-glow"></div>
-    <img class="ad-side-logo"
-         src="https://ugc.production.linktr.ee/929ba8e6-3ff8-4f67-8973-e6f071b900cf_8567fd8ded86adcb458e6ac291267689-tplv-tiktokx-cropcenter-1080-1080.jpeg"
-         alt="iWorld TCG" onerror="this.style.display='none'">
-    <div class="ad-side-name">iWorld TCG</div>
-    <div class="ad-side-sub">Pereira Barreto · SP</div>
-    <div class="ad-side-div"></div>
-    <div class="ad-side-offers">
-      <div class="ad-side-offer"><span class="ad-side-offer-icon">★</span>Boosters &amp; Singles</div>
-      <div class="ad-side-offer"><span class="ad-side-offer-icon">★</span>Gold Cards raros</div>
-      <div class="ad-side-offer"><span class="ad-side-offer-icon">★</span>Pulls ao vivo</div>
-      <div class="ad-side-offer"><span class="ad-side-offer-icon">★</span>Entrega nacional</div>
-    </div>
-    <button class="ad-side-cta-btn">VER LOJA →</button>
-  </div>
 
   <nav class="tabs">
     <div class="tab active" onclick="go('dash',this)">📊 Dashboard</div>
@@ -168,7 +122,6 @@
     <div class="tab" onclick="go('gastos',this)">💸 Gastos</div>
     <div class="tab" onclick="go('cartas',this)">🃏 Cartas Tiradas</div>
     <div class="tab" onclick="go('preco',this)">💰 Preço Justo</div>
-    <div class="tab" onclick="go('shopping',this)">🛒 Shopping</div>
     <div class="tab" onclick="window.open('simulador.html','_blank')" style="background:linear-gradient(90deg,#7b2ff744,#f107a322);color:#c084fc">🎰 Simulador</div>
   </nav>
 
@@ -283,205 +236,6 @@
     </div>
     <div id="ev-wrap"></div>
   </div>
-
-  <!-- ===== ABA SHOPPING ===== -->
-  <div id="shopping" class="pane">
-
-    <!-- HERO IWORLD -->
-    <div style="position:relative;border-radius:20px;overflow:hidden;margin-bottom:28px;background:linear-gradient(135deg,#0a0e1a 0%,#111827 100%);border:1px solid #1c2238">
-      <div style="position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 80% 50%,rgba(255,209,0,.06) 0%,transparent 60%),radial-gradient(ellipse 40% 60% at 20% 50%,rgba(34,197,94,.04) 0%,transparent 60%)"></div>
-      <div style="position:relative;padding:40px 36px;display:flex;align-items:center;gap:32px;flex-wrap:wrap">
-        <!-- Logo -->
-        <div style="flex-shrink:0">
-          <img src="https://ugc.production.linktr.ee/929ba8e6-3ff8-4f67-8973-e6f071b900cf_8567fd8ded86adcb458e6ac291267689-tplv-tiktokx-cropcenter-1080-1080.jpeg" alt="iWorld TCG"
-               style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.1);box-shadow:0 8px 32px rgba(0,0,0,.4)"
-               >
-          <div id="iworld-text-logo" style="display:none;width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,#1a2e1a,#0d1a0d);border:3px solid #22c55e;align-items:center;justify-content:center;flex-direction:column;box-shadow:0 8px 32px rgba(34,197,94,.2)">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;background:linear-gradient(90deg,#facc15,#22c55e,#3b82f6,#e63946);-webkit-background-clip:text;-webkit-text-fill-color:transparent">iWORLD</div>
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:3px;color:#fff">TCG</div>
-          </div>
-        </div>
-        <!-- Info -->
-        <div style="flex:1;min-width:240px">
-          <div style="font-family:'Space Mono',monospace;font-size:10px;letter-spacing:3px;color:#22c55e;margin-bottom:8px">PARCEIRO OFICIAL</div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:44px;letter-spacing:3px;background:linear-gradient(90deg,#facc15,#22c55e,#3b82f6,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;margin-bottom:4px">iWorld TCG</div>
-          <div style="font-family:'DM Sans',sans-serif;font-size:14px;color:#8892a4;margin-bottom:20px">Sua loja de Pokémon TCG em Pereira Barreto · SP</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap">
-            <a href="https://www.tiktok.com/@iworldtcg?_r=1&_t=ZS-95MjgLhojWX" target="_blank"
-               style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:#111827;border:1px solid #374151;border-radius:10px;color:#fff;text-decoration:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;transition:all .2s"
-               onmouseover="this.style.borderColor='#22c55e';this.style.background='rgba(34,197,94,.08)'"
-               onmouseout="this.style.borderColor='#374151';this.style.background='#111827'">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.83a8.22 8.22 0 0 0 4.86 1.57V6.95a4.85 4.85 0 0 1-1.09-.26z"/></svg>
-              TikTok
-            </a>
-            <a href="https://wa.me/5518996362300?text=Ol%C3%A1!%20Vim%20pelo%20site%20MyDeck%20e%20tenho%20interesse%20em%20produtos%20Pok%C3%A9mon%20TCG!%20%F0%9F%83%8F" target="_blank"
-               style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:#111827;border:1px solid #374151;border-radius:10px;color:#fff;text-decoration:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;transition:all .2s"
-               onmouseover="this.style.borderColor='#25d366';this.style.background='rgba(37,211,102,.08)'"
-               onmouseout="this.style.borderColor='#374151';this.style.background='#111827'">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
-              WhatsApp Direto
-            </a>
-            <a href="https://www.instagram.com/ronaldojunior88" target="_blank"
-               style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:#111827;border:1px solid #374151;border-radius:10px;color:#fff;text-decoration:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;transition:all .2s"
-               onmouseover="this.style.borderColor='#e1306c';this.style.background='rgba(225,48,108,.08)'"
-               onmouseout="this.style.borderColor='#374151';this.style.background='#111827'">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="url(#igGrad)"><defs><linearGradient id="igGrad" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#f09433"/><stop offset="25%" stop-color="#e6683c"/><stop offset="50%" stop-color="#dc2743"/><stop offset="75%" stop-color="#cc2366"/><stop offset="100%" stop-color="#bc1888"/></linearGradient></defs><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-              Instagram
-            </a>
-            <a href="https://www.facebook.com/share/1BUi3crbEz/" target="_blank"
-               style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:#111827;border:1px solid #374151;border-radius:10px;color:#fff;text-decoration:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;transition:all .2s"
-               onmouseover="this.style.borderColor='#1877f2';this.style.background='rgba(24,119,242,.08)'"
-               onmouseout="this.style.borderColor='#374151';this.style.background='#111827'">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#1877f2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-              Facebook
-            </a>
-            <a href="https://chat.whatsapp.com/J9v2N6cwjnxARD49FuSzqB" target="_blank"
-               style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:#111827;border:1px solid #374151;border-radius:10px;color:#fff;text-decoration:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;transition:all .2s"
-               onmouseover="this.style.borderColor='#25d366';this.style.background='rgba(37,211,102,.08)'"
-               onmouseout="this.style.borderColor='#374151';this.style.background='#111827'">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
-              Grupo WhatsApp
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- INFO CARDS ROW -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:28px">
-
-      <!-- Evento Semanal -->
-      <div style="background:linear-gradient(135deg,rgba(230,57,70,.12),rgba(255,107,53,.06));border:1px solid rgba(230,57,70,.3);border-radius:16px;padding:24px 20px;position:relative;overflow:hidden">
-        <div style="position:absolute;top:-20px;right:-20px;font-size:80px;opacity:.06">🏆</div>
-        <div style="font-size:28px;margin-bottom:12px">🏆</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:#e63946;margin-bottom:6px">Evento Semanal</div>
-        <div style="font-family:'DM Sans',sans-serif;font-size:14px;color:#dde1f0;font-weight:700;margin-bottom:4px">Sábados das 9h às 13h</div>
-        <div style="font-family:'Space Mono',monospace;font-size:10px;color:#52597a">Toda semana · Entrada livre</div>
-      </div>
-
-      <!-- Localização -->
-      <a href="https://maps.google.com/?q=Av.+Brasil,+1236+Pereira+Barreto+SP" target="_blank"
-         style="background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:24px 20px;text-decoration:none;display:block;transition:all .2s;position:relative;overflow:hidden"
-         onmouseover="this.style.borderColor='#118ab2';this.style.background='rgba(17,138,178,.08)'"
-         onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface2)'">
-        <div style="position:absolute;top:-20px;right:-20px;font-size:80px;opacity:.06">📍</div>
-        <div style="font-size:28px;margin-bottom:12px">📍</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:#118ab2;margin-bottom:6px">Localização</div>
-        <div style="font-family:'DM Sans',sans-serif;font-size:13px;color:#dde1f0;font-weight:600;margin-bottom:4px;line-height:1.4">Av. Brasil, 1236<br>Centro · Pereira Barreto SP</div>
-        <div style="font-family:'Space Mono',monospace;font-size:10px;color:#118ab2">Ver no Google Maps →</div>
-      </a>
-
-      <!-- TikTok / Novidades -->
-      <a href="https://www.tiktok.com/@iworldtcg?_r=1&_t=ZS-95MjgLhojWX" target="_blank"
-         style="background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:24px 20px;text-decoration:none;display:block;transition:all .2s;position:relative;overflow:hidden"
-         onmouseover="this.style.borderColor='#22c55e';this.style.background='rgba(34,197,94,.08)'"
-         onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface2)'">
-        <div style="position:absolute;top:-20px;right:-20px;font-size:80px;opacity:.06">📱</div>
-        <div style="font-size:28px;margin-bottom:12px">📱</div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:#22c55e;margin-bottom:6px">Novidades</div>
-        <div style="font-family:'DM Sans',sans-serif;font-size:13px;color:#dde1f0;font-weight:600;margin-bottom:4px">Aberturas, pulls e<br>promoções no TikTok</div>
-        <div style="font-family:'Space Mono',monospace;font-size:10px;color:#22c55e">@iworldtcg →</div>
-      </a>
-    </div>
-
-    <!-- PROMOÇÕES CTA -->
-    <div style="background:linear-gradient(135deg,rgba(34,197,94,.1),rgba(37,211,102,.05));border:1px solid rgba(34,197,94,.3);border-radius:20px;padding:32px;margin-bottom:28px;text-align:center">
-      <div style="font-size:36px;margin-bottom:12px">🎉</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:3px;color:#fff;margin-bottom:8px">Promoções da Semana</div>
-      <div style="font-family:'DM Sans',sans-serif;font-size:14px;color:#8892a4;margin-bottom:28px;max-width:400px;margin-left:auto;margin-right:auto">Aberturas de boosters, pulls raros e ofertas especiais — tudo ao vivo no TikTok da iWorld TCG</div>
-      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-        <a href="https://www.tiktok.com/@iworldtcg?_r=1&_t=ZS-95MjgLhojWX" target="_blank"
-           style="display:inline-flex;align-items:center;gap:10px;padding:16px 32px;background:#22c55e;color:#fff;border-radius:14px;text-decoration:none;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;box-shadow:0 8px 32px rgba(34,197,94,.35);transition:all .2s"
-           onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 12px 40px rgba(34,197,94,.5)'"
-           onmouseout="this.style.transform='';this.style.boxShadow='0 8px 32px rgba(34,197,94,.35)'">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.83a8.22 8.22 0 0 0 4.86 1.57V6.95a4.85 4.85 0 0 1-1.09-.26z"/></svg>
-          VER PROMOÇÕES NO TIKTOK
-        </a>
-        <a href="https://wa.me/5518996362300?text=Ol%C3%A1!%20Vim%20pelo%20site%20MyDeck%20e%20tenho%20interesse%20em%20produtos%20Pok%C3%A9mon%20TCG!%20%F0%9F%83%8F" target="_blank"
-           style="display:inline-flex;align-items:center;gap:10px;padding:16px 28px;background:transparent;color:#25d366;border:2px solid #25d366;border-radius:14px;text-decoration:none;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;transition:all .2s"
-           onmouseover="this.style.background='rgba(37,211,102,.12)';this.style.transform='translateY(-3px)'"
-           onmouseout="this.style.background='transparent';this.style.transform=''">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
-          PEDIR VIA WHATSAPP
-        </a>
-      </div>
-    </div>
-
-    <!-- FEATURED SETS -->
-    <div class="sec-title">📦 Coleções Disponíveis</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:32px">
-
-      <!-- ME04 -->
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:16px;overflow:hidden;transition:all .2s;cursor:pointer"
-           onmouseover="this.style.borderColor='var(--accent)';this.style.transform='translateY(-4px)'"
-           onmouseout="this.style.borderColor='var(--border)';this.style.transform=''">
-        <img src="https://images.scrydex.com/pokemon/me4-113/large" alt="ME04"
-             style="width:100%;aspect-ratio:2.5/3.5;object-fit:cover;display:block">
-        <div style="padding:16px">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:#dde1f0;margin-bottom:2px">Caos Ascendente</div>
-          <div style="font-family:'Space Mono',monospace;font-size:9px;color:#52597a;margin-bottom:12px">ME04 · 122 cartas</div>
-          <a href="https://www.tiktok.com/@iworldtcg?_r=1&_t=ZS-95MjgLhojWX" target="_blank"
-             style="display:block;text-align:center;padding:8px;background:var(--accent);color:#fff;border-radius:8px;text-decoration:none;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1px;font-weight:700;transition:opacity .2s"
-             onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">VER NA LOJA →</a>
-        </div>
-      </div>
-
-      <!-- ME03 -->
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:16px;overflow:hidden;transition:all .2s;cursor:pointer"
-           onmouseover="this.style.borderColor='#3b82f6';this.style.transform='translateY(-4px)'"
-           onmouseout="this.style.borderColor='var(--border)';this.style.transform=''">
-        <img src="https://images.scrydex.com/pokemon/me3-110/large" alt="ME03"
-             style="width:100%;aspect-ratio:2.5/3.5;object-fit:cover;display:block">
-        <div style="padding:16px">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:#dde1f0;margin-bottom:2px">Ordem Perfeita</div>
-          <div style="font-family:'Space Mono',monospace;font-size:9px;color:#52597a;margin-bottom:12px">ME03 · 120 cartas</div>
-          <a href="https://www.tiktok.com/@iworldtcg?_r=1&_t=ZS-95MjgLhojWX" target="_blank"
-             style="display:block;text-align:center;padding:8px;background:#3b82f6;color:#fff;border-radius:8px;text-decoration:none;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1px;font-weight:700;transition:opacity .2s"
-             onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">VER NA LOJA →</a>
-        </div>
-      </div>
-
-      <!-- ME02 -->
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:16px;overflow:hidden;transition:all .2s;cursor:pointer"
-           onmouseover="this.style.borderColor='#8b5cf6';this.style.transform='translateY(-4px)'"
-           onmouseout="this.style.borderColor='var(--border)';this.style.transform=''">
-        <img src="https://images.scrydex.com/pokemon/me2-119/large" alt="ME02"
-             style="width:100%;aspect-ratio:2.5/3.5;object-fit:cover;display:block">
-        <div style="padding:16px">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:#dde1f0;margin-bottom:2px">Fogo Fantasmagórico</div>
-          <div style="font-family:'Space Mono',monospace;font-size:9px;color:#52597a;margin-bottom:12px">ME02 · 130 cartas</div>
-          <a href="https://www.tiktok.com/@iworldtcg?_r=1&_t=ZS-95MjgLhojWX" target="_blank"
-             style="display:block;text-align:center;padding:8px;background:#8b5cf6;color:#fff;border-radius:8px;text-decoration:none;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1px;font-weight:700;transition:opacity .2s"
-             onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">VER NA LOJA →</a>
-        </div>
-      </div>
-
-      <!-- ME05 (Breve) -->
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:16px;overflow:hidden;opacity:.7">
-        <div style="width:100%;aspect-ratio:2.5/3.5;background:linear-gradient(135deg,#0d0f1a,#1a0d2e);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px">
-          <div style="font-size:40px">🌑</div>
-          <div style="font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;color:#52597a">EM BREVE</div>
-        </div>
-        <div style="padding:16px">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:#dde1f0;margin-bottom:2px">Negrura Absoluta</div>
-          <div style="font-family:'Space Mono',monospace;font-size:9px;color:#52597a;margin-bottom:12px">ME05 · Agosto/2026</div>
-          <div style="display:block;text-align:center;padding:8px;background:var(--surface3,#1c2238);color:#52597a;border-radius:8px;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1px">EM BREVE</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- FOOTER NOTE -->
-    <div style="text-align:center;padding:24px;background:var(--surface2);border:1px solid var(--border);border-radius:16px">
-      <div style="font-family:'Space Mono',monospace;font-size:10px;color:#52597a;line-height:1.8">
-        Parceria MyDeck × iWorld TCG · Pereira Barreto SP<br>
-        TCG · Games · Geek · (18) 99636-2300<br>
-        <a href="https://www.tiktok.com/@iworldtcg?_r=1&_t=ZS-95MjgLhojWX" target="_blank" style="color:#22c55e;text-decoration:none">@iworldtcg</a>
-        &nbsp;·&nbsp;
-        <a href="https://chat.whatsapp.com/J9v2N6cwjnxARD49FuSzqB" target="_blank" style="color:#25d366;text-decoration:none">Grupo WhatsApp</a>
-      </div>
-    </div>
-
-  </div><!-- /shopping pane -->
 
 </div><!-- /pg-app -->
 
@@ -745,3 +499,4 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch
 </script>
 </body>
 </html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
