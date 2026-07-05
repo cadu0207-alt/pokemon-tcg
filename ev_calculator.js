@@ -70,12 +70,12 @@ var CATALOG = [
   { id:'me04-blister3', grupo:'ME04 — Caos Ascendente', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me04', extras:[], premium:0 },
   { id:'me04-blister2', grupo:'ME04 — Caos Ascendente', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me04', extras:[], premium:0 },
   { id:'me04-booster',  grupo:'ME04 — Caos Ascendente', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me04', extras:[], premium:0 },
-  // ME05 — Negrura Absoluta (lança ago/2026 — varejo estimado, ajustar no lançamento)
-  { id:'me05-display',  grupo:'ME05 — Negrura Absoluta', nome:'Box Display (36 boosters)',      boosters:36, varejo:539.99, set:'me05', extras:[], premium:0 },
-  { id:'me05-etb',      grupo:'ME05 — Negrura Absoluta', nome:'Elite Trainer Box (9 boosters)', boosters:9,  varejo:199.99, set:'me05', extras:[], premium:5 },
-  { id:'me05-blister4', grupo:'ME05 — Negrura Absoluta', nome:'Blister Quadriplo (4 boosters)',boosters:4,  varejo:59.99,  set:'me05', extras:[], premium:0 },
-  { id:'me05-blister3', grupo:'ME05 — Negrura Absoluta', nome:'Blister Triplo (3 boosters)',   boosters:3,  varejo:44.99,  set:'me05', extras:[], premium:0 },
-  { id:'me05-booster',  grupo:'ME05 — Negrura Absoluta', nome:'Booster Avulso',                boosters:1,  varejo:14.99,  set:'me05', extras:[], premium:0 },
+  // ME05 — Escuridão Absoluta (lança ago/2026 — varejo estimado, ajustar no lançamento)
+  { id:'me05-display',  grupo:'ME05 — Escuridão Absoluta', nome:'Box Display (36 boosters)',      boosters:36, varejo:539.99, set:'me05', extras:[], premium:0 },
+  { id:'me05-etb',      grupo:'ME05 — Escuridão Absoluta', nome:'Elite Trainer Box (9 boosters)', boosters:9,  varejo:199.99, set:'me05', extras:[], premium:5 },
+  { id:'me05-blister4', grupo:'ME05 — Escuridão Absoluta', nome:'Blister Quadriplo (4 boosters)',boosters:4,  varejo:59.99,  set:'me05', extras:[], premium:0 },
+  { id:'me05-blister3', grupo:'ME05 — Escuridão Absoluta', nome:'Blister Triplo (3 boosters)',   boosters:3,  varejo:44.99,  set:'me05', extras:[], premium:0 },
+  { id:'me05-booster',  grupo:'ME05 — Escuridão Absoluta', nome:'Booster Avulso',                boosters:1,  varejo:14.99,  set:'me05', extras:[], premium:0 },
   // ── ME03 Ordem Perfeita ───────────────────────────────────
   { id:'me03-display',  grupo:'ME03 — Ordem Perfeita', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me03', extras:[], premium:0 },
   { id:'me03-etb',      grupo:'ME03 — Ordem Perfeita', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me03', extras:[], premium:5 },
