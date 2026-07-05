@@ -1,6 +1,7 @@
 /* MyDeck Service Worker — cache-first para assets estáticos, network-first para dados */
-const CACHE = 'mydeck-v1';
-const STATIC = ['./', './index.html', './style.css', './app.js', './fichario_patch.js', './ev_calculator.js'];
+const CACHE = 'mydeck-v2';
+const STATIC = ['./', './index.html', './style.css', './app.js', './fichario_patch.js', './ev_calculator.js',
+  './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)).catch(() => {}));

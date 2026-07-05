@@ -63,6 +63,8 @@
 #pg-app .pane { position: relative; z-index: 1; background: var(--bg); }
 </style>
 <link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-512.png">
 <meta name="theme-color" content="#f7f7fa">
 </head>
 <body>
@@ -333,7 +335,7 @@
       <label>Coleção</label>
       <div id="share-set-label" style="font-size:13px;color:var(--text2);font-weight:600"></div>
     </div>
-    <div class="ff">
+    <div class="ff" id="share-mode-row">
       <label>Modo de visualização do link</label>
       <select id="share-mode">
         <option value="grid">⊞ Grade</option>

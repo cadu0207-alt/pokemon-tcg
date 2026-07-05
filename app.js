@@ -1635,6 +1635,11 @@ function renderCustomBindersHome(){
               style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px;
                      opacity:.5;transition:opacity .15s" title="Editar"
               onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.5'">✏️</button>
+            <button onclick="event.stopPropagation();shareCustomBinderPrompt(${safeJSON(b)})"
+              style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px;
+                     opacity:.5;transition:opacity .15s" title="Compartilhar"
+              onmouseover="this.style.opacity='1';this.style.color='var(--teal)'"
+              onmouseout="this.style.opacity='.5';this.style.color='var(--muted)'">🔗</button>
             <button onclick="event.stopPropagation();deleteCustomBinder('${b.id}')"
               style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px;
                      opacity:.5;transition:opacity .15s" title="Excluir"
@@ -2385,6 +2390,8 @@ function renderEvolucao(){
 }
 
 // ── COMPARTILHAMENTO PÚBLICO DE FICHÁRIO (link + QR code) ─────────
+let _shareCustomBinder=null; // {id,name,card_ids} quando compartilhando um fichário personalizado
+
 async function loadSharedBinder(){
   _showAuth(false);
   goPage('app');
@@ -2393,17 +2400,24 @@ async function loadSharedBinder(){
   try{
     const{data,error}=await sbClient.rpc('get_share_collection',{p_token:shareToken});
     const row=Array.isArray(data)?data[0]:data;
-    if(error||!row||!row.set_key){
+    if(error||!row||(!row.set_key&&!row.card_ids)){
       setStatus('Link inválido ou expirado','error');
       return;
     }
-    currentSet=row.set_key;
     collected=new Set(row.slot_keys||[]);
     fetchCambio();
     const fichTab=[...document.querySelectorAll('.tab')].find(t=>(t.getAttribute('onclick')||'').includes("'fichario'"));
     go('fichario', fichTab||document.querySelector('.tab'));
-    if(typeof setFicView==='function') setFicView(row.view_mode==='binder'?'binder':'grid');
-    if(row.view_mode==='binder' && typeof setBinderSize==='function') setBinderSize(row.layout||3);
+
+    if(row.card_ids){
+      // Fichário personalizado compartilhado (snapshot resolvido no momento do link)
+      renderSharedCustomBinder(row.card_ids, row.binder_name||'Fichário Compartilhado');
+    }else{
+      currentSet=row.set_key;
+      if(typeof setFicView==='function') setFicView(row.view_mode==='binder'?'binder':'grid');
+      if(row.view_mode==='binder' && typeof setBinderSize==='function') setBinderSize(row.layout||3);
+      else renderBinder();
+    }
   }catch(e){console.error(e);setStatus('Erro ao carregar link','error');}
 }
 if(shareMode){
@@ -2411,9 +2425,52 @@ if(shareMode){
   else loadSharedBinder();
 }
 
+// Renderiza (somente leitura) um fichário personalizado compartilhado, a partir
+// de um snapshot [{set,n}] resolvido no momento em que o link foi gerado.
+function renderSharedCustomBinder(cardIds, binderName){
+  ['fic-binder-controls','fic-set-info'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.style.display='none';
+  });
+  const bctl=document.querySelector('.bctl'); if(bctl) bctl.style.display='none';
+
+  const items=(cardIds||[]).map(ref=>{
+    const cards=SET_CARDS_MAP[ref.set]?.()??[];
+    const card=cards.find(c=>c.n===ref.n);
+    return card?{...card,_setId:ref.set}:null;
+  }).filter(Boolean);
+
+  let total=0,got=0;
+  const cellsHtml=items.map(c=>{
+    const slots=getSlots(c,c._setId);
+    const imgUrl=getBinderImg(c,c._setId)||'';
+    let anyCollected=false;
+    slots.forEach(s=>{ total++; if(collected.has(slotKey(c._setId+':',c.n,s.ver))){got++;anyCollected=true;} });
+    return `<div class="bc2${anyCollected?' collected':''}">
+      <div class="bc2-in"><img src="${imgUrl}" loading="lazy" alt="${c.name||''}" onerror="this.style.opacity=.15"></div>
+      <div class="chk">✓</div>
+    </div>`;
+  }).join('');
+
+  const pct=total>0?Math.round(got/total*100):0;
+  const bstats=document.getElementById('binder-stats');
+  if(bstats){
+    bstats.style.display='flex';
+    bstats.innerHTML=`<div><div class="bsv" style="color:var(--purple)">${binderName}</div><div class="bsl">Fichário compartilhado</div></div>
+      <div><div class="bsv">${pct}%</div><div class="bsl">Coletado</div></div>
+      <div><div class="bsv">${got}/${total}</div><div class="bsl">Slots</div></div>`;
+  }
+
+  const wrap=document.getElementById('bwrap');
+  if(wrap) wrap.innerHTML = items.length
+    ? `<div class="bgrid">${cellsHtml}</div>`
+    : `<div style="color:var(--muted);font-size:11px;padding:20px">Este fichário está vazio.</div>`;
+}
+
 function openShareModal(){
+  _shareCustomBinder=null;
+  const modeRow=document.getElementById('share-mode-row'); if(modeRow) modeRow.style.display='';
   if(currentSet==='__custom__'){
-    alert('Compartilhar fichários personalizados ainda não é suportado — em breve!');
+    alert('Pra compartilhar um fichário personalizado específico, use o botão 🔗 dentro do card dele em "Meus Fichários".');
     return;
   }
   if(!uid()){ alert('Faça login para gerar um link de compartilhamento.'); return; }
@@ -2425,17 +2482,34 @@ function openShareModal(){
   document.getElementById('mshare').classList.add('open');
 }
 
+// Compartilhar um fichário personalizado específico (chamado pelo botão 🔗 no card dele)
+function shareCustomBinderPrompt(binder){
+  if(!uid()){ alert('Faça login para gerar um link de compartilhamento.'); return; }
+  const cards=getBinderCards(binder);
+  if(!cards.length){ alert('Este fichário ainda não tem cartas — adicione cartas antes de compartilhar.'); return; }
+  _shareCustomBinder={ id:binder.id, name:binder.name, card_ids: cards.map(c=>({set:c._setId,n:c.n})) };
+  const modeRow=document.getElementById('share-mode-row'); if(modeRow) modeRow.style.display='none';
+  const lbl=document.getElementById('share-set-label'); if(lbl) lbl.textContent=binder.name;
+  const urlInp=document.getElementById('share-url'); if(urlInp) urlInp.value='';
+  const qr=document.getElementById('share-qr'); if(qr){ const ctx=qr.getContext&&qr.getContext('2d'); if(ctx) ctx.clearRect(0,0,qr.width,qr.height); }
+  document.getElementById('mshare').classList.add('open');
+}
+
 async function generateShareLink(){
   const btn=document.getElementById('share-gen-btn');
+  const isCustom=!!_shareCustomBinder;
   const modeSel=document.getElementById('share-mode');
-  const view_mode=(modeSel&&modeSel.value==='binder')?'binder':'grid';
+  const view_mode=isCustom?'grid':((modeSel&&modeSel.value==='binder')?'binder':'grid');
   const layout=ficBinderSize||3;
   if(btn){btn.disabled=true;btn.textContent='Gerando...';}
   try{
+    const payload=isCustom
+      ? {user_id:uid(), view_mode:'grid', layout, card_ids:_shareCustomBinder.card_ids, binder_name:_shareCustomBinder.name}
+      : {user_id:uid(), set_key:currentSet, view_mode, layout};
     const{data,error}=await sbClient.from('binder_shares')
-      .insert({user_id:uid(), set_key:currentSet, view_mode, layout})
+      .insert(payload)
       .select('token').single();
-    if(error||!data){ alert('Erro ao gerar link. Verifique se rodou o SQL binder_shares_setup.sql no Supabase.'); return; }
+    if(error||!data){ alert('Erro ao gerar link. Verifique se rodou o SQL binder_shares_setup.sql (e a migração de card_ids) no Supabase.'); return; }
     const url=`${location.origin}${location.pathname}?share=${data.token}`;
     const urlInp=document.getElementById('share-url'); if(urlInp) urlInp.value=url;
     const qr=document.getElementById('share-qr');
@@ -2443,7 +2517,7 @@ async function generateShareLink(){
       QRCode.toCanvas(qr, url, {width:220,margin:1,color:{dark:'#1c1f2e',light:'#ffffff'}}, err=>{ if(err) console.error(err); });
     }
   }catch(e){ console.error(e); alert('Erro ao gerar link.'); }
-  finally{ if(btn){btn.disabled=false;btn.text='🔗 Gerar Link e QR Code';} }
+  finally{ if(btn){btn.disabled=false;btn.textContent='🔗 Gerar Link e QR Code';} }
 }
 
 function copyShareUrl(){
@@ -2454,6 +2528,4 @@ function copyShareUrl(){
   if(navigator.clipboard) navigator.clipboard.writeText(inp.value).catch(()=>{});
   const btn=document.getElementById('share-copy-btn');
   if(btn){ const old=btn.textContent; btn.textContent='Copiado ✓'; setTimeout(()=>btn.textContent=old,1500); }
-}
-); }
 }
