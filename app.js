@@ -142,6 +142,9 @@ async function fetchCambio(){
     if(el)el.textContent=`USD/BRL R$${USD_BRL.toFixed(2)}`;
   }catch(e){}
 }
+// Câmbio ficava travado no valor do momento do login — se a aba fica aberta
+// por horas o R$/USD exibido e usado no EV envelhece. Atualiza sozinho.
+setInterval(()=>{ if(document.visibilityState==='visible') fetchCambio(); }, 30*60*1000);
 
 // ── PREÇOS AO VIVO (TCGDex — CardMarket EUR + TCGPlayer USD) ─────
 const TCGDX={
