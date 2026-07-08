@@ -110,6 +110,32 @@ function getCardImg(card){
   return imgMe04(Math.min(parseInt(n)||1,122));
 }
 
+// Cadeia de fallback de imagem: quando o CDN principal (scrydex) ainda não tem
+// a carta (comum em sets recém-lançados, ex. ME05 Escuridão Absoluta em jul/2026,
+// ou promos MEP), tenta o CDN alternativo (tcgdex) antes de esconder a imagem.
+function imgAltUrl(setId,n){
+  const num=parseInt(n,10);const safe=isNaN(num)?n:num;
+  const map={
+    me05:`https://assets.tcgdex.net/en/me/me05/${safe}/high.png`,
+    me06:`https://assets.tcgdex.net/en/me/me06/${safe}/high.png`,
+    me04:`https://assets.tcgdex.net/en/me/me04/${safe}/high.png`,
+    me03:`https://assets.tcgdex.net/en/me/me03/${safe}/high.png`,
+    me02:`https://assets.tcgdex.net/en/me/me02/${safe}/high.png`,
+    meg: `https://assets.tcgdex.net/en/me/me01/${safe}/high.png`,
+    mep: `https://assets.tcgdex.net/en/me/mep/${safe}/high.png`,
+  };
+  return map[setId]||null;
+}
+// Handler global reusado nos onerror de <img> do fichário — tenta o CDN alternativo
+// uma única vez (via data-img-try) e só então cai no placeholder "sem imagem".
+function handleCardImgError(img,setId,n){
+  if(img.dataset.imgTry!=='1'){
+    const alt=imgAltUrl(setId,n);
+    if(alt){img.dataset.imgTry='1';img.src=alt;return;}
+  }
+  img.style.display='none';
+  if(img.nextElementSibling)img.nextElementSibling.style.display='flex';
+}
 function getBinderImg(c,setId){
   const n=parseInt(c.n);
   if(setId==='me06') return imgMe06(n);
@@ -270,12 +296,21 @@ function setStatus(txt,state){
 // ── TOGGLE SLOT ──────────────────────────────────────────────────
 async function toggleSlot(key){
   if(!uid()) return;
-  if(collected.has(key)){
+  const wasCollected=collected.has(key);
+  let error=null;
+  if(wasCollected){
     collected.delete(key);
-    await sbClient.from('collection').delete().eq('slot_key',key).eq('user_id',uid());
+    ({error}=await sbClient.from('collection').delete().eq('slot_key',key).eq('user_id',uid()));
   }else{
     collected.add(key);
-    await sbClient.from('collection').upsert({slot_key:key,user_id:uid()},{onConflict:'user_id,slot_key'});
+    ({error}=await sbClient.from('collection').upsert({slot_key:key,user_id:uid()},{onConflict:'user_id,slot_key'}));
+  }
+  if(error){
+    // reverte estado local — a gravação falhou, não deixar a UI mentir
+    if(wasCollected)collected.add(key);else collected.delete(key);
+    console.error('Erro ao salvar coleção:',error);
+    setStatus('Erro ao salvar — tente novamente','error');
+    alert('Não foi possível salvar essa carta no fichário. Verifique sua conexão e tente de novo.');
   }
   renderBinder();updateDashProgress();
 }
@@ -627,7 +662,7 @@ const SET_CATALOG=[
   {id:'me03',label:'ME03 — Ordem Perfeita',        emoji:'🔵',cards:120,color:'#1565C0',series:'ME'},
   {id:'me02',label:'ME02 — Fogo Fantasmagórico',   emoji:'👻',cards:130,color:'#9C27B0',series:'ME'},
   {id:'meg', label:'MEG — Megaevolução',            emoji:'🌿',cards:188,color:'#4CAF50',series:'ME'},
-  {id:'mep', label:'MEP — Parceiros Iniciais',     emoji:'⭐',cards:45, color:'#ffd166',series:'ME'},
+  {id:'mep', label:'MEP — Promos Mega Evolução',   emoji:'⭐',cards:typeof CARDS_MEP!=='undefined'?CARDS_MEP.length:54, color:'#ffd166',series:'ME'},
   {id:'sv10',label:'SV10 — Rivais do Destino',     emoji:'⚔️',cards:244,color:'#E91E63',series:'SV'},
   {id:'sv9', label:'SV9 — Jornada Juntos',          emoji:'🤝',cards:190,color:'#3F51B5',series:'SV'},
   {id:'sv8pt5',label:'SV8.5 — Evoluções Prismáticas',emoji:'💫',cards:180,color:'#9C27B0',series:'SV'},
@@ -794,6 +829,11 @@ function renderGastos(){
     const pb=p.boost>0?(Number(p.price)/p.boost).toFixed(2):null;
     const d=new Date(p.date+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
     const imgSrc=getPurchaseImg(p.product);
+    // Profit por compra: soma das cartas tiradas vinculadas via purchase_id - preço pago.
+    // Cartas antigas (lançadas antes do vínculo existir) não têm purchase_id e não entram aqui.
+    const linked=pulledCards.filter(c=>String(c.purchase_id)===String(p.id));
+    const linkedVal=linked.reduce((s,c)=>s+Number(c.price||0),0);
+    const profit=linked.length?linkedVal-Number(p.price):null;
     return`<div class="pcard">
       <div class="pcard-img-wrap">
         <img src="${imgSrc}" alt="${p.product}" onerror="this.style.display='none'">
@@ -810,6 +850,7 @@ function renderGastos(){
             </div>
             <div style="font-weight:700;font-size:14px;margin-bottom:4px">${p.product}</div>
             ${p.boost>0?`<div style="font-size:11px;color:var(--muted)">${p.boost} boosters · ~${p.cards} cartas</div>`:''}
+            ${profit!==null?`<div style="font-size:11px;margin-top:4px;color:${profit>=0?'var(--teal)':'var(--accent)'}">${profit>=0?'▲':'▼'} R$${fmtR(Math.abs(profit))} ${profit>=0?'de lucro':'abaixo do gasto'} · ${linked.length} carta${linked.length!==1?'s':''} vinculada${linked.length!==1?'s':''}</div>`:''}
           </div>
           <div style="display:flex;gap:16px;align-items:center">
             <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--accent);line-height:1">R$${fmtR(p.price)}</div>
@@ -1019,12 +1060,13 @@ function getSetData(){
       sections:[{lbl:'📄 Base — 001 a 094',filter:c=>c.base},{lbl:'✨ Secretas — 095 a 130',filter:c=>!c.base}]},
     meg: {cards:CARDS_MEG,imgFn:imgMeg,label:'MEG — Megaevolução',
       sections:[{lbl:'📄 Base — 001 a 132',filter:c=>c.base},{lbl:'✨ Secretas — 133 a 188',filter:c=>!c.base}]},
-    mep: {cards:CARDS_MEP,imgFn:imgMep,label:'MEP — Parceiros Iniciais (Promos)',
+    mep: {cards:CARDS_MEP,imgFn:imgMep,label:'MEP — Promos Mega Evolução (todas)',
       sections:[
+        {lbl:'📦 Promos MEP001–036 — Staff/Torneio/Jumbo/Pokémon Center', filter:c=>c.series==='Promos MEP 001–036'},
         {lbl:'⭐ Série 1 — Kanto · Sinnoh · Alola (MEP037–045)',  filter:c=>c.series&&c.series.includes('Série 1')},
         {lbl:'⭐ Série 2 — Johto · Unova · Galar (MEP046–054)',   filter:c=>c.series&&c.series.includes('Série 2')},
         {lbl:'⭐ Série 3 — Hoenn · Kalos · Paldea (em breve)',    filter:c=>c.series&&c.series.includes('Série 3')},
-        {lbl:'📦 Outros Promos',                                   filter:c=>!c.series||!c.series.includes('Série')},
+        {lbl:'📦 Outros',                                          filter:c=>!c.series||(!c.series.includes('Série')&&c.series!=='Promos MEP 001–036')},
       ]},
     // ── Escarlate e Violeta (2023-2025) ─────────────────────────────
     sv10:  {cards:typeof CARDS_SV10!=='undefined'?CARDS_SV10:[],  label:'SV10 — Rivais do Destino',
@@ -1231,8 +1273,16 @@ function selectPulledVer(ver){
 async function toggleVerCard(key,ver){
   if(!uid()) return;
   const isCol=collected.has(key);
-  if(isCol){collected.delete(key);await sbClient.from('collection').delete().eq('slot_key',key).eq('user_id',uid());}
-  else{collected.add(key);await sbClient.from('collection').upsert({slot_key:key,user_id:uid()},{onConflict:'user_id,slot_key'});}
+  let error=null;
+  if(isCol){collected.delete(key);({error}=await sbClient.from('collection').delete().eq('slot_key',key).eq('user_id',uid()));}
+  else{collected.add(key);({error}=await sbClient.from('collection').upsert({slot_key:key,user_id:uid()},{onConflict:'user_id,slot_key'}));}
+  if(error){
+    if(isCol)collected.add(key);else collected.delete(key);
+    console.error('Erro ao salvar coleção:',error);
+    setStatus('Erro ao salvar — tente novamente','error');
+    alert('Não foi possível salvar essa carta no fichário. Verifique sua conexão e tente de novo.');
+    return;
+  }
   // Atualizar visual do card clicado
   const card=document.getElementById(`vcard-${ver}`);
   if(card){
@@ -1268,7 +1318,8 @@ async function saveBinderModal(card,setId){
       ic:'fp',
       bc:ver==='SP'?'bi':ver==='F'?'br':'bx',
       price:slot.price||card.price||null,
-      psrc:'Fichário — preço estimado'
+      psrc:'Fichário — preço estimado',
+      purchase_id:purchase?purchase.id:null
     };
     if(!uid()) return;
     const {data:res}=await sbClient.from('pulled_cards').insert({...row,user_id:uid()}).select();
@@ -1403,7 +1454,8 @@ async function saveBoosterOpening(){
       icon:icons[card.type||'']||'🃏',ic:'fp',
       bc:verBc[ver]||'bx',
       price:slot.price||card.price||null,
-      psrc:'Abertura registrada'
+      psrc:'Abertura registrada',
+      purchase_id:purchase.id
     };
   });
 

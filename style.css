@@ -882,6 +882,34 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
 }
 .btn-cx:hover { color: var(--text); border-color: var(--border2); }
 
+/* ─── MODAL DE SLOT (fichário — versões/quantidade) ─── */
+.slot-modal-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 24px; width: 420px; max-width: 92vw; max-height: 88vh; overflow-y: auto; position: relative;
+}
+.slot-modal-head { display: flex; gap: 14px; margin-bottom: 20px; align-items: flex-start; }
+.slot-modal-img  { width: 70px; height: 98px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); flex-shrink: 0; }
+.slot-modal-info { min-width: 0; }
+.slot-modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 1px; }
+.slot-modal-sub   { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
+.slot-modal-rare  { font-size: 11px; color: var(--accent2); margin-top: 3px; }
+.slot-modal-price { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--teal); font-weight: 700; margin-top: 4px; }
+
+/* Desktop grande: carta e textos bem maiores, como pedido */
+@media (min-width: 1024px) {
+  .slot-modal-box  { width: 640px; padding: 34px; }
+  .slot-modal-head { gap: 26px; margin-bottom: 26px; }
+  .slot-modal-img  { width: 220px; height: 308px; border-radius: 12px; }
+  .slot-modal-title { font-size: 38px; }
+  .slot-modal-sub   { font-size: 14px; margin-top: 2px; }
+  .slot-modal-rare  { font-size: 15px; margin-top: 6px; }
+  .slot-modal-price { font-size: 22px; margin-top: 10px; }
+  #slot-modal-body  { font-size: 15px; }
+  #slot-modal-body [id^="slot-block-"] { padding: 18px; }
+  #slot-modal-body [id^="slot-qty-"]   { font-size: 30px !important; min-width: 32px !important; }
+  #slot-modal-body select, #slot-modal-body button { font-size: 13px; }
+}
+
 /* ─── MODAL BINDER ───────────────────────────────────── */
 .mbinder-img { width: 100%; max-height: 260px; object-fit: contain; background: var(--surface); display: block; border-radius: 10px 10px 0 0; }
 .mbinder-body { padding: 22px; }
@@ -896,6 +924,26 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
   #mbinder-content .mbinder-title { font-size: 28px; }
   #mbinder-content .mbinder-sub   { font-size: 11px; }
   .ver-select-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+}
+
+/* Desktop grande: aumentar imagem e textos do modal de carta/fichário */
+@media (min-width: 1024px) {
+  #mbinder-content { min-height: 560px; }
+  #mbinder-content .mbinder-img { width: 380px; }
+  #mbinder-content .mbinder-body { padding: 34px; }
+  #mbinder-content .mbinder-title { font-size: 36px; }
+  #mbinder-content .mbinder-sub   { font-size: 13px; margin-bottom: 22px; }
+  #mbinder-content .ver-card-label { font-size: 12px; }
+  #mbinder-content .ver-card-price { font-size: 14px; }
+  #mbinder-content .origin-select  { font-size: 15px; padding: 12px 15px; }
+
+  .cmc-img   { max-height: 460px; }
+  .cmc-body  { padding: 30px; }
+  .cmc-title { font-size: 32px; }
+  .cmc-sub   { font-size: 12px; }
+  .cmc-item label { font-size: 11px; }
+  .cmc-item span  { font-size: 16px; }
+  .cmc-ver   { font-size: 12px; }
 }
 .ver-select-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 18px; }
 .ver-card {

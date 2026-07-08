@@ -70,21 +70,30 @@ function loadCollection() {
 ───────────────────────────────────────────── */
 async function saveSlot(key, qty, origins) {
   if (!uid()) return; // não salva sem login
+  let error = null;
   if (qty <= 0) {
     if (collected.has(key)) {
       collected.delete(key);
-      await sbClient.from('collection').delete().eq('slot_key', key).eq('user_id', uid());
+      ({ error } = await sbClient.from('collection').delete().eq('slot_key', key).eq('user_id', uid()));
+      if (error) { collected.add(key); }
     }
-    delete ficCollection[key];
+    if (!error) delete ficCollection[key];
   } else {
     if (!collected.has(key)) {
       collected.add(key);
-      await sbClient.from('collection').upsert(
+      ({ error } = await sbClient.from('collection').upsert(
         { slot_key: key, user_id: uid() },
         { onConflict: 'user_id,slot_key' }
-      );
+      ));
+      if (error) { collected.delete(key); }
     }
-    ficCollection[key] = { qty, origins };
+    if (!error) ficCollection[key] = { qty, origins };
+  }
+  if (error) {
+    console.error('Erro ao salvar slot do fichário:', error);
+    if (typeof setStatus === 'function') setStatus('Erro ao salvar — tente novamente', 'error');
+    alert('Não foi possível salvar essa carta no fichário. Verifique sua conexão e tente de novo.');
+    return;
   }
   // Persistir extras localmente
   const extras = JSON.parse(localStorage.getItem('fic_extras') || '{}');
@@ -285,7 +294,7 @@ function renderGridView(cards) {
            box-shadow:${glow};position:relative;overflow:hidden;background:#0a0b10">
         <img src="${imgUrl(c.n)}" alt="${c.name}" loading="lazy"
              style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:${imgFilter}"
-             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+             onerror="handleCardImgError(this,'${currentSet}','${c.n}')">
         <div style="display:none;flex-direction:column;align-items:center;justify-content:center;
              gap:3px;position:absolute;inset:0;padding:5px;text-align:center">
           <div style="font-family:'Space Mono',monospace;font-size:7px;color:var(--muted)">${c.n}</div>
@@ -371,7 +380,7 @@ function renderBinderView(cards) {
            border:2px solid ${borderColor};box-shadow:${glow};background:#0a0b10;overflow:hidden;position:relative">
         <img src="${imgUrl(c.n)}" alt="${c.name}" loading="lazy"
              style="width:100%;height:100%;object-fit:cover;filter:${imgFilter}"
-             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+             onerror="handleCardImgError(this,'${currentSet}','${c.n}')">
         <div style="display:none;flex-direction:column;align-items:center;justify-content:center;
              gap:2px;position:absolute;inset:0;padding:4px;text-align:center">
           <div style="font-size:${cellSize>90?7:6}px;color:var(--muted);font-family:'Space Mono',monospace">${c.n}</div>
@@ -485,21 +494,18 @@ async function openSlotModal(cardN, defaultVer) {
   }
 
   overlay.innerHTML = `
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;
-       padding:24px;width:420px;max-width:92vw;max-height:88vh;overflow-y:auto;position:relative">
+  <div class="slot-modal-box">
     <button onclick="closeSlotModal()" style="position:absolute;top:12px;right:12px;background:none;
-      border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
-    <div style="display:flex;gap:14px;margin-bottom:20px;align-items:flex-start">
-      <img src="${imgUrl(cardN)}" alt="${card.name}"
-           style="width:70px;height:98px;object-fit:cover;border-radius:6px;border:1px solid var(--border)"
-           onerror="this.style.display='none'">
-      <div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px">${card.name}</div>
-        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">#${card.n} · ${card.type||''}</div>
-        <div style="font-size:11px;color:var(--accent2);margin-top:3px">${card.rare||''}</div>
-        ${card.price?`<div style="font-family:'Space Mono',monospace;font-size:13px;color:var(--teal);
-          font-weight:700;margin-top:4px">R$${fmtR(card.price)}</div>`:''}
-        ${card.important?'<div style="color:var(--gold);font-size:10px;margin-top:3px">★ Carta importante</div>':''}
+      border:none;color:var(--muted);font-size:18px;cursor:pointer;z-index:2">✕</button>
+    <div class="slot-modal-head">
+      <img class="slot-modal-img" src="${imgUrl(cardN)}" alt="${card.name}"
+           onerror="handleCardImgError(this,'${currentSet}','${cardN}')">
+      <div class="slot-modal-info">
+        <div class="slot-modal-title">${card.name}</div>
+        <div class="slot-modal-sub">#${card.n} · ${card.type||''}</div>
+        <div class="slot-modal-rare">${card.rare||''}</div>
+        ${card.price?`<div class="slot-modal-price">R$${fmtR(card.price)}</div>`:''}
+        ${card.important?'<div style="color:var(--gold);font-size:12px;margin-top:4px">★ Carta importante</div>':''}
       </div>
     </div>
     <div id="slot-modal-body">
