@@ -28,7 +28,7 @@ ALERTA_VARIACAO = 4.0        # loga aviso se preço novo divergir mais de 4x do 
 
 # ── Extração via Playwright ──────────────────────────────────────────────────
 
-def fetch_liga_prices(url: str) -> dict:
+def fetch_liga_prices(url: str, debug_key: str = "") -> dict:
     """
     Abre a página de busca da Liga Pokémon e extrai {numero_3dig: menor_preco}.
     A Liga renderiza a grade via JS e pagina — rola até o fim antes de extrair.
@@ -47,6 +47,31 @@ def fetch_liga_prices(url: str) -> dict:
         )
         page.goto(url, wait_until="domcontentloaded", timeout=45000)
         page.wait_for_timeout(3500)
+
+        # Fecha banner de cookies/consentimento se existir — pode estar bloqueando
+        # cliques/scroll e impedindo o carregamento da grade de cards.
+        for txt in ("Aceitar", "Aceitar todos", "Concordo", "OK", "Entendi"):
+            try:
+                btn = page.locator(f"button:has-text('{txt}')")
+                if btn.count() > 0:
+                    btn.first.click(timeout=1500)
+                    page.wait_for_timeout(500)
+            except Exception:
+                pass
+
+        # DEBUG: se não achar nenhum card já de cara, salva screenshot + HTML pra
+        # diagnosticar (bloqueio anti-bot, captcha, tela de login, layout mudou etc.)
+        # Os artefatos aparecem na aba Actions -> essa execução -> Artifacts.
+        early_count = page.locator("a[href*='view=cards/card']").count()
+        if early_count == 0 and debug_key:
+            os.makedirs("debug_screenshots", exist_ok=True)
+            try:
+                page.screenshot(path=f"debug_screenshots/{debug_key}.png", full_page=True)
+                with open(f"debug_screenshots/{debug_key}.html", "w", encoding="utf-8") as f:
+                    f.write(page.content())
+                print(f"     🩺 Debug salvo: debug_screenshots/{debug_key}.png (título da página: '{page.title()}')")
+            except Exception as e:
+                print(f"     🩺 Falha ao salvar debug: {e}")
 
         # Rola para carregar todos os cards (grade com lazy-load / paginação)
         prev = -1
@@ -164,7 +189,7 @@ def main():
 
         print(f"  📡 [{s['key'].upper()}] {s['url']}")
         try:
-            prices = fetch_liga_prices(s["url"])
+            prices = fetch_liga_prices(s["url"], debug_key=s["key"])
             print(f"     → {len(prices)} preços extraídos")
 
             if len(prices) < MIN_CARDS_PARA_GRAVAR:

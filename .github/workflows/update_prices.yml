@@ -35,6 +35,15 @@ jobs:
       - name: Atualizar preços
         run: python scripts/update_prices.py
 
+      - name: Upload screenshots de debug (se algum set não retornou cards)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshots
+          path: debug_screenshots/
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Commit e push (apenas se houver mudanças)
         run: |
           git config --global user.name  'Price Bot 🤖'
