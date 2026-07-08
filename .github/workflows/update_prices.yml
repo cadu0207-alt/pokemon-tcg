@@ -1,9 +1,14 @@
 name: Atualizar Preços das Cartas
 
 on:
-  schedule:
-    # Toda domingo às 10h UTC (7h BRT)
-    - cron: '0 10 * * 0'
+  # Cron semanal DESATIVADO (jul/2026): a Liga Pokémon usa Cloudflare e bloqueia
+  # os IPs de datacenter do GitHub Actions ("Access denied ... used Cloudflare
+  # to restrict access" — confirmado via screenshot de debug). A atualização
+  # de preços agora roda localmente (scripts/run_update_prices_local.bat via
+  # Agendador de Tarefas do Windows), que usa o IP residencial do Eduardo.
+  # Mantido aqui só pra permitir disparo manual/teste futuro.
+  # schedule:
+  #   - cron: '0 10 * * 0'
   workflow_dispatch:
     # Permite rodar manualmente pela aba Actions do GitHub
 
