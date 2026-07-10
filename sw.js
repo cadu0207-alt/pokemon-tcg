@@ -1,5 +1,11 @@
-/* MyDeck Service Worker — cache-first para assets estáticos, network-first para dados */
-const CACHE = 'mydeck-v2';
+/* MyDeck Service Worker — cache-first para assets estaticos, network-first para dados */
+// v3 (09/07/2026): fetch() por padrao respeita o cache HTTP do navegador -- mesmo
+// em modo "network-first" ele podia devolver uma resposta antiga do disk cache
+// sem nunca ir na rede de verdade. Isso deixou o fichario/app.js presos numa
+// versao velha por dias mesmo depois de pushes corrigindo bugs (ver feedback_coding).
+// Fix: {cache:'no-store'} forca ida real a rede pros assets proprios.
+// Bump de versao (v2 para v3) tambem limpa o cache antigo de quem ja tinha instalado o SW.
+const CACHE = 'mydeck-v3';
 const STATIC = ['./', './index.html', './style.css', './app.js', './fichario_patch.js', './ev_calculator.js',
   './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
@@ -19,10 +25,8 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET') return;
 
-  // Supabase e APIs: sempre rede (dados frescos)
   if (/supabase|tcgdex|frankfurter/.test(url.hostname)) return;
 
-  // Imagens de cartas: cache-first (imutáveis)
   if (/scrydex|pokemontcg\.io|pkmncards/.test(url.hostname)) {
     e.respondWith(
       caches.match(e.request).then(hit => hit ||
@@ -35,10 +39,9 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Assets próprios: network-first com fallback ao cache (funciona offline)
   if (url.origin === location.origin) {
     e.respondWith(
-      fetch(e.request).then(r => {
+      fetch(e.request, { cache: 'no-store' }).then(r => {
         if (r.ok) { const cl = r.clone(); caches.open(CACHE).then(c => c.put(e.request, cl)); }
         return r;
       }).catch(() => caches.match(e.request))
