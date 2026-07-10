@@ -1,14 +1,21 @@
 // MEP — Black Star Promos (TODAS as promocionais da série Mega Evolution, não só First Partner)
 // MEP001–036: promos anteriores ao First Partner — staff/prerelease, Pokémon Center,
 //   jumbo (produtos ex), stamped — confirmado via Bulbapedia (checklist oficial, jul/2026)
-// Série 1: MEP037–MEP045 (Kanto, Sinnoh, Alola) — lançamento 30/03/2026
-// Série 2: MEP046–MEP054 (Johto, Unova, Galar)  — lançamento 19/06/2026
-// Série 3: MEP055–063 (Hoenn/Kalos/Paldea) — lança 07/ago/2026, artes ainda não reveladas (não incluído)
+// Série 1: MEP037–045 (Kanto, Sinnoh, Alola) — lançamento 30/03/2026
+// Série 2: MEP046–054 (Johto, Unova, Galar) — lançamento 19/06/2026 — CONFIRMADO via Serebii.net
+// Série 3: MEP055–063 (Hoenn, Kalos, Paldea) — CONFIRMADO via Serebii.net (checklist), ainda sem
+//   preço de mercado BR no momento da inclusão (09/jul/2026) — usar como estimativa até haver venda real
+// MEP064–081 (exceto 081, arte ainda não revelada): produtos de Ordem Perfeita/Caos Ascendente
 // Categoria: Promos exclusivos, não pertencem a nenhum set regular
 // Preços: estimativas de mercado BR (jun/2026) — set completo S1 ~R$700 no MYP Cards
 // NOTA sobre 001–036: preços são estimativas conservadoras por raridade/produto de origem —
 // a maioria não circula no mercado BR (vieram de ETB/box/torneio, não de blister avulso).
-// Ajustar quando houver referência de venda real. Fonte da lista: bulbapedia.bulbagarden.net/wiki/MEP_Black_Star_Promos_(TCG)
+// Ajustar quando houver referência de venda real. Fontes: bulbapedia.bulbagarden.net/wiki/MEP_Black_Star_Promos_(TCG)
+//   e serebii.net/card/megapromos (checklist numerado oficial, consultado em 09/jul/2026)
+//
+// MEP082–110: CONFIRMADO e completo via Serebii.net (dados de carta + checklist, 09/jul/2026).
+// Gaps confirmados (arte ainda não revelada, não incluídos): #81 e #86–91.
+// Checklist oficial do Serebii vai de #1 até #110 — catálogo MEP 100% completo neste arquivo.
 const CARDS_MEP = [
   // ── PROMOS MEP001–036 (produtos diversos, set/torneio da série Mega Evolution) ──
   {n:'001',name:'Meganium',type:'Grama',color:'#4CAF50',rare:'Promo (Staff)',price:19.90,base:false,series:'Promos MEP 001–036'},
@@ -77,6 +84,62 @@ const CARDS_MEP = [
   {n:'052',name:'Grookey',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:35.00,base:true,series:'Série 2 — Galar'},
   {n:'053',name:'Scorbunny',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:35.00,base:true,series:'Série 2 — Galar'},
   {n:'054',name:'Sobble',type:'Aquático',color:'#2196F3',rare:'Ilustração Rara (IR)',price:31.49,base:true,series:'Série 2 — Galar'},
+  // SÉRIE 3 — Hoenn · Kalos · Paldea (MEP055–063) — confirmado via Serebii.net em 09/jul/2026,
+  // preços ainda são estimativas (sem referência de venda BR no momento da inclusão)
+  {n:'055',name:'Treecko',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:35.00,base:true,series:'Série 3 — Hoenn'},
+  {n:'056',name:'Torchic',type:'Incolor',color:'#9E9E9E',rare:'Ilustração Rara (IR)',price:35.00,base:true,series:'Série 3 — Hoenn'},
+  {n:'057',name:'Mudkip',type:'Aquático',color:'#2196F3',rare:'Ilustração Rara (IR)',price:35.00,base:true,important:true,series:'Série 3 — Hoenn'},
+  {n:'058',name:'Chespin',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:35.00,base:true,series:'Série 3 — Kalos'},
+  {n:'059',name:'Fennekin',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:35.00,base:true,important:true,series:'Série 3 — Kalos'},
+  {n:'060',name:'Froakie',type:'Incolor',color:'#9E9E9E',rare:'Ilustração Rara (IR)',price:35.00,base:true,series:'Série 3 — Kalos'},
+  {n:'061',name:'Sprigatito',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:35.00,base:true,important:true,series:'Série 3 — Paldea'},
+  {n:'062',name:'Fuecoco',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:35.00,base:true,series:'Série 3 — Paldea'},
+  {n:'063',name:'Quaxly',type:'Aquático',color:'#2196F3',rare:'Ilustração Rara (IR)',price:35.00,base:true,series:'Série 3 — Paldea'},
+  // ── PROMOS MEP064–081 (produtos de Ordem Perfeita/ME03 e Caos Ascendente/ME04) ──
+  // MEP072 e 073 ainda não foram revelados/confirmados (Bulbapedia/pkmncards) — não incluídos.
+  {n:'064',name:'Serperior',type:'Grama',color:'#4CAF50',rare:'Promo (Staff)',price:15.00,base:false,series:'Promos MEP 064–081'},
+  {n:'065',name:'Barbaracle',type:'Lutador',color:'#795548',rare:'Promo (Staff)',price:15.00,base:false,series:'Promos MEP 064–081'},
+  {n:'066',name:'Tyrantrum',type:'Lutador',color:'#795548',rare:'Promo (Staff)',price:15.00,base:false,series:'Promos MEP 064–081'},
+  {n:'067',name:'Doublade',type:'Metal',color:'#9E9E9E',rare:'Promo (Staff)',price:15.00,base:false,series:'Promos MEP 064–081'},
+  {n:'068',name:'Makuhita',type:'Lutador',color:'#795548',rare:'Promo',price:0.40,base:false,series:'Promos MEP 064–081'},
+  {n:'069',name:'Chikorita',type:'Grama',color:'#4CAF50',rare:'Promo',price:0.40,base:false,series:'Promos MEP 064–081'},
+  {n:'070',name:'Tyrunt',type:'Lutador',color:'#795548',rare:'Promo (Pokémon Center)',price:20.00,base:false,series:'Promos MEP 064–081'},
+  {n:'071',name:'Mega Zygarde ex',type:'Lutador',color:'#795548',rare:'Promo (Jumbo)',price:35.00,base:false,important:true,series:'Promos MEP 064–081'},
+  {n:'072',name:'Mega Clefable ex',type:'Psíquico',color:'#9C27B0',rare:'Promo (Jumbo)',price:35.00,base:false,important:true,series:'Promos MEP 064–081'},
+  {n:'073',name:'Mega Gengar ex',type:'Escuridão',color:'#212121',rare:'Promo (Jumbo)',price:38.00,base:false,important:true,series:'Promos MEP 064–081'},
+  {n:'074',name:'Delphox',type:'Fogo',color:'#F44336',rare:'Promo (B&B)',price:12.00,base:false,series:'Promos MEP 064–081'},
+  {n:'075',name:'Ampharos',type:'Raio',color:'#FFC107',rare:'Promo (B&B)',price:12.00,base:false,series:'Promos MEP 064–081'},
+  {n:'076',name:'Crobat',type:'Escuridão',color:'#212121',rare:'Promo (B&B)',price:12.00,base:false,series:'Promos MEP 064–081'},
+  {n:'077',name:'Goodra',type:'Dragão',color:'#7C4DFF',rare:'Promo (B&B)',price:12.00,base:false,series:'Promos MEP 064–081'},
+  {n:'078',name:'Toxel',type:'Escuridão',color:'#212121',rare:'Promo',price:0.40,base:false,series:'Promos MEP 064–081'},
+  {n:'079',name:'Charmeleon',type:'Fogo',color:'#F44336',rare:'Promo',price:0.45,base:false,series:'Promos MEP 064–081'},
+  {n:'080',name:'Fennekin',type:'Fogo',color:'#F44336',rare:'Promo',price:0.45,base:false,series:'Promos MEP 064–081'},
+  // MEP081: existe no checklist oficial (Serebii/pkmncards) mas arte/nome ainda não revelados em 09/jul/2026 — não incluído até confirmação.
+  // ── PROMOS MEP082–110 (confirmado via Serebii.net, 09/jul/2026) ──
+  // MEP086–091: existem no checklist oficial mas arte/nome ainda não revelados — não incluídos até confirmação.
+  {n:'082',name:'Miraidon',type:'Raio',color:'#FFC107',rare:'Promo (Jumbo)',price:35.00,base:false,important:true,series:'Promos MEP 082–110'},
+  {n:'083',name:'Slowbro',type:'Psíquico',color:'#9C27B0',rare:'Promo (B&B)',price:12.00,base:false,series:'Promos MEP 082–110'},
+  {n:'084',name:'Dhelmise',type:'Psíquico',color:'#9C27B0',rare:'Promo (B&B)',price:12.00,base:false,series:'Promos MEP 082–110'},
+  {n:'085',name:'Bastiodon',type:'Metal',color:'#9E9E9E',rare:'Promo (Staff)',price:15.00,base:false,series:'Promos MEP 082–110'},
+  {n:'092',name:'Paradise Resort',type:'Treinador',color:'#607D8B',rare:'Promo (Estádio)',price:5.00,base:false,series:'Promos MEP 082–110'},
+  {n:'093',name:'Pikachu',type:'Raio',color:'#FFC107',rare:'Promo',price:0.45,base:false,series:'Promos MEP 082–110'},
+  {n:'094',name:'Alolan Exeggutor',type:'Grama',color:'#4CAF50',rare:'Promo (B&B)',price:12.00,base:false,series:'Promos MEP 082–110'},
+  {n:'095',name:'Lucario',type:'Lutador',color:'#795548',rare:'Promo (Staff)',price:15.00,base:false,series:'Promos MEP 082–110'},
+  {n:'096',name:'Moltres',type:'Fogo',color:'#F44336',rare:'Promo (Jumbo)',price:20.00,base:false,important:true,series:'Promos MEP 082–110'},
+  {n:'097',name:'Articuno',type:'Aquático',color:'#2196F3',rare:'Promo (Jumbo)',price:20.00,base:false,important:true,series:'Promos MEP 082–110'},
+  {n:'098',name:'Zapdos',type:'Raio',color:'#FFC107',rare:'Promo (Jumbo)',price:20.00,base:false,important:true,series:'Promos MEP 082–110'},
+  {n:'099',name:'Greninja ex',type:'Aquático',color:'#2196F3',rare:'Promo (Jumbo)',price:40.00,base:false,important:true,series:'Promos MEP 082–110'},
+  {n:'100',name:'Sylveon ex',type:'Psíquico',color:'#9C27B0',rare:'Promo (Jumbo)',price:45.00,base:false,important:true,series:'Promos MEP 082–110'},
+  {n:'101',name:'Nidorina',type:'Psíquico',color:'#9C27B0',rare:'Promo',price:0.45,base:false,series:'Promos MEP 082–110'},
+  {n:'102',name:'Victini',type:'Fogo',color:'#F44336',rare:'Promo (Pokémon Center)',price:20.00,base:false,series:'Promos MEP 082–110'},
+  {n:'103',name:'Zeraora',type:'Raio',color:'#FFC107',rare:'Promo (Staff)',price:15.00,base:false,series:'Promos MEP 082–110'},
+  {n:'104',name:'Mewtwo',type:'Psíquico',color:'#9C27B0',rare:'Promo (B&B)',price:15.00,base:false,series:'Promos MEP 082–110'},
+  {n:'105',name:'Mew',type:'Psíquico',color:'#9C27B0',rare:'Promo',price:0.50,base:false,series:'Promos MEP 082–110'},
+  {n:'106',name:'Ditto',type:'Incolor',color:'#9E9E9E',rare:'Promo',price:0.45,base:false,series:'Promos MEP 082–110'},
+  {n:'107',name:'Pikachu ex',type:'Raio',color:'#FFC107',rare:'Promo (Jumbo)',price:50.00,base:false,important:true,series:'Promos MEP 082–110'},
+  {n:'108',name:'Espeon ex',type:'Psíquico',color:'#9C27B0',rare:'Promo (Jumbo)',price:45.00,base:false,important:true,series:'Promos MEP 082–110'},
+  {n:'109',name:'Pikachu ex',type:'Raio',color:'#FFC107',rare:'Promo (Jumbo)',price:50.00,base:false,important:true,series:'Promos MEP 082–110'},
+  {n:'110',name:'Umbreon ex',type:'Escuridão',color:'#212121',rare:'Promo (Jumbo)',price:45.00,base:false,important:true,series:'Promos MEP 082–110'},
   // Snover (veio na Coleção Parceiros Iniciais junto com ME02/MEG boosters)
   {n:'140',name:'Snover',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:8.00,base:false,series:'MEG Secretas'},
 ];

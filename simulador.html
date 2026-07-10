@@ -220,7 +220,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
     MyDeck
   </a>
   <div class="sim-title">🎴 Simulador de Abertura</div>
-  <div class="sim-sub">ME04 — Caos Ascendente · Taxas: TCGplayer (8.500+ packs)</div>
+  <div class="sim-sub" id="sim-sub">ME04 — Caos Ascendente · Metodologia BR (pack de 6 cartas)</div>
 </header>
 
 <div class="stats-bar">
@@ -234,6 +234,14 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 </div>
 
 <div class="products-wrap">
+  <div class="products-label">Escolha a coleção</div>
+  <div class="products-grid" id="set-tabs" style="margin-bottom:18px">
+    <div class="product-card set-tab active" id="set-tab-me04" onclick="selectSet('me04')" style="min-width:120px"><div class="pc-name">🔥 ME04</div></div>
+    <div class="product-card set-tab" id="set-tab-me03" onclick="selectSet('me03')" style="min-width:120px"><div class="pc-name">🔵 ME03</div></div>
+    <div class="product-card set-tab" id="set-tab-me02" onclick="selectSet('me02')" style="min-width:120px"><div class="pc-name">👻 ME02</div></div>
+    <div class="product-card set-tab" id="set-tab-meg" onclick="selectSet('meg')" style="min-width:120px"><div class="pc-name">🌿 MEG</div></div>
+    <div class="product-card set-tab" id="set-tab-me05" onclick="selectSet('me05')" style="min-width:120px"><div class="pc-name">🌑 ME05</div></div>
+  </div>
   <div class="products-label">Escolha o produto para simular</div>
   <div class="products-grid" id="products-grid"></div>
 </div>
@@ -252,7 +260,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 </div>
 
 <div class="rates-wrap">
-  <div class="rates-title">Pull Rates — ME04 Caos Ascendente</div>
+  <div class="rates-title">Pull Rates — <span id="rates-title-set">ME04 — Caos Ascendente</span></div>
   <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:14px;line-height:1.6">
     Pack BR: 6 cartas · 1 energia obrigatória + 4 comuns + 1 slot raro.<br>
     Taxas do slot raro calibradas para 6–11 hits por display (36 packs).
@@ -314,90 +322,91 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
   Preços baseados no mercado BR. Cada abertura é independente — não garante resultado real.
 </div>
 
+<script src="cards_me04.js"></script>
+<script src="cards_me03.js"></script>
+<script src="cards_me02.js"></script>
+<script src="cards_meg.js"></script>
+<script src="cards_me05.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
-// DADOS DAS CARTAS — ME04 Caos Ascendente
+// DADOS DAS CARTAS — dinâmico por set (le direto dos cards_*.js reais,
+// mesma fonte usada pelo Ficha rio/EV calculator — sem precos fixos aqui).
 // ═══════════════════════════════════════════════════════════════
-const CARD_DATA = {
-  // Rara Dupla (base)
-  3:{name:'Beedrill ex',price:11.99,rare:'RD'},
-  15:{name:'Mega Pyroar ex',price:5.53,rare:'RD'},
-  22:{name:'Mega Greninja ex',price:29.99,rare:'RD'},
-  35:{name:'Mega Floette ex',price:11.33,rare:'RD'},
-  41:{name:'Gourgeist ex',price:7.02,rare:'RD'},
-  48:{name:'Mega Gallade ex',price:6.89,rare:'RD'},
-  55:{name:'Krookodile ex',price:7.11,rare:'RD'},
-  64:{name:'Cobalion ex',price:7.61,rare:'RD'},
-  65:{name:'Mega Dragalge ex',price:6.99,rare:'RD'},
-  73:{name:'Cinccino ex',price:7.02,rare:'RD'},
-  // Ilustração Rara
-  87:{name:'Chespin (IR)',price:34.97,rare:'IR'},
-  88:{name:'Froakie (IR)',price:62.45,rare:'IR'},
-  89:{name:'Frogadier (IR)',price:82.33,rare:'IR'},
-  90:{name:'Ampharos (IR)',price:24.51,rare:'IR'},
-  91:{name:'Xerneas (IR)',price:34.99,rare:'IR'},
-  92:{name:'Claydol (IR)',price:18.08,rare:'IR'},
-  93:{name:'Crobat (IR)',price:28.36,rare:'IR'},
-  94:{name:'Metang (IR)',price:23.98,rare:'IR'},
-  95:{name:'Sliggoo (IR)',price:16.85,rare:'IR'},
-  96:{name:'Tauros (SAR)',price:31.00,rare:'IR'},
-  97:{name:'Watchog (IR)',price:15.32,rare:'IR'},
-  // Rara Ultra
-  98:{name:'Beedrill ex (UR)',price:35.67,rare:'UR'},
-  99:{name:'Mega Pyroar ex (UR)',price:16.33,rare:'UR'},
-  100:{name:'Mega Greninja ex (UR)',price:90.13,rare:'UR'},
-  101:{name:'Mega Floette ex (UR)',price:25.16,rare:'UR'},
-  102:{name:'Gourgeist ex (UR)',price:11.33,rare:'UR'},
-  103:{name:'Cobalion ex (UR)',price:13.99,rare:'UR'},
-  104:{name:'Mega Dragalge ex (UR)',price:22.31,rare:'UR'},
-  105:{name:'Cinccino ex (UR)',price:36.00,rare:'UR'},
-  106:{name:'Tranquilidade do AZ (UR)',price:27.33,rare:'UR'},
-  107:{name:'Emma (UR)',price:39.99,rare:'UR'},
-  108:{name:'Recuperação de Energia (UR)',price:49.00,rare:'UR'},
-  109:{name:'Sorvetão Jumbo (UR)',price:36.33,rare:'UR'},
-  110:{name:'Philippe (UR)',price:30.50,rare:'UR'},
-  111:{name:'Torre Prisma (UR)',price:39.00,rare:'UR'},
-  112:{name:'Show da Roxie (UR)',price:46.33,rare:'UR'},
-  113:{name:'Cartão Vermelho Esp. (UR)',price:70.00,rare:'UR'},
-  114:{name:'Praia de Surfista (UR)',price:47.68,rare:'UR'},
-  115:{name:'Sucateador de Ferr. (UR)',price:28.80,rare:'UR'},
-  // Ilustração Rara Especial (SAR)
-  116:{name:'Mega Greninja ex (SAR)',price:1094.93,rare:'IRE'},
-  117:{name:'Mega Floette ex (SAR)',price:263.46,rare:'IRE'},
-  118:{name:'Mega Dragalge ex (SAR)',price:212.66,rare:'IRE'},
-  119:{name:'Cinccino ex (SAR)',price:349.99,rare:'IRE'},
-  120:{name:'Tranquilidade do AZ (SAR)',price:368.80,rare:'IRE'},
-  121:{name:'Show da Roxie (SAR)',price:277.02,rare:'IRE'},
-  // Mega Hiper Raro
-  122:{name:'Mega Greninja ex GOLD',price:1453.08,rare:'MHR'},
+const SET_CONFIGS = {
+  me04:{label:'ME04 — Caos Ascendente',        img:'me4', get:()=>(typeof CARDS!=='undefined'?CARDS:[])},
+  me03:{label:'ME03 — Ordem Perfeita',         img:'me3', get:()=>(typeof CARDS_ME03!=='undefined'?CARDS_ME03:[])},
+  me02:{label:'ME02 — Fogo Fantasmagórico',    img:'me2', get:()=>(typeof CARDS_ME02!=='undefined'?CARDS_ME02:[])},
+  meg: {label:'MEG — Megaevolução',            img:'me1', get:()=>(typeof CARDS_MEG!=='undefined'?CARDS_MEG:[])},
+  me05:{label:'ME05 — Escuridão Absoluta',     img:'me5', get:()=>(typeof CARDS_ME05!=='undefined'?CARDS_ME05:[])},
 };
-// Base commons 1-86 que não são RD
-const BASE_NUMS=[1,2,4,5,6,7,8,9,10,11,12,13,14,16,17,18,19,20,21,23,24,25,26,
-  27,28,29,30,31,32,33,34,36,37,38,39,40,42,43,44,45,46,47,49,50,51,52,53,54,
-  56,57,58,59,60,61,62,63,66,67,68,69,70,71,72,74,75,76,77,78,79,80,81,82,83,84,85,86];
 
-const RD_POOL=[3,15,22,35,41,48,55,64,65,73];
-const IR_POOL=[87,88,89,90,91,92,93,94,95,96,97];
-const UR_POOL=[98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115];
-const IRE_POOL=[116,117,118,119,120,121];
-const MHR_POOL=[122];
+// Precos de varejo de referencia (mesmos valores do ev_calculator.js/CATALOG).
+// me05 ainda nao lancou — preco estimado (mesma linha ME).
+const RETAIL = {
+  me04:{avulso:14.99,duplo:29.99,triplo:44.99,quad:59.99,box:539.99},
+  me03:{avulso:14.99,duplo:29.99,triplo:44.99,quad:59.99,box:539.99},
+  me02:{avulso:14.99,duplo:29.99,triplo:44.99,quad:59.99,box:539.99},
+  me05:{avulso:14.99,duplo:29.99,triplo:44.99,quad:59.99,box:539.99},
+  meg: {avulso:13.99,duplo:27.99,triplo:39.99,quad:54.99,box:499.99},
+};
 
-// ═══════════════════════════════════════════════════════════════
-// PRODUTOS
-// ═══════════════════════════════════════════════════════════════
-const PRODUCTS=[
-  {id:'avulso',   name:'Booster Avulso',  packs:1,  defaultPrice:14.99,  emoji:'📦'},
-  {id:'duplo',    name:'Blister Duplo',   packs:2,  defaultPrice:29.99,  emoji:'📦📦'},
-  {id:'triplo',   name:'Blister Triplo',  packs:3,  defaultPrice:39.99,  emoji:'📦📦📦'},
-  {id:'quaripack',name:'QuadriPack',       packs:4,  defaultPrice:54.99,  emoji:'🎁'},
-  {id:'box36',    name:'Box 36 Boosters', packs:36, defaultPrice:539.64, emoji:'📦✕36'},
-];
+function normalizeRareBucket(r){
+  if(!r) return 'BASE';
+  const s=r.trim();
+  if(s==='Dupla Rara'||s==='Rara Dupla') return 'RD';
+  if(s==='Ilustr. Rara') return 'IR';
+  if(s==='Rara Ultra') return 'UR';
+  if(s==='Ilustr. Esp. Rara') return 'IRE';
+  if(s==='Mega Hyper Rare'||s==='Mega Attack Rare') return 'MHR';
+  return 'BASE'; // Comum, Incomum, Rara normal
+}
 
+let CARD_DATA={}, BASE_NUMS=[], RD_POOL=[], IR_POOL=[], UR_POOL=[], IRE_POOL=[], MHR_POOL=[], ENERGIA_NUMS=[];
+let IMG_PREFIX='me4', currentSetId='me04';
+
+function buildSetPools(id){
+  const cfg=SET_CONFIGS[id];
+  if(!cfg) return false;
+  const cards=cfg.get();
+  if(!cards.length) return false;
+  CARD_DATA={};BASE_NUMS=[];RD_POOL=[];IR_POOL=[];UR_POOL=[];IRE_POOL=[];MHR_POOL=[];ENERGIA_NUMS=[];
+  IMG_PREFIX=cfg.img;currentSetId=id;
+  cards.forEach(c=>{
+    if(!c.price||c.price<=0) return;
+    const num=parseInt(c.n,10);
+    CARD_DATA[num]={name:c.name,price:c.price,rare:c.rare};
+    if(c.type==='Energia'){ ENERGIA_NUMS.push(num); return; }
+    const bucket=normalizeRareBucket(c.rare);
+    if(bucket==='RD') RD_POOL.push(num);
+    else if(bucket==='IR') IR_POOL.push(num);
+    else if(bucket==='UR') UR_POOL.push(num);
+    else if(bucket==='IRE') IRE_POOL.push(num);
+    else if(bucket==='MHR') MHR_POOL.push(num);
+    else BASE_NUMS.push(num);
+  });
+  if(!ENERGIA_NUMS.length) ENERGIA_NUMS=BASE_NUMS.slice(0,6); // fallback de seguranca
+  return true;
+}
+
+function productsForSet(id){
+  const r=RETAIL[id]||RETAIL.me04;
+  return [
+    {id:'avulso',   name:'Booster Avulso',  packs:1,  defaultPrice:r.avulso,  emoji:'📦'},
+    {id:'duplo',    name:'Blister Duplo',   packs:2,  defaultPrice:r.duplo,   emoji:'📦📦'},
+    {id:'triplo',   name:'Blister Triplo',  packs:3,  defaultPrice:r.triplo,  emoji:'📦📦📦'},
+    {id:'quaripack',name:'QuadriPack',       packs:4,  defaultPrice:r.quad,    emoji:'🎁'},
+    {id:'box36',    name:'Box 36 Boosters', packs:36, defaultPrice:r.box,    emoji:'📦✕36'},
+  ];
+}
+
+let PRODUCTS=productsForSet('me04');
 let selectedProduct=null;
 const priceInputs={};
 
 function buildProducts(){
   const grid=document.getElementById('products-grid');
+  grid.innerHTML='';
+  for(const k in priceInputs) delete priceInputs[k];
   PRODUCTS.forEach(p=>{
     const card=document.createElement('div');
     card.className='product-card';
@@ -417,13 +426,38 @@ function buildProducts(){
 
 function selectProduct(p){
   selectedProduct=p;
-  document.querySelectorAll('.product-card').forEach(c=>c.classList.remove('active'));
+  document.querySelectorAll('#products-grid .product-card').forEach(c=>c.classList.remove('active'));
   document.getElementById('pc-'+p.id).classList.add('active');
   document.getElementById('btn-open').disabled=false;
   document.getElementById('btn-open10').disabled=false;
   document.getElementById('btn-open').textContent=p.packs===1?'ABRIR 1 PACK':`ABRIR (${p.packs} PACKS)`;
   document.getElementById('btn-open10').textContent=p.packs===36?'ABRIR 2 BOX (72 PACKS)':`ABRIR 10× (${p.packs*10} PACKS)`;
   resetCards();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TROCA DE SET — recarrega pools, produtos e reseta a simulacao
+// ═══════════════════════════════════════════════════════════════
+function selectSet(id){
+  const ok=buildSetPools(id);
+  document.querySelectorAll('.set-tab').forEach(t=>t.classList.remove('active'));
+  const tab=document.getElementById('set-tab-'+id);
+  if(tab) tab.classList.add('active');
+  if(!ok){
+    document.getElementById('products-grid').innerHTML=
+      '<div style="font-family:Space Mono,monospace;font-size:11px;color:var(--muted);padding:12px">'+
+      '🚧 Cartas deste set ainda nao cadastradas com preco.</div>';
+    selectedProduct=null;
+    document.getElementById('btn-open').disabled=true;
+    document.getElementById('btn-open10').disabled=true;
+    return;
+  }
+  PRODUCTS=productsForSet(id);
+  const cfg=SET_CONFIGS[id];
+  document.getElementById('sim-sub').textContent=cfg.label+' · Metodologia BR (pack de 6 cartas)';
+  document.getElementById('rates-title-set').textContent=cfg.label;
+  buildProducts();
+  resetSim();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -446,9 +480,6 @@ function rollRareSlot(){
 }
 
 function randomFrom(arr){return arr[Math.floor(Math.random()*arr.length)];}
-
-// Energias básicas do ME04 (cartas 123-128 aprox.)
-const ENERGIA_NUMS=[123,124,125,126,127,128];
 
 function openOnePack(){
   // Estrutura BR: 1 energia + 4 comuns + 1 slot raro = 6 cartas
@@ -528,11 +559,7 @@ function renderCards(allCards, instant=false){
     const data=CARD_DATA[c.num];
     const name=data?data.name:(c.rare==='ENERGIA'?'Energia':'Carta #'+c.num);
     const price=data?data.price:(c.rare==='ENERGIA'?.15:.48);
-    const isEnergy=c.rare==='ENERGIA';
-    // Energias básicas ME04: cartas 123-128 usam imagem genérica (não há no scrydex)
-    const img=isEnergy
-      ?`https://images.scrydex.com/pokemon/me4-123/large`
-      :`https://images.scrydex.com/pokemon/me4-${c.num}/large`;
+    const img=`https://images.scrydex.com/pokemon/${IMG_PREFIX}-${c.num}/large`;
     const rarClass='r-'+c.rare.toLowerCase();
     const rarLabel=RAR_LABEL[c.rare]||c.rare;
     const rarBg=RAR_BG[c.rare]||'rgba(30,40,60,.5)';
@@ -618,7 +645,7 @@ function spawnParticles(anchor,color){
 }
 
 function showMHR(num,name,price){
-  document.getElementById('mhr-img').src=`https://images.scrydex.com/pokemon/me4-${num}/large`;
+  document.getElementById('mhr-img').src=`https://images.scrydex.com/pokemon/${IMG_PREFIX}-${num}/large`;
   document.getElementById('mhr-sub').textContent=`${name} · R$ ${fmtR(price)}`;
   document.getElementById('mhr-overlay').classList.add('active');
   // Screen shake
@@ -720,7 +747,7 @@ function resetSim(){
 }
 
 // Init
-buildProducts();
+selectSet('me04');
 </script>
 </body>
 </html>

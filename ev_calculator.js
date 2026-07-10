@@ -110,6 +110,25 @@ var CATALOG = [
     ], extras:[{descricao:'Promo Charizard Y ex',valor:15.00}], premium:8 }
 ];
 
+// ── Sets SV (Escarlate & Violeta) — adicionados a partir do SET_CATALOG (app.js) ──
+// IMPORTANTE: os precos de varejo abaixo sao ESTIMATIVAS genericas (nao ha nota
+// fiscal / print de loja do Eduardo para esses sets ainda). O EV por booster usa
+// dados reais (cards_svX.js via SET_CARDS_MAP), mas o "voce paga" segue estimado
+// ate alguem confirmar o preco de tabela praticado. Ajustar varejo assim que
+// houver referencia real de compra.
+(function addSVProducts() {
+  var svIds = ['sv10','sv9','sv8pt5','sv8','sv7','sv6pt5','sv6','sv5','sv4pt5','sv4','sv3pt5','sv3','sv2','sv1'];
+  svIds.forEach(function(id) {
+    var meta = (typeof SET_CATALOG !== 'undefined') ? SET_CATALOG.find(function(s){ return s.id === id; }) : null;
+    var label = meta ? meta.label : id.toUpperCase();
+    CATALOG.push(
+      { id:id+'-display',  grupo:label, nome:'Box Display (36 boosters) [estimado]', boosters:36, varejo:449.99, set:id, extras:[], premium:0, estimado:true },
+      { id:id+'-blister3', grupo:label, nome:'Blister Triplo (3 boosters) [estimado]', boosters:3, varejo:39.99, set:id, extras:[], premium:0, estimado:true },
+      { id:id+'-booster',  grupo:label, nome:'Booster Avulso [estimado]', boosters:1, varejo:12.99, set:id, extras:[], premium:0, estimado:true }
+    );
+  });
+})();
+
 function getVerdict(mult) {
   if (mult < 1.00) return { label:'ABAIXO DO EV', grade:'S', cls:'verdict-s', desc:'Voce paga MENOS que o EV. Rarissimo — compra imediata.' };
   if (mult < 1.15) return { label:'EXCELENTE',    grade:'A', cls:'verdict-a', desc:'Ate 15% acima do EV. Compra recomendada.' };
@@ -136,19 +155,21 @@ function evSetPrice(v) {
   evDebounceTimer = setTimeout(function(){ renderEVResults(); }, 350);
 }
 
+function getSetCards(setId) {
+  // Fonte única: SET_CARDS_MAP (app.js) — mesma usada por Home, Fichário e busca global.
+  // Elimina a duplicação antiga de globals (CARDS, CARDS_ME03 etc.) que travava o EV
+  // calculator em apenas 5 dos 20+ sets cadastrados em SET_CATALOG.
+  if (typeof SET_CARDS_MAP !== 'undefined' && typeof SET_CARDS_MAP[setId] === 'function') {
+    try { return SET_CARDS_MAP[setId]() || []; } catch (e) { return []; }
+  }
+  return [];
+}
+
 function calcEVForProduct(prod) {
-  var sets = {
-    me04: (typeof CARDS      !== 'undefined') ? CARDS      : [],
-    me03: (typeof CARDS_ME03 !== 'undefined') ? CARDS_ME03 : [],
-    me02: (typeof CARDS_ME02 !== 'undefined') ? CARDS_ME02 : [],
-    meg:  (typeof CARDS_MEG  !== 'undefined') ? CARDS_MEG  : [],
-    me05: (typeof CARDS_ME05 !== 'undefined') ? CARDS_ME05 : [],
-    me06: (typeof CARDS_ME06 !== 'undefined') ? CARDS_ME06 : []
-  };
   var evBooster = 0, evBoosterMin = 0, evBoosterMax = 0;
   var rarBreakdown = [];
   if (prod.set) {
-    var cards = (sets[prod.set] || []).filter(function(c){return c.price && c.price > 0;});
+    var cards = getSetCards(prod.set).filter(function(c){return c.price && c.price > 0;});
     if (cards.length === 0) {
       return { evBooster:0, evBoosterMin:0, evBoosterMax:0, evBoostersTotal:0,
                evExtras:0, evTotal:0, evTotalMin:0, evTotalMax:0, rarBreakdown:[], noData:true };
@@ -281,7 +302,14 @@ function renderEVResults() {
       '<td style="padding:6px 10px;font-size:12px;color:var(--teal);text-align:right">' + fmtR(e.valor) + '</td></tr>';
   });
 
-  area.innerHTML =
+  var estimadoBanner = prod.estimado ? (
+    '<div style="background:rgba(247,183,49,.12);border:1px solid var(--gold);border-radius:8px;' +
+    'padding:10px 14px;margin-bottom:16px;font-size:11px;color:var(--gold)">' +
+    '⚠ Preco de varejo estimado — ainda sem referencia real de compra para este set. O EV/booster usa dados reais de mercado.' +
+    '</div>'
+  ) : '';
+
+  area.innerHTML = estimadoBanner +
     '<div style="background:' + verdictBg + ';border-radius:16px;padding:24px 28px;' +
     'display:flex;align-items:center;gap:24px;margin-bottom:24px;flex-wrap:wrap">' +
       '<div style="background:rgba(0,0,0,0.25);border-radius:12px;width:72px;height:72px;' +

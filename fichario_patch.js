@@ -238,8 +238,11 @@ function renderBinder() {
     if (q && !(c.name + c.n + (c.type || '')).toLowerCase().includes(q)) return false;
     const slots = getSlots(c, currentSet);
     const hasAny = slots.some(s => collected.has(`${currentSet}:${c.n}:${s.ver}`));
+    const hasAll = slots.every(s => collected.has(`${currentSet}:${c.n}:${s.ver}`));
     if (oc && !hasAny) return false;
-    if (om &&  hasAny) return false;
+    // "Só faltantes": mostra a carta se falta QUALQUER versão (Normal/Foil/Reverse Holo),
+    // não só quando não tem nenhuma. Antes escondia a carta inteira se tivesse só 1 de 2-3 versões.
+    if (om && hasAll) return false;
     if (oi && !c.important) return false;
     return true;
   });

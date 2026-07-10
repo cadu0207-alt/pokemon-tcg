@@ -245,11 +245,21 @@ function getSlots(c,setId){
   const r=c.rare||'';
   if(!c.base) return [{ver:'SP',price:c.price}];
   if(r.includes('Dupla')||r.includes('RR')) return [{ver:'F',price:c.price}];
-  if(r==='Rara'||r.startsWith('Rara ')&&!r.includes('Ultra')) return [
-    {ver:'N',price:c.price},
-    {ver:'F',price:c.priceF||(c.price?+(c.price*1.5).toFixed(2):null)},
-    {ver:'RH',price:c.priceRH||(c.price?+(c.price*1.2).toFixed(2):null)}
-  ];
+  // Raridade "Rara" nos sets modernos (ME/SV) já nasce holo (Foil) por padrão —
+  // não existe impressão "Normal" sem foil pra essa raridade, só Foil + Reverse Holo.
+  // Confirmado via TCG Collector/Cardrake para ME04 Chaos Rising (jul/2026).
+  const isModernSet=setId&&(setId.startsWith('me')||setId.startsWith('sv'));
+  if(r==='Rara'||r.startsWith('Rara ')&&!r.includes('Ultra')){
+    if(isModernSet) return [
+      {ver:'F',price:c.price},
+      {ver:'RH',price:c.priceRH||(c.price?+(c.price*1.2).toFixed(2):null)}
+    ];
+    return [
+      {ver:'N',price:c.price},
+      {ver:'F',price:c.priceF||(c.price?+(c.price*1.5).toFixed(2):null)},
+      {ver:'RH',price:c.priceRH||(c.price?+(c.price*1.2).toFixed(2):null)}
+    ];
+  }
   // MEP: só tem IR (SP)
   if(setId==='mep') return [{ver:'SP',price:c.price}];
   return [{ver:'N',price:c.price},{ver:'RH',price:c.priceRH||(c.price?+(c.price*1.2).toFixed(2):null)}];
@@ -1065,8 +1075,10 @@ function getSetData(){
         {lbl:'📦 Promos MEP001–036 — Staff/Torneio/Jumbo/Pokémon Center', filter:c=>c.series==='Promos MEP 001–036'},
         {lbl:'⭐ Série 1 — Kanto · Sinnoh · Alola (MEP037–045)',  filter:c=>c.series&&c.series.includes('Série 1')},
         {lbl:'⭐ Série 2 — Johto · Unova · Galar (MEP046–054)',   filter:c=>c.series&&c.series.includes('Série 2')},
-        {lbl:'⭐ Série 3 — Hoenn · Kalos · Paldea (em breve)',    filter:c=>c.series&&c.series.includes('Série 3')},
-        {lbl:'📦 Outros',                                          filter:c=>!c.series||(!c.series.includes('Série')&&c.series!=='Promos MEP 001–036')},
+        {lbl:'⭐ Série 3 — Hoenn · Kalos · Paldea (MEP055–063)',  filter:c=>c.series&&c.series.includes('Série 3')},
+        {lbl:'📦 Promos MEP064–081 — Ordem Perfeita/Caos Ascendente', filter:c=>c.series==='Promos MEP 064–081'},
+        {lbl:'📦 Promos MEP082–110 — Ex\'s, Legendary Birds & mais', filter:c=>c.series==='Promos MEP 082–110'},
+        {lbl:'📦 Outros',                                          filter:c=>!c.series||(!c.series.includes('Série')&&c.series!=='Promos MEP 001–036'&&c.series!=='Promos MEP 064–081'&&c.series!=='Promos MEP 082–110')},
       ]},
     // ── Escarlate e Violeta (2023-2025) ─────────────────────────────
     sv10:  {cards:typeof CARDS_SV10!=='undefined'?CARDS_SV10:[],  label:'SV10 — Rivais do Destino',
@@ -1194,6 +1206,71 @@ function renderBinder(){
   }
 
   updateDashProgress();
+}
+
+// ── EXPORTAR LISTA EM TEXTO (para colar na Liga Pokémon / MYP Cards) ──
+const MYDECK_SITE_URL='https://cadu0207-alt.github.io/pokemon-tcg';
+const TYPE_ICON={Grama:'🌿',Fogo:'🔥',Aquático:'💧',Raio:'⚡',Psíquico:'🔮',Lutador:'🥊',Escuridão:'⚫',Metal:'⚙️',Dragão:'🐉',Incolor:'⬜',Treinador:'🎴'};
+
+function exportBinderText(){
+  const{cards,label}=getSetData();
+  const pfx=currentSet;
+  const q=document.getElementById('bsrch').value.toLowerCase();
+  const oc=document.getElementById('fc').checked,om=document.getElementById('fm').checked,oi=document.getElementById('fi2').checked;
+
+  function visible(c){
+    const term=(c.name+c.n+(c.type||'')).toLowerCase();
+    if(q&&!term.includes(q))return false;
+    const anyCol=getSlots(c,pfx).some(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
+    if(oc&&!anyCol)return false;if(om&&anyCol)return false;if(oi&&!c.important)return false;
+    return true;
+  }
+
+  const filterLbl=oc?'✅ Só coletadas':om?'🔍 Só faltantes':'📚 Todas';
+  const visibleCards=cards.filter(visible);
+  const rows=visibleCards.map(c=>{
+    const slots=getSlots(c,pfx);
+    const anyCol=slots.some(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
+    const dp=lprice(pfx,c.n,c.price);
+    const priceStr=dp?` — 💰 R$${fmtR(dp)}`:'';
+    const icon=TYPE_ICON[c.type||'']||'🃏';
+    const statusIcon=anyCol?'✅':'❌';
+    return`${statusIcon} ${icon} *${c.n}* ${c.name}${c.rare?` _(${c.rare})_`:''}${priceStr}`;
+  });
+
+  const dateStr=new Date().toLocaleDateString('pt-BR');
+  const header=`🎴✨ *${label}* ✨🎴\n${filterLbl}${q?` · busca: "${q}"`:''}\n📅 ${dateStr}\n━━━━━━━━━━━━━━━━━━`;
+  const footer=`━━━━━━━━━━━━━━━━━━\n📦 Total: *${rows.length}* carta${rows.length!==1?'s':''}\n\n🔥 Confira minha coleção completa e todas as novidades no *MyDeck*! 👉 ${MYDECK_SITE_URL} 🎉🃏`;
+  const text=`${header}\n${rows.join('\n')}\n${footer}`;
+
+  // Tentar copiar direto pra área de transferência
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>setStatus('Lista copiada! Cole no WhatsApp.','ok')).catch(()=>{});
+  }
+  showTextExportModal(text,`${label} — ${rows.length} carta${rows.length!==1?'s':''}`);
+}
+
+function showTextExportModal(text,title){
+  let ov=document.getElementById('text-export-overlay');
+  if(ov)ov.remove();
+  ov=document.createElement('div');
+  ov.id='text-export-overlay';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML=`
+    <div style="background:var(--surface,#111422);border:1px solid var(--border,#2a2e42);border-radius:10px;max-width:640px;width:100%;max-height:80vh;display:flex;flex-direction:column;padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px">${title}</div>
+        <button onclick="document.getElementById('text-export-overlay').remove()" style="background:none;border:none;color:var(--muted,#888);font-size:20px;cursor:pointer">✕</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted,#888);margin-bottom:8px;font-family:'Space Mono',monospace">
+        Lista copiada para a área de transferência (se o navegador permitiu). Se não copiou, selecione tudo abaixo (Ctrl+A) e copie manualmente.
+      </div>
+      <textarea readonly style="flex:1;min-height:280px;width:100%;background:var(--surface2,#181c2e);color:var(--text,#eee);border:1px solid var(--border,#2a2e42);border-radius:6px;padding:10px;font-family:'Space Mono',monospace;font-size:11px;resize:vertical" onclick="this.select()">${text}</textarea>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px">
+        <button class="btn-add" onclick="navigator.clipboard.writeText(document.querySelector('#text-export-overlay textarea').value).then(()=>setStatus('Lista copiada!','ok'))">📋 Copiar de novo</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
 }
 
 // ── MODAL FICHÁRIO — marcar versão + origem da compra ────────────
