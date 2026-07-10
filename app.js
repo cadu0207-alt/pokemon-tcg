@@ -245,15 +245,12 @@ function getSlots(c,setId){
   const r=c.rare||'';
   if(!c.base) return [{ver:'SP',price:c.price}];
   if(r.includes('Dupla')||r.includes('RR')) return [{ver:'F',price:c.price}];
-  // Raridade "Rara" nos sets modernos (ME/SV) já nasce holo (Foil) por padrão —
-  // não existe impressão "Normal" sem foil pra essa raridade, só Foil + Reverse Holo.
-  // Confirmado via TCG Collector/Cardrake para ME04 Chaos Rising (jul/2026).
-  const isModernSet=setId&&(setId.startsWith('me')||setId.startsWith('sv'));
+  // Raridade "Rara" nos sets modernos (ME/SV): a impressão padrão já nasce holo,
+  // mas mantemos o slot "N" mesmo assim — remover ele em 09/07/2026 órfãou os
+  // registros já coletados de quem tinha marcado a versão N dessas cartas
+  // (o app parava de reconhecer o slot e a carta "sumia" do fichário/estatísticas,
+  // embora o registro continuasse no Supabase). Ver [[feedback_coding]].
   if(r==='Rara'||r.startsWith('Rara ')&&!r.includes('Ultra')){
-    if(isModernSet) return [
-      {ver:'F',price:c.price},
-      {ver:'RH',price:c.priceRH||(c.price?+(c.price*1.2).toFixed(2):null)}
-    ];
     return [
       {ver:'N',price:c.price},
       {ver:'F',price:c.priceF||(c.price?+(c.price*1.5).toFixed(2):null)},
