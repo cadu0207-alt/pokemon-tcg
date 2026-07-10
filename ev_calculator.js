@@ -155,10 +155,14 @@ function evSetPrice(v) {
   evDebounceTimer = setTimeout(function(){ renderEVResults(); }, 350);
 }
 
-function getSetCards(setId) {
+function evGetSetCards(setId) {
   // Fonte única: SET_CARDS_MAP (app.js) — mesma usada por Home, Fichário e busca global.
   // Elimina a duplicação antiga de globals (CARDS, CARDS_ME03 etc.) que travava o EV
   // calculator em apenas 5 dos 20+ sets cadastrados em SET_CATALOG.
+  // NOME PREFIXADO DE PROPÓSITO: fichario_patch.js já tem uma getSetCards() global sem
+  // parâmetro; como ev_calculator.js carrega DEPOIS, uma função global de mesmo nome aqui
+  // sobrescrevia a do fichário e zerava o Fichário inteiro (renderBinder chamava esta versão,
+  // que faz SET_CARDS_MAP[undefined] e devolve []). Ver incidente 10/07/2026 em [[feedback_coding]].
   if (typeof SET_CARDS_MAP !== 'undefined' && typeof SET_CARDS_MAP[setId] === 'function') {
     try { return SET_CARDS_MAP[setId]() || []; } catch (e) { return []; }
   }
@@ -169,7 +173,7 @@ function calcEVForProduct(prod) {
   var evBooster = 0, evBoosterMin = 0, evBoosterMax = 0;
   var rarBreakdown = [];
   if (prod.set) {
-    var cards = getSetCards(prod.set).filter(function(c){return c.price && c.price > 0;});
+    var cards = evGetSetCards(prod.set).filter(function(c){return c.price && c.price > 0;});
     if (cards.length === 0) {
       return { evBooster:0, evBoosterMin:0, evBoosterMax:0, evBoostersTotal:0,
                evExtras:0, evTotal:0, evTotalMin:0, evTotalMax:0, rarBreakdown:[], noData:true };
