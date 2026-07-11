@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6527NPX3G0"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-6527NPX3G0');
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="google-site-verification" content="BCnkuzgOq8Up6R74GAR7AoqM3WhsrL52KgB2ds4P1sc" />
@@ -150,6 +158,7 @@
   </nav>
 
   <div id="dash" class="pane active">
+    <div id="admin-stats-wrap"></div>
     <div class="kpi-grid" id="kpi-dash"></div>
     <div class="sec-title">📚 Progresso Master Set</div>
     <div id="progress-sets" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:28px"></div>
@@ -565,6 +574,7 @@
 <script defer src="ev_calculator.js"></script>
 <script defer src="lojas.js"></script>
 <script defer src="iniciantes.js"></script>
+<script defer src="admin_stats.js"></script>
 <script>
 // Renderizar EV ao abrir a aba Preco Justo (após scripts deferidos)
 document.addEventListener('DOMContentLoaded', function(){
