@@ -1341,3 +1341,41 @@ body.share-view .btn-add { display: none !important; }
 .admin-stat-icon { font-size: 18px; margin-bottom: 4px; }
 .admin-stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 26px; color: var(--accent); letter-spacing: .5px; }
 .admin-stat-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+/* ─── FEEDBACK DE USUÁRIOS ─────────────────────────────────── */
+.feedback-bar, .feedback-reply-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: linear-gradient(90deg, rgba(230,57,70,.06), rgba(230,57,70,.02));
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 8px 14px; margin: 10px 24px 0; font-size: 12px;
+}
+.feedback-bar-text { font-weight: 600; color: var(--text); white-space: nowrap; }
+.feedback-input {
+  flex: 1; min-width: 160px; font-size: 12px; padding: 6px 10px;
+  border: 1px solid var(--border); border-radius: 20px; background: var(--surface);
+  font-family: 'DM Sans', sans-serif;
+}
+.feedback-send-btn {
+  background: var(--accent); border: none; color: #fff; font-size: 14px;
+  width: 30px; height: 30px; border-radius: 50%; cursor: pointer; flex-shrink: 0;
+}
+.feedback-send-btn:hover { filter: brightness(1.1); }
+.feedback-bar-sent { color: #16a34a; font-weight: 600; }
+.feedback-reply-bar { background: rgba(22,163,74,.07); border-color: rgba(22,163,74,.3); }
+.feedback-reply-bar span { flex: 1; color: var(--text2); }
+
+.feedback-msg-list { display: flex; flex-direction: column; gap: 10px; }
+.feedback-msg-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 16px;
+}
+.feedback-msg-hdr { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.feedback-msg-user { font-weight: 700; font-size: 12px; color: var(--text); }
+.feedback-msg-date { font-size: 10px; color: var(--muted); font-family: 'Space Mono', monospace; }
+.feedback-msg-text { font-size: 13px; color: var(--text2); margin-bottom: 8px; }
+.feedback-msg-reply { font-size: 12px; color: #16a34a; background: rgba(22,163,74,.07); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+.feedback-reply-row { display: flex; gap: 8px; }
+.feedback-reply-row input {
+  flex: 1; font-size: 12px; padding: 6px 10px; border: 1px solid var(--border);
+  border-radius: 8px; font-family: 'DM Sans', sans-serif;
+}

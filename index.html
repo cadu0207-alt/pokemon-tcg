@@ -145,6 +145,7 @@
     </div>
   </header>
   <div class="stripe"></div>
+  <div id="feedback-bar-wrap"></div>
 
   <nav class="tabs">
     <div class="tab active" onclick="go('dash',this)">📊 Dashboard</div>
@@ -159,6 +160,7 @@
 
   <div id="dash" class="pane active">
     <div id="admin-stats-wrap"></div>
+    <div id="admin-feedback-wrap"></div>
     <div class="kpi-grid" id="kpi-dash"></div>
     <div class="sec-title">📚 Progresso Master Set</div>
     <div id="progress-sets" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:28px"></div>
@@ -575,6 +577,7 @@
 <script defer src="lojas.js"></script>
 <script defer src="iniciantes.js"></script>
 <script defer src="admin_stats.js"></script>
+<script defer src="feedback.js"></script>
 <script>
 // Renderizar EV ao abrir a aba Preco Justo (após scripts deferidos)
 document.addEventListener('DOMContentLoaded', function(){
