@@ -26,6 +26,34 @@ function isAdmin() {
 // Link da Central de Afiliados do Mercado Livre (gerador manual de links)
 const ML_AFFILIATE_TOOL_URL = 'https://www.mercadolivre.com.br/l/afiliados-gere-seus-links';
 
+// Edge Function (Supabase) que faz a busca autenticada no catálogo do ML.
+// Existe porque /products/{id} e /products/{id}/items exigem token OAuth —
+// e esse token não pode ficar no JS público, então quem chama a API de
+// verdade é a function (server-side), não o navegador.
+const ML_CATALOG_FN_URL = SUPABASE_URL + '/functions/v1/ml-catalog';
+
+function extractCatalogId(input) {
+  const trimmed = (input || '').trim();
+  const pathMatch = trimmed.match(/\/p\/MLB-?(\d{6,})/i);
+  if (pathMatch) return 'MLB' + pathMatch[1];
+  const bareMatch = trimmed.match(/^MLB-?(\d{6,})$/i);
+  if (bareMatch) return 'MLB' + bareMatch[1];
+  return null;
+}
+
+async function fetchCatalogPreview(catalogIdOrLink) {
+  const catalogId = extractCatalogId(catalogIdOrLink);
+  if (!catalogId) return { ok: false, error: 'Link/ID de catálogo inválido. Use o formato .../p/MLB1234567 ou MLB1234567.' };
+  try {
+    const res = await fetch(ML_CATALOG_FN_URL + '?catalogId=' + encodeURIComponent(catalogId), {
+      headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+    });
+    return await res.json();
+  } catch (e) {
+    return { ok: false, error: 'Falha ao chamar a busca de catálogo: ' + e.message };
+  }
+}
+
 // ── CONFIG: lojas parceiras ─────────────────────────────────────
 const STORES = [
   {
@@ -89,12 +117,26 @@ async function loadSearchTerms() {
   return data || [];
 }
 
-async function addSearchTerm(term, label) {
-  if (!isAdmin() || !term.trim()) return;
-  const { error } = await sbClient
+async function addSearchTerm(linkOrId, label) {
+  if (!isAdmin() || !linkOrId.trim()) return;
+  const preview = await fetchCatalogPreview(linkOrId);
+  if (!preview.ok) { alert('Não consegui cadastrar: ' + preview.error); return; }
+
+  const finalLabel = (label || '').trim() || preview.name || preview.catalogId;
+  const { data, error } = await sbClient
     .from('ml_search_terms')
-    .insert({ user_id: uid(), term: term.trim(), label: (label || '').trim() || term.trim() });
-  if (error) { alert('Erro ao salvar termo: ' + error.message); return; }
+    .insert({
+      user_id: uid(),
+      term: preview.name || preview.catalogId,
+      label: finalLabel,
+      catalog_product_id: preview.catalogId,
+      image_url: preview.image || null
+    })
+    .select()
+    .single();
+  if (error) { alert('Erro ao salvar produto: ' + error.message); return; }
+
+  if (preview.lowestPrice != null) await insertCatalogPriceRecord(data.id, preview);
   renderLojas();
 }
 
@@ -132,20 +174,20 @@ async function loadPriceHistory(termId) {
   return data || [];
 }
 
-async function insertPriceRecords(termId, results) {
-  if (!sbClient || !results.length) return;
-  const rows = results.slice(0, 10).map(r => ({
+async function insertCatalogPriceRecord(termId, preview) {
+  if (!sbClient || preview.lowestPrice == null) return;
+  const row = {
     term_id: termId,
-    ml_item_id: r.id,
-    title: r.title,
-    price: r.price,
-    currency: r.currency_id || 'BRL',
-    url: r.permalink,
-    thumbnail: r.thumbnail,
-    seller: r.seller && r.seller.nickname ? r.seller.nickname : ''
-  }));
-  const { error } = await sbClient.from('ml_price_history').insert(rows);
-  if (error) console.error('insertPriceRecords', error);
+    ml_item_id: preview.catalogId,
+    title: preview.name || preview.catalogId,
+    price: preview.lowestPrice,
+    currency: 'BRL',
+    url: preview.catalogUrl,
+    thumbnail: preview.image || null,
+    seller: preview.sellersCount ? preview.sellersCount + ' vendedores' : ''
+  };
+  const { error } = await sbClient.from('ml_price_history').insert([row]);
+  if (error) console.error('insertCatalogPriceRecord', error);
 }
 
 // ── DATA: cupons (leitura pública) ──────────────────────────────
@@ -160,49 +202,41 @@ async function loadCoupons() {
   return data || [];
 }
 
-// ── BUSCA no Mercado Livre (API pública) — só o admin dispara ──
-async function searchMercadoLivre(term) {
-  try {
-    const url = 'https://api.mercadolibre.com/sites/MLB/search?q=' + encodeURIComponent(term) + '&limit=12';
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const json = await res.json();
-    return (json.results || []).sort((a, b) => a.price - b.price);
-  } catch (e) {
-    console.warn('searchMercadoLivre falhou (provável bloqueio de CORS no navegador):', e);
-    return null;
-  }
-}
-
+// ── BUSCA no catálogo do Mercado Livre (via Edge Function) — admin ──
 async function runSearchForTerm(termObj, containerEl) {
   if (!isAdmin()) return;
-  containerEl.innerHTML = '<div class="ml-loading">🔎 Buscando ofertas para "' + termObj.term + '"...</div>';
-  const results = await searchMercadoLivre(termObj.term);
-  if (results === null) {
-    containerEl.innerHTML =
-      '<div class="ml-loading">⚠️ Não consegui buscar direto (bloqueio do navegador). ' +
-      '<a href="' + mlSearchUrl(termObj.term) + '" target="_blank" rel="noopener">Abrir busca no Mercado Livre →</a></div>';
+  const label = termObj.label || termObj.term;
+  containerEl.innerHTML = '<div class="ml-loading">🔎 Buscando vendedores para "' + label + '"...</div>';
+
+  const preview = await fetchCatalogPreview(termObj.catalog_product_id || termObj.term);
+  if (!preview.ok) {
+    containerEl.innerHTML = '<div class="ml-loading">⚠️ ' + preview.error + '</div>';
     return;
   }
-  if (results.length) await insertPriceRecords(termObj.id, results);
-  if (!results.length) {
-    containerEl.innerHTML = '<div class="ml-loading">Nenhum resultado encontrado agora para "' + termObj.term + '".</div>';
+  if (!preview.sellersCount) {
+    containerEl.innerHTML = '<div class="ml-loading">Nenhum vendedor encontrado agora para "' + label + '".</div>';
     return;
   }
-  const rows = results.slice(0, 6).map(r => (
+
+  await insertCatalogPriceRecord(termObj.id, preview);
+  if (preview.image && preview.image !== termObj.image_url) {
+    await sbClient.from('ml_search_terms').update({ image_url: preview.image }).eq('id', termObj.id);
+  }
+
+  const rows = preview.sellers.slice(0, 6).map(s => (
     '<div class="ml-admin-result">' +
-      '<img src="' + r.thumbnail + '" alt="">' +
       '<div class="ml-admin-result-info">' +
-        '<div class="ml-result-title">' + (r.title || '').slice(0, 55) + '</div>' +
-        '<div class="ml-result-price">R$ ' + fmtBRLLoja(r.price) + '</div>' +
+        '<div class="ml-result-title">Vendedor #' + s.seller_id + (s.free_shipping ? ' · frete grátis' : '') + '</div>' +
+        '<div class="ml-result-price">R$ ' + fmtBRLLoja(s.price) + '</div>' +
       '</div>' +
-      '<button class="btn-mini" onclick="copyToClipboard(' + JSON.stringify(r.permalink) + ', this)">📋 Copiar URL</button>' +
     '</div>'
   )).join('');
   containerEl.innerHTML =
-    '<div class="ml-loading">✅ ' + results.length + ' ofertas registradas — menor preço agora: R$ ' + fmtBRLLoja(results[0].price) + '</div>' +
+    '<div class="ml-loading">✅ ' + preview.sellersCount + ' vendedores encontrados — menor preço agora: R$ ' + fmtBRLLoja(preview.lowestPrice) + '</div>' +
     '<div class="ml-admin-results">' + rows + '</div>' +
-    '<div class="ml-admin-hint">Copie a URL do produto que quer indicar, cole em <a href="' + ML_AFFILIATE_TOOL_URL + '" target="_blank" rel="noopener">Central de Afiliados → Gerador de links</a>, e cole o link meli.la gerado no campo "Link de afiliado" abaixo.</div>';
+    '<div class="ml-admin-hint">Copie o link do catálogo (' +
+      '<button class="btn-mini" onclick="copyToClipboard(' + JSON.stringify(preview.catalogUrl) + ', this)">📋 Copiar link</button>' +
+      '), cole em <a href="' + ML_AFFILIATE_TOOL_URL + '" target="_blank" rel="noopener">Central de Afiliados → Gerador de links</a>, e cole o link meli.la gerado no campo "Link de afiliado" abaixo.</div>';
   renderShowcaseSection();
 }
 
@@ -254,10 +288,11 @@ function renderProductCard(term, history, featured) {
   }
 
   const updatedStr = latest && latest.found_at ? new Date(latest.found_at).toLocaleDateString('pt-BR') : '';
+  const imgSrc = term.image_url || best.thumbnail;
   return (
     '<a class="product-card' + (featured ? ' product-card-featured' : '') + '" href="' + linkUrl + '" target="_blank" rel="noopener' + (term.affiliate_url ? ' sponsored' : '') + '">' +
       (featured ? '<div class="product-badge">🔥 OFERTA IMPERDÍVEL</div>' : '') +
-      '<img class="product-img" src="' + best.thumbnail + '" alt="' + label + '">' +
+      '<img class="product-img" src="' + imgSrc + '" alt="' + label + '">' +
       '<div class="product-info">' +
         '<div class="product-name">' + label + '</div>' +
         '<div class="product-price">R$ ' + fmtBRLLoja(best.price) + '</div>' +
@@ -312,7 +347,8 @@ async function renderAdminPanel() {
               '<button class="btn-mini btn-mini-danger" onclick="removeSearchTerm(' + t.id + ')">✕</button>' +
             '</span>' +
           '</div>' +
-          '<div class="ml-term-sub">termo de busca: <code>' + t.term + '</code></div>' +
+          '<div class="ml-term-sub">catálogo: <code>' + (t.catalog_product_id || t.term) + '</code>' +
+            ' · <a href="https://www.mercadolivre.com.br/p/' + (t.catalog_product_id || '') + '" target="_blank" rel="noopener">ver no ML →</a></div>' +
           '<div class="ml-aff-row">' +
             '<input id="aff-' + t.id + '" placeholder="Cole aqui o link meli.la gerado" value="' + (t.affiliate_url || '') + '">' +
             '<button class="btn-mini" onclick="saveAffiliateUrl(' + t.id + ')">Salvar link</button>' +
@@ -325,11 +361,27 @@ async function renderAdminPanel() {
   holder.innerHTML =
     '<div class="sec-title" style="margin-top:28px">⚙️ Admin · Cadastrar Produto Rastreado</div>' +
     '<div class="ml-add-term">' +
-      '<input id="new-ml-label" placeholder="Nome do produto (ex: Booster Box ME04)">' +
-      '<input id="new-ml-term" placeholder="Termo de busca no ML (ex: booster box pokemon me04)">' +
-      '<button class="btn-add" onclick="var l=document.getElementById(&quot;new-ml-label&quot;).value;var v=document.getElementById(&quot;new-ml-term&quot;).value;if(v.trim())addSearchTerm(v,l);document.getElementById(&quot;new-ml-term&quot;).value=&quot;&quot;;document.getElementById(&quot;new-ml-label&quot;).value=&quot;&quot;;">+ RASTREAR PRODUTO</button>' +
+      '<input id="new-ml-label" placeholder="Nome do produto (opcional — puxa do ML se deixar em branco)">' +
+      '<input id="new-ml-term" placeholder="Link de catálogo do ML (.../p/MLB1234567) ou o ID (MLB1234567)">' +
+      '<button class="btn-add" id="btn-add-ml-term" onclick="onAddCatalogClick()">+ RASTREAR PRODUTO</button>' +
     '</div>' +
+    '<div class="ml-add-hint">Cole o link da página de catálogo do produto (a que junta os vários vendedores) — o nome, a imagem e o menor preço são carregados automaticamente.</div>' +
     '<div class="ml-terms-list">' + termsListHtml + '</div>';
+}
+
+async function onAddCatalogClick() {
+  const btn = document.getElementById('btn-add-ml-term');
+  const labelEl = document.getElementById('new-ml-label');
+  const linkEl = document.getElementById('new-ml-term');
+  if (!linkEl.value.trim()) return;
+  const oldText = btn.textContent;
+  btn.textContent = 'Buscando...';
+  btn.disabled = true;
+  await addSearchTerm(linkEl.value, labelEl.value);
+  linkEl.value = '';
+  labelEl.value = '';
+  btn.textContent = oldText;
+  btn.disabled = false;
 }
 
 // ── RENDER: cupons ───────────────────────────────────────────────
