@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mydecktcg.com.br/sitemap.xml

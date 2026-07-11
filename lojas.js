@@ -498,6 +498,7 @@ async function renderLojas() {
 
   wrap.innerHTML =
     '<div class="sec-title" style="margin:0 0 4px">🛍️ Lojas Recomendadas</div>' +
+    '<div class="affiliate-disclosure">🔗 Esta aba contém links de afiliado do Mercado Livre — ao comprar por eles, o MyDeck pode receber uma pequena comissão, sem custo adicional para você.</div>' +
     '<div class="stores-grid">' + storesHtml + '</div>' +
     '<div id="lojas-showcase"></div>' +
     '<div id="lojas-admin"></div>' +
