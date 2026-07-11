@@ -1379,3 +1379,15 @@ body.share-view .btn-add { display: none !important; }
   flex: 1; font-size: 12px; padding: 6px 10px; border: 1px solid var(--border);
   border-radius: 8px; font-family: 'DM Sans', sans-serif;
 }
+
+.admin-stats-lastrow {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.admin-stats-lastrow strong { color: var(--fg); }
