@@ -303,6 +303,43 @@ async function removeProductCoupon(couponId) {
   renderLojas();
 }
 
+// ── BUSCA EM LOTE: atualiza todos os produtos rastreados de uma vez ──
+// Botão manual pro admin — evita ter que clicar "Buscar agora" produto
+// por produto. Roda em sequência (não em paralelo) com uma pequena
+// pausa entre chamadas pra não sobrecarregar a Edge Function/API do ML.
+async function refreshAllTerms() {
+  if (!isAdmin()) return;
+  const btn = document.getElementById('btn-refresh-all');
+  const statusEl = document.getElementById('refresh-all-status');
+  const terms = await loadSearchTerms();
+  if (!terms.length) return;
+
+  if (btn) { btn.disabled = true; }
+  let ok = 0, fail = 0;
+  for (let i = 0; i < terms.length; i++) {
+    const t = terms[i];
+    if (statusEl) statusEl.textContent = 'Atualizando ' + (i + 1) + '/' + terms.length + ': ' + (t.label || t.term) + '...';
+    try {
+      const preview = await fetchCatalogPreview(t.catalog_product_id || t.term);
+      if (preview.ok && preview.lowestPrice != null) {
+        await insertCatalogPriceRecord(t.id, preview);
+        if (preview.image && preview.image !== t.image_url) {
+          await sbClient.from('ml_search_terms').update({ image_url: preview.image }).eq('id', t.id);
+        }
+        ok++;
+      } else {
+        fail++;
+      }
+    } catch (e) {
+      fail++;
+    }
+    await new Promise(r => setTimeout(r, 700)); // pausa entre chamadas
+  }
+  if (statusEl) statusEl.textContent = '✅ Atualizado: ' + ok + ' produto(s)' + (fail ? ' · ⚠️ ' + fail + ' falharam' : '') + '.';
+  if (btn) { btn.disabled = false; }
+  renderLojas();
+}
+
 // ── BUSCA no catálogo do Mercado Livre (via Edge Function) — admin ──
 async function runSearchForTerm(termObj, containerEl) {
   if (!isAdmin()) return;
@@ -490,7 +527,13 @@ async function renderAdminPanel() {
     : '<div class="ml-loading">Nenhum termo cadastrado ainda — adicione um acima.</div>';
 
   holder.innerHTML =
-    '<div class="sec-title" style="margin-top:28px">⚙️ Admin · Cadastrar Produto Rastreado</div>' +
+    '<div class="sec-title" style="margin-top:28px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">' +
+      '<span>⚙️ Admin · Cadastrar Produto Rastreado</span>' +
+      '<span style="display:flex;align-items:center;gap:10px">' +
+        '<button class="btn-mini" id="btn-refresh-all" onclick="refreshAllTerms()">🔄 Atualizar todos agora</button>' +
+        '<span id="refresh-all-status" style="font-size:11px;color:var(--muted)"></span>' +
+      '</span>' +
+    '</div>' +
     '<div class="ml-add-term">' +
       '<input id="new-ml-label" placeholder="Nome do produto (opcional — puxa do ML se deixar em branco)">' +
       '<input id="new-ml-term" placeholder="Link de catálogo do ML (.../p/MLB1234567) ou o ID (MLB1234567)">' +
