@@ -1304,3 +1304,26 @@ body.share-view .btn-add { display: none !important; }
 .ml-admin-result-info { flex: 1; }
 .ml-admin-hint { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
 .ml-admin-hint a { color: var(--blue); }
+
+/* ─── ABA INICIANTES (FAQ) ─────────────────────────────────── */
+.faq-intro { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+.faq-list { display: flex; flex-direction: column; gap: 10px; }
+.faq-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+.faq-q {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; cursor: pointer; user-select: none;
+}
+.faq-q:hover { background: var(--surface2); }
+.faq-icon { font-size: 20px; flex-shrink: 0; }
+.faq-q-text { flex: 1; font-weight: 600; font-size: 14px; color: var(--text); }
+.faq-arrow { color: var(--muted); font-size: 13px; flex-shrink: 0; transition: transform .15s ease; }
+.faq-a {
+  max-height: 0; overflow: hidden;
+  padding: 0 16px; font-size: 13px; line-height: 1.6; color: var(--text2);
+  transition: max-height .25s ease, padding .25s ease;
+}
+.faq-a.faq-a-open { max-height: 500px; padding: 0 16px 16px; }
+.faq-a strong { color: var(--accent); }
