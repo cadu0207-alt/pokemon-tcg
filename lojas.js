@@ -1,13 +1,24 @@
 // ================================================================
 // MyDeck — Lojas & Ofertas (lojas.js)
-// Aba de indicação de lojas parceiras + rastreador de ofertas no
-// Mercado Livre (busca por termo, link de afiliado, histórico de
-// preço e cupons). Carregado depois de app.js — reaproveita sbClient,
-// currentUser, uid() e USD_BRL já definidos lá.
+// Aba de indicação de lojas parceiras + vitrine de ofertas rastreadas
+// no Mercado Livre. O cadastro de termos de busca é restrito ao admin
+// (Eduardo) — os demais usuários só veem a vitrine já pronta, com
+// imagem do produto, menor preço já registrado e link de afiliado.
+// Carregado depois de app.js — reaproveita sbClient, currentUser,
+// uid() e USD_BRL já definidos lá.
 // ================================================================
+
+// ── CONFIG: admin (único que cadastra/edita termos de busca) ────
+const ADMIN_UID = 'eb9da0ad-9877-4f17-ac5a-6f1da5eebc9b';
+const ADMIN_EMAIL = 'cadu0207@gmail.com';
+function isAdmin() {
+  return uid() === ADMIN_UID || (currentUser && currentUser.email || '').toLowerCase() === ADMIN_EMAIL;
+}
 
 // ── CONFIG: lojas parceiras ─────────────────────────────────────
 // Edite/preencha os links reais de cada loja aqui.
+// TODO Eduardo: quando tiver os links diretos de WhatsApp com
+// mensagem pré-preenchida ("vim do MyDeck..."), cole no campo whatsapp.
 const STORES = [
   {
     name: 'iWorld TCG',
@@ -21,20 +32,20 @@ const STORES = [
   },
   {
     name: 'CoffeeCat - Pokémon TCG',
-    city: '', // TODO Eduardo: preencher cidade/região
+    city: '',
     logo: '',
     tiktok: '',
-    instagram: '', // TODO Eduardo: colar link do Instagram/TikTok da loja
+    instagram: '',
     whatsapp: '',
     color: '#c8960a',
     tag: '⭐ Loja recomendada'
   },
   {
     name: 'TOYBOX POKE CARDS',
-    city: '', // TODO Eduardo: preencher cidade/região
+    city: '',
     logo: '',
     tiktok: '',
-    instagram: '', // TODO Eduardo: colar link do Instagram/TikTok da loja
+    instagram: '',
     whatsapp: '',
     color: '#0e7898',
     tag: '⭐ Loja recomendada'
@@ -43,8 +54,6 @@ const STORES = [
 
 // ── CONFIG: afiliado Mercado Livre ──────────────────────────────
 // TODO Eduardo: troque pelos seus parâmetros reais de afiliado
-// (o Mercado Livre costuma usar algo como matt_word / matt_tool —
-// copie do painel de afiliados dentro do app que você já criou).
 const ML_AFFILIATE_PARAMS = 'matt_word=SEU_CODIGO_AQUI&matt_tool=SEU_CODIGO_AQUI';
 
 function toAffiliateLink(url) {
@@ -62,37 +71,41 @@ function mlSearchUrl(term) {
   return 'https://lista.mercadolivre.com.br/' + encodeURIComponent(term).replace(/%20/g, '-');
 }
 
-// ── STATE ────────────────────────────────────────────────────────
-let _lojasTerms = [];
-let _lojasResultsCache = {}; // termId -> [results]
+function fmtBRLLoja(v) {
+  return (+v || 0).toFixed(2).replace('.', ',');
+}
 
-// ── DATA: termos de busca (Supabase) ────────────────────────────
+// ── DATA: termos de busca (Supabase) — leitura pública, escrita admin ──
 async function loadSearchTerms() {
-  if (!sbClient || !uid()) { _lojasTerms = []; return []; }
+  if (!sbClient) return [];
   const { data, error } = await sbClient
     .from('ml_search_terms')
     .select('*')
-    .eq('user_id', uid())
+    .eq('active', true)
+    .order('featured', { ascending: false })
     .order('created_at', { ascending: false });
-  if (error) { console.error('loadSearchTerms', error); _lojasTerms = []; return []; }
-  _lojasTerms = data || [];
-  return _lojasTerms;
+  if (error) { console.error('loadSearchTerms', error); return []; }
+  return data || [];
 }
 
-async function addSearchTerm(term) {
-  if (!sbClient || !uid() || !term.trim()) return;
+async function addSearchTerm(term, label) {
+  if (!isAdmin() || !term.trim()) return;
   const { error } = await sbClient
     .from('ml_search_terms')
-    .insert({ user_id: uid(), term: term.trim() });
+    .insert({ user_id: uid(), term: term.trim(), label: (label || '').trim() || term.trim() });
   if (error) { alert('Erro ao salvar termo: ' + error.message); return; }
-  await loadSearchTerms();
   renderLojas();
 }
 
 async function removeSearchTerm(id) {
-  if (!sbClient) return;
+  if (!isAdmin()) return;
   await sbClient.from('ml_search_terms').delete().eq('id', id);
-  await loadSearchTerms();
+  renderLojas();
+}
+
+async function toggleFeatured(id, current) {
+  if (!isAdmin()) return;
+  await sbClient.from('ml_search_terms').update({ featured: !current }).eq('id', id);
   renderLojas();
 }
 
@@ -118,7 +131,7 @@ async function insertPriceRecords(termId, results) {
     currency: r.currency_id || 'BRL',
     url: r.permalink,
     thumbnail: r.thumbnail,
-    seller: r.seller?.nickname || ''
+    seller: r.seller && r.seller.nickname ? r.seller.nickname : ''
   }));
   const { error } = await sbClient.from('ml_price_history').insert(rows);
   if (error) console.error('insertPriceRecords', error);
@@ -136,7 +149,7 @@ async function loadCoupons() {
   return data || [];
 }
 
-// ── BUSCA no Mercado Livre (API pública) ────────────────────────
+// ── BUSCA no Mercado Livre (API pública) — só o admin dispara ──
 async function searchMercadoLivre(term) {
   try {
     const url = 'https://api.mercadolibre.com/sites/MLB/search?q=' + encodeURIComponent(term) + '&limit=12';
@@ -146,11 +159,12 @@ async function searchMercadoLivre(term) {
     return (json.results || []).sort((a, b) => a.price - b.price);
   } catch (e) {
     console.warn('searchMercadoLivre falhou (provável bloqueio de CORS no navegador):', e);
-    return null; // null = falhou, diferente de [] = busca ok sem resultados
+    return null;
   }
 }
 
 async function runSearchForTerm(termObj, containerEl) {
+  if (!isAdmin()) return;
   containerEl.innerHTML = '<div class="ml-loading">🔎 Buscando ofertas para "' + termObj.term + '"...</div>';
   const results = await searchMercadoLivre(termObj.term);
   if (results === null) {
@@ -159,10 +173,11 @@ async function runSearchForTerm(termObj, containerEl) {
       '<a href="' + toAffiliateLink(mlSearchUrl(termObj.term)) + '" target="_blank" rel="noopener">Abrir busca no Mercado Livre →</a></div>';
     return;
   }
-  _lojasResultsCache[termObj.id] = results;
   if (results.length) await insertPriceRecords(termObj.id, results);
-  const history = await loadPriceHistory(termObj.id);
-  containerEl.innerHTML = renderResultsBlock(termObj, results, history);
+  containerEl.innerHTML = results.length
+    ? '<div class="ml-loading">✅ ' + results.length + ' ofertas registradas. Menor preço agora: R$ ' + fmtBRLLoja(results[0].price) + '</div>'
+    : '<div class="ml-loading">Nenhum resultado encontrado agora para "' + termObj.term + '".</div>';
+  renderShowcaseSection();
 }
 
 // ── RENDER: cartão de loja ───────────────────────────────────────
@@ -185,69 +200,105 @@ function renderStoreCard(s) {
   );
 }
 
-// ── RENDER: bloco de resultados de uma busca ────────────────────
-function renderResultsBlock(termObj, results, history) {
-  if (!results.length) {
-    return '<div class="ml-loading">Nenhum resultado encontrado agora para "' + termObj.term + '".</div>';
+// ── RENDER: vitrine pública de produtos rastreados ──────────────
+function bestRecord(history) {
+  if (!history.length) return null;
+  return history.reduce((min, r) => (+r.price < +min.price ? r : min), history[0]);
+}
+function latestRecord(history) {
+  return history.length ? history[history.length - 1] : null;
+}
+
+function renderProductCard(term, history, featured) {
+  const best = bestRecord(history);
+  const latest = latestRecord(history);
+  const label = term.label || term.term;
+
+  if (!best) {
+    return (
+      '<div class="product-card' + (featured ? ' product-card-featured' : '') + '">' +
+        '<div class="product-img product-img-empty">📦</div>' +
+        '<div class="product-info">' +
+          '<div class="product-name">' + label + '</div>' +
+          '<div class="product-empty-note">Ainda sem preços registrados — em breve.</div>' +
+        '</div>' +
+      '</div>'
+    );
   }
-  const best = results[0];
-  const cards = results.slice(0, 6).map(r => (
-    '<a class="ml-result" href="' + toAffiliateLink(r.permalink) + '" target="_blank" rel="noopener">' +
-      '<img src="' + r.thumbnail + '" alt="">' +
-      '<div class="ml-result-info">' +
-        '<div class="ml-result-title">' + (r.title || '').slice(0, 60) + '</div>' +
-        '<div class="ml-result-price">R$ ' + fmtBRLLoja(r.price) + '</div>' +
-        '<div class="ml-result-seller">' + (r.seller?.nickname || '') + '</div>' +
+
+  const updatedStr = latest && latest.found_at ? new Date(latest.found_at).toLocaleDateString('pt-BR') : '';
+  return (
+    '<a class="product-card' + (featured ? ' product-card-featured' : '') + '" href="' + toAffiliateLink(best.url) + '" target="_blank" rel="noopener">' +
+      (featured ? '<div class="product-badge">🔥 OFERTA IMPERDÍVEL</div>' : '') +
+      '<img class="product-img" src="' + best.thumbnail + '" alt="' + label + '">' +
+      '<div class="product-info">' +
+        '<div class="product-name">' + label + '</div>' +
+        '<div class="product-price">R$ ' + fmtBRLLoja(best.price) + '</div>' +
+        '<div class="product-note">menor preço já registrado' + (updatedStr ? ' · atualizado ' + updatedStr : '') + '</div>' +
       '</div>' +
     '</a>'
-  )).join('');
-
-  const chartHtml = history.length > 1 ? renderPriceSparkline(history) : '';
-  const lowest = history.length ? Math.min(...history.map(h => +h.price)) : best.price;
-
-  return (
-    '<div class="ml-summary">Menor preço já registrado: <b>R$ ' + fmtBRLLoja(lowest) + '</b> · Melhor preço agora: <b>R$ ' + fmtBRLLoja(best.price) + '</b></div>' +
-    chartHtml +
-    '<div class="ml-results-grid">' + cards + '</div>'
   );
 }
 
-function fmtBRLLoja(v) {
-  return (+v || 0).toFixed(2).replace('.', ',');
+async function renderShowcaseSection() {
+  const holder = document.getElementById('lojas-showcase');
+  if (!holder) return;
+  const terms = await loadSearchTerms();
+  if (!terms.length) {
+    holder.innerHTML = '<div class="ml-loading">Nenhuma oferta cadastrada ainda.</div>';
+    return;
+  }
+  const histories = await Promise.all(terms.map(t => loadPriceHistory(t.id)));
+  const featuredCards = [];
+  const normalCards = [];
+  terms.forEach((t, i) => {
+    const html = renderProductCard(t, histories[i], !!t.featured);
+    if (t.featured) featuredCards.push(html); else normalCards.push(html);
+  });
+
+  let html = '';
+  if (featuredCards.length) {
+    html += '<div class="sec-title" style="margin-top:8px">🔥 Ofertas em Destaque</div>';
+    html += '<div class="products-grid products-grid-featured">' + featuredCards.join('') + '</div>';
+  }
+  html += '<div class="sec-title" style="margin-top:24px">🛒 Ofertas Rastreadas · Mercado Livre</div>';
+  html += '<div class="products-grid">' + (normalCards.join('') || '<div class="ml-loading">Nenhuma outra oferta cadastrada.</div>') + '</div>';
+
+  holder.innerHTML = html;
 }
 
-// ── RENDER: mini gráfico de histórico de preço (canvas) ─────────
-function renderPriceSparkline(history) {
-  const id = 'spark-' + Math.random().toString(36).slice(2);
-  setTimeout(() => drawSparkline(id, history), 0);
-  return '<canvas id="' + id + '" class="price-sparkline" width="600" height="90"></canvas>';
-}
+// ── RENDER: painel do admin (só aparece para o Eduardo logado) ──
+async function renderAdminPanel() {
+  const holder = document.getElementById('lojas-admin');
+  if (!holder) return;
+  if (!isAdmin()) { holder.innerHTML = ''; return; }
 
-function drawSparkline(canvasId, history) {
-  const cv = document.getElementById(canvasId);
-  if (!cv) return;
-  const ctx = cv.getContext('2d');
-  const w = cv.width, h = cv.height, pad = 10;
-  const prices = history.map(p => +p.price);
-  const min = Math.min(...prices), max = Math.max(...prices);
-  const range = (max - min) || 1;
-  ctx.clearRect(0, 0, w, h);
-  ctx.beginPath();
-  ctx.strokeStyle = '#e63946';
-  ctx.lineWidth = 2;
-  history.forEach((p, i) => {
-    const x = pad + (i / (history.length - 1 || 1)) * (w - pad * 2);
-    const y = h - pad - ((+p.price - min) / range) * (h - pad * 2);
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-  // pontos
-  ctx.fillStyle = '#e63946';
-  history.forEach((p, i) => {
-    const x = pad + (i / (history.length - 1 || 1)) * (w - pad * 2);
-    const y = h - pad - ((+p.price - min) / range) * (h - pad * 2);
-    ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
-  });
+  const terms = await loadSearchTerms();
+  const termsListHtml = terms.length
+    ? terms.map(t => (
+        '<div class="ml-term-card">' +
+          '<div class="ml-term-hdr">' +
+            '<span class="ml-term-name">' + (t.featured ? '🔥 ' : '🔎 ') + (t.label || t.term) + '</span>' +
+            '<span class="ml-term-actions">' +
+              '<button class="btn-mini" onclick="runSearchForTerm(' + JSON.stringify(t).replace(/"/g, '&quot;') + ', document.getElementById(\'res-' + t.id + '\'))">Buscar agora</button>' +
+              '<button class="btn-mini' + (t.featured ? ' btn-mini-active' : '') + '" onclick="toggleFeatured(' + t.id + ',' + (!!t.featured) + ')">' + (t.featured ? '★ Destaque' : '☆ Destacar') + '</button>' +
+              '<button class="btn-mini btn-mini-danger" onclick="removeSearchTerm(' + t.id + ')">✕</button>' +
+            '</span>' +
+          '</div>' +
+          '<div class="ml-term-sub">termo de busca: <code>' + t.term + '</code></div>' +
+          '<div id="res-' + t.id + '" class="ml-term-results"></div>' +
+        '</div>'
+      )).join('')
+    : '<div class="ml-loading">Nenhum termo cadastrado ainda — adicione um acima.</div>';
+
+  holder.innerHTML =
+    '<div class="sec-title" style="margin-top:28px">⚙️ Admin · Cadastrar Produto Rastreado</div>' +
+    '<div class="ml-add-term">' +
+      '<input id="new-ml-label" placeholder="Nome do produto (ex: Booster Box ME04)">' +
+      '<input id="new-ml-term" placeholder="Termo de busca no ML (ex: booster box pokemon me04)">' +
+      '<button class="btn-add" onclick="var l=document.getElementById(&quot;new-ml-label&quot;).value;var v=document.getElementById(&quot;new-ml-term&quot;).value;if(v.trim())addSearchTerm(v,l);document.getElementById(&quot;new-ml-term&quot;).value=&quot;&quot;;document.getElementById(&quot;new-ml-label&quot;).value=&quot;&quot;;">+ RASTREAR PRODUTO</button>' +
+    '</div>' +
+    '<div class="ml-terms-list">' + termsListHtml + '</div>';
 }
 
 // ── RENDER: cupons ───────────────────────────────────────────────
@@ -282,46 +333,17 @@ async function renderLojas() {
   if (!wrap) return;
 
   const storesHtml = STORES.map(renderStoreCard).join('');
-
-  let termsSectionHtml;
-  if (!uid()) {
-    termsSectionHtml = '<div class="ml-loading">Faça login para cadastrar termos de busca e acompanhar histórico de preço.</div>';
-  } else {
-    await loadSearchTerms();
-    const termsListHtml = _lojasTerms.length
-      ? _lojasTerms.map(t => (
-          '<div class="ml-term-card">' +
-            '<div class="ml-term-hdr">' +
-              '<span class="ml-term-name">🔎 ' + t.term + '</span>' +
-              '<span class="ml-term-actions">' +
-                '<button class="btn-mini" onclick="runSearchForTerm(' + JSON.stringify(t).replace(/"/g, '&quot;') + ', document.getElementById(\'res-' + t.id + '\'))">Buscar agora</button>' +
-                '<button class="btn-mini btn-mini-danger" onclick="removeSearchTerm(' + t.id + ')">✕</button>' +
-              '</span>' +
-            '</div>' +
-            '<div id="res-' + t.id + '" class="ml-term-results"></div>' +
-          '</div>'
-        )).join('')
-      : '<div class="ml-loading">Nenhum termo cadastrado ainda — adicione um acima (ex: "booster me04", "etb charizard").</div>';
-
-    termsSectionHtml =
-      '<div class="ml-add-term">' +
-        '<input id="new-ml-term" placeholder="Ex: booster pokemon me04, etb charizard...">' +
-        '<button class="btn-add" onclick="const v=document.getElementById(\'new-ml-term\').value;if(v.trim())addSearchTerm(v);document.getElementById(\'new-ml-term\').value=\'\'">+ RASTREAR TERMO</button>' +
-      '</div>' +
-      '<div class="ml-terms-list">' + termsListHtml + '</div>';
-  }
-
   const coupons = await loadCoupons();
 
   wrap.innerHTML =
     '<div class="sec-title" style="margin:0 0 4px">🛍️ Lojas Recomendadas</div>' +
     '<div class="stores-grid">' + storesHtml + '</div>' +
-
-    '<div class="sec-title" style="margin-top:28px">🛒 Rastreador de Ofertas · Mercado Livre</div>' +
-    '<div class="ml-tracker-intro">Cadastre um termo de busca e acompanhe o menor preço encontrado ao longo do tempo. Os links abrem com seu código de afiliado.</div>' +
-    termsSectionHtml +
-
+    '<div id="lojas-showcase"></div>' +
+    '<div id="lojas-admin"></div>' +
     renderCouponsBlock(coupons);
+
+  await renderShowcaseSection();
+  await renderAdminPanel();
 }
 
 // Auto-render se a aba já estiver ativa no load (ex: refresh na URL)
