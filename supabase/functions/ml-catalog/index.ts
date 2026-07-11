@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
     }
     const product = await productRes.json();
 
-    let sellers: Array<{ price: number; original_price: number | null; free_shipping: boolean; seller_id: number }> = [];
+    let sellers: Array<{ price: number; original_price: number | null; free_shipping: boolean; seller_id: number; itemId: string | null; permalink: string | null }> = [];
     if (itemsRes.ok) {
       const itemsData = await itemsRes.json();
       sellers = (itemsData.results || [])
@@ -157,6 +157,12 @@ Deno.serve(async (req) => {
           original_price: (r.original_price as number) ?? null,
           free_shipping: !!(r.shipping as { free_shipping?: boolean } | undefined)?.free_shipping,
           seller_id: r.seller_id as number,
+          // Alguns retornos do catálogo trazem o id/permalink do anúncio
+          // específico daquele vendedor — se vier, dá pra linkar direto
+          // no anúncio mais barato em vez da página geral de catálogo
+          // (que o ML pode mostrar com outro vendedor "em destaque").
+          itemId: (r.item_id as string) ?? (r.id as string) ?? null,
+          permalink: (r.permalink as string) ?? null,
         }))
         .sort((a: { price: number }, b: { price: number }) => a.price - b.price);
     }
@@ -166,13 +172,17 @@ Deno.serve(async (req) => {
         ? product.pictures[0].url
         : null;
 
+    const catalogUrl = `https://www.mercadolivre.com.br/p/${catalogId}`;
+    const lowestPriceUrl = sellers.length ? (sellers[0].permalink || catalogUrl) : catalogUrl;
+
     return json({
       ok: true,
       catalogId,
       name: product.name || null,
       image,
       images: (product.pictures || []).map((p: { url: string }) => p.url),
-      catalogUrl: `https://www.mercadolivre.com.br/p/${catalogId}`,
+      catalogUrl,
+      lowestPriceUrl,
       sellersCount: sellers.length,
       lowestPrice: sellers.length ? sellers[0].price : null,
       sellers: sellers.slice(0, 8),

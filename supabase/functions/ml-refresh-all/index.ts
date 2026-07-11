@@ -112,7 +112,7 @@ async function refreshOneTerm(term: TermRow, token: string) {
   if (!productRes.ok) return { id: term.id, ok: false, error: `produto ${productRes.status}` };
   const product = await productRes.json();
 
-  let sellers: Array<{ price: number; seller_id: number; free_shipping: boolean }> = [];
+  let sellers: Array<{ price: number; seller_id: number; free_shipping: boolean; permalink: string | null }> = [];
   if (itemsRes.ok) {
     const itemsData = await itemsRes.json();
     sellers = (itemsData.results || [])
@@ -120,6 +120,7 @@ async function refreshOneTerm(term: TermRow, token: string) {
         price: r.price as number,
         seller_id: r.seller_id as number,
         free_shipping: !!(r.shipping as { free_shipping?: boolean } | undefined)?.free_shipping,
+        permalink: (r.permalink as string) ?? null,
       }))
       .sort((a: { price: number }, b: { price: number }) => a.price - b.price);
   }
@@ -128,6 +129,11 @@ async function refreshOneTerm(term: TermRow, token: string) {
 
   const image = product.pictures && product.pictures[0] ? product.pictures[0].url : null;
   const lowestPrice = sellers[0].price;
+  const catalogUrl = `https://www.mercadolivre.com.br/p/${catalogId}`;
+  // Linka direto no anúncio do vendedor mais barato quando a API traz o
+  // permalink dele — senão cai pro link geral de catálogo (o ML pode
+  // destacar lá um vendedor diferente do mais barato registrado).
+  const bestUrl = sellers[0].permalink || catalogUrl;
 
   await sbAdmin.from('ml_price_history').insert([{
     term_id: term.id,
@@ -135,7 +141,7 @@ async function refreshOneTerm(term: TermRow, token: string) {
     title: product.name || term.label || term.term,
     price: lowestPrice,
     currency: 'BRL',
-    url: `https://www.mercadolivre.com.br/p/${catalogId}`,
+    url: bestUrl,
     thumbnail: image,
     seller: sellers.length + ' vendedores',
   }]);
