@@ -322,6 +322,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
   Preços baseados no mercado BR. Cada abertura é independente — não garante resultado real.
 </div>
 
+<!-- Supabase JS v2 — usado so pra puxar preco real de produtos rastreados em Lojas & Ofertas -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="cards_me04.js"></script>
 <script src="cards_me03.js"></script>
 <script src="cards_me02.js"></script>
@@ -399,6 +401,44 @@ function productsForSet(id){
   ];
 }
 
+// Mesmo projeto Supabase usado no site principal — chaves publicas, seguras de expor.
+const SIM_SUPABASE_URL='https://dvkiodmhtzlkvmyyzelx.supabase.co';
+const SIM_SUPABASE_KEY='sb_publishable_f4d1JHAzTWPWYAI0Vm6aRA_NwM-uzr3';
+const simSb=window.supabase?window.supabase.createClient(SIM_SUPABASE_URL,SIM_SUPABASE_KEY):null;
+
+// Mapeia o id do produto aqui no simulador pro sufixo usado como product_key
+// em Lojas & Ofertas (mesmo padrao do ev_calculator.js: "<set>-<sufixo>").
+const PRODUCT_KEY_SUFFIX={avulso:'booster',duplo:'blister2',triplo:'blister3',quaripack:'blister4',box36:'display'};
+
+async function simGetRealPrice(productKey){
+  if(!simSb||!productKey) return null;
+  const {data:term}=await simSb.from('ml_search_terms').select('id').eq('product_key',productKey).eq('active',true).limit(1).maybeSingle();
+  if(!term) return null;
+  const {data:rows}=await simSb.from('ml_price_history').select('price,found_at').eq('term_id',term.id).order('price',{ascending:true}).limit(1);
+  if(!rows||!rows.length) return null;
+  return {price:+rows[0].price,updatedAt:rows[0].found_at};
+}
+
+async function applyRealPrices(setId){
+  for(const p of PRODUCTS){
+    const suffix=PRODUCT_KEY_SUFFIX[p.id];
+    if(!suffix) continue;
+    const real=await simGetRealPrice(setId+'-'+suffix);
+    const input=priceInputs[p.id];
+    if(real&&input){
+      input.value=real.price.toFixed(2);
+      const card=document.getElementById('pc-'+p.id);
+      if(card&&!card.querySelector('.pc-real-badge')){
+        const badge=document.createElement('div');
+        badge.className='pc-real-badge';
+        badge.style.cssText='font-size:8px;color:var(--green);margin-top:2px;letter-spacing:.5px';
+        badge.textContent='PRECO REAL · ML';
+        card.querySelector('.pc-price').after(badge);
+      }
+    }
+  }
+}
+
 let PRODUCTS=productsForSet('me04');
 let selectedProduct=null;
 const priceInputs={};
@@ -458,6 +498,7 @@ function selectSet(id){
   document.getElementById('rates-title-set').textContent=cfg.label;
   buildProducts();
   resetSim();
+  applyRealPrices(id);
 }
 
 // ═══════════════════════════════════════════════════════════════

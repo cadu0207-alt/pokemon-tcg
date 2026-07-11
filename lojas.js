@@ -206,6 +206,56 @@ function couponForTerm(coupons, termId) {
   return coupons.find(c => c.term_id === termId) || null;
 }
 
+// ── INTEGRAÇÃO: preço real pro Preço Justo / Simulador ──────────
+// Exposta globalmente porque ev_calculator.js (Preço Justo) chama isso
+// direto — mesmo carregando antes de lojas.js no <head>, essa função só
+// é de fato CHAMADA depois (quando o usuário abre a aba), quando lojas.js
+// já rodou e já definiu window.mydeckGetRealPrice.
+async function saveProductKey(termId) {
+  if (!isAdmin()) return;
+  const sel = document.getElementById('pkey-' + termId);
+  if (!sel) return;
+  const val = sel.value || null;
+  const { error } = await sbClient.from('ml_search_terms').update({ product_key: val }).eq('id', termId);
+  if (error) alert('Erro ao vincular produto: ' + error.message);
+}
+
+function productKeyOptionsHtml(selected) {
+  const catalog = (typeof CATALOG !== 'undefined') ? CATALOG : [];
+  let html = '<option value="">— nenhum —</option>';
+  let lastGrupo = null;
+  catalog.forEach(p => {
+    if (p.grupo !== lastGrupo) {
+      if (lastGrupo !== null) html += '</optgroup>';
+      html += '<optgroup label="' + p.grupo + '">';
+      lastGrupo = p.grupo;
+    }
+    html += '<option value="' + p.id + '"' + (p.id === selected ? ' selected' : '') + '>' + p.nome + '</option>';
+  });
+  if (lastGrupo !== null) html += '</optgroup>';
+  return html;
+}
+
+window.mydeckGetRealPrice = async function(productKey) {
+  if (!sbClient || !productKey) return null;
+  const { data: term, error: e1 } = await sbClient
+    .from('ml_search_terms')
+    .select('id')
+    .eq('product_key', productKey)
+    .eq('active', true)
+    .limit(1)
+    .maybeSingle();
+  if (e1 || !term) return null;
+  const { data: rows, error: e2 } = await sbClient
+    .from('ml_price_history')
+    .select('price, found_at')
+    .eq('term_id', term.id)
+    .order('price', { ascending: true })
+    .limit(1);
+  if (e2 || !rows || !rows.length) return null;
+  return { price: +rows[0].price, updatedAt: rows[0].found_at };
+};
+
 function applyCouponDiscount(price, coupon) {
   if (!coupon || !coupon.discount_type || coupon.discount_value == null) return null;
   const value = +coupon.discount_value;
@@ -428,6 +478,10 @@ async function renderAdminPanel() {
             '<input id="cupom-value-' + t.id + '" type="number" step="0.01" min="0" placeholder="Valor" value="' + (coupon ? coupon.discount_value : '') + '">' +
             '<button class="btn-mini" onclick="saveProductCoupon(' + t.id + ')">' + (coupon ? 'Atualizar cupom' : 'Salvar cupom') + '</button>' +
             (coupon ? '<button class="btn-mini btn-mini-danger" onclick="removeProductCoupon(' + coupon.id + ')">Remover</button>' : '') +
+          '</div>' +
+          '<div class="ml-coupon-row">' +
+            '<span style="font-size:11px;color:var(--muted);white-space:nowrap">Vincular ao Preço Justo/Simulador:</span>' +
+            '<select id="pkey-' + t.id + '" onchange="saveProductKey(' + t.id + ')">' + productKeyOptionsHtml(t.product_key) + '</select>' +
           '</div>' +
           '<div id="res-' + t.id + '" class="ml-term-results"></div>' +
         '</div>'

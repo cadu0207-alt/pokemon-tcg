@@ -140,12 +140,27 @@ function getVerdict(mult) {
 var evState = { productId: 'me04-display', pixPrice: null };
 var evDebounceTimer = null;
 
+var evRealPriceInfo = null; // {price, updatedAt} do produto atual, ou null se nao rastreado
+
+async function evApplyRealPrice(id) {
+  if (typeof window.mydeckGetRealPrice !== 'function') return;
+  var real = null;
+  try { real = await window.mydeckGetRealPrice(id); } catch (e) { real = null; }
+  if (evState.productId !== id) return; // usuario ja trocou de produto nesse meio tempo
+  evRealPriceInfo = real;
+  if (real) evState.pixPrice = real.price;
+  renderEVControls();
+  renderEVResults();
+}
+
 function evSelectProduct(id) {
   evState.productId = id;
   var prod = CATALOG.find(function(p){return p.id===id;}) || CATALOG[0];
   evState.pixPrice = prod.varejo;
+  evRealPriceInfo = null;
   renderEVControls();
   renderEVResults();
+  evApplyRealPrice(id); // busca assincrona — atualiza quando (se) responder
 }
 
 function evSetPrice(v) {
@@ -241,7 +256,10 @@ function renderEVControls() {
         'padding:10px 14px;border-radius:8px;font-size:16px;font-family:\'Bebas Neue\',sans-serif;width:140px;letter-spacing:1px">' +
       '</div>' +
       '<div style="font-size:11px;color:var(--muted);padding-bottom:14px">' +
-        'MSRP: ' + fmtR(prod.varejo) + ' &nbsp;|&nbsp; ' + prod.boosters + ' booster' + (prod.boosters>1?'s':'') +
+        (evRealPriceInfo
+          ? '<span style="color:#16a34a">Preco real (menor achado no ML' + (evRealPriceInfo.updatedAt ? ' · ' + new Date(evRealPriceInfo.updatedAt).toLocaleDateString('pt-BR') : '') + ')</span>'
+          : 'MSRP estimado') +
+        ' &nbsp;|&nbsp; ' + prod.boosters + ' booster' + (prod.boosters>1?'s':'') +
       '</div>' +
     '</div>';
 }
@@ -370,6 +388,7 @@ function renderEV() {
   }
   renderEVControls();
   renderEVResults();
+  evApplyRealPrice(evState.productId);
 }
 
 function initEV() { renderEV(); }
