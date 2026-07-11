@@ -541,6 +541,7 @@ function renderProductCard(term, history, featured, coupon, rules) {
         '<div class="product-name">' + label + '</div>' +
         priceHtml +
         '<div class="product-note">menor preço já registrado' + (updatedStr ? ' · atualizado ' + updatedStr : '') + '</div>' +
+        '<div class="product-note-warn">💡 Se o preço na página não bater, veja "Outras opções de compra"/"Mais vendedores" ao lado do produto — o valor listado costuma estar lá.</div>' +
       '</div>' +
     '</a>'
   );

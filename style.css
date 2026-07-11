@@ -1284,6 +1284,7 @@ body.share-view .btn-add { display: none !important; }
 .ml-coupon-row input[type=number] { width: 80px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 12px; }
 .ml-coupon-row select { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 12px; }
 .product-note { font-size: 10px; color: var(--muted); margin-top: 3px; }
+.product-note-warn { font-size: 10px; color: #a16207; background: #fef3c7; border-radius: 6px; padding: 4px 8px; margin-top: 6px; line-height: 1.4; }
 .product-empty-note { font-size: 11px; color: var(--muted); }
 
 /* ─── ADMIN PANEL (lojas.js) ───────────────────────────────── */
