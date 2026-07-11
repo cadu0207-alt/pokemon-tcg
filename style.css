@@ -1279,3 +1279,16 @@ body.share-view .btn-add { display: none !important; }
 .ml-term-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
 .ml-term-sub code { background: var(--surface2); padding: 1px 6px; border-radius: 4px; }
 .btn-mini-active { background: var(--gold); color: #1c1f2e; border-color: var(--gold); }
+
+/* ─── ADMIN: link de afiliado + resultados de busca ─────────── */
+.ml-aff-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.ml-aff-row input {
+  flex: 1; min-width: 200px; padding: 8px 10px; border: 1px solid var(--border);
+  border-radius: 6px; background: var(--surface2); color: var(--text); font-family: 'Space Mono', monospace; font-size: 11px;
+}
+.ml-admin-results { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.ml-admin-result { display: flex; align-items: center; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px; }
+.ml-admin-result img { width: 42px; height: 42px; object-fit: contain; background: #fff; border-radius: 6px; flex-shrink: 0; }
+.ml-admin-result-info { flex: 1; }
+.ml-admin-hint { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
+.ml-admin-hint a { color: var(--blue); }

@@ -4,6 +4,14 @@
 // no Mercado Livre. O cadastro de termos de busca é restrito ao admin
 // (Eduardo) — os demais usuários só veem a vitrine já pronta, com
 // imagem do produto, menor preço já registrado e link de afiliado.
+//
+// IMPORTANTE: o Mercado Livre não tem API pública pra gerar link de
+// afiliado — o "Gerador de produtos recomendados" só funciona logado,
+// manualmente, dentro da Central de Afiliados e Criadores. Por isso o
+// link de afiliado de cada produto é colado à mão pelo admin (campo
+// affiliate_url), depois de gerado em:
+// https://www.mercadolivre.com.br/l/afiliados-gere-seus-links
+//
 // Carregado depois de app.js — reaproveita sbClient, currentUser,
 // uid() e USD_BRL já definidos lá.
 // ================================================================
@@ -15,10 +23,10 @@ function isAdmin() {
   return uid() === ADMIN_UID || (currentUser && currentUser.email || '').toLowerCase() === ADMIN_EMAIL;
 }
 
+// Link da Central de Afiliados do Mercado Livre (gerador manual de links)
+const ML_AFFILIATE_TOOL_URL = 'https://www.mercadolivre.com.br/l/afiliados-gere-seus-links';
+
 // ── CONFIG: lojas parceiras ─────────────────────────────────────
-// Edite/preencha os links reais de cada loja aqui.
-// TODO Eduardo: quando tiver os links diretos de WhatsApp com
-// mensagem pré-preenchida ("vim do MyDeck..."), cole no campo whatsapp.
 const STORES = [
   {
     name: 'iWorld TCG',
@@ -52,27 +60,20 @@ const STORES = [
   }
 ];
 
-// ── CONFIG: afiliado Mercado Livre ──────────────────────────────
-// TODO Eduardo: troque pelos seus parâmetros reais de afiliado
-const ML_AFFILIATE_PARAMS = 'matt_word=SEU_CODIGO_AQUI&matt_tool=SEU_CODIGO_AQUI';
-
-function toAffiliateLink(url) {
-  if (!url) return '#';
-  try {
-    const u = new URL(url);
-    const sep = u.search ? '&' : '?';
-    return url + sep + ML_AFFILIATE_PARAMS;
-  } catch (e) {
-    return url;
-  }
-}
-
 function mlSearchUrl(term) {
   return 'https://lista.mercadolivre.com.br/' + encodeURIComponent(term).replace(/%20/g, '-');
 }
 
 function fmtBRLLoja(v) {
   return (+v || 0).toFixed(2).replace('.', ',');
+}
+
+function copyToClipboard(text, btn) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      if (btn) { const old = btn.textContent; btn.textContent = '✓ Copiado'; setTimeout(() => btn.textContent = old, 1400); }
+    }).catch(() => {});
+  }
 }
 
 // ── DATA: termos de busca (Supabase) — leitura pública, escrita admin ──
@@ -106,6 +107,16 @@ async function removeSearchTerm(id) {
 async function toggleFeatured(id, current) {
   if (!isAdmin()) return;
   await sbClient.from('ml_search_terms').update({ featured: !current }).eq('id', id);
+  renderLojas();
+}
+
+async function saveAffiliateUrl(id) {
+  if (!isAdmin()) return;
+  const input = document.getElementById('aff-' + id);
+  if (!input) return;
+  const val = input.value.trim();
+  const { error } = await sbClient.from('ml_search_terms').update({ affiliate_url: val || null }).eq('id', id);
+  if (error) { alert('Erro ao salvar link de afiliado: ' + error.message); return; }
   renderLojas();
 }
 
@@ -170,13 +181,28 @@ async function runSearchForTerm(termObj, containerEl) {
   if (results === null) {
     containerEl.innerHTML =
       '<div class="ml-loading">⚠️ Não consegui buscar direto (bloqueio do navegador). ' +
-      '<a href="' + toAffiliateLink(mlSearchUrl(termObj.term)) + '" target="_blank" rel="noopener">Abrir busca no Mercado Livre →</a></div>';
+      '<a href="' + mlSearchUrl(termObj.term) + '" target="_blank" rel="noopener">Abrir busca no Mercado Livre →</a></div>';
     return;
   }
   if (results.length) await insertPriceRecords(termObj.id, results);
-  containerEl.innerHTML = results.length
-    ? '<div class="ml-loading">✅ ' + results.length + ' ofertas registradas. Menor preço agora: R$ ' + fmtBRLLoja(results[0].price) + '</div>'
-    : '<div class="ml-loading">Nenhum resultado encontrado agora para "' + termObj.term + '".</div>';
+  if (!results.length) {
+    containerEl.innerHTML = '<div class="ml-loading">Nenhum resultado encontrado agora para "' + termObj.term + '".</div>';
+    return;
+  }
+  const rows = results.slice(0, 6).map(r => (
+    '<div class="ml-admin-result">' +
+      '<img src="' + r.thumbnail + '" alt="">' +
+      '<div class="ml-admin-result-info">' +
+        '<div class="ml-result-title">' + (r.title || '').slice(0, 55) + '</div>' +
+        '<div class="ml-result-price">R$ ' + fmtBRLLoja(r.price) + '</div>' +
+      '</div>' +
+      '<button class="btn-mini" onclick="copyToClipboard(' + JSON.stringify(r.permalink) + ', this)">📋 Copiar URL</button>' +
+    '</div>'
+  )).join('');
+  containerEl.innerHTML =
+    '<div class="ml-loading">✅ ' + results.length + ' ofertas registradas — menor preço agora: R$ ' + fmtBRLLoja(results[0].price) + '</div>' +
+    '<div class="ml-admin-results">' + rows + '</div>' +
+    '<div class="ml-admin-hint">Copie a URL do produto que quer indicar, cole em <a href="' + ML_AFFILIATE_TOOL_URL + '" target="_blank" rel="noopener">Central de Afiliados → Gerador de links</a>, e cole o link meli.la gerado no campo "Link de afiliado" abaixo.</div>';
   renderShowcaseSection();
 }
 
@@ -213,6 +239,7 @@ function renderProductCard(term, history, featured) {
   const best = bestRecord(history);
   const latest = latestRecord(history);
   const label = term.label || term.term;
+  const linkUrl = term.affiliate_url || (best ? best.url : null);
 
   if (!best) {
     return (
@@ -228,7 +255,7 @@ function renderProductCard(term, history, featured) {
 
   const updatedStr = latest && latest.found_at ? new Date(latest.found_at).toLocaleDateString('pt-BR') : '';
   return (
-    '<a class="product-card' + (featured ? ' product-card-featured' : '') + '" href="' + toAffiliateLink(best.url) + '" target="_blank" rel="noopener">' +
+    '<a class="product-card' + (featured ? ' product-card-featured' : '') + '" href="' + linkUrl + '" target="_blank" rel="noopener' + (term.affiliate_url ? ' sponsored' : '') + '">' +
       (featured ? '<div class="product-badge">🔥 OFERTA IMPERDÍVEL</div>' : '') +
       '<img class="product-img" src="' + best.thumbnail + '" alt="' + label + '">' +
       '<div class="product-info">' +
@@ -286,6 +313,10 @@ async function renderAdminPanel() {
             '</span>' +
           '</div>' +
           '<div class="ml-term-sub">termo de busca: <code>' + t.term + '</code></div>' +
+          '<div class="ml-aff-row">' +
+            '<input id="aff-' + t.id + '" placeholder="Cole aqui o link meli.la gerado" value="' + (t.affiliate_url || '') + '">' +
+            '<button class="btn-mini" onclick="saveAffiliateUrl(' + t.id + ')">Salvar link</button>' +
+          '</div>' +
           '<div id="res-' + t.id + '" class="ml-term-results"></div>' +
         '</div>'
       )).join('')
