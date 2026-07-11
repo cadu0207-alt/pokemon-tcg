@@ -347,6 +347,7 @@ function go(id,el){
   if(id==='dash'){renderDash();updateDashProgress();}
   if(id==='cartas'){renderCartas();}
   if(id==='gastos'){renderGastos();}
+  if(id==='lojas'){if(typeof renderLojas==='function')renderLojas();}
 }
 function renderAll(){renderDash();renderGastos();renderCartas();updateDashProgress();if(typeof renderEvolucao==='function')renderEvolucao();}
 

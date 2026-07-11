@@ -127,6 +127,7 @@
     <div class="tab" onclick="go('gastos',this)">💸 Gastos</div>
     <div class="tab" onclick="go('cartas',this)">🃏 Cartas Tiradas</div>
     <div class="tab" onclick="go('preco',this)">💰 Preço Justo</div>
+    <div class="tab" onclick="go('lojas',this)">🛍️ Lojas & Ofertas</div>
     <div class="tab" onclick="window.open('simulador.html','_blank')" style="background:linear-gradient(90deg,#7b2ff744,#f107a322);color:#c084fc">🎰 Simulador</div>
   </nav>
 
@@ -254,6 +255,10 @@
       <div class="sec-title" style="margin:0">💰 Calculadora de Preço Justo / EV</div>
     </div>
     <div id="ev-wrap"></div>
+  </div>
+
+  <div id="lojas" class="pane">
+    <div id="lojas-wrap"></div>
   </div>
 
 </div><!-- /pg-app -->
@@ -535,6 +540,7 @@
 <script defer src="app.js"></script>
 <script defer src="fichario_patch.js"></script>
 <script defer src="ev_calculator.js"></script>
+<script defer src="lojas.js"></script>
 <script>
 // Renderizar EV ao abrir a aba Preco Justo (após scripts deferidos)
 document.addEventListener('DOMContentLoaded', function(){
