@@ -1,0 +1,28 @@
+name: Snapshot Diario do Valor da Colecao
+
+on:
+  schedule:
+    # 02:50 UTC = 23:50 horario de Brasilia (UTC-3 fixo, sem horario de verao)
+    - cron: '50 2 * * *'
+  workflow_dispatch:
+    # Permite rodar manualmente pela aba Actions do GitHub
+
+jobs:
+  snapshot-value:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (branch Rotower)
+        uses: actions/checkout@v4
+        with:
+          ref: Rotower
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Registrar snapshot de valor
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/snapshot_value.js

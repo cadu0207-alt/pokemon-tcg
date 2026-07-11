@@ -234,7 +234,7 @@ function lprice(setId,n,fallback){
 }
 
 // ── ESTADO ──────────────────────────────────────────────────────
-let purchases=[],pulledCards=[],collected=new Set();
+let purchases=[],pulledCards=[],collected=new Set(),valueHistory=[];
 
 // ── VERSÕES ──────────────────────────────────────────────────────
 const VER_COLOR={N:'#c8cfe8',F:'#118ab2',RH:'#06d6a0',SP:'#ff6b35'};
@@ -276,14 +276,16 @@ async function loadAll(){
   if(!uid()){setStatus('Faça login','warning');return;}
   try{
     const myUid=uid();
-    const[{data:p},{data:c},{data:col}]=await Promise.all([
+    const[{data:p},{data:c},{data:col},{data:vh}]=await Promise.all([
       sbClient.from('purchases').select('*').eq('user_id',myUid).order('date',{ascending:false}),
       sbClient.from('pulled_cards').select('*').eq('user_id',myUid).order('id',{ascending:true}),
-      sbClient.from('collection').select('slot_key').eq('user_id',myUid)
+      sbClient.from('collection').select('slot_key').eq('user_id',myUid),
+      sbClient.from('value_history').select('date,total_value').eq('user_id',myUid).order('date',{ascending:true})
     ]);
     purchases=Array.isArray(p)?p:[];
     pulledCards=Array.isArray(c)?c:[];
     collected=new Set((Array.isArray(col)?col:[]).map(r=>r.slot_key));
+    valueHistory=Array.isArray(vh)?vh:[];
     setStatus('Online ✓','ok');
     fetchCambio();  // atualiza USD_BRL e EUR_BRL para conversão de preços
     renderAll();updateHomeStats();
@@ -349,7 +351,7 @@ function go(id,el){
   if(id==='gastos'){renderGastos();}
   if(id==='lojas'){if(typeof renderLojas==='function')renderLojas();}
 }
-function renderAll(){renderDash();renderGastos();renderCartas();updateDashProgress();if(typeof renderEvolucao==='function')renderEvolucao();}
+function renderAll(){renderDash();renderGastos();renderCartas();updateDashProgress();if(typeof renderEvolucao==='function')renderEvolucao();renderPatrimonio();}
 
 // ── UTILS ────────────────────────────────────────────────────────
 const fmtR=v=>(+v||0).toFixed(2).replace('.',',');
@@ -2517,6 +2519,59 @@ function renderEvolucao(){
     <span>Valor tirado: <b style="color:var(--teal)">R$${fmtR(accP)}</b></span>
     <span>ROI: <b style="color:${accP>=accI?'var(--teal)':'var(--gold)'}">${accI>0?((accP/accI-1)*100).toFixed(0):0}%</b></span>
   </div>`;
+}
+
+// ── EVOLUÇÃO DO PATRIMÔNIO (snapshot diário via value_history) ────
+// Os dados vêm de scripts/snapshot_value.js, rodado 1x/dia via GitHub
+// Actions — não há gravação client-side aqui, só leitura.
+function renderPatrimonio(){
+  const el=document.getElementById('chart-patrimonio');
+  if(!el)return;
+  if(!valueHistory||valueHistory.length<2){
+    el.innerHTML='<div style="color:var(--muted);font-size:11px">Ainda sem histórico suficiente — o snapshot diário roda todo dia à noite. Volte amanhã.</div>';
+    return;
+  }
+  const W=760,H=180,PAD_L=54,PAD_R=14,PAD_T=14,PAD_B=26;
+  const vals=valueHistory.map(v=>Number(v.total_value)||0);
+  const minV=Math.min(...vals),maxV=Math.max(...vals);
+  const range=(maxV-minV)||1;
+  const n=valueHistory.length;
+  const x=i=>PAD_L+(n>1?i/(n-1):0)*(W-PAD_L-PAD_R);
+  const y=v=>PAD_T+(1-(v-minV)/range)*(H-PAD_T-PAD_B);
+  const pts=vals.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const areaPts=`${x(0).toFixed(1)},${(H-PAD_B).toFixed(1)} ${pts} ${x(n-1).toFixed(1)},${(H-PAD_B).toFixed(1)}`;
+  // Eixo Y: 3 linhas-guia (min, meio, max)
+  const guides=[minV,(minV+maxV)/2,maxV].map(v=>{
+    const yy=y(v).toFixed(1);
+    return`<line x1="${PAD_L}" y1="${yy}" x2="${W-PAD_R}" y2="${yy}" stroke="var(--border)" stroke-width="1" stroke-dasharray="3,3"/>
+      <text x="${PAD_L-6}" y="${+yy+3}" text-anchor="end" font-size="9" fill="var(--muted)" font-family="'Space Mono',monospace">R$${fmtR(v)}</text>`;
+  }).join('');
+  // Rótulos de data: primeiro, meio e último ponto
+  const dLbl=d=>new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+  const idxs=n>2?[0,Math.floor((n-1)/2),n-1]:[0,n-1];
+  const dateLbls=idxs.map(i=>`<text x="${x(i).toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="9" fill="var(--muted)" font-family="'Space Mono',monospace">${dLbl(valueHistory[i].date)}</text>`).join('');
+  const last=vals[n-1],first=vals[0];
+  const delta=last-first,deltaPct=first>0?(delta/first*100):0;
+  const deltaColor=delta>=0?'var(--teal)':'var(--accent)';
+  el.innerHTML=`
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;overflow:visible">
+      <defs>
+        <linearGradient id="pat-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--accent2)" stop-opacity="0.28"/>
+          <stop offset="100%" stop-color="var(--accent2)" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      ${guides}
+      <polygon points="${areaPts}" fill="url(#pat-fill)"/>
+      <polyline points="${pts}" fill="none" stroke="var(--accent2)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${vals.map((v,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i===n-1?3.5:2}" fill="var(--accent2)"><title>${valueHistory[i].date}: R$${fmtR(v)}</title></circle>`).join('')}
+      ${dateLbls}
+    </svg>
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-family:'Space Mono',monospace;font-size:11px;display:flex;gap:18px;flex-wrap:wrap">
+      <span>Atual: <b>R$${fmtR(last)}</b></span>
+      <span>Variação no período: <b style="color:${deltaColor}">${delta>=0?'+':''}R$${fmtR(delta)} (${deltaPct>=0?'+':''}${deltaPct.toFixed(1)}%)</b></span>
+      <span>${n} dias registrados</span>
+    </div>`;
 }
 
 // ── COMPARTILHAMENTO PÚBLICO DE FICHÁRIO (link + QR code) ─────────
