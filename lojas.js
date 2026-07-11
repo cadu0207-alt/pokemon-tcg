@@ -202,6 +202,57 @@ async function loadCoupons() {
   return data || [];
 }
 
+function couponForTerm(coupons, termId) {
+  return coupons.find(c => c.term_id === termId) || null;
+}
+
+function applyCouponDiscount(price, coupon) {
+  if (!coupon || !coupon.discount_type || coupon.discount_value == null) return null;
+  const value = +coupon.discount_value;
+  if (coupon.discount_type === 'percent') return Math.max(0, price * (1 - value / 100));
+  if (coupon.discount_type === 'fixed') return Math.max(0, price - value);
+  return null;
+}
+
+async function saveProductCoupon(termId) {
+  if (!isAdmin()) return;
+  const codeEl = document.getElementById('cupom-code-' + termId);
+  const typeEl = document.getElementById('cupom-type-' + termId);
+  const valueEl = document.getElementById('cupom-value-' + termId);
+  const code = codeEl.value.trim();
+  const discountType = typeEl.value;
+  const discountValue = parseFloat(valueEl.value);
+  if (!code || isNaN(discountValue) || discountValue <= 0) {
+    alert('Preencha o código do cupom e um valor de desconto válido.');
+    return;
+  }
+  const discountLabel = discountType === 'percent' ? discountValue + '% OFF' : 'R$ ' + fmtBRLLoja(discountValue) + ' OFF';
+
+  const coupons = await loadCoupons();
+  const existing = couponForTerm(coupons, termId);
+  const row = {
+    term_id: termId,
+    code,
+    description: 'Cupom exclusivo testado neste produto',
+    discount: discountLabel,
+    discount_type: discountType,
+    discount_value: discountValue,
+    source: 'manual',
+    active: true
+  };
+  const { error } = existing
+    ? await sbClient.from('ml_coupons').update(row).eq('id', existing.id)
+    : await sbClient.from('ml_coupons').insert(row);
+  if (error) { alert('Erro ao salvar cupom: ' + error.message); return; }
+  renderLojas();
+}
+
+async function removeProductCoupon(couponId) {
+  if (!isAdmin()) return;
+  await sbClient.from('ml_coupons').delete().eq('id', couponId);
+  renderLojas();
+}
+
 // ── BUSCA no catálogo do Mercado Livre (via Edge Function) — admin ──
 async function runSearchForTerm(termObj, containerEl) {
   if (!isAdmin()) return;
@@ -269,7 +320,7 @@ function latestRecord(history) {
   return history.length ? history[history.length - 1] : null;
 }
 
-function renderProductCard(term, history, featured) {
+function renderProductCard(term, history, featured, coupon) {
   const best = bestRecord(history);
   const latest = latestRecord(history);
   const label = term.label || term.term;
@@ -289,13 +340,23 @@ function renderProductCard(term, history, featured) {
 
   const updatedStr = latest && latest.found_at ? new Date(latest.found_at).toLocaleDateString('pt-BR') : '';
   const imgSrc = term.image_url || best.thumbnail;
+  const discounted = coupon ? applyCouponDiscount(+best.price, coupon) : null;
+  const priceHtml = discounted != null
+    ? (
+        '<div class="product-price product-price-with-coupon">' +
+          '<span class="product-price-old">R$ ' + fmtBRLLoja(best.price) + '</span>' +
+          '<span class="product-price-new">R$ ' + fmtBRLLoja(discounted) + '</span>' +
+        '</div>' +
+        '<div class="product-coupon-badge">🎟️ Cupom <code>' + coupon.code + '</code> · ' + (coupon.discount || '') + '</div>'
+      )
+    : '<div class="product-price">R$ ' + fmtBRLLoja(best.price) + '</div>';
   return (
     '<a class="product-card' + (featured ? ' product-card-featured' : '') + '" href="' + linkUrl + '" target="_blank" rel="noopener' + (term.affiliate_url ? ' sponsored' : '') + '">' +
       (featured ? '<div class="product-badge">🔥 OFERTA IMPERDÍVEL</div>' : '') +
       '<img class="product-img" src="' + imgSrc + '" alt="' + label + '">' +
       '<div class="product-info">' +
         '<div class="product-name">' + label + '</div>' +
-        '<div class="product-price">R$ ' + fmtBRLLoja(best.price) + '</div>' +
+        priceHtml +
         '<div class="product-note">menor preço já registrado' + (updatedStr ? ' · atualizado ' + updatedStr : '') + '</div>' +
       '</div>' +
     '</a>'
@@ -310,11 +371,14 @@ async function renderShowcaseSection() {
     holder.innerHTML = '<div class="ml-loading">Nenhuma oferta cadastrada ainda.</div>';
     return;
   }
-  const histories = await Promise.all(terms.map(t => loadPriceHistory(t.id)));
+  const [histories, coupons] = await Promise.all([
+    Promise.all(terms.map(t => loadPriceHistory(t.id))),
+    loadCoupons()
+  ]);
   const featuredCards = [];
   const normalCards = [];
   terms.forEach((t, i) => {
-    const html = renderProductCard(t, histories[i], !!t.featured);
+    const html = renderProductCard(t, histories[i], !!t.featured, couponForTerm(coupons, t.id));
     if (t.featured) featuredCards.push(html); else normalCards.push(html);
   });
 
@@ -335,9 +399,11 @@ async function renderAdminPanel() {
   if (!holder) return;
   if (!isAdmin()) { holder.innerHTML = ''; return; }
 
-  const terms = await loadSearchTerms();
+  const [terms, coupons] = await Promise.all([loadSearchTerms(), loadCoupons()]);
   const termsListHtml = terms.length
-    ? terms.map(t => (
+    ? terms.map(t => {
+        const coupon = couponForTerm(coupons, t.id);
+        return (
         '<div class="ml-term-card">' +
           '<div class="ml-term-hdr">' +
             '<span class="ml-term-name">' + (t.featured ? '🔥 ' : '🔎 ') + (t.label || t.term) + '</span>' +
@@ -353,9 +419,20 @@ async function renderAdminPanel() {
             '<input id="aff-' + t.id + '" placeholder="Cole aqui o link meli.la gerado" value="' + (t.affiliate_url || '') + '">' +
             '<button class="btn-mini" onclick="saveAffiliateUrl(' + t.id + ')">Salvar link</button>' +
           '</div>' +
+          '<div class="ml-coupon-row">' +
+            '<input id="cupom-code-' + t.id + '" placeholder="Código do cupom testado" value="' + (coupon ? coupon.code : '') + '">' +
+            '<select id="cupom-type-' + t.id + '">' +
+              '<option value="percent"' + (coupon && coupon.discount_type === 'fixed' ? '' : ' selected') + '>%</option>' +
+              '<option value="fixed"' + (coupon && coupon.discount_type === 'fixed' ? ' selected' : '') + '>R$</option>' +
+            '</select>' +
+            '<input id="cupom-value-' + t.id + '" type="number" step="0.01" min="0" placeholder="Valor" value="' + (coupon ? coupon.discount_value : '') + '">' +
+            '<button class="btn-mini" onclick="saveProductCoupon(' + t.id + ')">' + (coupon ? 'Atualizar cupom' : 'Salvar cupom') + '</button>' +
+            (coupon ? '<button class="btn-mini btn-mini-danger" onclick="removeProductCoupon(' + coupon.id + ')">Remover</button>' : '') +
+          '</div>' +
           '<div id="res-' + t.id + '" class="ml-term-results"></div>' +
         '</div>'
-      )).join('')
+        );
+      }).join('')
     : '<div class="ml-loading">Nenhum termo cadastrado ainda — adicione um acima.</div>';
 
   holder.innerHTML =
@@ -385,7 +462,8 @@ async function onAddCatalogClick() {
 }
 
 // ── RENDER: cupons ───────────────────────────────────────────────
-function renderCouponsBlock(coupons) {
+function renderCouponsBlock(allCoupons) {
+  const coupons = allCoupons.filter(c => !c.term_id); // cupons de produto aparecem no card dele
   const query = encodeURIComponent('cupom mercado livre pokemon tcg');
   const extLinks = (
     '<a href="https://www.pelando.com.br/busca?q=' + query + '" target="_blank" rel="noopener">Pelando</a> · ' +
