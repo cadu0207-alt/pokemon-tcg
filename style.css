@@ -1391,3 +1391,31 @@ body.share-view .btn-add { display: none !important; }
   border-top: 1px solid var(--border);
 }
 .admin-stats-lastrow strong { color: var(--fg); }
+
+/* Filtro por coleção na aba Lojas & Ofertas */
+.collection-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 18px;
+}
+.filter-chip {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card-bg, transparent);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.filter-chip:hover { border-color: var(--accent); color: var(--fg); }
+.filter-chip-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+.product-card-hidden { display: none !important; }
+.products-grid-hidden { display: none !important; }

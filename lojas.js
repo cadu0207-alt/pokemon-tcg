@@ -116,7 +116,7 @@ async function loadSearchTerms() {
   return data || [];
 }
 
-async function addSearchTerm(linkOrId, label) {
+async function addSearchTerm(linkOrId, label, collection) {
   if (!isAdmin() || !linkOrId.trim()) return;
   const preview = await fetchCatalogPreview(linkOrId);
   if (!preview.ok) { alert('Não consegui cadastrar: ' + preview.error); return; }
@@ -129,13 +129,24 @@ async function addSearchTerm(linkOrId, label) {
       term: preview.name || preview.catalogId,
       label: finalLabel,
       catalog_product_id: preview.catalogId,
-      image_url: preview.image || null
+      image_url: preview.image || null,
+      collection: (collection || '').trim() || null
     })
     .select()
     .single();
   if (error) { alert('Erro ao salvar produto: ' + error.message); return; }
 
   if (preview.lowestPrice != null) await insertCatalogPriceRecord(data.id, preview);
+  renderLojas();
+}
+
+async function saveCollection(id) {
+  if (!isAdmin()) return;
+  const input = document.getElementById('coll-' + id);
+  if (!input) return;
+  const val = input.value.trim();
+  const { error } = await sbClient.from('ml_search_terms').update({ collection: val || null }).eq('id', id);
+  if (error) { alert('Erro ao salvar coleção: ' + error.message); return; }
   renderLojas();
 }
 
@@ -163,14 +174,17 @@ async function saveAffiliateUrl(id) {
 
 async function loadPriceHistory(termId) {
   if (!sbClient) return [];
-  const { data, error } = await sbClient
-    .from('ml_price_history')
-    .select('*')
-    .eq('term_id', termId)
-    .order('found_at', { ascending: true })
-    .limit(60);
+  // Pega os registros mais RECENTES (desc + limit) e depois inverte pra
+  // ordem cronológica — antes pegava os mais ANTIGOS (asc + limit), então
+  // depois de ~2,5 dias de cron horário os preços de ontem/hoje ficavam
+  // de fora e "menor preço já registrado" comparava só dados velhos.
+  const { data, error } = await withTimeout(
+    sbClient.from('ml_price_history').select('*').eq('term_id', termId)
+      .order('found_at', { ascending: false }).limit(500),
+    10000, 'ml_price_history'
+  );
   if (error) { console.error('loadPriceHistory', error); return []; }
-  return data || [];
+  return (data || []).slice().reverse();
 }
 
 async function insertCatalogPriceRecord(termId, preview) {
@@ -502,9 +516,11 @@ function renderProductCard(term, history, featured, coupon, rules) {
   const label = term.label || term.term;
   const linkUrl = term.affiliate_url || (best ? best.url : null);
 
+  const collectionAttr = ' data-collection="' + (term.collection || '').replace(/"/g, '&quot;') + '"';
+
   if (!best) {
     return (
-      '<div class="product-card' + (featured ? ' product-card-featured' : '') + '">' +
+      '<div class="product-card' + (featured ? ' product-card-featured' : '') + '"' + collectionAttr + '>' +
         '<div class="product-img product-img-empty">📦</div>' +
         '<div class="product-info">' +
           '<div class="product-name">' + label + '</div>' +
@@ -545,7 +561,7 @@ function renderProductCard(term, history, featured, coupon, rules) {
       )
     : '<div class="product-price">R$ ' + fmtBRLLoja(best.price) + '</div>';
   return (
-    '<a class="product-card' + (featured ? ' product-card-featured' : '') + '" href="' + linkUrl + '" target="_blank" rel="noopener' + (term.affiliate_url ? ' sponsored' : '') + '">' +
+    '<a class="product-card' + (featured ? ' product-card-featured' : '') + '"' + collectionAttr + ' href="' + linkUrl + '" target="_blank" rel="noopener' + (term.affiliate_url ? ' sponsored' : '') + '">' +
       (featured ? '<div class="product-badge">🔥 OFERTA IMPERDÍVEL</div>' : '') +
       '<img class="product-img" src="' + imgSrc + '" alt="' + label + '">' +
       '<div class="product-info">' +
@@ -556,6 +572,41 @@ function renderProductCard(term, history, featured, coupon, rules) {
       '</div>' +
     '</a>'
   );
+}
+
+// Filtro por coleção (Caos Ascendente, Inglês etc.) — 100% client-side:
+// já temos todos os cards renderizados no DOM, então filtrar é só
+// mostrar/esconder por data-collection, sem nova consulta ao banco.
+function renderCollectionFilterBar(terms) {
+  const set = new Set();
+  terms.forEach(function(t) { if (t.collection) set.add(t.collection); });
+  if (!set.size) return '';
+  const options = Array.from(set).sort();
+  const chips = ['<button class="filter-chip filter-chip-active" data-filter="" onclick="filterLojasByCollection(\'\', this)">Todos</button>']
+    .concat(options.map(function(c) {
+      return '<button class="filter-chip" data-filter="' + c.replace(/"/g, '&quot;') + '" onclick="filterLojasByCollection(\'' + c.replace(/'/g, "\\'") + '\', this)">' + c + '</button>';
+    }));
+  return '<div class="collection-filter-bar">' + chips.join('') + '</div>';
+}
+
+function filterLojasByCollection(collection, btn) {
+  const bar = btn ? btn.closest('.collection-filter-bar') : null;
+  if (bar) {
+    bar.querySelectorAll('.filter-chip').forEach(function(el) { el.classList.remove('filter-chip-active'); });
+    btn.classList.add('filter-chip-active');
+  }
+  document.querySelectorAll('#lojas-showcase .product-card').forEach(function(card) {
+    const match = !collection || card.getAttribute('data-collection') === collection;
+    card.classList.toggle('product-card-hidden', !match);
+  });
+  // Some seção some se nenhum card dela sobreviveu ao filtro.
+  document.querySelectorAll('#lojas-showcase .products-grid').forEach(function(grid) {
+    const visible = grid.querySelectorAll('.product-card:not(.product-card-hidden)').length;
+    const title = grid.previousElementSibling;
+    const hide = visible === 0;
+    grid.classList.toggle('products-grid-hidden', hide);
+    if (title && title.classList.contains('sec-title')) title.classList.toggle('products-grid-hidden', hide);
+  });
 }
 
 async function renderShowcaseSection() {
@@ -578,7 +629,7 @@ async function renderShowcaseSection() {
     if (t.featured) featuredCards.push(html); else normalCards.push(html);
   });
 
-  let html = '';
+  let html = renderCollectionFilterBar(terms);
   if (featuredCards.length) {
     html += '<div class="sec-title" style="margin-top:8px">🔥 Ofertas em Destaque</div>';
     html += '<div class="products-grid products-grid-featured">' + featuredCards.join('') + '</div>';
@@ -628,6 +679,11 @@ async function renderAdminPanel() {
           '<div class="ml-coupon-row">' +
             '<span style="font-size:11px;color:var(--muted);white-space:nowrap">Vincular ao Preço Justo/Simulador:</span>' +
             '<select id="pkey-' + t.id + '" onchange="saveProductKey(' + t.id + ')">' + productKeyOptionsHtml(t.product_key) + '</select>' +
+          '</div>' +
+          '<div class="ml-coupon-row">' +
+            '<span style="font-size:11px;color:var(--muted);white-space:nowrap">Coleção/filtro:</span>' +
+            '<input id="coll-' + t.id + '" list="ml-collections-datalist" placeholder="ex: Caos Ascendente, Inglês" value="' + (t.collection || '') + '">' +
+            '<button class="btn-mini" onclick="saveCollection(' + t.id + ')">Salvar</button>' +
           '</div>' +
           '<div id="res-' + t.id + '" class="ml-term-results"></div>' +
         '</div>'
@@ -685,23 +741,33 @@ async function renderAdminPanel() {
     '<div class="ml-add-term">' +
       '<input id="new-ml-label" placeholder="Nome do produto (opcional — puxa do ML se deixar em branco)">' +
       '<input id="new-ml-term" placeholder="Link de catálogo do ML (.../p/MLB1234567) ou o ID (MLB1234567)">' +
+      '<input id="new-ml-collection" list="ml-collections-datalist" placeholder="Coleção/filtro (ex: Caos Ascendente, Inglês)">' +
       '<button class="btn-add" id="btn-add-ml-term" onclick="onAddCatalogClick()">+ RASTREAR PRODUTO</button>' +
     '</div>' +
-    '<div class="ml-add-hint">Cole o link da página de catálogo do produto (a que junta os vários vendedores) — o nome, a imagem e o menor preço são carregados automaticamente.</div>' +
+    '<datalist id="ml-collections-datalist">' + collectionsDatalistHtml(terms) + '</datalist>' +
+    '<div class="ml-add-hint">Cole o link da página de catálogo do produto (a que junta os vários vendedores) — o nome, a imagem e o menor preço são carregados automaticamente. O campo "Coleção/filtro" alimenta o filtro que aparece pros usuários na aba Lojas.</div>' +
     '<div class="ml-terms-list">' + termsListHtml + '</div>';
+}
+
+function collectionsDatalistHtml(terms) {
+  const set = new Set();
+  (terms || []).forEach(function(t) { if (t.collection) set.add(t.collection); });
+  return Array.from(set).sort().map(function(c) { return '<option value="' + c + '">'; }).join('');
 }
 
 async function onAddCatalogClick() {
   const btn = document.getElementById('btn-add-ml-term');
   const labelEl = document.getElementById('new-ml-label');
   const linkEl = document.getElementById('new-ml-term');
+  const collEl = document.getElementById('new-ml-collection');
   if (!linkEl.value.trim()) return;
   const oldText = btn.textContent;
   btn.textContent = 'Buscando...';
   btn.disabled = true;
-  await addSearchTerm(linkEl.value, labelEl.value);
+  await addSearchTerm(linkEl.value, labelEl.value, collEl ? collEl.value : '');
   linkEl.value = '';
   labelEl.value = '';
+  if (collEl) collEl.value = '';
   btn.textContent = oldText;
   btn.disabled = false;
 }
