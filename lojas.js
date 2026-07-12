@@ -77,12 +77,12 @@ const STORES = [
     tag: '⭐ Loja recomendada'
   },
   {
-    name: 'TOYBOX POKE CARDS',
-    city: '',
-    logo: '',
-    tiktok: '',
-    instagram: '',
-    whatsapp: '',
+    name: 'TOYBOX Artes 3D',
+    city: 'José Bonifácio · SP',
+    logo: 'https://toyboxtcg.netlify.app/assets/logo.jpeg',
+    tiktok: 'https://www.tiktok.com/@toyboxtcg',
+    instagram: 'https://www.instagram.com/toybox_colecionaveis/',
+    whatsapp: 'https://wa.me/5517991620996',
     color: '#0e7898',
     tag: '⭐ Loja recomendada'
   }
