@@ -509,6 +509,18 @@ function bestRecord(history) {
 function latestRecord(history) {
   return history.length ? history[history.length - 1] : null;
 }
+function computePriceStats(history) {
+  const prices = (history || [])
+    .map(r => +r.price)
+    .filter(p => Number.isFinite(p) && p > 0)
+    .sort((a, b) => a - b);
+  if (!prices.length) return null;
+  const n = prices.length;
+  const sum = prices.reduce((a, b) => a + b, 0);
+  const avg = sum / n;
+  const median = n % 2 === 1 ? prices[(n - 1) / 2] : (prices[n / 2 - 1] + prices[n / 2]) / 2;
+  return { min: prices[0], max: prices[n - 1], avg, median, count: n };
+}
 
 function renderProductCard(term, history, featured, coupon, rules) {
   const best = bestRecord(history);
@@ -551,6 +563,18 @@ function renderProductCard(term, history, featured, coupon, rules) {
     badgeLabel = r.discount_type === 'percent' ? (+r.discount_value) + '% OFF' : 'R$ ' + fmtBRLLoja(r.discount_value) + ' OFF';
   }
 
+  const stats = computePriceStats(history);
+  const statsHtml = (stats && stats.count > 1)
+    ? (
+        '<div class="product-stats">' +
+          '<div class="product-stat"><span class="product-stat-lbl">Menor</span><span class="product-stat-val">R$ ' + fmtBRLLoja(stats.min) + '</span></div>' +
+          '<div class="product-stat"><span class="product-stat-lbl">Mediana</span><span class="product-stat-val">R$ ' + fmtBRLLoja(stats.median) + '</span></div>' +
+          '<div class="product-stat"><span class="product-stat-lbl">Média</span><span class="product-stat-val">R$ ' + fmtBRLLoja(stats.avg) + '</span></div>' +
+          '<div class="product-stat"><span class="product-stat-lbl">Maior</span><span class="product-stat-val">R$ ' + fmtBRLLoja(stats.max) + '</span></div>' +
+        '</div>'
+      )
+    : '';
+
   const priceHtml = discounted != null
     ? (
         '<div class="product-price product-price-with-coupon">' +
@@ -569,6 +593,7 @@ function renderProductCard(term, history, featured, coupon, rules) {
         priceHtml +
         '<div class="product-note">menor preço já registrado' + (updatedStr ? ' · atualizado ' + updatedStr : '') + '</div>' +
         '<div class="product-note-warn">💡 Se o preço na página não bater, veja "Outras opções de compra"/"Mais vendedores" ao lado do produto — o valor listado costuma estar lá.</div>' +
+        statsHtml +
       '</div>' +
     '</a>'
   );
@@ -629,7 +654,8 @@ async function renderShowcaseSection() {
     if (t.featured) featuredCards.push(html); else normalCards.push(html);
   });
 
-  let html = renderCollectionFilterBar(terms);
+  let html = '<div class="ml-price-warning">⚠️ Os preços aqui mostram sempre o <strong>menor valor encontrado entre todos os vendedores</strong> do produto no Mercado Livre — mesmo que esse vendedor tenha poucas vendas ou pouca reputação ainda. Antes de comprar, confira a avaliação e o histórico do vendedor na página do anúncio.</div>';
+  html += renderCollectionFilterBar(terms);
   if (featuredCards.length) {
     html += '<div class="sec-title" style="margin-top:8px">🔥 Ofertas em Destaque</div>';
     html += '<div class="products-grid products-grid-featured">' + featuredCards.join('') + '</div>';

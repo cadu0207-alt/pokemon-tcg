@@ -16,15 +16,40 @@ var PULL_RATES = {
 };
 var EV_EXCLUDE = { 'Comum': true, 'Incomum': true };
 
+// ── Mapa de raridades por era/idioma ─────────────────────────────
+// Cada geração (ME, SV) e cada tradução usa um texto diferente pra
+// dizer a MESMA coisa. Antes só as strings do ME04 eram reconhecidas
+// e tudo mais (toda a era SV, boa parte do catálogo) caía no default
+// 'Rara' — tratando Ultra Rara/Ilustrada Especial/Hyper Rare como se
+// fossem raridade comum de 76% de chance. Ver [[feedback_coding]]
+// incidente 2026-07 "EV só bate em Caos Ascendente".
+//
+// SV usa as MESMAS taxas calibradas pra era ME como aproximação (não
+// há dado real de pull rate por era ainda — decisão consciente do
+// Eduardo até termos números melhores).
 function normalizeRare(r) {
   if (!r) return 'Rara';
   var s = r.trim();
   if (s === 'Dupla Rara' || s === 'Rara Dupla' || s === 'Double Rare') return 'Dupla Rara';
-  if (s === 'Ilustr. Rara' || s === 'Illustration Rare')  return 'Ilustr. Rara';
-  if (s === 'Rara Ultra' || s === 'Ultra Rare')            return 'Rara Ultra';
-  if (s === 'Ilustr. Esp. Rara' || s === 'Special Illustration Rare') return 'Ilustr. Esp. Rara';
-  if (s === 'Mega Hyper Rare' || s === 'Hyper Rare' || s === 'Mega Attack Rare') return 'Mega Hyper Rare';
-  if (s === 'Rara (Holo)' || s === 'Holo Rare') return 'Rara (Holo)';
+  // Illustration Rare (IR) — ME: "Ilustr. Rara" · SV: "Rara Ilustrada" · Promo: "Ilustração Rara (IR)" · ME05 (provisório): "Art Rare"
+  if (s === 'Ilustr. Rara' || s === 'Illustration Rare' || s === 'Rara Ilustrada' ||
+      s === 'Ilustração Rara (IR)' || s === 'Art Rare') return 'Ilustr. Rara';
+  // Ultra Rare (UR) — ME: "Rara Ultra" · SV: "Ultra Rara" (ordem invertida) · ME05 (provisório): "Super Rare"
+  if (s === 'Rara Ultra' || s === 'Ultra Rare' || s === 'Ultra Rara' || s === 'Super Rare') return 'Rara Ultra';
+  // Special Illustration Rare (SAR/SIR) — ME: "Ilustr. Esp. Rara" · SV: "Rara Ilustrada Especial" · ME05 (provisório): "Special Art Rare"
+  if (s === 'Ilustr. Esp. Rara' || s === 'Special Illustration Rare' || s === 'Rara Ilustrada Especial' ||
+      s === 'Special Art Rare') return 'Ilustr. Esp. Rara';
+  // Hyper Rare (topo da raridade) — ME: "Mega Hyper Rare"/"Mega Attack Rare" · SV: "Hiper Rara" · ME05 (provisório): "Mega Ultra Rare"
+  if (s === 'Mega Hyper Rare' || s === 'Hyper Rare' || s === 'Mega Attack Rare' ||
+      s === 'Hiper Rara' || s === 'Mega Ultra Rare') return 'Mega Hyper Rare';
+  // Holo Rare (slot bônus, sem valor de mercado relevante — fica fora do EV, prob 0)
+  if (s === 'Rara (Holo)' || s === 'Holo Rare' || s === 'Rara Holo') return 'Rara (Holo)';
+  // ACE SPEC e Shiny Vault (Rara Brilhante / Ultra Rara Brilhante) — mecânica exclusiva
+  // da era SV, sem equivalente na era ME. Sem taxa real calibrada ainda: fica de fora
+  // do cálculo de EV por enquanto (não existe entrada correspondente em PULL_RATES,
+  // então calcEV() ignora essas cartas em vez de tratá-las como raridade comum).
+  if (s === 'ACE SPEC') return 'ACE SPEC';
+  if (s === 'Rara Brilhante' || s === 'Ultra Rara Brilhante') return 'Rara Brilhante (Shiny Vault)';
   if (s === 'Comum' || s === 'Common')   return 'Comum';
   if (s === 'Incomum' || s === 'Uncommon') return 'Incomum';
   return 'Rara';
