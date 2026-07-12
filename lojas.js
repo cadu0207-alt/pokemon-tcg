@@ -107,12 +107,11 @@ function copyToClipboard(text, btn) {
 // ── DATA: termos de busca (Supabase) — leitura pública, escrita admin ──
 async function loadSearchTerms() {
   if (!sbClient) return [];
-  const { data, error } = await sbClient
-    .from('ml_search_terms')
-    .select('*')
-    .eq('active', true)
-    .order('featured', { ascending: false })
-    .order('created_at', { ascending: false });
+  const { data, error } = await withTimeout(
+    sbClient.from('ml_search_terms').select('*').eq('active', true)
+      .order('featured', { ascending: false }).order('created_at', { ascending: false }),
+    10000, 'ml_search_terms'
+  );
   if (error) { console.error('loadSearchTerms', error); return []; }
   return data || [];
 }
@@ -190,14 +189,27 @@ async function insertCatalogPriceRecord(termId, preview) {
   if (error) console.error('insertCatalogPriceRecord', error);
 }
 
+// ── Blindagem: uma query travada (lock no banco, rede lenta etc.)
+// não pode congelar a aba inteira de Lojas & Ofertas. Qualquer leitura
+// que passar do prazo aqui é tratada como "sem dados" em vez de travar
+// o await pra sempre.
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => setTimeout(() => {
+      console.error('[lojas] timeout (' + ms + 'ms) em: ' + label);
+      resolve({ data: null, error: { message: 'timeout' } });
+    }, ms))
+  ]);
+}
+
 // ── DATA: cupons (leitura pública) ──────────────────────────────
 async function loadCoupons() {
   if (!sbClient) return [];
-  const { data, error } = await sbClient
-    .from('ml_coupons')
-    .select('*')
-    .eq('active', true)
-    .order('created_at', { ascending: false });
+  const { data, error } = await withTimeout(
+    sbClient.from('ml_coupons').select('*').eq('active', true).order('created_at', { ascending: false }),
+    10000, 'ml_coupons'
+  );
   if (error) { console.error('loadCoupons', error); return []; }
   return data || [];
 }
@@ -213,11 +225,10 @@ function couponForTerm(coupons, termId) {
 // produto rastreado cujo preço bata as condições.
 async function loadCouponRules() {
   if (!sbClient) return [];
-  const { data, error } = await sbClient
-    .from('ml_coupon_rules')
-    .select('*')
-    .eq('active', true)
-    .order('created_at', { ascending: false });
+  const { data, error } = await withTimeout(
+    sbClient.from('ml_coupon_rules').select('*').eq('active', true).order('created_at', { ascending: false }),
+    10000, 'ml_coupon_rules'
+  );
   if (error) { console.error('loadCouponRules', error); return []; }
   return data || [];
 }
