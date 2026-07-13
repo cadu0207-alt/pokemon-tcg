@@ -96,7 +96,12 @@ const CARDS_MEP = [
   {n:'062',name:'Fuecoco',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:35.00,base:true,series:'Série 3 — Paldea'},
   {n:'063',name:'Quaxly',type:'Aquático',color:'#2196F3',rare:'Ilustração Rara (IR)',price:35.00,base:true,series:'Série 3 — Paldea'},
   // ── PROMOS MEP064–081 (produtos de Ordem Perfeita/ME03 e Caos Ascendente/ME04) ──
-  // MEP072 e 073 ainda não foram revelados/confirmados (Bulbapedia/pkmncards) — não incluídos.
+  // CORRIGIDO 13/07/2026: MEP072 (Mega Clefable ex) e MEP073 (Mega Gengar ex) JÁ estão
+  // confirmados e revelados (checklist oficial serebii.net/card/megapromos) — comentário
+  // antigo estava desatualizado. As duas cartas continuam nas linhas abaixo normalmente.
+  // pkmncards.com ainda não tem o scan dessas duas (404 na imagem em 13/07) — o fallback
+  // tcgdex também não cobre a série ME inteira (ver nota no topo do arquivo/app.js), então
+  // até alguém escanear, essas duas cartas ficam sem imagem no fichário (placeholder).
   {n:'064',name:'Serperior',type:'Grama',color:'#4CAF50',rare:'Promo (Staff)',price:9.60,base:false,series:'Promos MEP 064–081'},
   {n:'065',name:'Barbaracle',type:'Lutador',color:'#795548',rare:'Promo (Staff)',price:21.00,base:false,series:'Promos MEP 064–081'},
   {n:'066',name:'Tyrantrum',type:'Lutador',color:'#795548',rare:'Promo (Staff)',price:16.40,base:false,series:'Promos MEP 064–081'},

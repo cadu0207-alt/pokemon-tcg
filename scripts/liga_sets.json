@@ -7,6 +7,21 @@
     { "key": "meg",  "file": "cards_meg.js",  "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=730%20ed=MEG" },
     { "key": "me05", "file": "cards_me05.js", "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=792%20ed=PBL" },
     { "key": "me06", "file": "cards_me06.js", "url": "" },
-    { "key": "mep",  "file": "cards_mep.js",  "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=733%20ed=MEP" }
+    { "key": "mep",  "file": "cards_mep.js",  "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=733%20ed=MEP" },
+
+    { "key": "sv1",    "file": "cards_sv1.js",    "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=343%20ed=SV1" },
+    { "key": "sv2",    "file": "cards_sv2.js",    "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=391%20ed=PAL" },
+    { "key": "sv3",    "file": "cards_sv3.js",    "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=406%20ed=OBF" },
+    { "key": "sv3pt5", "file": "cards_sv3pt5.js", "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=411%20ed=MEW" },
+    { "key": "sv4",    "file": "cards_sv4.js",    "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=439%20ed=PAR" },
+    { "key": "sv4pt5", "file": "cards_sv4pt5.js", "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=505%20ed=PAF" },
+    { "key": "sv5",    "file": "cards_sv5.js",    "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=529%20ed=TEF" },
+    { "key": "sv6",    "file": "cards_sv6.js",    "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=538%20ed=TWM" },
+    { "key": "sv6pt5", "file": "cards_sv6pt5.js", "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=557%20ed=SFA" },
+    { "key": "sv7",    "file": "cards_sv7.js",    "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=612%20ed=SCR" },
+    { "key": "sv8",    "file": "cards_sv8.js",    "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=639%20ed=SSP" },
+    { "key": "sv8pt5", "file": "cards_sv8pt5.js", "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=649%20ed=PRE" },
+    { "key": "sv9",    "file": "cards_sv9.js",    "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=654%20ed=JTG" },
+    { "key": "sv10",   "file": "cards_sv10.js",   "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=706%20ed=DRI" }
   ]
 }
