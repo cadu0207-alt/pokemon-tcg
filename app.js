@@ -251,9 +251,15 @@ function getSlots(c,setId){
   // (o app parava de reconhecer o slot e a carta "sumia" do fichário/estatísticas,
   // embora o registro continuasse no Supabase). Ver [[feedback_coding]].
   if(r==='Rara'||r.startsWith('Rara ')&&!r.includes('Ultra')){
+    // CORRIGIDO 13/07/2026: cartas "Rara"/"Rara Holo" nos sets modernos (ME/SV)
+    // nascem impressas SÓ em holo — não existe versão Normal física (conferido
+    // contra pokecottage.com: Chesnaught, Ho-Oh, Delphox etc. só têm holo/reverse
+    // holo). O slot N antigo inflava o master set com uma versão que não existe.
+    // Registros antigos marcados como :N foram migrados para :F no Supabase
+    // (ver migracao_rara_holo_n_para_f.sql) antes desta mudança, então nenhuma
+    // coleção existente foi perdida. Ver [[feedback_coding]].
     return [
-      {ver:'N',price:c.price},
-      {ver:'F',price:c.priceF||(c.price?+(c.price*1.5).toFixed(2):null)},
+      {ver:'F',price:c.priceF||c.price},
       {ver:'RH',price:c.priceRH||(c.price?+(c.price*1.2).toFixed(2):null)}
     ];
   }
