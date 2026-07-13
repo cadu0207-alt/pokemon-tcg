@@ -49,43 +49,67 @@ function initFichario() {
 
 /* ─────────────────────────────────────────────
    CARREGAR COLEÇÃO
-   Usa `collected` (Set já carregado pelo loadAll do app.js)
-   + localStorage para extras (qty > 1 e origens)
+   Fonte de verdade: `collectedQty` (Map carregado do Supabase
+   pelo loadAll do app.js — colunas quantity/origins de `collection`).
+   localStorage (`fic_extras`) só é usado como cache/fallback para
+   sessões antigas que ainda não sincronizaram com o banco (ex:
+   antes da migração de 13/07/2026 que criou as colunas quantity/origins).
 ───────────────────────────────────────────── */
 function loadCollection() {
   const extras = JSON.parse(localStorage.getItem('fic_extras') || '{}');
   ficCollection = {};
   collected.forEach(key => {
-    ficCollection[key] = {
-      qty:     extras[key]?.qty     || 1,
-      origins: extras[key]?.origins || [],
-    };
+    const dbEntry = (typeof collectedQty !== 'undefined') ? collectedQty.get(key) : null;
+    if (dbEntry) {
+      ficCollection[key] = { qty: dbEntry.qty || 1, origins: dbEntry.origins || [] };
+    } else {
+      // fallback: ainda não sincronizado no banco — usa cache local e agenda a migração
+      const qty = extras[key]?.qty || 1;
+      const origins = extras[key]?.origins || [];
+      ficCollection[key] = { qty, origins };
+      if (extras[key] && (extras[key].qty > 1 || (extras[key].origins || []).length)) {
+        saveSlot(key, qty, origins); // sobe o dado local pro Supabase na próxima chance
+      }
+    }
   });
 }
 
 /* ─────────────────────────────────────────────
    SALVAR SLOT
-   Sincroniza com `collected` Set + sb REST client do app.js
-   Persiste extras (qty, origins) em localStorage
+   Sincroniza com `collected` Set + `collectedQty` Map (app.js) +
+   grava quantity/origins na tabela `collection` do Supabase.
+   localStorage continua sendo atualizado como cache local.
 ───────────────────────────────────────────── */
 async function saveSlot(key, qty, origins) {
   if (!uid()) return; // não salva sem login
+  const wasCollected = collected.has(key);
+  const prevEntry = (typeof collectedQty !== 'undefined') ? collectedQty.get(key) : null;
   let error = null;
   if (qty <= 0) {
-    if (collected.has(key)) {
+    if (wasCollected) {
       collected.delete(key);
+      if (typeof collectedQty !== 'undefined') collectedQty.delete(key);
       ({ error } = await sbClient.from('collection').delete().eq('slot_key', key).eq('user_id', uid()));
-      if (error) { collected.add(key); }
+      if (error) {
+        collected.add(key);
+        if (typeof collectedQty !== 'undefined' && prevEntry) collectedQty.set(key, prevEntry);
+      }
     }
     if (!error) delete ficCollection[key];
   } else {
-    if (!collected.has(key)) {
-      collected.add(key);
-      ({ error } = await sbClient.from('collection').upsert(
-        { slot_key: key, user_id: uid() },
-        { onConflict: 'user_id,slot_key' }
-      ));
-      if (error) { collected.delete(key); }
+    collected.add(key);
+    if (typeof collectedQty !== 'undefined') collectedQty.set(key, { qty, origins: origins || [] });
+    // upsert SEMPRE que qty>0 — precisa atualizar quantity/origins mesmo
+    // quando o slot já estava marcado (ex: subir de 1 pra 3 cópias)
+    ({ error } = await sbClient.from('collection').upsert(
+      { slot_key: key, user_id: uid(), quantity: qty, origins: origins || [] },
+      { onConflict: 'user_id,slot_key' }
+    ));
+    if (error) {
+      if (!wasCollected) collected.delete(key);
+      if (typeof collectedQty !== 'undefined') {
+        if (prevEntry) collectedQty.set(key, prevEntry); else collectedQty.delete(key);
+      }
     }
     if (!error) ficCollection[key] = { qty, origins };
   }
@@ -95,7 +119,7 @@ async function saveSlot(key, qty, origins) {
     alert('Não foi possível salvar essa carta no fichário. Verifique sua conexão e tente de novo.');
     return;
   }
-  // Persistir extras localmente
+  // Cache local (fallback pra quando não houver conexão)
   const extras = JSON.parse(localStorage.getItem('fic_extras') || '{}');
   if (qty <= 0) delete extras[key];
   else extras[key] = { qty, origins };

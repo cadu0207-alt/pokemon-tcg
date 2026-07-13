@@ -234,7 +234,7 @@ function lprice(setId,n,fallback){
 }
 
 // ── ESTADO ──────────────────────────────────────────────────────
-let purchases=[],pulledCards=[],collected=new Set(),valueHistory=[];
+let purchases=[],pulledCards=[],collected=new Set(),collectedQty=new Map(),valueHistory=[];
 
 // ── VERSÕES ──────────────────────────────────────────────────────
 const VER_COLOR={N:'#c8cfe8',F:'#118ab2',RH:'#06d6a0',SP:'#ff6b35'};
@@ -279,12 +279,13 @@ async function loadAll(){
     const[{data:p},{data:c},{data:col},{data:vh}]=await Promise.all([
       sbClient.from('purchases').select('*').eq('user_id',myUid).order('date',{ascending:false}),
       sbClient.from('pulled_cards').select('*').eq('user_id',myUid).order('id',{ascending:true}),
-      sbClient.from('collection').select('slot_key').eq('user_id',myUid),
+      sbClient.from('collection').select('slot_key,quantity,origins').eq('user_id',myUid),
       sbClient.from('value_history').select('date,total_value').eq('user_id',myUid).order('date',{ascending:true})
     ]);
     purchases=Array.isArray(p)?p:[];
     pulledCards=Array.isArray(c)?c:[];
     collected=new Set((Array.isArray(col)?col:[]).map(r=>r.slot_key));
+    collectedQty=new Map((Array.isArray(col)?col:[]).map(r=>[r.slot_key,{qty:r.quantity||1,origins:r.origins||[]}]));
     valueHistory=Array.isArray(vh)?vh:[];
     setStatus('Online ✓','ok');
     fetchCambio();  // atualiza USD_BRL e EUR_BRL para conversão de preços
@@ -306,17 +307,20 @@ function setStatus(txt,state){
 async function toggleSlot(key){
   if(!uid()) return;
   const wasCollected=collected.has(key);
+  const prevEntry=collectedQty.get(key);
   let error=null;
   if(wasCollected){
     collected.delete(key);
+    collectedQty.delete(key);
     ({error}=await sbClient.from('collection').delete().eq('slot_key',key).eq('user_id',uid()));
   }else{
     collected.add(key);
-    ({error}=await sbClient.from('collection').upsert({slot_key:key,user_id:uid()},{onConflict:'user_id,slot_key'}));
+    collectedQty.set(key,{qty:1,origins:[]});
+    ({error}=await sbClient.from('collection').upsert({slot_key:key,user_id:uid(),quantity:1},{onConflict:'user_id,slot_key'}));
   }
   if(error){
     // reverte estado local — a gravação falhou, não deixar a UI mentir
-    if(wasCollected)collected.add(key);else collected.delete(key);
+    if(wasCollected){collected.add(key);collectedQty.set(key,prevEntry||{qty:1,origins:[]});}else{collected.delete(key);collectedQty.delete(key);}
     console.error('Erro ao salvar coleção:',error);
     setStatus('Erro ao salvar — tente novamente','error');
     alert('Não foi possível salvar essa carta no fichário. Verifique sua conexão e tente de novo.');
@@ -409,9 +413,11 @@ function calcCollectedValue(){
   all.forEach(c=>{
     const sid=c._setId;
     getSlots(c,sid).forEach(s=>{
-      if(collected.has(slotKey(sid+':',c.n,s.ver))){
+      const key=slotKey(sid+':',c.n,s.ver);
+      if(collected.has(key)){
         const p=s.price||c.price;
-        if(p)total+=p;
+        const qty=collectedQty.get(key)?.qty||1;
+        if(p)total+=p*qty;
       }
     });
   });
