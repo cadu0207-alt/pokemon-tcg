@@ -1144,8 +1144,15 @@ function renderBinder(){
   function cardVisible(c){
     const term=(c.name+c.n+(c.type||'')).toLowerCase();
     if(q&&!term.includes(q))return false;
-    const anyCol=getSlots(c,pfx).some(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
-    if(oc&&!anyCol)return false;if(om&&anyCol)return false;if(oi&&!c.important)return false;
+    const slots=getSlots(c,pfx);
+    const anyCol=slots.some(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
+    const allCol=slots.every(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
+    // "Só faltantes" precisa considerar o master set completo: uma carta com
+    // Normal marcada mas sem a Reverse Holo ainda está faltando uma versão,
+    // então continua sendo "faltante" mesmo tendo anyCol=true. Antes usava
+    // !anyCol aqui, o que escondia cartas parcialmente coletadas do filtro
+    // de faltantes (subcontagem do master set). Ver [[feedback_coding]].
+    if(oc&&!anyCol)return false;if(om&&allCol)return false;if(oi&&!c.important)return false;
     return true;
   }
 
@@ -1222,7 +1229,7 @@ function renderBinder(){
 }
 
 // ── EXPORTAR LISTA EM TEXTO (para colar na Liga Pokémon / MYP Cards) ──
-const MYDECK_SITE_URL='https://cadu0207-alt.github.io/pokemon-tcg';
+const MYDECK_SITE_URL='https://mydecktcg.com.br';
 const TYPE_ICON={Grama:'🌿',Fogo:'🔥',Aquático:'💧',Raio:'⚡',Psíquico:'🔮',Lutador:'🥊',Escuridão:'⚫',Metal:'⚙️',Dragão:'🐉',Incolor:'⬜',Treinador:'🎴'};
 
 function exportBinderText(){
@@ -1234,26 +1241,45 @@ function exportBinderText(){
   function visible(c){
     const term=(c.name+c.n+(c.type||'')).toLowerCase();
     if(q&&!term.includes(q))return false;
-    const anyCol=getSlots(c,pfx).some(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
-    if(oc&&!anyCol)return false;if(om&&anyCol)return false;if(oi&&!c.important)return false;
+    const slots=getSlots(c,pfx);
+    const anyCol=slots.some(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
+    const allCol=slots.every(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
+    // Mesma correção do cardVisible: "Só faltantes" tem que mostrar cartas que
+    // ainda faltam alguma versão (foil/reverse holo), não só as que não têm
+    // nenhuma versão. Ver [[feedback_coding]].
+    if(oc&&!anyCol)return false;if(om&&allCol)return false;if(oi&&!c.important)return false;
     return true;
   }
 
   const filterLbl=oc?'✅ Só coletadas':om?'🔍 Só faltantes':'📚 Todas';
   const visibleCards=cards.filter(visible);
+  let slotsTotal=0,slotsCol=0,cardsComplete=0;
   const rows=visibleCards.map(c=>{
     const slots=getSlots(c,pfx);
-    const anyCol=slots.some(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
     const dp=lprice(pfx,c.n,c.price);
     const priceStr=dp?` — 💰 R$${fmtR(dp)}`:'';
     const icon=TYPE_ICON[c.type||'']||'🃏';
-    const statusIcon=anyCol?'✅':'❌';
-    return`${statusIcon} ${icon} *${c.n}* ${c.name}${c.rare?` _(${c.rare})_`:''}${priceStr}`;
+
+    // Detalha o status de CADA versão da carta (Normal/Foil/Reverse Holo/Especial)
+    // em vez de marcar a carta inteira como ✅ só por ter uma versão qualquer.
+    // Isso é o que fazia o master set "fechar" no texto exportado mesmo faltando
+    // foils/reverse holos. Ver [[feedback_coding]].
+    const slotParts=slots.map(s=>{
+      const has=collected.has(slotKey(pfx+':',c.n,s.ver));
+      slotsTotal++;if(has)slotsCol++;
+      return`${VER_SHORT[s.ver]}${has?'✅':'❌'}`;
+    }).join(' ');
+    const allCol=slots.every(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
+    const anyCol=slots.some(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
+    if(allCol)cardsComplete++;
+    const statusIcon=allCol?'✅':anyCol?'🟡':'❌';
+    return`${statusIcon} ${icon} *${c.n}* ${c.name}${c.rare?` _(${c.rare})_`:''} [${slotParts}]${priceStr}`;
   });
 
   const dateStr=new Date().toLocaleDateString('pt-BR');
+  const pctSlots=slotsTotal>0?(slotsCol/slotsTotal*100).toFixed(0):0;
   const header=`🎴✨ *${label}* ✨🎴\n${filterLbl}${q?` · busca: "${q}"`:''}\n📅 ${dateStr}\n━━━━━━━━━━━━━━━━━━`;
-  const footer=`━━━━━━━━━━━━━━━━━━\n📦 Total: *${rows.length}* carta${rows.length!==1?'s':''}\n\n🔥 Confira minha coleção completa e todas as novidades no *MyDeck*! 👉 ${MYDECK_SITE_URL} 🎉🃏`;
+  const footer=`━━━━━━━━━━━━━━━━━━\n📦 Cartas completas: *${cardsComplete}/${rows.length}*\n🎯 Versões (master set): *${slotsCol}/${slotsTotal}* (${pctSlots}%)\n\n🔥 Confira minha coleção completa e todas as novidades no *MyDeck*! 👉 ${MYDECK_SITE_URL} 🎉🃏`;
   const text=`${header}\n${rows.join('\n')}\n${footer}`;
 
   // Tentar copiar direto pra área de transferência
