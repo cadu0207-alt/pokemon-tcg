@@ -18,6 +18,13 @@
 // Depende de (já definidos em app.js, carregado antes deste arquivo):
 //   sbClient, uid(), currentUser, window.go, window._updateUserChip,
 //   window.toggleSlot, SET_CATALOG
+//
+// FIX 16/07/2026: sbClient é declarado com `const` em app.js — const
+// no topo de um script clássico NÃO vira propriedade de `window`
+// (diferente de `function`/`var`). O código antigo checava
+// `window.sbClient`, que é sempre undefined, então o painel nunca
+// carregava nada (o loop de hook nunca instalava, xpFetchAll sempre
+// abortava cedo). Corrigido pra referenciar `sbClient` direto.
 // ================================================================
 
 const XP_TITLES = [
@@ -64,13 +71,16 @@ function xpAchievementIcon(a) {
   if (a.meta && a.meta.icon) return a.meta.icon;
   return (a.meta && a.meta.category === 'master_set') ? '👑' : '✅';
 }
+function xpHasClient() {
+  return typeof sbClient !== 'undefined' && !!sbClient;
+}
 
 // ── ESTADO ──────────────────────────────────────────────────────
-let xpState = { progress: null, achievements: [], leaderboard: [], namesByUid: {}, myProfile: null, loaded: false };
+let xpState = { progress: null, achievements: [], leaderboard: [], namesByUid: {}, myProfile: null, myRank: null, loaded: false };
 
 async function xpFetchAll() {
   const myUid = (typeof uid === 'function') ? uid() : null;
-  if (!myUid || !window.sbClient) return;
+  if (!myUid || !xpHasClient()) return;
   try {
     const [{ data: prog }, { data: myAchv }, { data: allAchv }, { data: board }, { data: myProf }] = await Promise.all([
       sbClient.from('user_progress').select('total_xp,level').eq('user_id', myUid).maybeSingle(),
@@ -95,6 +105,15 @@ async function xpFetchAll() {
     } else {
       xpState.namesByUid = {};
     }
+
+    // posição no ranking geral, mesmo se estiver fora do top 10
+    // (conta quantos usuários têm mais XP que eu — não precisa
+    // baixar a tabela inteira, só a contagem)
+    const { count: aheadCount } = await sbClient
+      .from('user_progress')
+      .select('user_id', { count: 'exact', head: true })
+      .gt('total_xp', xpState.progress.total_xp);
+    xpState.myRank = (aheadCount || 0) + 1;
   } catch (e) {
     console.error('xp_system: falha ao buscar dados de XP', e);
   }
@@ -160,6 +179,23 @@ function xpRenderDashPanel() {
     </div>`;
   }).join('');
 
+  // se eu não estou no top 10, mostra minha posição real separada
+  // (com "..." de divisor), pra sempre saber onde estou
+  const amIInTop10 = (xpState.leaderboard || []).some(r => r.user_id === myUid);
+  let myRankBlock = '';
+  if (!amIInTop10 && xpState.myRank) {
+    const myName2 = xpDisplayName(myUid, myName);
+    myRankBlock = `
+      <div class="xp-board-divider">⋯</div>
+      <div class="xp-board-row xp-board-me">
+        <span class="xp-board-pos">${xpState.myRank}º</span>
+        <span class="xp-board-name">${myName2}</span>
+        <span class="xp-board-title">${title}</span>
+        <span class="xp-board-lvl">Nv.${prog.level}</span>
+        <span class="xp-board-xp">${(prog.total_xp || 0).toLocaleString('pt-BR')} XP</span>
+      </div>`;
+  }
+
   wrap.innerHTML = `
     <div class="sec-title" style="margin-top:0">🏆 Seu Progresso</div>
     <div class="xp-progress-panel">
@@ -178,8 +214,8 @@ function xpRenderDashPanel() {
         <div class="xp-achv-grid">${recentAchv || '<div class="xp-empty">Nenhuma conquista ainda — marca uma carta no fichário pra começar!</div>'}</div>
       </div>
       <div class="panel">
-        <div class="panel-t">📊 Ranking — Top 10</div>
-        <div class="xp-board">${boardRows || '<div class="xp-empty">Ranking vazio por enquanto.</div>'}</div>
+        <div class="panel-t">📊 Ranking — Top 10${xpState.myRank ? ` · Você: ${xpState.myRank}º` : ''}</div>
+        <div class="xp-board">${boardRows || '<div class="xp-empty">Ranking vazio por enquanto.</div>'}${myRankBlock}</div>
       </div>
     </div>`;
 }
@@ -233,7 +269,7 @@ function xpToast(msg) {
 (function hookXpSystem() {
   function tryHook() {
     if (typeof window.go !== 'function' || typeof window._updateUserChip !== 'function' ||
-        typeof window.toggleSlot !== 'function' || !window.sbClient) {
+        typeof window.toggleSlot !== 'function' || !xpHasClient()) {
       setTimeout(tryHook, 50);
       return;
     }
@@ -311,6 +347,7 @@ document.addEventListener('DOMContentLoaded', function () {
 .xp-board{display:flex;flex-direction:column;gap:4px;max-height:280px;overflow-y:auto;}
 .xp-board-row{display:grid;grid-template-columns:32px 1fr auto auto auto;gap:8px;align-items:center;padding:6px 8px;border-radius:8px;font-size:12px;}
 .xp-board-me{background:var(--surface3);font-weight:700;}
+.xp-board-divider{text-align:center;color:var(--muted2);font-size:11px;padding:2px 0;}
 .xp-board-pos{color:var(--muted);font-family:'Space Mono',monospace;}
 .xp-board-name{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .xp-board-title{color:var(--muted2);font-size:10px;text-transform:uppercase;}
