@@ -92,10 +92,68 @@ function imgMe02(n){return`https://images.scrydex.com/pokemon/me2-${parseInt(n)}
 function imgMe05(n){return`https://images.scrydex.com/pokemon/me5-${parseInt(n)}/large`;}
 function imgMe06(n){return`https://images.scrydex.com/pokemon/me6-${parseInt(n)}/large`;}
 function imgMeg(n) {return`https://images.scrydex.com/pokemon/me1-${parseInt(n)}/large`;}
+// Overrides pra cartas MEP que o pkmncards.com (URL genérica abaixo) não tem —
+// achadas individualmente em 16/07/2026 checando site por site (pkmncards não
+// cataloga essas ainda, provavelmente por serem promos muito recentes/exclusivas).
+// 26 vêm do CDN oficial assets.pokemon.com (mesmo padrão MEP_EN_{n}.png),
+// 17 vêm do CDN da tcgcollector.com (sem padrão previsível, URL direta por carta).
+// Ver [[project_pokemon_tcg]] antes de mexer aqui de novo.
+const MEP_IMG_OVERRIDE={
+  46:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_46.png',
+  47:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_47.png',
+  48:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_48.png',
+  49:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_49.png',
+  50:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_50.png',
+  51:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_51.png',
+  52:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_52.png',
+  53:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_53.png',
+  54:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_54.png',
+  72:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_72.png',
+  73:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_73.png',
+  82:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_82.png',
+  83:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_83.png',
+  84:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_84.png',
+  85:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_85.png',
+  94:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_94.png',
+  95:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_95.png',
+  99:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_99.png',
+  100:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_100.png',
+  101:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_101.png',
+  102:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_102.png',
+  103:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_103.png',
+  107:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_107.png',
+  108:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_108.png',
+  109:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_109.png',
+  110:'https://assets.pokemon.com/static-assets/content-assets/cms2/img/cards/web/MEP/MEP_EN_110.png',
+  55:'https://static.tcgcollector.com/content/images/41/3f/aa/413faa60dd1079901a094874a37d5987b54384788ca8bd7e0f3a675ba4c80211.webp',
+  56:'https://static.tcgcollector.com/content/images/b3/7d/94/b37d941db9cd1b81f16f5093b4d60e6b2af13b8f3ded3b9fd384ce42a91acda1.webp',
+  57:'https://static.tcgcollector.com/content/images/20/eb/70/20eb70a81fda26eaac3d3e3a8467f8d48cbe0898d8c023ffbd18767accc0a07c.webp',
+  58:'https://static.tcgcollector.com/content/images/78/0f/1b/780f1b1c27872aec47e1901b9e6e4047eb476cb408067985ad4640079d18df5f.webp',
+  59:'https://static.tcgcollector.com/content/images/e4/67/51/e467512598b5cee7292960177c6ebc12e77f3d6ab9115c0952ec8c1ad0b6edbf.webp',
+  60:'https://static.tcgcollector.com/content/images/c8/ff/1c/c8ff1c16ac373a3fa139bb8f5e4c4c22e458727f2d4c1f770025f7a11e62f607.webp',
+  61:'https://static.tcgcollector.com/content/images/28/d4/c6/28d4c6dbadee916c1185122e4ce96b1a5584452e0e85495c133dfc9f015ba6e7.webp',
+  62:'https://static.tcgcollector.com/content/images/cc/6a/33/cc6a33efa2a8cf3394f2ee7df6b6122306a53163d54e03ba6712f17856bb658c.webp',
+  63:'https://static.tcgcollector.com/content/images/08/74/d6/0874d67be78a4bd9825e4edc88000836a3b9c28417efbc04d0a2dadf5e48f668.webp',
+  92:'https://static.tcgcollector.com/content/images/a9/71/cb/a971cba625db58900669cd9cce483a9e9c4ed889ab200d40fcdfde03ca0447e9.webp',
+  93:'https://static.tcgcollector.com/content/images/9d/b7/a5/9db7a51af4c729807c969548f74034fa809f38b3bb58c378b404f119b23bbc08.webp',
+  96:'https://static.tcgcollector.com/content/images/51/e2/8b/51e28b591884a949c45459931bad3405f7d731cda135b53dbb361a3ea6351a1c.webp',
+  97:'https://static.tcgcollector.com/content/images/ec/48/28/ec48286e43c64c66bab7d33617f92656fc5bc7e40b5caaca383ee44488a22629.webp',
+  98:'https://static.tcgcollector.com/content/images/8b/65/63/8b6563570443b1595d5103d47d83fdc69ad1248b47fbd8919d51ea364bc6b78b.webp',
+  104:'https://static.tcgcollector.com/content/images/86/90/08/869008497cda2dd5466d528b92c4f7f90279ea54a241529cf68241074c18f06b.webp',
+  105:'https://static.tcgcollector.com/content/images/32/03/19/320319115a12af25e9feea99f189423f73972410ee301c3c0a18298c65837666.webp',
+  106:'https://static.tcgcollector.com/content/images/55/47/48/554748fad514a556add0c8180b9eb1a423ff876ab7440b93d0115f75bb4c348f.webp',
+};
+
 function imgMep(n) {
-  // pkmncards.com tem todas as imagens MEP com URL previsível
+  const num=parseInt(n);
+  // 140 (Snover IR) é entrada duplicada — a carta real já existe em cards_meg.js
+  // com imagem funcionando via Scrydex (me1-140). Redireciona pra lá em vez de
+  // procurar imagem própria pro "mep:140" que não existe de verdade.
+  if(num===140) return imgMeg(140);
+  if(MEP_IMG_OVERRIDE[num]) return MEP_IMG_OVERRIDE[num];
+  // pkmncards.com tem a maioria das imagens MEP com URL previsível
   // formato: mebsp_en_{número_com_zeros}_std.jpg
-  const pad=String(parseInt(n)).padStart(3,'0');
+  const pad=String(num).padStart(3,'0');
   return`https://pkmncards.com/wp-content/uploads/mebsp_en_${pad}_std.jpg`;
 }
 
