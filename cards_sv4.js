@@ -253,7 +253,25 @@ const CARDS_SV4 = [
   {n:'247',name:'Tapu Koko ex',type:'Raio',color:'#FFEB3B',rare:'Rara Ilustrada Especial',price:58.50,base:false,important:true},
   {n:'248',name:'Iron Hands ex',type:'Raio',color:'#FFEB3B',rare:'Rara Ilustrada Especial',price:67.50,base:false,important:true},
   {n:'249',name:'Iron Valiant ex',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada Especial',price:119.90,base:false,important:true},
-  {n:'250',name:'Sandy Shocks ex',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada Especial',price:69.90,base:false,important:true}
+  {n:'250',name:'Sandy Shocks ex',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada Especial',price:69.90,base:false,important:true},
+  // Cartas 251-266 completadas em 15/jul/2026 (generate_set.js tinha pageSize=250 sem
+  // paginação — perdia o final do set). Preços via api.pokemontcg.io, USD/BRL 5.8.
+  {n:'251',name:'Roaring Moon ex',type:'Sombrio',color:'#607D8B',rare:'Rara Ilustrada Especial',price:244.59,base:false,important:true},
+  {n:'252',name:'Gholdengo ex',type:'Metal',color:'#78909C',rare:'Rara Ilustrada Especial',price:218.95,base:false,important:true},
+  {n:'253',name:'Altaria ex',type:'Dragão',color:'#3F51B5',rare:'Rara Ilustrada Especial',price:357.98,base:false,important:true},
+  {n:'254',name:'Mela',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:49.65,base:false},
+  {n:'255',name:'Parasol Lady',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:97.50,base:false,important:true},
+  {n:'256',name:'Professor Sada\'s Vitality',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:49.65,base:false},
+  {n:'257',name:'Professor Turo\'s Scenario',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:35.90,base:false},
+  {n:'258',name:'Rika',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:54.52,base:false,important:true},
+  {n:'259',name:'Tulip',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:49.13,base:false},
+  {n:'260',name:'Garchomp ex',type:'Aquático',color:'#2196F3',rare:'Hiper Rara',price:97.38,base:false,important:true},
+  {n:'261',name:'Iron Valiant ex',type:'Psíquico',color:'#9C27B0',rare:'Hiper Rara',price:34.34,base:false},
+  {n:'262',name:'Roaring Moon ex',type:'Sombrio',color:'#607D8B',rare:'Hiper Rara',price:43.27,base:false},
+  {n:'263',name:'Beach Court',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:17.23,base:false},
+  {n:'264',name:'Counter Catcher',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:14.50,base:false},
+  {n:'265',name:'Luxurious Cape',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:15.43,base:false},
+  {n:'266',name:'Reversal Energy',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:17.63,base:false}
 ];
 
 // Exporta para uso global

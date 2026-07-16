@@ -53,22 +53,37 @@ function _updateUserChip(user){
 }
 
 // Escuta mudanças de sessão (login/logout/refresh)
-sbClient.auth.onAuthStateChange((_event,session)=>{
-  if(shareMode) return; // visitante de link compartilhado: não mexe na tela de login
-  currentUser=session?.user??null;
-  _updateUserChip(currentUser);
-  if(currentUser){
-    _showAuth(false);
-    // Só carrega dados se o DOM estiver pronto
-    if(document.readyState==='complete'||document.readyState==='interactive'){
-      loadAll();
+if(sbClient){
+  sbClient.auth.onAuthStateChange((_event,session)=>{
+    if(shareMode) return; // visitante de link compartilhado: não mexe na tela de login
+    currentUser=session?.user??null;
+    _updateUserChip(currentUser);
+    if(currentUser){
+      _showAuth(false);
+      // Só carrega dados se o DOM estiver pronto
+      if(document.readyState==='complete'||document.readyState==='interactive'){
+        loadAll();
+      }else{
+        document.addEventListener('DOMContentLoaded',()=>loadAll());
+      }
     }else{
-      document.addEventListener('DOMContentLoaded',()=>loadAll());
+      _showAuth(true);
     }
-  }else{
-    _showAuth(true);
-  }
-});
+  });
+} else {
+  // sbClient nulo = CDN da Supabase não carregou (rede, bloqueador de scripts, CDN fora do ar).
+  // Sem isso, o resto do app.js quebrava silenciosamente e a tela ficava em branco.
+  // Ver ANALISE_GERAL_15jul2026.md item 1.3.
+  document.addEventListener('DOMContentLoaded',()=>{
+    const b=document.createElement('div');
+    b.style.cssText='position:fixed;inset:0;z-index:99999;background:#050609;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-family:sans-serif;text-align:center;padding:24px';
+    b.innerHTML='<div style="font-size:40px">⚠️</div>'+
+      '<div style="font-size:18px;font-weight:600">Não foi possível conectar ao MyDeck</div>'+
+      '<div style="font-size:13px;color:#9aa">O serviço de dados (Supabase) não carregou. Verifique sua conexão ou desative bloqueadores de script e recarregue a página.</div>'+
+      '<button onclick="location.reload()" style="margin-top:8px;padding:10px 20px;background:#e63946;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer">Recarregar</button>';
+    document.body.appendChild(b);
+  });
+}
 
 // ── IMAGENS ──────────────────────────────────────────────────────
 function imgMe04(n){return`https://images.scrydex.com/pokemon/me4-${parseInt(n)}/large`;}
@@ -682,7 +697,7 @@ const SET_CATALOG=[
   {id:'me06',label:'ME06 — Esmeralda Tempestuosa',emoji:'💎',cards:0,  color:'#00c853',series:'ME',upcoming:true},
   {id:'me05',label:'ME05 — Escuridão Absoluta',      emoji:'🌑',cards:118,color:'#757575',series:'ME',upcoming:true},
   {id:'me04',label:'ME04 — Caos Ascendente',       emoji:'🔥',cards:122,color:'#FF5722',series:'ME'},
-  {id:'me03',label:'ME03 — Ordem Perfeita',        emoji:'🔵',cards:120,color:'#1565C0',series:'ME'},
+  {id:'me03',label:'ME03 — Ordem Perfeita',        emoji:'🔵',cards:typeof CARDS_ME03!=='undefined'?CARDS_ME03.length:120,color:'#1565C0',series:'ME'},
   {id:'me02',label:'ME02 — Fogo Fantasmagórico',   emoji:'👻',cards:130,color:'#9C27B0',series:'ME'},
   {id:'meg', label:'MEG — Megaevolução',            emoji:'🌿',cards:188,color:'#4CAF50',series:'ME'},
   {id:'mep', label:'MEP — Promos Mega Evolução',   emoji:'⭐',cards:typeof CARDS_MEP!=='undefined'?CARDS_MEP.length:54, color:'#ffd166',series:'ME'},
@@ -1073,7 +1088,7 @@ function getSetData(){
   const map={
     me06:{cards:me06c,imgFn:imgMe06,label:'ME06 — Esmeralda Tempestuosa',upcoming:true,
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Secretas',filter:c=>!c.base}]},
-    me05:{cards:me05c,imgFn:imgMe05,label:'ME05 — Escuridão Absoluta',upcoming:true, // lança ago/2026 — manter consistente com SET_CATALOG
+    me05:{cards:me05c,imgFn:imgMe05,label:'ME05 — Escuridão Absoluta',upcoming:true, // lança 17/jul/2026 — manter consistente com SET_CATALOG
       sections:[{lbl:'📄 Base — 001 a 105',filter:c=>c.base},{lbl:'✨ Secretas',filter:c=>!c.base}]},
     me04:{cards:CARDS,imgFn:imgMe04,label:'ME04 — Caos Ascendente',
       sections:[{lbl:'📄 Base — 001 a 086',filter:c=>c.base},{lbl:'✨ Secretas — 087 a 122',filter:c=>!c.base}]},
@@ -1131,102 +1146,10 @@ function getSetData(){
   return map[currentSet]||map.me04;
 }
 
-function renderBinder(){
-  const{cards,imgFn,label,sections}=getSetData();
-  const pfx=currentSet;
-  const q=document.getElementById('bsrch').value.toLowerCase();
-  const oc=document.getElementById('fc').checked,om=document.getElementById('fm').checked,oi=document.getElementById('fi2').checked;
-  let totalSlots=0,colSlots=0;
-  cards.forEach(c=>{getSlots(c,pfx).forEach(s=>{totalSlots++;if(collected.has(slotKey(pfx+':',c.n,s.ver)))colSlots++;});});
-  const pct=totalSlots>0?(colSlots/totalSlots*100).toFixed(0):0;
-  const totalBase=pfx==='me04'?86:pfx==='me02'?94:pfx==='meg'?132:cards.filter(c=>c.base).length;
-
-  function cardVisible(c){
-    const term=(c.name+c.n+(c.type||'')).toLowerCase();
-    if(q&&!term.includes(q))return false;
-    const slots=getSlots(c,pfx);
-    const anyCol=slots.some(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
-    const allCol=slots.every(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
-    // "Só faltantes" precisa considerar o master set completo: uma carta com
-    // Normal marcada mas sem a Reverse Holo ainda está faltando uma versão,
-    // então continua sendo "faltante" mesmo tendo anyCol=true. Antes usava
-    // !anyCol aqui, o que escondia cartas parcialmente coletadas do filtro
-    // de faltantes (subcontagem do master set). Ver [[feedback_coding]].
-    if(oc&&!anyCol)return false;if(om&&allCol)return false;if(oi&&!c.important)return false;
-    return true;
-  }
-
-  function buildCard(c){
-    if(!cardVisible(c))return'';
-    const slots=getSlots(c,pfx);
-    const allCol=slots.every(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
-    const anyCol=slots.some(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
-    const numLabel=`${c.n}/${String(totalBase).padStart(3,'0')}`;
-    const imgSrc=getBinderImg(c,pfx);
-    const versBoxes=slots.map(s=>{
-      const key=slotKey(pfx+':',c.n,s.ver);const isCol=collected.has(key);const col=VER_COLOR[s.ver];
-      const _dp=lprice(pfx,c.n,s.price);
-      const priceStr=_dp?`R$${fmtR(_dp)}`:'';
-      const _live=!!_lp[pfx]?.[c.n];
-      return`<div class="vslot${isCol?' vslot-col':''}" onclick="event.stopPropagation();toggleSlot('${key}')" title="${VER_LABEL[s.ver]}${priceStr?' — '+priceStr+''+(_live?' (ao vivo)':''):''}">
-        <div class="vdot" style="background:${isCol?col:'transparent'};border-color:${col};color:${isCol?'#08090d':col}">${isCol?'✓':VER_SHORT[s.ver]}</div>
-        <div class="vnum">${numLabel}</div>${priceStr?`<div class="vprice">${priceStr}${_live?'<span style="font-size:8px;color:var(--teal);vertical-align:super">●</span>':''}</div>`:''}
-      </div>`;
-    }).join('');
-    return`<div class="bc2${allCol?' collected':''}${anyCol&&!allCol?' bc2-partial':''}${c.important?' important':''}"
-      title="${c.name}" onclick='openBinderModal(${safeJSON(c)},"${pfx}")'>
-      <div class="bc2-in">
-        <img src="${imgSrc}" alt="${c.name}" loading="lazy"
-          style="filter:${allCol?'none':anyCol?'saturate(.6) brightness(.75)':'grayscale(80%) brightness(.55)'}"
-          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-        <div class="fb"><div class="fb-n">${c.n}</div><div class="fb-name">${c.name}</div>
-          <div class="fb-t">${c.type||''}</div><div class="fb-stripe" style="background:${c.color||'#666'}"></div></div>
-        <div class="vslots">${versBoxes}</div>
-      </div>
-      <div class="chk">✓</div>
-      <div class="tip"><div class="tip-n">${c.name}</div><div class="tip-nr">#${c.n} · ${c.type||''}</div>
-        <div class="tip-r">${c.rare||''}</div>${(()=>{const dp=lprice(pfx,c.n,c.price);return dp?`<div class="tip-p">R$${fmtR(dp)}</div>`:''})()}
-        ${c.important?'<div class="tip-imp">★ Importante</div>':''}</div>
-    </div>`;
-  }
-
-  const setInfo=`<div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:14px;display:flex;gap:20px;align-items:center;flex-wrap:wrap">
-    <span>${label}</span><span style="color:var(--teal)">${colSlots}/${totalSlots} slots</span>
-    <span style="color:var(--gold)">${pct}% master set</span>
-    <div style="flex:1;min-width:100px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden">
-      <div style="height:100%;width:${pct}%;background:var(--teal);border-radius:2px"></div></div>
-    <span style="font-size:9px;color:var(--muted)">Clique na carta para marcar versões</span>
-  </div>`;
-  let html=setInfo;
-  sections.forEach(s=>{
-    const filtered=cards.filter(s.filter);
-    const built=filtered.map(buildCard).join('');
-    if(built.trim())html+=`<div class="bsec-lbl">${s.lbl}</div><div class="bgrid">${built}</div>`;
-  });
-  document.getElementById('bwrap').innerHTML=html;
-
-  // ── Navegação por setas (somente ao pesquisar) ────────────────
-  if(q!==_lastBinderQuery){_binderNavIdx=0;_lastBinderQuery=q;}
-  if(q){
-    const allCards=document.querySelectorAll('#bwrap .bc2');
-    _binderNavTotal=allCards.length;
-    allCards.forEach((el,i)=>el.setAttribute('data-nav-idx',i));
-    const navBar=document.createElement('div');
-    navBar.id='binder-nav-bar';
-    navBar.innerHTML=
-      `<span class="bnav-label">RESULTADO</span>`+
-      `<button class="bnav-btn" onclick="binderNavGo(-1)">&#8249;</button>`+
-      `<span class="bnav-pos">${_binderNavTotal===0?'0':_binderNavIdx+1} / ${_binderNavTotal}</span>`+
-      `<button class="bnav-btn" onclick="binderNavGo(1)">&#8250;</button>`+
-      `<span class="bnav-label">${_binderNavTotal} carta${_binderNavTotal!==1?'s':''} encontrada${_binderNavTotal!==1?'s':''}</span>`;
-    document.getElementById('bwrap').prepend(navBar);
-    if(_binderNavTotal>0)_binderNavScroll();
-  } else {
-    _binderNavTotal=0;_lastBinderQuery='';
-  }
-
-  updateDashProgress();
-}
+// renderBinder() foi movida pra fichario_patch.js (carrega depois e sobrescreve
+// a global — a versão antiga que ficava aqui nunca era executada). Removida em
+// 15/jul/2026 na conferência geral pra não confundir manutenção futura.
+// Ver ANALISE_GERAL_15jul2026.md item 1.4.
 
 // ── EXPORTAR LISTA EM TEXTO (para colar na Liga Pokémon / MYP Cards) ──
 const MYDECK_SITE_URL='https://mydecktcg.com.br';

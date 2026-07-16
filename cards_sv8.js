@@ -253,7 +253,11 @@ const CARDS_SV8 = [
   {n:'247',name:'Pikachu ex',type:'Raio',color:'#FFEB3B',rare:'Hiper Rara',price:324.46,base:false,important:true},
   {n:'248',name:'Alolan Exeggutor ex',type:'Dragão',color:'#3F51B5',rare:'Hiper Rara',price:60.00,base:false,important:true},
   {n:'249',name:'Counter Gain',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:24.90,base:false},
-  {n:'250',name:'Gravity Mountain',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:64.75,base:false,important:true}
+  {n:'250',name:'Gravity Mountain',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:64.75,base:false,important:true},
+  // Cartas 251-252 completadas em 15/jul/2026 (generate_set.js tinha pageSize=250 sem
+  // paginação — perdia o final do set). Preços via api.pokemontcg.io, USD/BRL 5.8.
+  {n:'251',name:'Night Stretcher',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:59.80,base:false,important:true},
+  {n:'252',name:'Jet Energy',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:31.26,base:false}
 ];
 
 // Exporta para uso global

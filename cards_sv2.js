@@ -253,7 +253,39 @@ const CARDS_SV2 = [
   {n:'247',name:'Squawkabilly ex',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:9.41,base:false},
   {n:'248',name:'Boss\'s Orders (Ghetsis)',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:80.00,base:false,important:true},
   {n:'249',name:'Clavell',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:8.00,base:false},
-  {n:'250',name:'Dendra',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:19.90,base:false}
+  {n:'250',name:'Dendra',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:19.90,base:false},
+  // Cartas 251-279 completadas em 15/jul/2026 (generate_set.js tinha pageSize=250 sem
+  // paginação — perdia o final do set, incluindo várias Special Illustration Rare).
+  // Preços via api.pokemontcg.io, USD/BRL 5.8.
+  {n:'251',name:'Falkner',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:8.29,base:false},
+  {n:'252',name:'Giacomo',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:7.02,base:false},
+  {n:'253',name:'Grusha',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:16.82,base:false},
+  {n:'254',name:'Iono',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:64.67,base:false,important:true},
+  {n:'255',name:'Saguaro',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:6.84,base:false},
+  {n:'256',name:'Meowscarada ex',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada Especial',price:230.03,base:false,important:true},
+  {n:'257',name:'Wo-Chien ex',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada Especial',price:110.26,base:false,important:true},
+  {n:'258',name:'Skeledirge ex',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada Especial',price:225.39,base:false,important:true},
+  {n:'259',name:'Chi-Yu ex',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada Especial',price:323.12,base:false,important:true},
+  {n:'260',name:'Quaquaval ex',type:'Aquático',color:'#2196F3',rare:'Rara Ilustrada Especial',price:89.73,base:false,important:true},
+  {n:'261',name:'Chien-Pao ex',type:'Aquático',color:'#2196F3',rare:'Rara Ilustrada Especial',price:182.00,base:false,important:true},
+  {n:'262',name:'Tinkaton ex',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada Especial',price:323.06,base:false,important:true},
+  {n:'263',name:'Ting-Lu ex',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada Especial',price:72.91,base:false,important:true},
+  {n:'264',name:'Squawkabilly ex',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:68.21,base:false,important:true},
+  {n:'265',name:'Boss\'s Orders (Ghetsis)',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:111.30,base:false,important:true},
+  {n:'266',name:'Dendra',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:64.96,base:false,important:true},
+  {n:'267',name:'Giacomo',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:26.80,base:false},
+  {n:'268',name:'Grusha',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:123.89,base:false,important:true},
+  {n:'269',name:'Iono',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:373.00,base:false,important:true},
+  {n:'270',name:'Saguaro',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:91.81,base:false,important:true},
+  {n:'271',name:'Meowscarada ex',type:'Planta',color:'#4CAF50',rare:'Hiper Rara',price:57.07,base:false,important:true},
+  {n:'272',name:'Skeledirge ex',type:'Fogo',color:'#F44336',rare:'Hiper Rara',price:35.44,base:false},
+  {n:'273',name:'Quaquaval ex',type:'Aquático',color:'#2196F3',rare:'Hiper Rara',price:35.44,base:false},
+  {n:'274',name:'Chien-Pao ex',type:'Aquático',color:'#2196F3',rare:'Hiper Rara',price:36.95,base:false},
+  {n:'275',name:'Ting-Lu ex',type:'Lutador',color:'#FF9800',rare:'Hiper Rara',price:21.92,base:false},
+  {n:'276',name:'Super Rod',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:23.43,base:false},
+  {n:'277',name:'Superior Energy Retrieval',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:13.34,base:false},
+  {n:'278',name:'Basic Grass Energy',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:60.20,base:false,important:true},
+  {n:'279',name:'Basic Water Energy',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:76.79,base:false,important:true}
 ];
 
 // Exporta para uso global

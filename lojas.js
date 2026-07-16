@@ -522,17 +522,48 @@ function computePriceStats(history) {
   return { min: prices[0], max: prices[n - 1], avg, median, count: n };
 }
 
-function renderProductCard(term, history, featured, coupon, rules) {
+// ── SISTEMA DE DESTAQUES AUTOMÁTICO ─────────────────────────────
+// "Desconto real" de um produto = o quanto o preço mais recente está
+// abaixo da MEDIANA do próprio histórico dele (não comparado a outros
+// produtos — cada um só compete com o próprio passado). Precisa de
+// pelo menos 2 registros de preço pra fazer sentido (senão não há
+// "normal" pra comparar) — com só 1 registro, retorna null e o produto
+// não entra no ranking por desconto até o cron rodar mais vezes.
+function computeDealScore(history) {
+  const stats = computePriceStats(history);
+  if (!stats || stats.count < 2) return null;
+  const latest = latestRecord(history);
+  if (!latest) return null;
+  const current = +latest.price;
+  if (!Number.isFinite(current) || current <= 0) return null;
+  const basis = stats.median || stats.avg;
+  if (!basis) return null;
+  return (basis - current) / basis; // >0 = mais barato que o normal agora; <0 = mais caro
+}
+
+// Fisher-Yates — usado pra embaralhar os produtos que não entraram
+// no top de desconto (a partir do 10º), pra não sempre mostrar os
+// mesmos produtos "de baixo" na mesma ordem.
+function shuffleInPlace(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+  }
+  return arr;
+}
+
+function renderProductCard(term, history, featured, coupon, rules, dealScore) {
   const best = bestRecord(history);
   const latest = latestRecord(history);
   const label = term.label || term.term;
   const linkUrl = term.affiliate_url || (best ? best.url : null);
 
   const collectionAttr = ' data-collection="' + (term.collection || '').replace(/"/g, '&quot;') + '"';
+  const scoreAttr = ' data-deal-score="' + (dealScore == null ? '' : dealScore) + '"';
 
   if (!best) {
     return (
-      '<div class="product-card' + (featured ? ' product-card-featured' : '') + '"' + collectionAttr + '>' +
+      '<div class="product-card' + (featured ? ' product-card-featured' : '') + '"' + collectionAttr + scoreAttr + '>' +
         '<div class="product-img product-img-empty">📦</div>' +
         '<div class="product-info">' +
           '<div class="product-name">' + label + '</div>' +
@@ -585,7 +616,7 @@ function renderProductCard(term, history, featured, coupon, rules) {
       )
     : '<div class="product-price">R$ ' + fmtBRLLoja(best.price) + '</div>';
   return (
-    '<a class="product-card' + (featured ? ' product-card-featured' : '') + '"' + collectionAttr + ' href="' + linkUrl + '" target="_blank" rel="noopener' + (term.affiliate_url ? ' sponsored' : '') + '">' +
+    '<a class="product-card' + (featured ? ' product-card-featured' : '') + '"' + collectionAttr + scoreAttr + ' href="' + linkUrl + '" target="_blank" rel="noopener' + (term.affiliate_url ? ' sponsored' : '') + '">' +
       (featured ? '<div class="product-badge">🔥 OFERTA IMPERDÍVEL</div>' : '') +
       '<img class="product-img" src="' + imgSrc + '" alt="' + label + '">' +
       '<div class="product-info">' +

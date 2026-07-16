@@ -253,7 +253,17 @@ const CARDS_SV1 = [
   {n:'247',name:'Koraidon ex',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada Especial',price:69.73,base:false,important:true},
   {n:'248',name:'Iron Treads ex',type:'Metal',color:'#78909C',rare:'Rara Ilustrada Especial',price:15.00,base:false},
   {n:'249',name:'Arven',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:39.00,base:false},
-  {n:'250',name:'Jacq',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:20.00,base:false}
+  {n:'250',name:'Jacq',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:20.00,base:false},
+  // Cartas 251-258 completadas em 15/jul/2026 (generate_set.js tinha pageSize=250 sem
+  // paginação — perdia o final do set). Preços via api.pokemontcg.io, USD/BRL 5.8.
+  {n:'251',name:'Miriam',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:155.32,base:false,important:true},
+  {n:'252',name:'Penny',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:37.18,base:false},
+  {n:'253',name:'Miraidon ex',type:'Raio',color:'#FFEB3B',rare:'Hiper Rara',price:48.31,base:false},
+  {n:'254',name:'Koraidon ex',type:'Lutador',color:'#FF9800',rare:'Hiper Rara',price:41.35,base:false},
+  {n:'255',name:'Nest Ball',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:18.62,base:false},
+  {n:'256',name:'Rare Candy',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:32.31,base:false},
+  {n:'257',name:'Basic Lightning Energy',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:23.78,base:false},
+  {n:'258',name:'Basic Fighting Energy',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:41.06,base:false}
 ];
 
 // Exporta para uso global
