@@ -717,7 +717,7 @@ function renderGen1Pobre(){
 // ── PROGRESS ────────────────────────────────────────────────────
 const SET_META={
   me06:{label:'💎 ME06 — Esmeralda Tempestuosa',color:'#00c853',chase:'Mega Rayquaza ex Gold — R$1.500 (est.)',heroCard:1,imgFn:imgMe06,upcoming:true,releaseDate:'out/2026'},
-  me05:{label:'🌑 ME05 — Escuridão Absoluta',color:'#424242',chase:'Mega Darkrai ex Gold — US$750 (est.)',heroCard:118,imgFn:imgMe05,upcoming:true,releaseDate:'17/jul/2026'},
+  me05:{label:'🌑 ME05 — Escuridão Absoluta',color:'#424242',chase:'Gladion\'s Showdown SAR — US$1.090',heroCard:118,imgFn:imgMe05,releaseDate:'17/jul/2026'},
   me04:{label:'🔥 ME04 — Caos Ascendente',color:'var(--accent)',chase:'Mega Greninja ex Gold — R$1.482',heroCard:22,imgFn:imgMe04},
   me03:{label:'🔵 ME03 — Ordem Perfeita',color:'#1565C0',chase:'Meowth ex SAR — R$870 · Mega Zygarde ex Gold — R$775',heroCard:62,imgFn:imgMe03},
   me02:{label:'👻 ME02 — Fogo Fantasmagórico',color:'#9C27B0',chase:'Mega Charizard X ex SAR — R$1.809',heroCard:13,imgFn:imgMe02},
@@ -753,7 +753,7 @@ const SET_CARDS_MAP={
 // ── CATÁLOGO DE COLEÇÕES ─────────────────────────────────────────
 const SET_CATALOG=[
   {id:'me06',label:'ME06 — Esmeralda Tempestuosa',emoji:'💎',cards:0,  color:'#00c853',series:'ME',upcoming:true},
-  {id:'me05',label:'ME05 — Escuridão Absoluta',      emoji:'🌑',cards:118,color:'#757575',series:'ME',upcoming:true},
+  {id:'me05',label:'ME05 — Escuridão Absoluta',      emoji:'🌑',cards:118,color:'#757575',series:'ME'},
   {id:'me04',label:'ME04 — Caos Ascendente',       emoji:'🔥',cards:122,color:'#FF5722',series:'ME'},
   {id:'me03',label:'ME03 — Ordem Perfeita',        emoji:'🔵',cards:typeof CARDS_ME03!=='undefined'?CARDS_ME03.length:120,color:'#1565C0',series:'ME'},
   {id:'me02',label:'ME02 — Fogo Fantasmagórico',   emoji:'👻',cards:130,color:'#9C27B0',series:'ME'},
@@ -1146,8 +1146,8 @@ function getSetData(){
   const map={
     me06:{cards:me06c,imgFn:imgMe06,label:'ME06 — Esmeralda Tempestuosa',upcoming:true,
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Secretas',filter:c=>!c.base}]},
-    me05:{cards:me05c,imgFn:imgMe05,label:'ME05 — Escuridão Absoluta',upcoming:true, // lança 17/jul/2026 — manter consistente com SET_CATALOG
-      sections:[{lbl:'📄 Base — 001 a 105',filter:c=>c.base},{lbl:'✨ Secretas',filter:c=>!c.base}]},
+    me05:{cards:me05c,imgFn:imgMe05,label:'ME05 — Escuridão Absoluta', // lançou 17/jul/2026 — já ativo, consistente com SET_CATALOG
+      sections:[{lbl:'📄 Base — 001 a 081',filter:c=>c.base},{lbl:'✨ Secretas — 082 a 118',filter:c=>!c.base}]},
     me04:{cards:CARDS,imgFn:imgMe04,label:'ME04 — Caos Ascendente',
       sections:[{lbl:'📄 Base — 001 a 086',filter:c=>c.base},{lbl:'✨ Secretas — 087 a 122',filter:c=>!c.base}]},
     me03:{cards:me03c,imgFn:imgMe03,label:'ME03 — Ordem Perfeita',

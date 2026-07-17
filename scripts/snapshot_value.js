@@ -15,15 +15,23 @@
  *
  * Como funciona:
  *   1. Carrega os arquivos cards_*.js / legacy_*.js num sandbox de VM (são
- *      JS de verdade, não regex) pra montar {setId: {numeroCarta: preco}} —
- *      espelha o SET_CARDS_MAP de app.js. Se um set novo for adicionado lá,
- *      adicionar aqui também (ver SET_CARDS_MAP abaixo).
- *   2. Busca todos os slot_key da tabela `collection` via REST do Supabase
+ *      JS de verdade, não regex) pra montar {setId: {numeroCarta: {versao: preco}}} —
+ *      espelha SET_CARDS_MAP + getSlots() de app.js. Se um set novo for
+ *      adicionado lá, adicionar aqui também (ver SET_CARDS_MAP abaixo).
+ *   2. Busca slot_key + quantity da tabela `collection` via REST do Supabase
  *      (service role key — só ela consegue ler entre usuários, RLS bloqueia
  *      o resto).
- *   3. Agrupa por user_id, soma o preço de cada slot coletado.
+ *   3. Agrupa por user_id, soma preço-por-versão × quantity de cada slot.
  *   4. Upsert em `value_history` (user_id, date, total_value) com a data de
  *      hoje no horário de Brasília (UTC-3 fixo, sem horário de verão).
+ *
+ * CORRIGIDO 17/07/2026: este script divergia do "Valor Fichário" do
+ * dashboard (calcCollectedValue()) por dois motivos — (a) não buscava
+ * `quantity`, então cartas com múltiplas cópias eram contadas como 1x; e
+ * (b) usava c.price para qualquer versão do slot, ignorando o prêmio de
+ * Reverse Holo (+20% / priceRH) e o priceF de cartas "Rara". Isso fazia a
+ * "Evolução do Patrimônio" subvalorizar a coleção em relação ao KPI do
+ * dashboard. Ver [[feedback_coding]].
  */
 
 const vm = require('vm');
@@ -109,8 +117,27 @@ const SET_CARDS_MAP = {
   if (ls && ls.id && !SET_CARDS_MAP[ls.id]) SET_CARDS_MAP[ls.id] = ls.data || [];
 });
 
-// {setId: {numeroCarta: preco}} -- preco e o mesmo pra qualquer versao do slot
-// (N/F/RH/SP), igual a logica de getSlots()/calcCollectedValue() em app.js.
+// Espelho de getSlots() em app.js -- o preco de um slot depende da versao
+// (N/F/RH/SP), NAO e sempre igual a c.price. Manter em sincronia se
+// getSlots() mudar no app.js.
+function getSlotsForSnapshot(c, setId) {
+  const r = c.rare || '';
+  if (!c.base) return [{ ver: 'SP', price: c.price }];
+  if (r.includes('Dupla') || r.includes('RR')) return [{ ver: 'F', price: c.price }];
+  if (r === 'Rara' || (r.startsWith('Rara ') && !r.includes('Ultra'))) {
+    return [
+      { ver: 'F', price: c.priceF || c.price },
+      { ver: 'RH', price: c.priceRH || (c.price ? +(c.price * 1.2).toFixed(2) : null) },
+    ];
+  }
+  if (setId === 'mep') return [{ ver: 'SP', price: c.price }];
+  return [
+    { ver: 'N', price: c.price },
+    { ver: 'RH', price: c.priceRH || (c.price ? +(c.price * 1.2).toFixed(2) : null) },
+  ];
+}
+
+// {setId: {numeroCarta: {versao: preco}}}
 const priceMap = {};
 let totalCardsLoaded = 0;
 for (const setId of Object.keys(SET_CARDS_MAP)) {
@@ -118,7 +145,14 @@ for (const setId of Object.keys(SET_CARDS_MAP)) {
   priceMap[setId] = {};
   cards.forEach(function (c) {
     if (!c || !c.n) return;
-    priceMap[setId][c.n] = Number(c.price) || 0;
+    const slots = getSlotsForSnapshot(c, setId);
+    priceMap[setId][c.n] = {};
+    slots.forEach(function (s) {
+      priceMap[setId][c.n][s.ver] = Number(s.price) || 0;
+    });
+    // fallback pra versoes fora do esperado (nao deveria acontecer, mas
+    // evita perder valor silenciosamente se getSlots() ganhar uma versao nova)
+    priceMap[setId][c.n]._fallback = Number(c.price) || 0;
     totalCardsLoaded++;
   });
 }
@@ -147,7 +181,7 @@ async function fetchAllCollectionRows() {
   let offset = 0;
   const rows = [];
   for (;;) {
-    const r = await sbFetch('collection?select=user_id,slot_key&order=user_id.asc', {
+    const r = await sbFetch('collection?select=user_id,slot_key,quantity&order=user_id.asc', {
       headers: { Range: offset + '-' + (offset + PAGE - 1) },
     });
     const page = await r.json();
@@ -158,15 +192,22 @@ async function fetchAllCollectionRows() {
   return rows;
 }
 
-function valueForSlots(slotKeys) {
+// rows: [{slot_key, quantity}] -- mesma logica de calcCollectedValue() em
+// app.js: preco por versao do slot × quantity (default 1 se null/undefined).
+function valueForSlots(rows) {
   let total = 0;
-  for (const sk of slotKeys) {
+  for (const row of rows) {
+    const sk = row.slot_key != null ? row.slot_key : row; // aceita string solta tb
+    const qty = Number(row.quantity) || 1;
     const parts = String(sk).split(':'); // "setId:numero:versao"
-    if (parts.length < 2) continue;
+    if (parts.length < 3) continue;
     const setId = parts[0];
     const n = parts[1];
-    const price = priceMap[setId] ? priceMap[setId][n] : undefined;
-    if (price) total += price;
+    const ver = parts[2];
+    const entry = priceMap[setId] ? priceMap[setId][n] : undefined;
+    if (!entry) continue;
+    const price = entry[ver] != null ? entry[ver] : entry._fallback;
+    if (price) total += price * qty;
   }
   return Math.round(total * 100) / 100;
 }
@@ -190,7 +231,7 @@ async function main() {
   const byUser = {};
   for (const r of rows) {
     if (!byUser[r.user_id]) byUser[r.user_id] = [];
-    byUser[r.user_id].push(r.slot_key);
+    byUser[r.user_id].push({ slot_key: r.slot_key, quantity: r.quantity });
   }
 
   const userIds = Object.keys(byUser);
