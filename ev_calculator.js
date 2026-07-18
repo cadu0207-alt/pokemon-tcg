@@ -2,58 +2,12 @@
 //  EV CALCULATOR — Metodologia 6 Passos
 //  Taxas calibradas para pack BR (6 cartas: 1 energia + 4 comuns + 1 slot raro)
 //  Meta: 6–11 hits por display de 36 packs
-// ============================================================
-var PULL_RATES = {
-  'Rara':              { prob: 0.7639, label: 'Rara base (76,4%)' },
-  'Dupla Rara':        { prob: 0.12,   label: 'Dupla Rara (RD) 1/8' },
-  'Ilustr. Rara':      { prob: 0.07,   label: 'Ilustr. Rara (IR) 1/14' },
-  'Rara Ultra':        { prob: 0.035,  label: 'Rara Ultra (UR) 1/29' },
-  'Ilustr. Esp. Rara': { prob: 0.01,   label: 'Ilustr. Especial (SAR) 1/100' },
-  'Mega Hyper Rare':   { prob: 1/909,  label: 'Mega Hiper Raro 1/909' },
-  'Rara (Holo)':       { prob: 0,      label: 'Rara Holo (nao existe)' },
-  'Comum':             { prob: 3.0,    label: 'Comum' },
-  'Incomum':           { prob: 1.0,    label: 'Incomum' }
-};
-var EV_EXCLUDE = { 'Comum': true, 'Incomum': true };
-
-// ── Mapa de raridades por era/idioma ─────────────────────────────
-// Cada geração (ME, SV) e cada tradução usa um texto diferente pra
-// dizer a MESMA coisa. Antes só as strings do ME04 eram reconhecidas
-// e tudo mais (toda a era SV, boa parte do catálogo) caía no default
-// 'Rara' — tratando Ultra Rara/Ilustrada Especial/Hyper Rare como se
-// fossem raridade comum de 76% de chance. Ver [[feedback_coding]]
-// incidente 2026-07 "EV só bate em Caos Ascendente".
 //
-// SV usa as MESMAS taxas calibradas pra era ME como aproximação (não
-// há dado real de pull rate por era ainda — decisão consciente do
-// Eduardo até termos números melhores).
-function normalizeRare(r) {
-  if (!r) return 'Rara';
-  var s = r.trim();
-  if (s === 'Dupla Rara' || s === 'Rara Dupla' || s === 'Double Rare') return 'Dupla Rara';
-  // Illustration Rare (IR) — ME: "Ilustr. Rara" · SV: "Rara Ilustrada" · Promo: "Ilustração Rara (IR)" · ME05 (provisório): "Art Rare"
-  if (s === 'Ilustr. Rara' || s === 'Illustration Rare' || s === 'Rara Ilustrada' ||
-      s === 'Ilustração Rara (IR)' || s === 'Art Rare') return 'Ilustr. Rara';
-  // Ultra Rare (UR) — ME: "Rara Ultra" · SV: "Ultra Rara" (ordem invertida) · ME05 (provisório): "Super Rare"
-  if (s === 'Rara Ultra' || s === 'Ultra Rare' || s === 'Ultra Rara' || s === 'Super Rare') return 'Rara Ultra';
-  // Special Illustration Rare (SAR/SIR) — ME: "Ilustr. Esp. Rara" · SV: "Rara Ilustrada Especial" · ME05 (provisório): "Special Art Rare"
-  if (s === 'Ilustr. Esp. Rara' || s === 'Special Illustration Rare' || s === 'Rara Ilustrada Especial' ||
-      s === 'Special Art Rare') return 'Ilustr. Esp. Rara';
-  // Hyper Rare (topo da raridade) — ME: "Mega Hyper Rare"/"Mega Attack Rare" · SV: "Hiper Rara" · ME05 (provisório): "Mega Ultra Rare"
-  if (s === 'Mega Hyper Rare' || s === 'Hyper Rare' || s === 'Mega Attack Rare' ||
-      s === 'Hiper Rara' || s === 'Mega Ultra Rare') return 'Mega Hyper Rare';
-  // Holo Rare (slot bônus, sem valor de mercado relevante — fica fora do EV, prob 0)
-  if (s === 'Rara (Holo)' || s === 'Holo Rare' || s === 'Rara Holo') return 'Rara (Holo)';
-  // ACE SPEC e Shiny Vault (Rara Brilhante / Ultra Rara Brilhante) — mecânica exclusiva
-  // da era SV, sem equivalente na era ME. Sem taxa real calibrada ainda: fica de fora
-  // do cálculo de EV por enquanto (não existe entrada correspondente em PULL_RATES,
-  // então calcEV() ignora essas cartas em vez de tratá-las como raridade comum).
-  if (s === 'ACE SPEC') return 'ACE SPEC';
-  if (s === 'Rara Brilhante' || s === 'Ultra Rara Brilhante') return 'Rara Brilhante (Shiny Vault)';
-  if (s === 'Comum' || s === 'Common')   return 'Comum';
-  if (s === 'Incomum' || s === 'Uncommon') return 'Incomum';
-  return 'Rara';
-}
+//  PULL_RATES, EV_EXCLUDE e normalizeRare() agora moram em pull_rates.js
+//  (carregado antes deste arquivo) — é a mesma fonte usada pelo Simulador,
+//  pra evitar as duas telas divergirem de novo. Ver esse arquivo pro
+//  histórico do incidente que motivou a unificação.
+// ============================================================
 
 function calcEV(cards) {
   var groups = {};
@@ -87,52 +41,66 @@ function calcEV(cards) {
 // ============================================================
 //  CATALOGO DE PRODUTOS
 // ============================================================
+// Campo `premium` removido do CATALOG (jul/2026): era declarado em todo produto
+// (0/5/8/12) mas nunca lido em nenhuma função deste arquivo — código morto,
+// provavelmente sobra de uma feature planejada e nunca implementada. Se um dia
+// fizer sentido dar bônus de EV pra ETB/caixas especiais por causa de promos
+// exclusivas, é só reintroduzir com a lógica de verdade em calcEVForProduct().
 var CATALOG = [
   // ── ME04 Caos Ascendente ──────────────────────────────────
-  { id:'me04-display',  grupo:'ME04 — Caos Ascendente', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me04', extras:[], premium:0 },
-  { id:'me04-etb',      grupo:'ME04 — Caos Ascendente', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me04', extras:[], premium:5 },
-  { id:'me04-blister4', grupo:'ME04 — Caos Ascendente', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me04', extras:[], premium:0 },
-  { id:'me04-blister3', grupo:'ME04 — Caos Ascendente', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me04', extras:[], premium:0 },
-  { id:'me04-blister2', grupo:'ME04 — Caos Ascendente', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me04', extras:[], premium:0 },
-  { id:'me04-booster',  grupo:'ME04 — Caos Ascendente', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me04', extras:[], premium:0 },
-  // ME05 — Escuridão Absoluta (lança 17/jul/2026 — varejo ainda ESTIMADO, urgente ajustar com preço real antes do lançamento)
-  { id:'me05-display',  grupo:'ME05 — Escuridão Absoluta', nome:'Box Display (36 boosters)',      boosters:36, varejo:539.99, set:'me05', extras:[], premium:0 },
-  { id:'me05-etb',      grupo:'ME05 — Escuridão Absoluta', nome:'Elite Trainer Box (9 boosters)', boosters:9,  varejo:199.99, set:'me05', extras:[], premium:5 },
-  { id:'me05-blister4', grupo:'ME05 — Escuridão Absoluta', nome:'Blister Quadriplo (4 boosters)',boosters:4,  varejo:59.99,  set:'me05', extras:[], premium:0 },
-  { id:'me05-blister3', grupo:'ME05 — Escuridão Absoluta', nome:'Blister Triplo (3 boosters)',   boosters:3,  varejo:44.99,  set:'me05', extras:[], premium:0 },
-  { id:'me05-booster',  grupo:'ME05 — Escuridão Absoluta', nome:'Booster Avulso',                boosters:1,  varejo:14.99,  set:'me05', extras:[], premium:0 },
+  { id:'me04-display',  grupo:'ME04 — Caos Ascendente', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me04', extras:[] },
+  { id:'me04-etb',      grupo:'ME04 — Caos Ascendente', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me04', extras:[] },
+  { id:'me04-blister4', grupo:'ME04 — Caos Ascendente', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me04', extras:[] },
+  { id:'me04-blister3', grupo:'ME04 — Caos Ascendente', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me04', extras:[] },
+  { id:'me04-blister2', grupo:'ME04 — Caos Ascendente', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me04', extras:[] },
+  { id:'me04-booster',  grupo:'ME04 — Caos Ascendente', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me04', extras:[] },
+  // ME05 — Escuridão Absoluta (lançou 17/jul/2026 — varejo ainda copiado do ME04, urgente confirmar preço real de tabela)
+  { id:'me05-display',  grupo:'ME05 — Escuridão Absoluta', nome:'Box Display (36 boosters)',      boosters:36, varejo:539.99, set:'me05', extras:[], estimado:true },
+  { id:'me05-etb',      grupo:'ME05 — Escuridão Absoluta', nome:'Elite Trainer Box (9 boosters)', boosters:9,  varejo:199.99, set:'me05', extras:[], estimado:true },
+  { id:'me05-blister4', grupo:'ME05 — Escuridão Absoluta', nome:'Blister Quadriplo (4 boosters)',boosters:4,  varejo:59.99,  set:'me05', extras:[], estimado:true },
+  { id:'me05-blister3', grupo:'ME05 — Escuridão Absoluta', nome:'Blister Triplo (3 boosters)',   boosters:3,  varejo:44.99,  set:'me05', extras:[], estimado:true },
+  { id:'me05-booster',  grupo:'ME05 — Escuridão Absoluta', nome:'Booster Avulso',                boosters:1,  varejo:14.99,  set:'me05', extras:[], estimado:true },
   // ── ME03 Ordem Perfeita ───────────────────────────────────
-  { id:'me03-display',  grupo:'ME03 — Ordem Perfeita', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me03', extras:[], premium:0 },
-  { id:'me03-etb',      grupo:'ME03 — Ordem Perfeita', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me03', extras:[], premium:5 },
-  { id:'me03-blister4', grupo:'ME03 — Ordem Perfeita', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me03', extras:[], premium:0 },
-  { id:'me03-blister3', grupo:'ME03 — Ordem Perfeita', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me03', extras:[], premium:0 },
-  { id:'me03-blister2', grupo:'ME03 — Ordem Perfeita', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me03', extras:[], premium:0 },
-  { id:'me03-booster',  grupo:'ME03 — Ordem Perfeita', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me03', extras:[], premium:0 },
+  { id:'me03-display',  grupo:'ME03 — Ordem Perfeita', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me03', extras:[] },
+  { id:'me03-etb',      grupo:'ME03 — Ordem Perfeita', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me03', extras:[] },
+  { id:'me03-blister4', grupo:'ME03 — Ordem Perfeita', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me03', extras:[] },
+  { id:'me03-blister3', grupo:'ME03 — Ordem Perfeita', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me03', extras:[] },
+  { id:'me03-blister2', grupo:'ME03 — Ordem Perfeita', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me03', extras:[] },
+  { id:'me03-booster',  grupo:'ME03 — Ordem Perfeita', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me03', extras:[] },
   // ── ME02 Fogo Fantasmagorico ──────────────────────────────
-  { id:'me02-display',  grupo:'ME02 — Fogo Fantasmagorico', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me02', extras:[], premium:0 },
-  { id:'me02-etb',      grupo:'ME02 — Fogo Fantasmagorico', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me02', extras:[], premium:5 },
-  { id:'me02-blister4', grupo:'ME02 — Fogo Fantasmagorico', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me02', extras:[], premium:0 },
-  { id:'me02-blister3', grupo:'ME02 — Fogo Fantasmagorico', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me02', extras:[], premium:0 },
-  { id:'me02-blister2', grupo:'ME02 — Fogo Fantasmagorico', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me02', extras:[], premium:0 },
-  { id:'me02-booster',  grupo:'ME02 — Fogo Fantasmagorico', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me02', extras:[], premium:0 },
+  { id:'me02-display',  grupo:'ME02 — Fogo Fantasmagorico', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me02', extras:[] },
+  { id:'me02-etb',      grupo:'ME02 — Fogo Fantasmagorico', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me02', extras:[] },
+  { id:'me02-blister4', grupo:'ME02 — Fogo Fantasmagorico', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me02', extras:[] },
+  { id:'me02-blister3', grupo:'ME02 — Fogo Fantasmagorico', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me02', extras:[] },
+  { id:'me02-blister2', grupo:'ME02 — Fogo Fantasmagorico', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me02', extras:[] },
+  { id:'me02-booster',  grupo:'ME02 — Fogo Fantasmagorico', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me02', extras:[] },
   // ── MEG Megaevolucao ──────────────────────────────────────
-  { id:'meg-display',   grupo:'MEG — Megaevolucao', nome:'Box Display (36 boosters)',       boosters:36, varejo:499.99, set:'meg', extras:[], premium:0 },
-  { id:'meg-blister4',  grupo:'MEG — Megaevolucao', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:54.99,  set:'meg', extras:[], premium:0 },
-  { id:'meg-blister3',  grupo:'MEG — Megaevolucao', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:39.99,  set:'meg', extras:[], premium:0 },
-  { id:'meg-booster',   grupo:'MEG — Megaevolucao', nome:'Booster Avulso',                 boosters:1,  varejo:13.99,  set:'meg', extras:[], premium:0 },
+  { id:'meg-display',   grupo:'MEG — Megaevolucao', nome:'Box Display (36 boosters)',       boosters:36, varejo:499.99, set:'meg', extras:[] },
+  { id:'meg-blister4',  grupo:'MEG — Megaevolucao', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:54.99,  set:'meg', extras:[] },
+  { id:'meg-blister3',  grupo:'MEG — Megaevolucao', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:39.99,  set:'meg', extras:[] },
+  { id:'meg-booster',   grupo:'MEG — Megaevolucao', nome:'Booster Avulso',                 boosters:1,  varejo:13.99,  set:'meg', extras:[] },
   // ── Caixas Especiais ──────────────────────────────────────
+  // Bandas min/max destas duas caixas eram fabricadas (evBoosterMin = c*0.6, evBoosterMax = c*1.5,
+  // sem base em dado nenhum). Trocado por minValor/maxValor reais por raridade (mesmo padrão dos
+  // sets normais, que usam mín/máx real observado por raridade em calcEV()).
   { id:'clefable-box', grupo:'Caixas Especiais', nome:'Box Mega Luar Clefable ex (8 boost.)', boosters:8, varejo:139.90,
     raridades:[
-      {nome:'Rev. Holo', freq:1.00,valor:0.80},{nome:'Rara Holo',freq:0.33,valor:4.00},
-      {nome:'Dupla Rara',freq:0.12,valor:7.00},{nome:'IR',freq:0.07,valor:35.00},
-      {nome:'UR/SAR',freq:0.035,valor:120.00},{nome:'Hyper Rare',freq:0.0011,valor:1500.00}
-    ], extras:[{descricao:'Promo Mega Clefable ex',valor:10.00}], premium:12 },
+      {nome:'Rev. Holo', freq:1.00,valor:0.80,minValor:0.50,maxValor:1.20},
+      {nome:'Rara Holo',freq:0.33,valor:4.00,minValor:2.00,maxValor:8.00},
+      {nome:'Dupla Rara',freq:0.12,valor:7.00,minValor:3.00,maxValor:15.00},
+      {nome:'IR',freq:0.07,valor:35.00,minValor:15.00,maxValor:70.00},
+      {nome:'UR/SAR',freq:0.035,valor:120.00,minValor:40.00,maxValor:300.00},
+      {nome:'Hyper Rare',freq:0.0011,valor:1500.00,minValor:500.00,maxValor:3500.00}
+    ], extras:[{descricao:'Promo Mega Clefable ex',valor:10.00}] },
   { id:'chary-box', grupo:'Caixas Especiais', nome:'Box Charizard Y ex (9 boost.)', boosters:9, varejo:149.99,
     raridades:[
-      {nome:'Rev. Holo',freq:1.00,valor:0.80},{nome:'Rara Holo',freq:0.33,valor:4.00},
-      {nome:'Dupla Rara',freq:0.12,valor:7.00},{nome:'IR',freq:0.07,valor:35.00},
-      {nome:'UR/SAR',freq:0.035,valor:120.00},{nome:'Hyper Rare',freq:0.0011,valor:1500.00}
-    ], extras:[{descricao:'Promo Charizard Y ex',valor:15.00}], premium:8 }
+      {nome:'Rev. Holo',freq:1.00,valor:0.80,minValor:0.50,maxValor:1.20},
+      {nome:'Rara Holo',freq:0.33,valor:4.00,minValor:2.00,maxValor:8.00},
+      {nome:'Dupla Rara',freq:0.12,valor:7.00,minValor:3.00,maxValor:15.00},
+      {nome:'IR',freq:0.07,valor:35.00,minValor:15.00,maxValor:70.00},
+      {nome:'UR/SAR',freq:0.035,valor:120.00,minValor:40.00,maxValor:300.00},
+      {nome:'Hyper Rare',freq:0.0011,valor:1500.00,minValor:500.00,maxValor:3500.00}
+    ], extras:[{descricao:'Promo Charizard Y ex',valor:15.00}] }
 ];
 
 // ── Sets SV (Escarlate & Violeta) — adicionados a partir do SET_CATALOG (app.js) ──
@@ -147,9 +115,9 @@ var CATALOG = [
     var meta = (typeof SET_CATALOG !== 'undefined') ? SET_CATALOG.find(function(s){ return s.id === id; }) : null;
     var label = meta ? meta.label : id.toUpperCase();
     CATALOG.push(
-      { id:id+'-display',  grupo:label, nome:'Box Display (36 boosters) [estimado]', boosters:36, varejo:449.99, set:id, extras:[], premium:0, estimado:true },
-      { id:id+'-blister3', grupo:label, nome:'Blister Triplo (3 boosters) [estimado]', boosters:3, varejo:39.99, set:id, extras:[], premium:0, estimado:true },
-      { id:id+'-booster',  grupo:label, nome:'Booster Avulso [estimado]', boosters:1, varejo:12.99, set:id, extras:[], premium:0, estimado:true }
+      { id:id+'-display',  grupo:label, nome:'Box Display (36 boosters) [estimado]', boosters:36, varejo:449.99, set:id, extras:[], estimado:true },
+      { id:id+'-blister3', grupo:label, nome:'Blister Triplo (3 boosters) [estimado]', boosters:3, varejo:39.99, set:id, extras:[], estimado:true },
+      { id:id+'-booster',  grupo:label, nome:'Booster Avulso [estimado]', boosters:1, varejo:12.99, set:id, extras:[], estimado:true }
     );
   });
 })();
@@ -226,7 +194,13 @@ function calcEVForProduct(prod) {
   } else {
     (prod.raridades||[]).forEach(function(r){
       var c = r.freq * r.valor;
-      evBooster += c; evBoosterMin += c*0.6; evBoosterMax += c*1.5;
+      // minValor/maxValor vem do próprio cadastro do produto (faixa real de preço
+      // observada pra essa raridade nessas caixas especiais) — antes era um fator
+      // arbitrário (c*0.6 / c*1.5) sem base em dado nenhum, igual pros sets normais
+      // (calcEV() acima usa mín/máx real por raridade) e pra estas caixas.
+      var minV = (r.minValor != null) ? r.minValor : r.valor;
+      var maxV = (r.maxValor != null) ? r.maxValor : r.valor;
+      evBooster += c; evBoosterMin += r.freq*minV; evBoosterMax += r.freq*maxV;
       rarBreakdown.push({ nome:r.nome, freq:r.freq, valor:r.valor, evContrib:c });
     });
   }
@@ -356,7 +330,33 @@ function renderEVResults() {
     '</div>'
   ) : '';
 
-  area.innerHTML = estimadoBanner +
+  // Aviso de variância: a nota S/A/B/C/D compara preço pago vs. EV MÉDIO, mas
+  // a mesma nota vale pra 1 booster (altíssima variância — pode não sair hit
+  // nenhum) e pra uma box de 36 (converge bem mais perto da média, lei dos
+  // grandes números). Sem isso o usuário pode achar que "B — Bom" garante o
+  // mesmo resultado nos dois casos, o que não é verdade estatisticamente.
+  var varianceCaveat = (function(){
+    var n = prod.boosters;
+    if (n <= 1) return { icon:'🎲', txt:'Compra de 1 booster — altíssima variância. O resultado individual pode ficar bem longe da média (inclusive sem hit nenhum). A nota acima reflete o retorno médio no longo prazo, não uma garantia desta compra específica.' };
+    if (n < 9)  return { icon:'🎲', txt:'Compra de ' + n + ' boosters — variância ainda alta. O resultado individual tende a divergir bastante do EV médio calculado.' };
+    return { icon:'📊', txt:'Compra de ' + n + ' boosters — resultado converge bem mais perto da média esperada (lei dos grandes números). A nota acima é mais confiável aqui do que num booster avulso.' };
+  })();
+  var varianceBanner =
+    '<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--teal);border-radius:8px;' +
+    'padding:10px 14px;margin-bottom:16px;font-size:11px;color:var(--muted)">' +
+    varianceCaveat.icon + ' ' + varianceCaveat.txt +
+    '</div>';
+
+  // Data da última atualização de preços deste set (price_updated_at.js,
+  // mantido por scripts/update_prices.py). Caixas especiais (clefable-box/
+  // chary-box) não têm prod.set — não fazem sentido aqui, ficam de fora.
+  var updatedBanner = (prod.set && typeof formatPriceUpdatedAt === 'function') ? (
+    '<div style="font-size:10px;color:var(--muted);margin-bottom:16px">' +
+    '🗓️ Preços das cartas atualizados em: <strong style="color:var(--fg)">' + formatPriceUpdatedAt(prod.set) + '</strong>' +
+    '</div>'
+  ) : '';
+
+  area.innerHTML = estimadoBanner + varianceBanner + updatedBanner +
     '<div style="background:' + verdictBg + ';border-radius:16px;padding:24px 28px;' +
     'display:flex;align-items:center;gap:24px;margin-bottom:24px;flex-wrap:wrap">' +
       '<div style="background:rgba(0,0,0,0.25);border-radius:12px;width:72px;height:72px;' +

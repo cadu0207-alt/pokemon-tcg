@@ -337,6 +337,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 <script src="cards_me02.js"></script>
 <script src="cards_meg.js"></script>
 <script src="cards_me05.js"></script>
+<script src="pull_rates.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
 // DADOS DAS CARTAS — dinâmico por set (le direto dos cards_*.js reais,
@@ -360,16 +361,15 @@ const RETAIL = {
   meg: {avulso:13.99,duplo:27.99,triplo:39.99,quad:54.99,box:499.99},
 };
 
-function normalizeRareBucket(r){
-  if(!r) return 'BASE';
-  const s=r.trim();
-  if(s==='Dupla Rara'||s==='Rara Dupla') return 'RD';
-  if(s==='Ilustr. Rara') return 'IR';
-  if(s==='Rara Ultra') return 'UR';
-  if(s==='Ilustr. Esp. Rara') return 'IRE';
-  if(s==='Mega Hyper Rare'||s==='Mega Attack Rare') return 'MHR';
-  return 'BASE'; // Comum, Incomum, Rara normal
-}
+// normalizeRareBucket() agora vem de pull_rates.js (script carregado acima) —
+// era uma cópia própria daqui que só reconhecia os nomes de raridade em
+// português no padrão ME04/ME03/ME02/MEG. Nunca foi atualizada com os nomes
+// provisórios do ME05 ("Art Rare", "Super Rare", "Special Art Rare", "Mega
+// Ultra Rare"), então todo hit raro do ME05 caía no bucket BASE (comuns) aqui
+// dentro — mesmo com o EV calculator (Preço Justo) já reconhecendo esses
+// nomes corretamente desde o incidente de julho. Unificado agora: as duas
+// telas usam a mesma função, então um nome de raridade novo só precisa ser
+// ensinado uma vez (em pull_rates.js).
 
 let CARD_DATA={}, BASE_NUMS=[], RD_POOL=[], IR_POOL=[], UR_POOL=[], IRE_POOL=[], MHR_POOL=[], ENERGIA_NUMS=[];
 let IMG_PREFIX='me4', currentSetId='me04';

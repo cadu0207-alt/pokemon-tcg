@@ -247,6 +247,12 @@ function renderBinder() {
   // Label de progresso do set
   const infoEl = document.getElementById('fic-set-info');
   if (infoEl) {
+    // Mesma data mostrada na aba Preço Justo (price_updated_at.js, mantido por
+    // scripts/update_prices.py) — sets fora do map (SV, legado, mep, me06 ainda
+    // sem cards) simplesmente não mostram o selo, sem quebrar nada.
+    const priceUpdated = (typeof formatPriceUpdatedAt === 'function' && typeof PRICE_UPDATED_AT !== 'undefined' && PRICE_UPDATED_AT.hasOwnProperty(currentSet))
+      ? `<span style="font-size:9px;color:var(--muted)">🗓️ preços atualizados em ${formatPriceUpdatedAt(currentSet)}</span>`
+      : '';
     infoEl.innerHTML = `
       <span>${getSetLabel()}</span>
       <span style="color:var(--teal)">${colSlots}/${totalSlots} slots</span>
@@ -254,6 +260,7 @@ function renderBinder() {
       <div style="flex:1;min-width:120px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden">
         <div style="height:100%;width:${pct}%;background:var(--teal);border-radius:2px;transition:width .4s"></div>
       </div>
+      ${priceUpdated}
       <span style="font-size:9px;color:var(--muted)">Clique na carta para editar slots</span>`;
   }
 

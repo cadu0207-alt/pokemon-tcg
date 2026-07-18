@@ -9,8 +9,14 @@
 //   1. Cada produto ganha um "score de desconto" = o quanto o preço
 //      MAIS RECENTE está abaixo da MEDIANA do próprio histórico dele
 //      (computeDealScore, já definida em lojas.js).
-//   2. Depois dos pins manuais, completa até 10 produtos em destaque com
-//      quem tem maior score — em ordem, maior desconto primeiro.
+//   2. Depois dos pins manuais, completa até 10 vagas de destaque só com
+//      quem tem DESCONTO REAL (score > 0) — em ordem, maior desconto
+//      primeiro. Se não tiver 10 produtos com desconto real, o destaque
+//      fica com menos de 10 (nunca "estica" com produto sem desconto).
+//   2.1. O selo "🔥 OFERTA IMPERDÍVEL" só aparece em quem tem desconto
+//      real. Pin manual sem desconto real ainda entra em destaque (regra
+//      0), mas ganha o selo neutro "★ EM DESTAQUE" em vez do selo de
+//      desconto — pra não prometer economia que não existe.
 //   3. Do produto seguinte em diante, ordem aleatória (embaralhada a cada
 //      carregamento da aba) — mostra "o resto" sem sempre repetir os
 //      mesmos por último.
@@ -56,19 +62,28 @@ async function renderShowcaseSection() {
 
   // Pin manual (estrela do admin, term.featured) SEMPRE entra em destaque,
   // não importa quantos sejam nem qual o score — prioridade absoluta.
+  // Já a vaga AUTOMÁTICA só é preenchida por quem tem desconto REAL
+  // (score > 0 — preço atual genuinamente abaixo da mediana/média do
+  // próprio histórico). Sem isso, produto com preço "normal" (score 0
+  // ou negativo) não ocupa vaga de destaque nem ganha selo de oferta.
   const pinned = scored.filter(x => x.term.featured).sort(byScoreDesc);
-  const autoPool = scored.filter(x => !x.term.featured).sort(byScoreDesc);
+  const autoPool = scored.filter(x => !x.term.featured && x.score > 0).sort(byScoreDesc);
 
-  const DESTAQUE_SIZE = 10;
+  const DESTAQUE_SIZE = 10; // teto — pode ter MENOS se faltar desconto real pra preencher
   const autoSlots = Math.max(0, DESTAQUE_SIZE - pinned.length);
   const destaqueList = pinned.concat(autoPool.slice(0, autoSlots));
   const destaqueIds = new Set(destaqueList.map(x => x.term.id));
   const restList = scored.filter(x => !destaqueIds.has(x.term.id));
   shuffleInPlace(restList);
 
-  const featuredCards = destaqueList.map(x =>
-    renderProductCard(x.term, x.history, true, couponForTerm(coupons, x.term.id), rules, x.score)
-  );
+  // Selo de desconto ("🔥 OFERTA IMPERDÍVEL") só quando o desconto é real.
+  // Pin manual sem desconto real ainda aparece em destaque (regra acima),
+  // mas com selo neutro — sem alegar economia que não existe.
+  const featuredCards = destaqueList.map(x => {
+    const html = renderProductCard(x.term, x.history, true, couponForTerm(coupons, x.term.id), rules, x.score);
+    const hasRealDiscount = x.score != null && x.score > 0;
+    return hasRealDiscount ? html : html.replace('🔥 OFERTA IMPERDÍVEL', '★ EM DESTAQUE');
+  });
   const normalCards = restList.map(x =>
     renderProductCard(x.term, x.history, false, couponForTerm(coupons, x.term.id), rules, x.score)
   );

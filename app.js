@@ -217,6 +217,7 @@ function getBinderImg(c,setId){
   if(setId==='me02') return imgMe02(n);
   if(setId==='meg')  return imgMeg(n);
   if(setId==='mep')  return imgMep(n);
+  // svp usa o fallback genérico sv* logo abaixo (pokemontcg.io CDN)
   if(setId==='me04') return imgMe04(n);
   // Sets Escarlate e Violeta — imagens via pokemontcg.io CDN (público)
   // Usa número sem zero à esquerda (padrão do CDN) ou o valor original para cartas especiais (TG01, ACE01...)
@@ -337,7 +338,7 @@ function getSlots(c,setId){
     ];
   }
   // MEP: só tem IR (SP)
-  if(setId==='mep') return [{ver:'SP',price:c.price}];
+  if(setId==='mep'||setId==='svp') return [{ver:'SP',price:c.price}];
   return [{ver:'N',price:c.price},{ver:'RH',price:c.priceRH||(c.price?+(c.price*1.2).toFixed(2):null)}];
 }
 
@@ -717,12 +718,12 @@ function renderGen1Pobre(){
 // ── PROGRESS ────────────────────────────────────────────────────
 const SET_META={
   me06:{label:'💎 ME06 — Esmeralda Tempestuosa',color:'#00c853',chase:'Mega Rayquaza ex Gold — R$1.500 (est.)',heroCard:1,imgFn:imgMe06,upcoming:true,releaseDate:'out/2026'},
-  me05:{label:'🌑 ME05 — Escuridão Absoluta',color:'#424242',chase:'Gladion\'s Showdown SAR — US$1.090',heroCard:118,imgFn:imgMe05,releaseDate:'17/jul/2026'},
-  me04:{label:'🔥 ME04 — Caos Ascendente',color:'var(--accent)',chase:'Mega Greninja ex Gold — R$1.482',heroCard:22,imgFn:imgMe04},
-  me03:{label:'🔵 ME03 — Ordem Perfeita',color:'#1565C0',chase:'Meowth ex SAR — R$870 · Mega Zygarde ex Gold — R$775',heroCard:62,imgFn:imgMe03},
-  me02:{label:'👻 ME02 — Fogo Fantasmagórico',color:'#9C27B0',chase:'Mega Charizard X ex SAR — R$1.809',heroCard:13,imgFn:imgMe02},
-  meg: {label:'🌿 MEG — Megaevolução',color:'#4CAF50',chase:'Mega Greninja ex UR — R$60',heroCard:3,imgFn:imgMeg},
-  mep: {label:'⭐ MEP — Parceiros Iniciais',color:'#ffd166',chase:'Charmander MEP038 — R$36',heroCard:38,imgFn:imgMep},
+  me05:{label:'🌑 ME05(PBL) — Escuridão Absoluta',color:'#424242',chase:'Gladion\'s Showdown SAR — US$1.090',heroCard:118,imgFn:imgMe05,releaseDate:'17/jul/2026'},
+  me04:{label:'🔥 ME04(CRI) — Caos Ascendente',color:'var(--accent)',chase:'Mega Greninja ex Gold — R$1.482',heroCard:22,imgFn:imgMe04},
+  me03:{label:'🔵 ME03(POR) — Ordem Perfeita',color:'#1565C0',chase:'Meowth ex SAR — R$870 · Mega Zygarde ex Gold — R$775',heroCard:62,imgFn:imgMe03},
+  me02:{label:'👻 ME02(PFL) — Fogo Fantasmagórico',color:'#9C27B0',chase:'Mega Charizard X ex SAR — R$1.809',heroCard:13,imgFn:imgMe02},
+  meg: {label:'🌿 MEG(MEG) — Megaevolução',color:'#4CAF50',chase:'Mega Greninja ex UR — R$60',heroCard:3,imgFn:imgMeg},
+  mep: {label:'⭐ MEP(MEP) — Parceiros Iniciais',color:'#ffd166',chase:'Charmander MEP038 — R$36',heroCard:38,imgFn:imgMep},
 };
 const SET_CARDS_MAP={
   me06:()=>typeof CARDS_ME06!=='undefined'?CARDS_ME06:[],
@@ -746,6 +747,7 @@ const SET_CARDS_MAP={
   sv8pt5:()=>typeof CARDS_SV8PT5!=='undefined'?CARDS_SV8PT5:[],
   sv9: ()=>typeof CARDS_SV9!=='undefined'?CARDS_SV9:[],
   sv10:()=>typeof CARDS_SV10!=='undefined'?CARDS_SV10:[],
+  svp:()=>typeof CARDS_SVP!=='undefined'?CARDS_SVP:[],
 };
 // sets legados entram no mapa dinamicamente
 (window.LEGACY_SETS||[]).forEach(ls=>{if(!SET_CARDS_MAP[ls.id])SET_CARDS_MAP[ls.id]=()=>ls.data;});
@@ -753,26 +755,27 @@ const SET_CARDS_MAP={
 // ── CATÁLOGO DE COLEÇÕES ─────────────────────────────────────────
 const SET_CATALOG=[
   {id:'me06',label:'ME06 — Esmeralda Tempestuosa',emoji:'💎',cards:0,  color:'#00c853',series:'ME',upcoming:true},
-  {id:'me05',label:'ME05 — Escuridão Absoluta',      emoji:'🌑',cards:118,color:'#757575',series:'ME'},
-  {id:'me04',label:'ME04 — Caos Ascendente',       emoji:'🔥',cards:122,color:'#FF5722',series:'ME'},
-  {id:'me03',label:'ME03 — Ordem Perfeita',        emoji:'🔵',cards:typeof CARDS_ME03!=='undefined'?CARDS_ME03.length:120,color:'#1565C0',series:'ME'},
-  {id:'me02',label:'ME02 — Fogo Fantasmagórico',   emoji:'👻',cards:130,color:'#9C27B0',series:'ME'},
-  {id:'meg', label:'MEG — Megaevolução',            emoji:'🌿',cards:188,color:'#4CAF50',series:'ME'},
-  {id:'mep', label:'MEP — Promos Mega Evolução',   emoji:'⭐',cards:typeof CARDS_MEP!=='undefined'?CARDS_MEP.length:54, color:'#ffd166',series:'ME'},
-  {id:'sv10',label:'SV10 — Rivais do Destino',     emoji:'⚔️',cards:244,color:'#E91E63',series:'SV'},
-  {id:'sv9', label:'SV9 — Jornada Juntos',          emoji:'🤝',cards:190,color:'#3F51B5',series:'SV'},
-  {id:'sv8pt5',label:'SV8.5 — Evoluções Prismáticas',emoji:'💫',cards:180,color:'#9C27B0',series:'SV'},
-  {id:'sv8', label:'SV8 — Faíscas Furiosas',        emoji:'⚡',cards:252,color:'#FF9800',series:'SV'},
-  {id:'sv7', label:'SV7 — Coroa Estelar',           emoji:'👑',cards:175,color:'#FFC107',series:'SV'},
-  {id:'sv6pt5',label:'SV6.5 — Véu das Sombras',   emoji:'🌑',cards:99, color:'#607D8B',series:'SV'},
-  {id:'sv6', label:'SV6 — Máscara do Futuro',      emoji:'🎭',cards:226,color:'#00BCD4',series:'SV'},
-  {id:'sv5', label:'SV5 — Forças Triplas',          emoji:'💥',cards:218,color:'#FF5722',series:'SV'},
-  {id:'sv4pt5',label:'SV4.5 — Destinos de Paldea', emoji:'✨',cards:245,color:'#FFD700',series:'SV'},
-  {id:'sv4', label:'SV4 — Fenda Temporal',          emoji:'⏰',cards:266,color:'#673AB7',series:'SV'},
-  {id:'sv3pt5',label:'SV3.5 — Coleção 151',        emoji:'💯',cards:207,color:'#E91E63',series:'SV'},
-  {id:'sv3', label:'SV3 — Obsidiana Chamejante',    emoji:'🌋',cards:230,color:'#BF360C',series:'SV'},
-  {id:'sv2', label:'SV2 — Evolução em Paldea',      emoji:'🏔️',cards:279,color:'#00ACC1',series:'SV'},
-  {id:'sv1', label:'SV1 — Escarlate e Violeta',     emoji:'🌿',cards:258,color:'#8E24AA',series:'SV'},
+  {id:'me05',label:'ME05(PBL) — Escuridão Absoluta', emoji:'🌑',cards:118,color:'#757575',series:'ME'},
+  {id:'me04',label:'ME04(CRI) — Caos Ascendente',  emoji:'🔥',cards:122,color:'#FF5722',series:'ME'},
+  {id:'me03',label:'ME03(POR) — Ordem Perfeita',   emoji:'🔵',cards:typeof CARDS_ME03!=='undefined'?CARDS_ME03.length:120,color:'#1565C0',series:'ME'},
+  {id:'me02',label:'ME02(PFL) — Fogo Fantasmagórico', emoji:'👻',cards:130,color:'#9C27B0',series:'ME'},
+  {id:'meg', label:'MEG(MEG) — Megaevolução',       emoji:'🌿',cards:188,color:'#4CAF50',series:'ME'},
+  {id:'mep', label:'MEP(MEP) — Promos Mega Evolução', emoji:'⭐',cards:typeof CARDS_MEP!=='undefined'?CARDS_MEP.length:54, color:'#ffd166',series:'ME'},
+  {id:'svp', label:'SVP(SVP) — Promos Escarlate e Violeta',emoji:'🎫',cards:typeof CARDS_SVP!=='undefined'?CARDS_SVP.length:218,color:'#546E7A',series:'SV'},
+  {id:'sv10',label:'SV10(DRI) — Rivais do Destino',emoji:'⚔️',cards:244,color:'#E91E63',series:'SV'},
+  {id:'sv9', label:'SV9(JTG) — Jornada Juntos',     emoji:'🤝',cards:190,color:'#3F51B5',series:'SV'},
+  {id:'sv8pt5',label:'SV8.5(PRE) — Evoluções Prismáticas',emoji:'💫',cards:180,color:'#9C27B0',series:'SV'},
+  {id:'sv8', label:'SV8(SSP) — Faíscas Furiosas',   emoji:'⚡',cards:252,color:'#FF9800',series:'SV'},
+  {id:'sv7', label:'SV7(SCR) — Coroa Estelar',      emoji:'👑',cards:175,color:'#FFC107',series:'SV'},
+  {id:'sv6pt5',label:'SV6.5(SFA) — Véu das Sombras',emoji:'🌑',cards:99, color:'#607D8B',series:'SV'},
+  {id:'sv6', label:'SV6(TWM) — Máscara do Futuro',  emoji:'🎭',cards:226,color:'#00BCD4',series:'SV'},
+  {id:'sv5', label:'SV5(TEF) — Forças Triplas',     emoji:'💥',cards:218,color:'#FF5722',series:'SV'},
+  {id:'sv4pt5',label:'SV4.5(PAF) — Destinos de Paldea',emoji:'✨',cards:245,color:'#FFD700',series:'SV'},
+  {id:'sv4', label:'SV4(PAR) — Fenda Temporal',     emoji:'⏰',cards:266,color:'#673AB7',series:'SV'},
+  {id:'sv3pt5',label:'SV3.5(MEW) — Coleção 151',   emoji:'💯',cards:207,color:'#E91E63',series:'SV'},
+  {id:'sv3', label:'SV3(OBF) — Obsidiana Chamejante',emoji:'🌋',cards:230,color:'#BF360C',series:'SV'},
+  {id:'sv2', label:'SV2(PAL) — Evolução em Paldea', emoji:'🏔️',cards:279,color:'#00ACC1',series:'SV'},
+  {id:'sv1', label:'SV1(SVI) — Escarlate e Violeta',emoji:'🌿',cards:258,color:'#8E24AA',series:'SV'},
 ];
 
 // ── SÉRIES (ordem de exibição na home e no gerenciador) ─────────
@@ -1146,17 +1149,17 @@ function getSetData(){
   const map={
     me06:{cards:me06c,imgFn:imgMe06,label:'ME06 — Esmeralda Tempestuosa',upcoming:true,
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Secretas',filter:c=>!c.base}]},
-    me05:{cards:me05c,imgFn:imgMe05,label:'ME05 — Escuridão Absoluta', // lançou 17/jul/2026 — já ativo, consistente com SET_CATALOG
+    me05:{cards:me05c,imgFn:imgMe05,label:'ME05(PBL) — Escuridão Absoluta', // lançou 17/jul/2026 — já ativo, consistente com SET_CATALOG
       sections:[{lbl:'📄 Base — 001 a 081',filter:c=>c.base},{lbl:'✨ Secretas — 082 a 118',filter:c=>!c.base}]},
-    me04:{cards:CARDS,imgFn:imgMe04,label:'ME04 — Caos Ascendente',
+    me04:{cards:CARDS,imgFn:imgMe04,label:'ME04(CRI) — Caos Ascendente',
       sections:[{lbl:'📄 Base — 001 a 086',filter:c=>c.base},{lbl:'✨ Secretas — 087 a 122',filter:c=>!c.base}]},
-    me03:{cards:me03c,imgFn:imgMe03,label:'ME03 — Ordem Perfeita',
+    me03:{cards:me03c,imgFn:imgMe03,label:'ME03(POR) — Ordem Perfeita',
       sections:[{lbl:'📄 Base — 001 a 070',filter:c=>c.base},{lbl:'✨ Secretas — 071 a 120',filter:c=>!c.base}]},
-    me02:{cards:CARDS_ME02,imgFn:imgMe02,label:'ME02 — Fogo Fantasmagórico',
+    me02:{cards:CARDS_ME02,imgFn:imgMe02,label:'ME02(PFL) — Fogo Fantasmagórico',
       sections:[{lbl:'📄 Base — 001 a 094',filter:c=>c.base},{lbl:'✨ Secretas — 095 a 130',filter:c=>!c.base}]},
-    meg: {cards:CARDS_MEG,imgFn:imgMeg,label:'MEG — Megaevolução',
+    meg: {cards:CARDS_MEG,imgFn:imgMeg,label:'MEG(MEG) — Megaevolução',
       sections:[{lbl:'📄 Base — 001 a 132',filter:c=>c.base},{lbl:'✨ Secretas — 133 a 188',filter:c=>!c.base}]},
-    mep: {cards:CARDS_MEP,imgFn:imgMep,label:'MEP — Promos Mega Evolução (todas)',
+    mep: {cards:CARDS_MEP,imgFn:imgMep,label:'MEP(MEP) — Promos Mega Evolução (todas)',
       sections:[
         {lbl:'📦 Promos MEP001–036 — Staff/Torneio/Jumbo/Pokémon Center', filter:c=>c.series==='Promos MEP 001–036'},
         {lbl:'⭐ Série 1 — Kanto · Sinnoh · Alola (MEP037–045)',  filter:c=>c.series&&c.series.includes('Série 1')},
@@ -1167,33 +1170,35 @@ function getSetData(){
         {lbl:'📦 Outros',                                          filter:c=>!c.series||(!c.series.includes('Série')&&c.series!=='Promos MEP 001–036'&&c.series!=='Promos MEP 064–081'&&c.series!=='Promos MEP 082–110')},
       ]},
     // ── Escarlate e Violeta (2023-2025) ─────────────────────────────
-    sv10:  {cards:typeof CARDS_SV10!=='undefined'?CARDS_SV10:[],  label:'SV10 — Rivais do Destino',
+    svp:   {cards:typeof CARDS_SVP!=='undefined'?CARDS_SVP:[],    label:'SVP(SVP) — Promos Escarlate e Violeta',
+      sections:[{lbl:'🎫 Promos (todas)',filter:c=>true}]},
+    sv10:  {cards:typeof CARDS_SV10!=='undefined'?CARDS_SV10:[],  label:'SV10(DRI) — Rivais do Destino',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv9:   {cards:typeof CARDS_SV9!=='undefined'?CARDS_SV9:[],    label:'SV9 — Jornada Juntos',
+    sv9:   {cards:typeof CARDS_SV9!=='undefined'?CARDS_SV9:[],    label:'SV9(JTG) — Jornada Juntos',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv8pt5:{cards:typeof CARDS_SV8PT5!=='undefined'?CARDS_SV8PT5:[],label:'SV8.5 — Evoluções Prismáticas',
+    sv8pt5:{cards:typeof CARDS_SV8PT5!=='undefined'?CARDS_SV8PT5:[],label:'SV8.5(PRE) — Evoluções Prismáticas',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv8:   {cards:typeof CARDS_SV8!=='undefined'?CARDS_SV8:[],    label:'SV8 — Faíscas Furiosas',
+    sv8:   {cards:typeof CARDS_SV8!=='undefined'?CARDS_SV8:[],    label:'SV8(SSP) — Faíscas Furiosas',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv7:   {cards:typeof CARDS_SV7!=='undefined'?CARDS_SV7:[],    label:'SV7 — Coroa Estelar',
+    sv7:   {cards:typeof CARDS_SV7!=='undefined'?CARDS_SV7:[],    label:'SV7(SCR) — Coroa Estelar',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv6pt5:{cards:typeof CARDS_SV6PT5!=='undefined'?CARDS_SV6PT5:[],label:'SV6.5 — Véu das Sombras',
+    sv6pt5:{cards:typeof CARDS_SV6PT5!=='undefined'?CARDS_SV6PT5:[],label:'SV6.5(SFA) — Véu das Sombras',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv6:   {cards:typeof CARDS_SV6!=='undefined'?CARDS_SV6:[],    label:'SV6 — Máscara do Futuro',
+    sv6:   {cards:typeof CARDS_SV6!=='undefined'?CARDS_SV6:[],    label:'SV6(TWM) — Máscara do Futuro',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv5:   {cards:typeof CARDS_SV5!=='undefined'?CARDS_SV5:[],    label:'SV5 — Forças Triplas',
+    sv5:   {cards:typeof CARDS_SV5!=='undefined'?CARDS_SV5:[],    label:'SV5(TEF) — Forças Triplas',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv4pt5:{cards:typeof CARDS_SV4PT5!=='undefined'?CARDS_SV4PT5:[],label:'SV4.5 — Destinos de Paldea',
+    sv4pt5:{cards:typeof CARDS_SV4PT5!=='undefined'?CARDS_SV4PT5:[],label:'SV4.5(PAF) — Destinos de Paldea',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv4:   {cards:typeof CARDS_SV4!=='undefined'?CARDS_SV4:[],    label:'SV4 — Fenda Temporal',
+    sv4:   {cards:typeof CARDS_SV4!=='undefined'?CARDS_SV4:[],    label:'SV4(PAR) — Fenda Temporal',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv3pt5:{cards:typeof CARDS_SV3PT5!=='undefined'?CARDS_SV3PT5:[],label:'SV3.5 — Coleção 151',
+    sv3pt5:{cards:typeof CARDS_SV3PT5!=='undefined'?CARDS_SV3PT5:[],label:'SV3.5(MEW) — Coleção 151',
       sections:[{lbl:'📄 Base (001-165)',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv3:   {cards:typeof CARDS_SV3!=='undefined'?CARDS_SV3:[],    label:'SV3 — Obsidiana Chamejante',
+    sv3:   {cards:typeof CARDS_SV3!=='undefined'?CARDS_SV3:[],    label:'SV3(OBF) — Obsidiana Chamejante',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv2:   {cards:typeof CARDS_SV2!=='undefined'?CARDS_SV2:[],    label:'SV2 — Evolução em Paldea',
+    sv2:   {cards:typeof CARDS_SV2!=='undefined'?CARDS_SV2:[],    label:'SV2(PAL) — Evolução em Paldea',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv1:   {cards:typeof CARDS_SV1!=='undefined'?CARDS_SV1:[],    label:'SV1 — Escarlate e Violeta',
+    sv1:   {cards:typeof CARDS_SV1!=='undefined'?CARDS_SV1:[],    label:'SV1(SVI) — Escarlate e Violeta',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
   };
   if(!map[currentSet]){
@@ -1439,7 +1444,7 @@ function loadBoosterSlots(){
 
   // Detectar qual set pela compra
   const prod=purchase.product.toLowerCase();
-  let setId='me04',setCards=CARDS,setLabel='ME04 — Caos Ascendente';
+  let setId='me04',setCards=CARDS,setLabel='ME04(CRI) — Caos Ascendente';
   if(prod.includes('me02')||prod.includes('fogo')||prod.includes('phantasmal')){setId='me02';setCards=CARDS_ME02;setLabel='ME02';}
   else if((prod.includes('meg')||prod.includes('me01'))&&!prod.includes('me04')){setId='meg';setCards=CARDS_MEG;setLabel='MEG';}
   else if(prod.includes('parceiros')||prod.includes('partner')||prod.includes('mep')){setId='mep';setCards=CARDS_MEP;setLabel='MEP';}
@@ -1677,12 +1682,12 @@ const BINDER_PRESETS=[
 
 const IMG_FNS={me04:imgMe04,me03:imgMe03,me02:imgMe02,meg:imgMeg,mep:imgMep,me05:imgMe05,me06:imgMe06};
 const CB_SET_LABELS={
-  me04:'🔥 ME04 — Caos Ascendente',
-  me03:'🔵 ME03 — Ordem Perfeita',
-  me02:'👻 ME02 — Fogo Fantasmagórico',
-  meg: '🌿 MEG — Megaevolução',
-  mep: '⭐ MEP — Promos',
-  me05:'🌑 ME05 — Escuridão Absoluta',
+  me04:'🔥 ME04(CRI) — Caos Ascendente',
+  me03:'🔵 ME03(POR) — Ordem Perfeita',
+  me02:'👻 ME02(PFL) — Fogo Fantasmagórico',
+  meg: '🌿 MEG(MEG) — Megaevolução',
+  mep: '⭐ MEP(MEP) — Promos',
+  me05:'🌑 ME05(PBL) — Escuridão Absoluta',
   me06:'💎 ME06 — Esmeralda Tempestuosa',
 };
 

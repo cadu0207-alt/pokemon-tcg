@@ -26,6 +26,29 @@ MIN_CARDS_PARA_GRAVAR = 20   # segurança: menos que isso = extração falhou, n
 ALERTA_VARIACAO = 4.0        # loga aviso se preço novo divergir mais de 4x do atual
 
 
+# ── Registro da data de atualização (price_updated_at.js) ────────────────────
+# Consumido pela aba Preço Justo e pelo Fichário no site, pra mostrar pro
+# usuário quão fresco é o preço que ele está vendo. Só a entrada do set que
+# de fato recebeu preços novos é tocada — sets pulados (sem URL, extração
+# insuficiente) mantêm a data anterior.
+
+def update_price_timestamp(repo_root: str, set_key: str) -> None:
+    path = os.path.join(repo_root, "price_updated_at.js")
+    today = datetime.now().strftime("%Y-%m-%d")
+    if not os.path.exists(path):
+        print(f"     ⚠️  price_updated_at.js não encontrado em {path} — pulando registro de data")
+        return
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+    pattern = re.compile(r"(\b" + re.escape(set_key) + r"\s*:\s*)(?:'[^']*'|null)")
+    new_content, n = pattern.subn(r"\g<1>'" + today + "'", content, count=1)
+    if n == 0:
+        print(f"     ⚠️  chave '{set_key}' não encontrada em price_updated_at.js — adicione manualmente")
+        return
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(new_content)
+
+
 # ── Extração via Playwright ──────────────────────────────────────────────────
 
 def fetch_liga_prices(url: str, debug_key: str = "") -> dict:
@@ -200,6 +223,9 @@ def main():
             updates, skipped, alertas = update_js_file(filepath, prices, dry)
             total += updates
             print(f"     ✅ {updates} preços {'simulados' if dry else 'atualizados'} em {s['file']}")
+            if updates > 0 and not dry:
+                update_price_timestamp(repo_root, s["key"])
+                print(f"     🗓️  price_updated_at.js atualizado para '{s['key']}'")
             if alertas:
                 print(f"     🔔 Variações >4x (conferir): {alertas[:8]}")
             if skipped:
