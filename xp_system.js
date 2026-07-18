@@ -74,6 +74,17 @@ function xpAchievementIcon(a) {
 function xpHasClient() {
   return typeof sbClient !== 'undefined' && !!sbClient;
 }
+// SEGURANÇA 16/07/2026: display_name é definido pelo próprio usuário
+// (profiles RLS deixa qualquer authenticated escrever a própria linha,
+// sem validação de conteúdo) e aparece pra TODO MUNDO no ranking —
+// sempre escapar antes de jogar em innerHTML, senão é XSS armazenado
+// (alguém setando display_name via API direta, não pelo modal, poderia
+// injetar <img onerror=...> e rodar JS na sessão de quem visse o board).
+function xpEscapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = String(str == null ? '' : str);
+  return d.innerHTML;
+}
 
 // ── ESTADO ──────────────────────────────────────────────────────
 let xpState = { progress: null, achievements: [], leaderboard: [], namesByUid: {}, myProfile: null, myRank: null, loaded: false };
@@ -169,7 +180,7 @@ function xpRenderDashPanel() {
   const myUid = (typeof uid === 'function') ? uid() : null;
   const boardRows = (xpState.leaderboard || []).map((r, i) => {
     const isMe = r.user_id === myUid;
-    const nm = xpDisplayName(r.user_id, xpState.namesByUid ? xpState.namesByUid[r.user_id] : null);
+    const nm = xpEscapeHtml(xpDisplayName(r.user_id, xpState.namesByUid ? xpState.namesByUid[r.user_id] : null));
     return `<div class="xp-board-row ${isMe ? 'xp-board-me' : ''}">
       <span class="xp-board-pos">${i + 1}º</span>
       <span class="xp-board-name">${nm}</span>
@@ -184,7 +195,7 @@ function xpRenderDashPanel() {
   const amIInTop10 = (xpState.leaderboard || []).some(r => r.user_id === myUid);
   let myRankBlock = '';
   if (!amIInTop10 && xpState.myRank) {
-    const myName2 = xpDisplayName(myUid, myName);
+    const myName2 = xpEscapeHtml(xpDisplayName(myUid, myName));
     myRankBlock = `
       <div class="xp-board-divider">⋯</div>
       <div class="xp-board-row xp-board-me">
@@ -205,7 +216,7 @@ function xpRenderDashPanel() {
       </div>
       <div class="xp-progress-bar-track"><div class="xp-progress-bar-fill" style="width:${pct}%"></div></div>
       <div class="xp-progress-sub">${(prog.total_xp || 0).toLocaleString('pt-BR')} XP — faltam ${Math.max(0, next - prog.total_xp).toLocaleString('pt-BR')} XP pro nível ${prog.level + 1}</div>
-      <button class="xp-btn xp-btn-ghost xp-btn-sm" style="margin-top:10px" onclick="xpOpenNameModal()">${myName ? `✎ mudar nome (${myName})` : 'Definir nome de exibição'}</button>
+      <button class="xp-btn xp-btn-ghost xp-btn-sm" style="margin-top:10px" onclick="xpOpenNameModal()">${myName ? `✎ mudar nome (${xpEscapeHtml(myName)})` : 'Definir nome de exibição'}</button>
     </div>
 
     <div class="dual" style="margin-top:16px">

@@ -88,9 +88,28 @@ const LORCANA_META=[
   {id:13,code:'???', label:'Attack of the Vine!'}, // lançou 17/jul/2026, ainda sem catálogo na API
 ];
 
+// IMPORTANTE: os cards_lorcana_setN.js declaram os arrays com `const`, e
+// `const`/`let` no escopo global NÃO viram propriedades de `window` (só `var`
+// vira) — por isso não dá pra usar window['CARDS_LORCANA_SET'+id] aqui. Fix:
+// switch com referência direta a cada nome, mesmo padrão já usado no app.js
+// do Pokémon (typeof CARDS_ME03!=='undefined'?CARDS_ME03:[]).
 function setCards(id){
-  const raw=window['CARDS_LORCANA_SET'+id];
-  return Array.isArray(raw)?raw:[];
+  switch(id){
+    case 1: return typeof CARDS_LORCANA_SET1!=='undefined'?CARDS_LORCANA_SET1:[];
+    case 2: return typeof CARDS_LORCANA_SET2!=='undefined'?CARDS_LORCANA_SET2:[];
+    case 3: return typeof CARDS_LORCANA_SET3!=='undefined'?CARDS_LORCANA_SET3:[];
+    case 4: return typeof CARDS_LORCANA_SET4!=='undefined'?CARDS_LORCANA_SET4:[];
+    case 5: return typeof CARDS_LORCANA_SET5!=='undefined'?CARDS_LORCANA_SET5:[];
+    case 6: return typeof CARDS_LORCANA_SET6!=='undefined'?CARDS_LORCANA_SET6:[];
+    case 7: return typeof CARDS_LORCANA_SET7!=='undefined'?CARDS_LORCANA_SET7:[];
+    case 8: return typeof CARDS_LORCANA_SET8!=='undefined'?CARDS_LORCANA_SET8:[];
+    case 9: return typeof CARDS_LORCANA_SET9!=='undefined'?CARDS_LORCANA_SET9:[];
+    case 10:return typeof CARDS_LORCANA_SET10!=='undefined'?CARDS_LORCANA_SET10:[];
+    case 11:return typeof CARDS_LORCANA_SET11!=='undefined'?CARDS_LORCANA_SET11:[];
+    case 12:return typeof CARDS_LORCANA_SET12!=='undefined'?CARDS_LORCANA_SET12:[];
+    case 13:return typeof CARDS_LORCANA_SET13!=='undefined'?CARDS_LORCANA_SET13:[];
+    default:return[];
+  }
 }
 function normCard(raw){
   return{n:raw.Card_Num,uid:raw.Unique_ID,name:raw.Name,cost:raw.Cost,color:raw.Color,
