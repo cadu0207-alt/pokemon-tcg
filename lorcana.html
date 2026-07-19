@@ -58,6 +58,23 @@ h1.ltitle{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:2px;
 .ev-row{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px}
 .ev-row:last-child{border-bottom:none}
 .ev-input{width:90px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-family:'Space Mono',monospace;font-size:12px;text-align:right}
+
+/* ── Botões de tamanho de grid (Fichário) ── */
+.gsize-btn{padding:6px 12px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'Space Mono',monospace;font-size:11px;cursor:pointer;transition:all .15s}
+.gsize-btn:hover{border-color:var(--accent);color:var(--text)}
+.gsize-btn.active{background:linear-gradient(135deg,var(--accent) 0%,#6a4fb0 100%);border-color:var(--accent);color:#fff}
+
+/* ── Preço na carta do Fichário ── */
+.lf-price{position:absolute;bottom:0;right:0;left:0;padding:2px 6px 3px;text-align:right;font-family:'Space Mono',monospace;font-size:9px;font-weight:700;color:var(--gold);background:rgba(5,3,10,.75);z-index:1}
+
+/* ── Modal de zoom da carta ── */
+.cz-img{width:100%;max-width:320px;border-radius:14px;display:block;margin:0 auto 18px;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.cz-body{text-align:center}
+.cz-title{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;color:#fff;margin-bottom:2px}
+.cz-sub{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:14px}
+.cz-badges{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-bottom:16px}
+.cz-badge{padding:4px 10px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);font-family:'Space Mono',monospace;font-size:10px;color:var(--text2)}
+.cz-price{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold);margin-bottom:16px}
 </style>
 </head>
 <body>
@@ -114,6 +131,11 @@ h1.ltitle{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:2px;
       <input class="bsrch" id="bsrch" placeholder="Buscar carta..." oninput="renderBinder()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:8px 12px;font-size:12px;min-width:200px">
       <label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px"><input type="checkbox" id="fc" onchange="renderBinder()"> Só coletadas</label>
       <label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px"><input type="checkbox" id="fm" onchange="renderBinder()"> Só faltantes</label>
+      <div style="display:flex;gap:4px;margin-left:auto">
+        <button class="gsize-btn" id="gsize-2" onclick="setGridSize(2)" title="Cartas grandes">2×2</button>
+        <button class="gsize-btn" id="gsize-3" onclick="setGridSize(3)" title="Cartas médias">3×3</button>
+        <button class="gsize-btn" id="gsize-4" onclick="setGridSize(4)" title="Cartas pequenas">4×4</button>
+      </div>
     </div>
     <div id="fic-set-info" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px"></div>
     <div class="lf-grid" id="lf-grid"></div>
@@ -191,6 +213,14 @@ h1.ltitle{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:2px;
   <div class="modal modal-card">
     <button class="mc-btn" onclick="closeModal('card-modal')">✕</button>
     <div id="card-modal-content"></div>
+  </div>
+</div>
+
+<!-- MODAL ZOOM DA CARTA (Fichário) -->
+<div class="ov" id="card-zoom" onclick="if(event.target===this)closeModal('card-zoom')">
+  <div class="modal modal-card">
+    <button class="mc-btn" onclick="closeModal('card-zoom')">✕</button>
+    <div id="card-zoom-content"></div>
   </div>
 </div>
 

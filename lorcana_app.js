@@ -10,8 +10,11 @@
 // v1 SIMPLIFICADO DE PROPÓSITO (alpha, "devagar pra não quebrar nada"):
 //  - 1 slot por carta (sem separar Normal/Foil como no fichário Pokémon)
 //  - Sem fichários personalizados, sem compartilhamento por link
-//  - Sem preço automático ainda (campo Price não vem da API lorcana-api.com —
-//    só Lorcast tem `prices.usd`, que é o próximo passo)
+//  - Preço: cada carta tem `Price` em USD (vindo da Lorcast, prices.usd —
+//    fallback prices.usd_foil quando usd é null), populado direto nos
+//    cards_lorcana_setN.js. A conversão pra BRL acontece AO VIVO aqui embaixo
+//    via USD_BRL (mesmo padrão do fetchCambio() do Pokémon), então nunca
+//    fica desatualizada. Ver priceBRL().
 // ================================================================
 const SUPABASE_URL='https://dvkiodmhtzlkvmyyzelx.supabase.co';
 const SUPABASE_KEY='sb_publishable_f4d1JHAzTWPWYAI0Vm6aRA_NwM-uzr3';
@@ -69,6 +72,21 @@ if(sbClient){
   });
 }
 
+// ── CÂMBIO (mesmo padrão do fetchCambio() do app.js Pokémon) ─────
+let USD_BRL=5.70;
+async function fetchCambio(){
+  try{
+    const r=await fetch('https://open.er-api.com/v6/latest/USD');
+    const d=await r.json();
+    if(d?.rates?.BRL)USD_BRL=d.rates.BRL;
+    const el=document.getElementById('usd-brl');
+    if(el)el.textContent=`USD/BRL R$${USD_BRL.toFixed(2)}`;
+  }catch(e){}
+}
+setInterval(()=>{ if(document.visibilityState==='visible') fetchCambio(); }, 30*60*1000);
+// Converte um preço em USD (vindo da Lorcast) pra BRL, arredondado a centavos.
+function priceBRL(usd){ return(usd||usd===0)?+(usd*USD_BRL).toFixed(2):null; }
+
 // ── CAPÍTULOS (SETS) ──────────────────────────────────────────────
 // Nomes/códigos conferidos direto na resposta da lorcana-api.com (Unique_ID
 // de cada carta), não são "achismo" — ver cabeçalho de cada cards_lorcana_setN.js.
@@ -112,8 +130,9 @@ function setCards(id){
   }
 }
 function normCard(raw){
+  // priceUsd vem cru da Lorcast (raw.Price) — use priceBRL(c.priceUsd) pra exibir em R$.
   return{n:raw.Card_Num,uid:raw.Unique_ID,name:raw.Name,cost:raw.Cost,color:raw.Color,
-    type:raw.Type,rarity:raw.Rarity,lore:raw.Lore,img:raw.Image,price:raw.Price||null};
+    type:raw.Type,rarity:raw.Rarity,lore:raw.Lore,img:raw.Image,priceUsd:raw.Price??null};
 }
 function slotKey(setId,n){return`${setId}:${n}`;}
 
@@ -145,6 +164,7 @@ async function loadAll(){
     pulledCards=Array.isArray(c)?c:[];
     collected=new Set((Array.isArray(col)?col:[]).map(r=>r.slot_key));
     setStatus('Online ✓','ok');
+    fetchCambio();
     renderTabs();
     renderBinder();
     renderDash();
@@ -255,14 +275,63 @@ function renderBinder(){
     const has=collected.has(key);
     const ink=inkColor(c.color);
     const rc=RARITY_COLOR[c.rarity]||'#9086b0';
-    return`<div class="lf-card${has?' owned':''}" onclick="toggleSlot('${key}')" title="${c.name}">
+    const priceBrl=priceBRL(c.priceUsd);
+    return`<div class="lf-card${has?' owned':''}" onclick="openLorcanaCardModal(${currentSet},'${c.n}')" title="${c.name} — clique pra ampliar">
       <div class="lf-cost" style="background:${ink}">${c.cost??''}</div>
-      <div class="lf-check">${has?'✓':''}</div>
+      <div class="lf-check" onclick="event.stopPropagation();toggleSlot('${key}')" title="Marcar/desmarcar coletada">${has?'✓':''}</div>
       <img src="${c.img}" alt="${c.name}" loading="lazy" onerror="this.style.opacity='.15'">
-      <div class="lf-info"><div class="lf-name">${c.name}</div><div class="lf-rar" style="color:${rc}">${c.rarity||''}</div></div>
+      <div class="lf-info"><div class="lf-name">${c.name}</div>
+        <div class="lf-rar" style="color:${rc}">${c.rarity||''}</div>
+        ${priceBrl?`<div class="lf-price">R$${fmtR(priceBrl)}</div>`:''}</div>
     </div>`;
   }).join('')||`<div class="lf-empty" style="grid-column:1/-1">Nenhuma carta encontrada com esse filtro.</div>`;
   updateBinderStats();
+  applyGridSize();
+}
+
+// ── FICHÁRIO — TAMANHO DO GRID (2/3/4 por linha, persistido) ────────
+let ficGridSize=parseInt(localStorage.getItem('lorcana_grid_size'))||3;
+const GRID_MINW={2:210,3:150,4:110};
+function setGridSize(n){
+  ficGridSize=n;
+  try{localStorage.setItem('lorcana_grid_size',n);}catch(e){}
+  applyGridSize();
+}
+function applyGridSize(){
+  const grid=document.getElementById('lf-grid');
+  if(grid)grid.style.gridTemplateColumns=`repeat(auto-fill,minmax(${GRID_MINW[ficGridSize]||150}px,1fr))`;
+  document.querySelectorAll('.gsize-btn').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById('gsize-'+ficGridSize);
+  if(btn)btn.classList.add('active');
+}
+
+// ── FICHÁRIO — MODAL DE ZOOM DA CARTA ────────────────────────────────
+function openLorcanaCardModal(setId,n){
+  const raw=setCards(setId).find(x=>String(x.Card_Num)===String(n));
+  if(!raw)return;
+  const c=normCard(raw);
+  const key=slotKey(setId,c.n);
+  const has=collected.has(key);
+  const ink=inkColor(c.color);
+  const rc=RARITY_COLOR[c.rarity]||'#9086b0';
+  const meta=LORCANA_META.find(m=>m.id===setId);
+  const priceBrl=priceBRL(c.priceUsd);
+  document.getElementById('card-zoom-content').innerHTML=`
+    <img class="cz-img" src="${c.img}" alt="${c.name}" onerror="this.style.display='none'">
+    <div class="cz-body">
+      <div class="cz-title">${c.name}</div>
+      <div class="cz-sub">${meta?meta.code:''} · #${c.n}${c.type?' · '+c.type:''}</div>
+      <div class="cz-badges">
+        <span class="cz-badge" style="border-color:${ink};color:${ink}">${c.color||'—'}</span>
+        <span class="cz-badge" style="border-color:${rc};color:${rc}">${c.rarity||'—'}</span>
+        <span class="cz-badge">💧 Custo ${c.cost??'—'}</span>
+        ${c.lore?`<span class="cz-badge" style="border-color:var(--gold);color:var(--gold)">💎 ${c.lore} lore</span>`:''}
+      </div>
+      <div class="cz-price">${priceBrl?'R$'+fmtR(priceBrl):'Preço indisponível'}</div>
+      <button class="btn-add" style="width:100%;margin-top:16px" onclick="toggleSlot('${key}');openLorcanaCardModal(${setId},'${c.n}')">
+        ${has?'✓ Coletada — clique pra remover':'+ Marcar como coletada'}</button>
+    </div>`;
+  openModal('card-zoom');
 }
 function updateBinderStats(){
   let grand=0,grandC=0;
@@ -285,13 +354,12 @@ function updateBinderStats(){
 }
 
 // ── VALOR DO FICHÁRIO ────────────────────────────────────────────
-// Preço ainda não vem da API (ver comentário no topo) — some devolve 0 até
-// popularmos raw.Price a partir da Lorcast (prices.usd → BRL).
+// raw.Price vem em USD (Lorcast) — converte pra BRL na hora com o câmbio atual.
 function calcCollectedValue(){
   let total=0;
   LORCANA_META.forEach(m=>{
     setCards(m.id).forEach(raw=>{
-      if(collected.has(slotKey(m.id,raw.Card_Num))&&raw.Price)total+=Number(raw.Price);
+      if(collected.has(slotKey(m.id,raw.Card_Num))&&raw.Price)total+=raw.Price*USD_BRL;
     });
   });
   return total;
@@ -539,10 +607,11 @@ function openCardModalByIdx(i){
 // Ravensburger) — fontes: cardgamer.com/games/tcgs/lorcana, tcgtalk.com
 // (Wilds Unknown pull rates, 192 packs abertos), thegamerslodge.com.
 // Cada booster tem 12 cartas: 6 comuns, 3 incomuns, 2 raras-ou-melhor +
-// 1 slot foil garantido (é onde mora o Enchanted). MyDeck ainda não tem
-// preço automático de Lorcana — por isso o valor médio por raridade é
-// preenchido manualmente aqui (ao contrário do EV de Pokémon, que já usa
-// preços de varejo cadastrados). Ver [[project_lorcana_expansion]].
+// 1 slot foil garantido (é onde mora o Enchanted).
+// O valor médio por raridade vem PRÉ-PREENCHIDO com a média real de preço
+// (Lorcast, convertido pro câmbio atual) das cartas daquela raridade no
+// capítulo selecionado — mas continua editável, porque preço de mercado
+// muda mais rápido que o catálogo. Ver [[project_lorcana_expansion]].
 const LORCANA_PULL_RATES={
   Rare:        {prob:1.35, label:'Rare (2 slots garantidos/pack, a maioria)'},
   'Super Rare':{prob:0.5,  label:'Super Rare (~1 a cada 2 packs)'},
@@ -552,25 +621,43 @@ const LORCANA_PULL_RATES={
 let _evInputs={};
 let _evSetId=null;
 
+// Média real de preço (BRL) por raridade, calculada a partir do catálogo do capítulo.
+function computeAvgPricesForSet(setId){
+  const sums={},counts={};
+  setCards(setId).forEach(raw=>{
+    if(raw.Price==null||!LORCANA_PULL_RATES[raw.Rarity])return;
+    sums[raw.Rarity]=(sums[raw.Rarity]||0)+raw.Price;
+    counts[raw.Rarity]=(counts[raw.Rarity]||0)+1;
+  });
+  const avg={};
+  Object.keys(LORCANA_PULL_RATES).forEach(r=>{
+    if(counts[r])avg[r]=priceBRL(sums[r]/counts[r]);
+  });
+  return avg;
+}
+
 function renderPreco(){
   const wrap=document.getElementById('ev-wrap');
   if(!wrap)return;
   const availableSets=LORCANA_META.filter(m=>setCards(m.id).length>0);
   if(!_evSetId&&availableSets.length)_evSetId=availableSets[0].id;
+  if(Object.keys(_evInputs).filter(k=>k!=='cost').length===0&&_evSetId){
+    _evInputs={...computeAvgPricesForSet(_evSetId),cost:_evInputs.cost};
+  }
   const setOpts=availableSets.map(m=>`<option value="${m.id}" ${m.id===_evSetId?'selected':''}>${m.code} — ${m.label}</option>`).join('');
   wrap.innerHTML=`
     <div class="panel" style="margin-bottom:20px">
-      <div class="panel-t">⚠️ Sobre esta calculadora</div>
+      <div class="panel-t">💰 Como funciona</div>
       <div style="font-size:12px;color:var(--muted);line-height:1.7">
-        O MyDeck ainda não busca preço automático das cartas de Lorcana (o catálogo hoje vem da lorcana-api.com,
-        que não tem campo de preço — o próximo passo é integrar a Lorcast pra isso). Por enquanto, informe abaixo
-        o custo do booster e o valor médio de mercado que você conhece por raridade pra estimar o EV (valor esperado).
-        As taxas de pull são estimativas da comunidade, não são garantidas pela Ravensburger.
+        Os valores por raridade abaixo já vêm pré-preenchidos com a média real de mercado (via Lorcast,
+        convertida pro câmbio atual) das cartas daquele capítulo — mas edite à vontade se quiser testar outro
+        cenário. As taxas de pull (chance de cada raridade sair por booster) são estimativas da comunidade,
+        não são garantidas pela Ravensburger.
       </div>
     </div>
     <div class="panel" style="margin-bottom:20px">
-      <div class="panel-t">🎴 Capítulo (referência de raridades)</div>
-      <select id="ev-set" onchange="_evSetId=parseInt(this.value);updateEvSetInfo()" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13px;margin-top:6px">${setOpts}</select>
+      <div class="panel-t">🎴 Capítulo</div>
+      <select id="ev-set" onchange="_evSetId=parseInt(this.value);_evInputs={...computeAvgPricesForSet(_evSetId),cost:_evInputs.cost};renderPrecoInputs();updateEvSetInfo();recalcEV()" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:9px 12px;font-size:13px;margin-top:6px">${setOpts}</select>
       <div id="ev-set-info" style="margin-top:10px"></div>
     </div>
     <div class="panel" style="margin-bottom:20px">
@@ -578,19 +665,23 @@ function renderPreco(){
       <input class="ev-input" style="width:160px" type="number" step="0.01" id="ev-cost" value="${_evInputs.cost||''}" placeholder="0,00" oninput="_evInputs.cost=this.value;recalcEV()">
     </div>
     <div class="panel" style="margin-bottom:20px">
-      <div class="panel-t">📈 Valor médio de mercado por raridade (R$)</div>
+      <div class="panel-t">📈 Valor médio de mercado por raridade (R$) <span style="font-weight:400;color:var(--muted);font-size:10px">— pré-preenchido, editável</span></div>
       <div id="ev-rarity-inputs"></div>
     </div>
     <div class="panel" id="ev-result"></div>
   `;
+  renderPrecoInputs();
+  updateEvSetInfo();
+  recalcEV();
+}
+function renderPrecoInputs(){
   const rarWrap=document.getElementById('ev-rarity-inputs');
+  if(!rarWrap)return;
   rarWrap.innerHTML=Object.entries(LORCANA_PULL_RATES).map(([r,info])=>`
     <div class="ev-row">
       <span>${info.label}</span>
-      <input class="ev-input" type="number" step="0.01" value="${_evInputs[r]||''}" placeholder="0,00" oninput="_evInputs['${r}']=this.value;recalcEV()">
+      <input class="ev-input" type="number" step="0.01" value="${_evInputs[r]??''}" placeholder="0,00" oninput="_evInputs['${r}']=this.value;recalcEV()">
     </div>`).join('');
-  updateEvSetInfo();
-  recalcEV();
 }
 function updateEvSetInfo(){
   const el=document.getElementById('ev-set-info');
