@@ -246,16 +246,41 @@ function renderTabs(){
   }).join('');
 }
 
-// ── FICHÁRIO — GRID ─────────────────────────────────────────────────
+// ── FICHÁRIO — MODO DE VISUALIZAÇÃO (🗂️ Coleção livre / 📖 Fichário simulado) ──
+// Coleção: grade responsiva com todas as cartas filtradas, sem noção de "página".
+// Fichário: simula um fichário físico de verdade — divide as cartas em páginas de
+// N×N bolsos (2×2/3×3/4×4, igual ao fichario_patch.js do MyDeck Pokémon) e preenche
+// os bolsos sobrando na última página com um placeholder tracejado vazio.
+let ficViewMode=localStorage.getItem('lorcana_view_mode')||'grid'; // 'grid' | 'binder'
+let ficBinderSize=parseInt(localStorage.getItem('lorcana_grid_size'))||3; // 2, 3 ou 4
+
+function setFicView(mode){
+  ficViewMode=mode;
+  try{localStorage.setItem('lorcana_view_mode',mode);}catch(e){}
+  const gBtn=document.getElementById('fic-view-grid');
+  const bBtn=document.getElementById('fic-view-binder');
+  if(gBtn)gBtn.classList.toggle('active',mode==='grid');
+  if(bBtn)bBtn.classList.toggle('active',mode==='binder');
+  const ctrl=document.getElementById('fic-binder-controls');
+  if(ctrl)ctrl.style.display=mode==='binder'?'flex':'none';
+  renderBinder();
+}
+function setGridSize(n){
+  ficBinderSize=n;
+  try{localStorage.setItem('lorcana_grid_size',n);}catch(e){}
+  renderBinder();
+}
+
+// ── FICHÁRIO — RENDER PRINCIPAL (dispatcher) ─────────────────────────
 function renderBinder(){
   const meta=LORCANA_META.find(m=>m.id===currentSet);
   const rawCards=setCards(currentSet);
   const info=document.getElementById('fic-set-info');
   if(info)info.textContent=meta?`${meta.code} — ${meta.label} · ${rawCards.length} carta${rawCards.length!==1?'s':''}`:'';
-  const grid=document.getElementById('lf-grid');
-  if(!grid)return;
+  const wrap=document.getElementById('fic-wrap');
+  if(!wrap)return;
   if(!rawCards.length){
-    grid.innerHTML=`<div class="lf-empty" style="grid-column:1/-1">Este capítulo ainda não está catalogado pela API de dados — assim que sair, aparece aqui automaticamente.</div>`;
+    wrap.innerHTML=`<div class="lf-empty">Este capítulo ainda não está catalogado pela API de dados — assim que sair, aparece aqui automaticamente.</div>`;
     updateBinderStats();
     return;
   }
@@ -269,40 +294,66 @@ function renderBinder(){
     if(om&&has)return false;
     return true;
   });
-  grid.innerHTML=visible.map(raw=>{
-    const c=normCard(raw);
-    const key=slotKey(currentSet,c.n);
-    const has=collected.has(key);
-    const ink=inkColor(c.color);
-    const rc=RARITY_COLOR[c.rarity]||'#9086b0';
-    const priceBrl=priceBRL(c.priceUsd);
-    return`<div class="lf-card${has?' owned':''}" onclick="openLorcanaCardModal(${currentSet},'${c.n}')" title="${c.name} — clique pra ampliar">
-      <div class="lf-cost" style="background:${ink}">${c.cost??''}</div>
-      <div class="lf-check" onclick="event.stopPropagation();toggleSlot('${key}')" title="Marcar/desmarcar coletada">${has?'✓':''}</div>
-      <img src="${c.img}" alt="${c.name}" loading="lazy" onerror="this.style.opacity='.15'">
-      <div class="lf-info"><div class="lf-name">${c.name}</div>
-        <div class="lf-rar" style="color:${rc}">${c.rarity||''}</div>
-        ${priceBrl?`<div class="lf-price">R$${fmtR(priceBrl)}</div>`:''}</div>
-    </div>`;
-  }).join('')||`<div class="lf-empty" style="grid-column:1/-1">Nenhuma carta encontrada com esse filtro.</div>`;
+  wrap.innerHTML=ficViewMode==='binder'?renderBinderPages(visible):renderGridView(visible);
   updateBinderStats();
-  applyGridSize();
+  // Sincroniza destaque dos botões (view mode + tamanho de página) com o estado atual —
+  // cobre tanto o clique direto quanto navegação vinda de goFichario()/switchSet().
+  const gBtn=document.getElementById('fic-view-grid'),bBtn=document.getElementById('fic-view-binder');
+  if(gBtn)gBtn.classList.toggle('active',ficViewMode==='grid');
+  if(bBtn)bBtn.classList.toggle('active',ficViewMode==='binder');
+  const ctrl=document.getElementById('fic-binder-controls');
+  if(ctrl)ctrl.style.display=ficViewMode==='binder'?'flex':'none';
+  document.querySelectorAll('.gsize-btn[id^="gsize-"]').forEach(b=>b.classList.remove('active'));
+  const sizeBtn=document.getElementById('gsize-'+ficBinderSize);
+  if(sizeBtn)sizeBtn.classList.add('active');
 }
 
-// ── FICHÁRIO — TAMANHO DO GRID (2/3/4 por linha, persistido) ────────
-let ficGridSize=parseInt(localStorage.getItem('lorcana_grid_size'))||3;
-const GRID_MINW={2:210,3:150,4:110};
-function setGridSize(n){
-  ficGridSize=n;
-  try{localStorage.setItem('lorcana_grid_size',n);}catch(e){}
-  applyGridSize();
+// Markup de UM card — reaproveitado tanto pela grade livre quanto pelos bolsos do fichário.
+function lfCardHtml(raw){
+  const c=normCard(raw);
+  const key=slotKey(currentSet,c.n);
+  const has=collected.has(key);
+  const ink=inkColor(c.color);
+  const rc=RARITY_COLOR[c.rarity]||'#9086b0';
+  const priceBrl=priceBRL(c.priceUsd);
+  return`<div class="lf-card${has?' owned':''}" onclick="openLorcanaCardModal(${currentSet},'${c.n}')" title="${c.name} — clique pra ampliar">
+    <div class="lf-cost" style="background:${ink}">${c.cost??''}</div>
+    <div class="lf-check" onclick="event.stopPropagation();toggleSlot('${key}')" title="Marcar/desmarcar coletada">${has?'✓':''}</div>
+    <img src="${c.img}" alt="${c.name}" loading="lazy" onerror="this.style.opacity='.15'">
+    <div class="lf-info"><div class="lf-name">${c.name}</div>
+      <div class="lf-rar" style="color:${rc}">${c.rarity||''}</div>
+      ${priceBrl?`<div class="lf-price">R$${fmtR(priceBrl)}</div>`:''}</div>
+  </div>`;
 }
-function applyGridSize(){
-  const grid=document.getElementById('lf-grid');
-  if(grid)grid.style.gridTemplateColumns=`repeat(auto-fill,minmax(${GRID_MINW[ficGridSize]||150}px,1fr))`;
-  document.querySelectorAll('.gsize-btn').forEach(b=>b.classList.remove('active'));
-  const btn=document.getElementById('gsize-'+ficGridSize);
-  if(btn)btn.classList.add('active');
+
+// ── FICHÁRIO — MODO 🗂️ COLEÇÃO (grade livre, sem paginação) ───────────
+function renderGridView(visible){
+  if(!visible.length)return`<div class="lf-empty">Nenhuma carta encontrada com esse filtro.</div>`;
+  return`<div class="lf-grid">${visible.map(lfCardHtml).join('')}</div>`;
+}
+
+// ── FICHÁRIO — MODO 📖 FICHÁRIO SIMULADO (páginas físicas N×N) ─────────
+function renderBinderPages(visible){
+  if(!visible.length)return`<div class="lf-empty">Nenhuma carta encontrada com esse filtro.</div>`;
+  const N=ficBinderSize;
+  const slotsPerPage=N*N;
+  const pages=[];
+  for(let i=0;i<visible.length;i+=slotsPerPage)pages.push(visible.slice(i,i+slotsPerPage));
+  const isMob=window.innerWidth<=600;
+  const cellW=N===2?(isMob?140:180):N===3?(isMob?100:135):(isMob?76:100);
+  const gap=N===2?14:N===3?12:8;
+  return pages.map((page,pi)=>{
+    while(page.length<slotsPerPage)page.push(null);
+    const slotsHtml=page.map(raw=>raw?lfCardHtml(raw):`<div class="lf-empty-slot"></div>`).join('');
+    return`<div class="bp-page">
+      <div class="bp-pagehdr"><span>📖 PÁGINA ${pi+1}</span>
+        <span style="color:var(--gold)">cartas ${pi*slotsPerPage+1}–${Math.min((pi+1)*slotsPerPage,visible.length)}</span>
+        <div class="bp-hrule"></div></div>
+      <div style="display:flex;justify-content:center">
+        <div class="bp-sheet" style="grid-template-columns:repeat(${N},${cellW}px);gap:${gap}px">${slotsHtml}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ── FICHÁRIO — MODAL DE ZOOM DA CARTA ────────────────────────────────

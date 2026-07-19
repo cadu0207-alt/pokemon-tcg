@@ -59,10 +59,17 @@ h1.ltitle{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:2px;
 .ev-row:last-child{border-bottom:none}
 .ev-input{width:90px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-family:'Space Mono',monospace;font-size:12px;text-align:right}
 
-/* ── Botões de tamanho de grid (Fichário) ── */
-.gsize-btn{padding:6px 12px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'Space Mono',monospace;font-size:11px;cursor:pointer;transition:all .15s}
+/* ── Botões de visualização / tamanho de página (Fichário) ── */
+.gsize-btn{padding:6px 12px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'Space Mono',monospace;font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .gsize-btn:hover{border-color:var(--accent);color:var(--text)}
 .gsize-btn.active{background:linear-gradient(135deg,var(--accent) 0%,#6a4fb0 100%);border-color:var(--accent);color:#fff}
+
+/* ── Fichário simulado — páginas físicas NxN ── */
+.bp-page{margin-bottom:34px}
+.bp-pagehdr{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.bp-hrule{flex:1;height:1px;background:var(--border)}
+.bp-sheet{display:grid;background:linear-gradient(160deg,var(--surface2),var(--surface3));border:1px solid var(--border2);border-radius:14px;padding:20px;box-shadow:0 12px 30px rgba(0,0,0,.3)}
+.lf-empty-slot{border:2px dashed var(--border);border-radius:10px;opacity:.35;aspect-ratio:734/1024}
 
 /* ── Preço na carta do Fichário ── */
 .lf-price{position:absolute;bottom:0;right:0;left:0;padding:2px 6px 3px;text-align:right;font-family:'Space Mono',monospace;font-size:9px;font-weight:700;color:var(--gold);background:rgba(5,3,10,.75);z-index:1}
@@ -132,13 +139,17 @@ h1.ltitle{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:2px;
       <label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px"><input type="checkbox" id="fc" onchange="renderBinder()"> Só coletadas</label>
       <label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px"><input type="checkbox" id="fm" onchange="renderBinder()"> Só faltantes</label>
       <div style="display:flex;gap:4px;margin-left:auto">
-        <button class="gsize-btn" id="gsize-2" onclick="setGridSize(2)" title="Cartas grandes">2×2</button>
-        <button class="gsize-btn" id="gsize-3" onclick="setGridSize(3)" title="Cartas médias">3×3</button>
-        <button class="gsize-btn" id="gsize-4" onclick="setGridSize(4)" title="Cartas pequenas">4×4</button>
+        <button class="gsize-btn" id="fic-view-grid" onclick="setFicView('grid')" title="Visualização em coleção (lista livre)">🗂️ Coleção</button>
+        <button class="gsize-btn" id="fic-view-binder" onclick="setFicView('binder')" title="Visualização em páginas de fichário físico">📖 Fichário</button>
+      </div>
+      <div id="fic-binder-controls" style="display:none;gap:4px">
+        <button class="gsize-btn" id="gsize-2" onclick="setGridSize(2)" title="Página 2×2 (4 bolsos)">2×2</button>
+        <button class="gsize-btn" id="gsize-3" onclick="setGridSize(3)" title="Página 3×3 (9 bolsos)">3×3</button>
+        <button class="gsize-btn" id="gsize-4" onclick="setGridSize(4)" title="Página 4×4 (16 bolsos)">4×4</button>
       </div>
     </div>
     <div id="fic-set-info" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px"></div>
-    <div class="lf-grid" id="lf-grid"></div>
+    <div id="fic-wrap"></div>
   </div>
 
   <!-- ═══ GASTOS ═══ -->
