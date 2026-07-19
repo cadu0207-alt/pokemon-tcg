@@ -5,10 +5,19 @@
 // NOTA: Precos de cartas fora do top 20 sao estimativas por raridade — ajustar quando o mercado BR abrir.
 const CARDS_ME05 = [
   // ── SET BASE 001–081 ─────────────────────────────────────
+  // CORRIGIDO 18/07/2026: as 8 cartas "ex" da base (004,015,026,036,043,046,
+  // 053,063) estavam com rare:'Rara' (mesmo texto de Rare Holo comum), o que faz
+  // getSlots() (app.js) cair no ramo [F,RH] — 2 versões colecionáveis. Na vida
+  // real "ex" é raridade Double Rare (Rara Dupla), impressão única, sem reverse
+  // holo (confirmado contra limitlesstcg.com/cards/PBL/4 — Lurantis ex é só
+  // "Double Rare", 1 print). Trocado pra rare:'Rara Dupla', que já cai no ramo
+  // [F] (1 versão) — mesmo padrão usado em cards_me02/03/04.js e cards_meg.js
+  // pras cartas ex deles. Isso pedia 8 versões fantasma a mais no master set.
+  // Ver [[project_pokemon_tcg]].
   {n:'001',name:'Tropius',         type:'Grama',   color:'#4CAF50',rare:'Comum',   price:0.15,base:true},
   {n:'002',name:'Grubbin',         type:'Grama',   color:'#4CAF50',rare:'Comum',   price:0.15,base:true},
   {n:'003',name:'Fomantis',        type:'Grama',   color:'#4CAF50',rare:'Comum',   price:0.15,base:true},
-  {n:'004',name:'Lurantis ex',     type:'Grama',   color:'#4CAF50',rare:'Rara',    price:3.47,base:true},
+  {n:'004',name:'Lurantis ex',     type:'Grama',   color:'#4CAF50',rare:'Rara Dupla',price:3.47,base:true},
   {n:'005',name:'Poltchageist',    type:'Trevas',  color:'#212121',rare:'Comum',   price:0.15,base:true},
   {n:'006',name:'Sinistcha',       type:'Trevas',  color:'#212121',rare:'Incomum', price:0.20,base:true},
   {n:'007',name:'Heatran',        type:'Fogo',    color:'#F44336',rare:'Incomum', price:0.15,base:true},
@@ -19,7 +28,7 @@ const CARDS_ME05 = [
   {n:'012',name:'Goldeen',         type:'Agua',    color:'#2196F3',rare:'Comum',   price:0.25,base:true},
   {n:'013',name:'Seaking',         type:'Agua',    color:'#2196F3',rare:'Incomum', price:0.15,base:true},
   {n:'014',name:'Wailmer',         type:'Agua',    color:'#2196F3',rare:'Comum',   price:0.10,base:true},
-  {n:'015',name:'Wailord ex',      type:'Agua',    color:'#2196F3',rare:'Rara',    price:0.15,base:true},
+  {n:'015',name:'Wailord ex',      type:'Agua',    color:'#2196F3',rare:'Rara Dupla',price:0.15,base:true},
   {n:'016',name:'Relicanth',       type:'Agua',    color:'#2196F3',rare:'Incomum', price:3.88,base:true},
   {n:'017',name:'Popplio',         type:'Agua',    color:'#2196F3',rare:'Comum',   price:0.19,base:true},
   {n:'018',name:'Brionne',         type:'Agua',    color:'#2196F3',rare:'Comum',   price:0.10,base:true},
@@ -30,7 +39,7 @@ const CARDS_ME05 = [
   {n:'023',name:'Manectric',       type:'Eletrico', color:'#FFC107',rare:'Incomum',price:0.15,base:true},
   {n:'024',name:'Charjabug',       type:'Eletrico', color:'#FFC107',rare:'Comum',  price:0.20,base:true},
   {n:'025',name:'Vikavolt',        type:'Eletrico', color:'#FFC107',rare:'Incomum',price:0.15,base:true},
-  {n:'026',name:'Mega Zeraora ex', type:'Eletrico', color:'#FFC107',rare:'Rara',   price:0.15,base:true},
+  {n:'026',name:'Mega Zeraora ex', type:'Eletrico', color:'#FFC107',rare:'Rara Dupla',price:0.15,base:true},
   {n:'027',name:'Miraidon',        type:'Eletrico', color:'#FFC107',rare:'Incomum',price:4.99,base:true},
   {n:'028',name:'Slowpoke',        type:'Psiquico', color:'#9C27B0',rare:'Comum',  price:0.15,base:true},
   {n:'029',name:'Slowbro',         type:'Psiquico', color:'#9C27B0',rare:'Incomum',price:0.15,base:true},
@@ -40,24 +49,24 @@ const CARDS_ME05 = [
   {n:'033',name:'Spiritomb',       type:'Trevas',  color:'#212121',rare:'Incomum', price:0.15,base:true},
   {n:'034',name:'Litwick',         type:'Fogo',    color:'#F44336',rare:'Comum',   price:0.15,base:true},
   {n:'035',name:'Lampent',         type:'Fogo',    color:'#F44336',rare:'Incomum', price:0.20,base:true},
-  {n:'036',name:'Mega Chandelure ex',type:'Fogo',  color:'#F44336',rare:'Rara',    price:0.15,base:true},
+  {n:'036',name:'Mega Chandelure ex',type:'Fogo',  color:'#F44336',rare:'Rara Dupla',price:0.15,base:true},
   {n:'037',name:'Dhelmise',        type:'Grama',   color:'#4CAF50',rare:'Incomum', price:0.15,base:true},
   {n:'038',name:'Marshadow',       type:'Trevas',  color:'#212121',rare:'Incomum', price:9.59,base:true},
   {n:'039',name:'Annihilape',      type:'Luta',    color:'#FF6B35',rare:'Incomum', price:0.15,base:true},
   {n:'040',name:'Mankey',          type:'Luta',    color:'#FF6B35',rare:'Comum',   price:0.15,base:true},
   {n:'041',name:'Primeape',        type:'Luta',    color:'#FF6B35',rare:'Incomum', price:0.15,base:true},
   {n:'042',name:'Cranidos',        type:'Luta',    color:'#FF6B35',rare:'Comum',   price:0.15,base:true},
-  {n:'043',name:'Rampardos ex',    type:'Luta',    color:'#FF6B35',rare:'Rara',    price:0.15,base:true},
+  {n:'043',name:'Rampardos ex',    type:'Luta',    color:'#FF6B35',rare:'Rara Dupla',price:0.15,base:true},
   {n:'044',name:'Drilbur',         type:'Luta',    color:'#FF6B35',rare:'Comum',   price:0.15,base:true},
   {n:'045',name:'Koraidon',        type:'Luta',    color:'#FF6B35',rare:'Incomum', price:3.95,base:true},
-  {n:'046',name:'Mega Darkrai ex', type:'Trevas',  color:'#212121',rare:'Rara',    price:0.15,base:true},
+  {n:'046',name:'Mega Darkrai ex', type:'Trevas',  color:'#212121',rare:'Rara Dupla',price:0.15,base:true},
   {n:'047',name:'Vullaby',         type:'Trevas',  color:'#212121',rare:'Comum',   price:0.25,base:true},
   {n:'048',name:'Mandibuzz',       type:'Trevas',  color:'#212121',rare:'Incomum', price:12.26,base:true},
   {n:'049',name:'Inkay',           type:'Trevas',  color:'#212121',rare:'Comum',   price:0.10,base:true},
   {n:'050',name:'Malamar',         type:'Trevas',  color:'#212121',rare:'Incomum', price:0.15,base:true},
   {n:'051',name:'Nickit',          type:'Trevas',  color:'#212121',rare:'Comum',   price:0.15,base:true},
   {n:'052',name:'Thievul',         type:'Trevas',  color:'#212121',rare:'Incomum', price:0.15,base:true},
-  {n:'053',name:'Morpeko ex',      type:'Eletrico', color:'#FFC107',rare:'Rara',   price:0.15,base:true},
+  {n:'053',name:'Morpeko ex',      type:'Eletrico', color:'#FFC107',rare:'Rara Dupla',price:0.15,base:true},
   {n:'054',name:'Zarude',          type:'Trevas',  color:'#212121',rare:'Incomum', price:0.15,base:true},
   {n:'055',name:'Maschiff',        type:'Trevas',  color:'#212121',rare:'Comum',   price:3.96,base:true},
   {n:'056',name:'Mabosstiff',      type:'Trevas',  color:'#212121',rare:'Incomum', price:0.25,base:true},
@@ -67,7 +76,7 @@ const CARDS_ME05 = [
   {n:'060',name:'Bastiodon',       type:'Metal',   color:'#607D8B',rare:'Incomum', price:0.10,base:true},
   {n:'061',name:'Bronzor',         type:'Metal',   color:'#607D8B',rare:'Comum',   price:0.15,base:true},
   {n:'062',name:'Bronzong',        type:'Metal',   color:'#607D8B',rare:'Incomum', price:0.25,base:true},
-  {n:'063',name:'Mega Excadrill ex',type:'Luta',   color:'#FF6B35',rare:'Rara',    price:0.15,base:true},
+  {n:'063',name:'Mega Excadrill ex',type:'Luta',   color:'#FF6B35',rare:'Rara Dupla',price:0.15,base:true},
   {n:'064',name:'Pikipek',         type:'Incolor', color:'#9E9E9E',rare:'Comum',   price:0.15,base:true},
   {n:'065',name:'Trumbeak',        type:'Incolor', color:'#9E9E9E',rare:'Comum',   price:9.49,base:true},
   {n:'066',name:'Toucannon',       type:'Incolor', color:'#9E9E9E',rare:'Incomum', price:0.15,base:true},
