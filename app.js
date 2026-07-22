@@ -1132,11 +1132,13 @@ function updateVendaSelectUI(){
   const bar=document.getElementById('cv-select-bar');
   const cnt=document.getElementById('cv-select-count');
   const genBtn=document.getElementById('cv-gen-img-btn');
+  const msgBtn=document.getElementById('cv-copy-msg-btn');
   if(btn)btn.classList.toggle('active',_vendaSelectMode);
   if(btn)btn.textContent=_vendaSelectMode?'✕ Cancelar seleção':'☑️ Selecionar';
   if(bar)bar.style.display=_vendaSelectMode?'flex':'none';
   if(cnt)cnt.textContent=`${_vendaSelected.length}/${VIMG_MAX} selecionadas`;
   if(genBtn)genBtn.disabled=_vendaSelected.length===0;
+  if(msgBtn)msgBtn.disabled=_vendaSelected.length===0;
 }
 
 // ── MODAL COLOCAR À VENDA ─────────────────────────────────────────
@@ -1265,6 +1267,12 @@ async function removeVenda(key){
 // Monta uma prévia em HTML (sempre funciona) e tenta gerar um PNG via
 // canvas para download (depende do servidor de imagens permitir CORS —
 // se ele bloquear, o usuário ainda tem a prévia pra printar a tela).
+const VIMG_BANNER_L1='🔥 QUER VENDER RÁPIDO E FÁCIL?';
+// função (não const) porque MYDECK_SITE_URL só é declarado mais abaixo no arquivo —
+// como const não é hoisted, resolver isso em tempo de execução da função evita
+// "Cannot access before initialization" no carregamento do script.
+function vimgBannerL2(){return`ACESSE ${MYDECK_SITE_URL.replace(/^https?:\/\//,'').toUpperCase()}`;}
+
 let _vimgItems=[];
 function openVendaImageModal(){
   if(!_vendaSelected.length)return;
@@ -1279,24 +1287,37 @@ function openVendaImageModal(){
   if(!_vimgItems.length)return;
 
   const total=_vimgItems.reduce((s,{l})=>s+Number(l.price||0),0);
+  const cols=Math.min(3,_vimgItems.length);
+  // banner entra logo após a 1ª fileira (ou abaixo, se só houver 1 fileira)
+  const bannerAt=Math.min(cols,_vimgItems.length);
+  const before=_vimgItems.slice(0,bannerAt);
+  const after=_vimgItems.slice(bannerAt);
+
+  const cellHTML=({l,imgSrc})=>`
+    <div class="vimg-cell">
+      <div class="vimg-name">${l.card_name} · ${l.card_n}</div>
+      ${imgSrc?`<img src="${imgSrc}" alt="${l.card_name}" loading="lazy">`:`<div style="aspect-ratio:245/342;display:flex;align-items:center;justify-content:center;font-size:32px">🃏</div>`}
+      <div class="vimg-price">R$${fmtR(l.price)}</div>
+    </div>`;
+  const bannerHTML=`<div class="vimg-banner-html"><div class="vb-l1">${VIMG_BANNER_L1}</div><div class="vb-l2">${vimgBannerL2()}</div></div>`;
+
+  let rowsHTML=`<div class="vimg-row">${before.map(cellHTML).join('')}</div>${bannerHTML}`;
+  for(let i=0;i<after.length;i+=cols){
+    rowsHTML+=`<div class="vimg-row">${after.slice(i,i+cols).map(cellHTML).join('')}</div>`;
+  }
+
   document.getElementById('mvimg-content').innerHTML=`
     <div class="vimg-wrap">
       <div class="vimg-title">🖼️ Imagem do Combo</div>
       <div class="vimg-sub">${_vimgItems.length} carta(s) selecionada(s) — prévia abaixo. Se o download automático não funcionar, tire um print desta prévia.</div>
       <div class="vimg-canvas-shell">
-        <div class="vimg-grid" id="vimg-grid">
-          ${_vimgItems.map(({l,imgSrc})=>`
-            <div class="vimg-cell">
-              <div class="vimg-name">${l.card_name} · ${l.card_n}</div>
-              ${imgSrc?`<img src="${imgSrc}" alt="${l.card_name}" crossorigin="anonymous">`:`<div style="aspect-ratio:245/342;display:flex;align-items:center;justify-content:center;font-size:32px">🃏</div>`}
-              <div class="vimg-price">R$${fmtR(l.price)}</div>
-            </div>`).join('')}
-        </div>
+        <div class="vimg-grid" id="vimg-grid">${rowsHTML}</div>
       </div>
       <div class="vimg-actions">
         <div class="vimg-total">Total do combo: <b>R$${fmtR(total)}</b></div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn-cx" onclick="closeModal('mvimg')">Fechar</button>
+          <button class="cv-msg-btn" onclick="copyVendaMessage(_vimgItems)">📋 Copiar Mensagem</button>
           <button class="btn-add" onclick="downloadVendaImage()">⬇️ Baixar PNG</button>
         </div>
       </div>
@@ -1312,10 +1333,18 @@ async function downloadVendaImage(){
   try{
     if(document.fonts&&document.fonts.ready)await document.fonts.ready;
     const cols=Math.min(3,_vimgItems.length);
-    const rows=Math.ceil(_vimgItems.length/cols);
-    const cellW=320,cellH=Math.round(cellW*342/245),gap=14,pad=24,headerH=54;
+    const cellW=320,cellH=Math.round(cellW*342/245),gap=14,pad=24,headerH=54,bannerH=88;
+
+    // Monta a lista de "fileiras": cartas da 1ª leva, banner, depois o resto em fileiras de `cols`.
+    const bannerAt=Math.min(cols,_vimgItems.length);
+    const before=_vimgItems.slice(0,bannerAt);
+    const after=_vimgItems.slice(bannerAt);
+    const rowDefs=[{type:'cards',items:before},{type:'banner'}];
+    for(let i=0;i<after.length;i+=cols)rowDefs.push({type:'cards',items:after.slice(i,i+cols)});
+
     const cw=pad*2+cols*cellW+(cols-1)*gap;
-    const ch=headerH+pad+rows*cellH+(rows-1)*gap+pad;
+    const rowHeights=rowDefs.map(r=>r.type==='banner'?bannerH:cellH);
+    const ch=headerH+pad+rowHeights.reduce((a,b)=>a+b,0)+gap*(rowHeights.length-1)+pad;
 
     const canvas=document.createElement('canvas');
     canvas.width=cw;canvas.height=ch;
@@ -1336,35 +1365,54 @@ async function downloadVendaImage(){
       im.src=imgSrc;
     })));
 
-    _vimgItems.forEach(({l},i)=>{
-      const col=i%cols,row=Math.floor(i/cols);
-      const x=pad+col*(cellW+gap),y=headerH+pad+row*(cellH+gap);
-      const im=imgs[i];
-
-      // fundo do card + moldura arredondada
-      ctx.save();
-      roundRectPath(ctx,x,y,cellW,cellH,10);
-      ctx.clip();
-      ctx.fillStyle='#181c2e';ctx.fillRect(x,y,cellW,cellH);
-      if(im)ctx.drawImage(im,x,y,cellW,cellH);
-      else{
-        ctx.fillStyle='#52597a';ctx.font='40px sans-serif';ctx.textAlign='center';
-        ctx.fillText('🃏',x+cellW/2,y+cellH/2-20);ctx.textAlign='left';
+    let cursorY=headerH+pad,itemIdx=0;
+    rowDefs.forEach(row=>{
+      if(row.type==='banner'){
+        const bw=cols*cellW+(cols-1)*gap;
+        ctx.save();
+        roundRectPath(ctx,pad,cursorY,bw,bannerH,10);
+        const grad=ctx.createLinearGradient(pad,0,pad+bw,0);
+        grad.addColorStop(0,'#e63946');grad.addColorStop(1,'#c1121f');
+        ctx.fillStyle=grad;ctx.fill();
+        ctx.fillStyle='#fff';ctx.font="700 22px 'Bebas Neue', sans-serif";ctx.textAlign='center';
+        ctx.fillText(VIMG_BANNER_L1,pad+bw/2,cursorY+22);
+        ctx.fillStyle='#ffd166';ctx.font="700 15px 'Space Mono', monospace";
+        ctx.fillText(vimgBannerL2(),pad+bw/2,cursorY+54);
+        ctx.textAlign='left';
+        ctx.restore();
+        cursorY+=bannerH+gap;
+        return;
       }
-      // faixa do nome (topo)
-      const nameGrad=ctx.createLinearGradient(0,y,0,y+40);
-      nameGrad.addColorStop(0,'rgba(0,0,0,.8)');nameGrad.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=nameGrad;ctx.fillRect(x,y,cellW,40);
-      ctx.fillStyle='#fff';ctx.font="700 13px 'Space Mono', monospace";
-      ctx.fillText(`${l.card_name} · ${l.card_n}`.slice(0,34),x+8,y+8);
-      // faixa do preço (base)
-      const priceGrad=ctx.createLinearGradient(0,y+cellH-46,0,y+cellH);
-      priceGrad.addColorStop(0,'rgba(0,0,0,0)');priceGrad.addColorStop(1,'rgba(0,0,0,.88)');
-      ctx.fillStyle=priceGrad;ctx.fillRect(x,y+cellH-46,cellW,46);
-      ctx.fillStyle='#ffd166';ctx.font="700 24px 'Bebas Neue', sans-serif";ctx.textAlign='center';
-      ctx.fillText('R$'+fmtR(l.price),x+cellW/2,y+cellH-34);
-      ctx.textAlign='left';
-      ctx.restore();
+      row.items.forEach(({l},c)=>{
+        const x=pad+c*(cellW+gap),y=cursorY;
+        const im=imgs[itemIdx];itemIdx++;
+
+        // fundo do card + moldura arredondada
+        ctx.save();
+        roundRectPath(ctx,x,y,cellW,cellH,10);
+        ctx.clip();
+        ctx.fillStyle='#181c2e';ctx.fillRect(x,y,cellW,cellH);
+        if(im)ctx.drawImage(im,x,y,cellW,cellH);
+        else{
+          ctx.fillStyle='#52597a';ctx.font='40px sans-serif';ctx.textAlign='center';
+          ctx.fillText('🃏',x+cellW/2,y+cellH/2-20);ctx.textAlign='left';
+        }
+        // faixa do nome (topo)
+        const nameGrad=ctx.createLinearGradient(0,y,0,y+40);
+        nameGrad.addColorStop(0,'rgba(0,0,0,.8)');nameGrad.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=nameGrad;ctx.fillRect(x,y,cellW,40);
+        ctx.fillStyle='#fff';ctx.font="700 13px 'Space Mono', monospace";
+        ctx.fillText(`${l.card_name} · ${l.card_n}`.slice(0,34),x+8,y+8);
+        // faixa do preço (base)
+        const priceGrad=ctx.createLinearGradient(0,y+cellH-46,0,y+cellH);
+        priceGrad.addColorStop(0,'rgba(0,0,0,0)');priceGrad.addColorStop(1,'rgba(0,0,0,.88)');
+        ctx.fillStyle=priceGrad;ctx.fillRect(x,y+cellH-46,cellW,46);
+        ctx.fillStyle='#ffd166';ctx.font="700 24px 'Bebas Neue', sans-serif";ctx.textAlign='center';
+        ctx.fillText('R$'+fmtR(l.price),x+cellW/2,y+cellH-34);
+        ctx.textAlign='left';
+        ctx.restore();
+      });
+      cursorY+=cellH+gap;
     });
 
     const total=_vimgItems.reduce((s,{l})=>s+Number(l.price||0),0);
@@ -1393,6 +1441,36 @@ function roundRectPath(ctx,x,y,w,h,r){
   ctx.arcTo(x,y+h,x,y,r);
   ctx.arcTo(x,y,x+w,y,r);
   ctx.closePath();
+}
+
+// ── MENSAGEM DE VENDA (texto pronto pra colar no WhatsApp/ML) ─────
+function buildVendaMessage(items){
+  const lines=[`🃏 *CARTAS À VENDA* — MyDeck TCG`,''];
+  items.forEach(({l})=>{
+    const qtyStr=l.qty>1?` (${l.qty}x)`:'';
+    lines.push(`🔹 ${l.card_name} #${l.card_n} [${VER_LABEL[l.version]||l.version}]${qtyStr} — *R$${fmtR(l.price)}*`);
+  });
+  const total=items.reduce((s,{l})=>s+Number(l.price||0)*Number(l.qty||1),0);
+  lines.push('',`💰 Total: *R$${fmtR(total)}*`,'',`🔥 Quer vender/comprar rápido e fácil? Acesse ${MYDECK_SITE_URL}`);
+  return lines.join('\n');
+}
+
+async function copyVendaMessage(items){
+  if(!items||!items.length)return;
+  const text=buildVendaMessage(items);
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>setStatus('Mensagem copiada! Cole no WhatsApp.','ok')).catch(()=>{});
+  }
+  showTextExportModal(text,`Cartas à venda — ${items.length} carta${items.length!==1?'s':''}`);
+}
+
+function copyVendaMessageFromSelection(){
+  if(!_vendaSelected.length){setStatus('Selecione ao menos uma carta','warning');return;}
+  const items=_vendaSelected.map(key=>{
+    const l=cardListings.find(x=>x.slot_key===key);
+    return l?{l}:null;
+  }).filter(Boolean);
+  copyVendaMessage(items);
 }
 
 // ── MODAL CARTA TIRADA EXPANDIDA ─────────────────────────────────
