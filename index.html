@@ -218,8 +218,18 @@
         <div id="cards-list-all" class="cv-list"></div>
       </div>
       <div class="cv-col">
-        <div class="cv-col-t">🏷️ À Venda <span class="cv-count" id="cv-count-venda"></span></div>
+        <div class="cv-col-t" style="justify-content:space-between">
+          <span>🏷️ À Venda <span class="cv-count" id="cv-count-venda"></span></span>
+          <button class="cv-select-toggle" id="cv-select-toggle" onclick="toggleVendaSelectMode()">☑️ Selecionar</button>
+        </div>
         <input class="bsrch" id="cv-search-venda" placeholder="Buscar à venda..." oninput="renderCardsVenda()">
+        <div id="cv-select-bar" class="cv-select-bar" style="display:none">
+          <span id="cv-select-count">0/9 selecionadas</span>
+          <div style="display:flex;gap:6px">
+            <button class="cv-item-remove" onclick="toggleVendaSelectMode()">Cancelar</button>
+            <button class="btn-add" id="cv-gen-img-btn" style="padding:6px 12px;font-size:10px" onclick="openVendaImageModal()" disabled>🖼️ Gerar Imagem</button>
+          </div>
+        </div>
         <div id="cards-list-venda" class="cv-list"></div>
       </div>
     </div>
@@ -413,6 +423,14 @@
   <div class="modal modal-wide">
     <button class="mc-btn" onclick="closeModal('mvenda')">✕</button>
     <div id="mvenda-content"></div>
+  </div>
+</div>
+
+<!-- MODAL GERAR IMAGEM DO COMBO À VENDA -->
+<div class="ov" id="mvimg" onclick="if(event.target===this)closeModal('mvimg')">
+  <div class="modal modal-wide">
+    <button class="mc-btn" onclick="closeModal('mvimg')">✕</button>
+    <div id="mvimg-content"></div>
   </div>
 </div>
 

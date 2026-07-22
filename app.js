@@ -1078,6 +1078,7 @@ function renderCardsVenda(){
   const wrap=document.getElementById('cards-list-venda');if(!wrap)return;
   if(!list.length){
     wrap.innerHTML=`<div class="cv-item-empty">Nenhuma carta à venda ainda.<br>Clique em uma carta à esquerda para anunciar.</div>`;
+    updateVendaSelectUI();
     return;
   }
   const allCards=getAllCardsWithSet();
@@ -1085,7 +1086,11 @@ function renderCardsVenda(){
     const col=VER_COLOR[l.version]||'#888';
     const c=allCards.find(cc=>cc._setId===l.set_id&&cc.n===l.card_n);
     const imgSrc=c?getBinderImg(c,l.set_id):null;
-    return`<div class="cv-item" onclick="openVendaModal('${l.set_id}','${l.card_n}','${l.version}')" title="Editar anúncio">
+    const selIdx=_vendaSelected.indexOf(l.slot_key);
+    const isSel=selIdx>-1;
+    const clickAttr=_vendaSelectMode?`toggleVendaSelect('${l.slot_key}')`:`openVendaModal('${l.set_id}','${l.card_n}','${l.version}')`;
+    return`<div class="cv-item${isSel?' cv-selected':''}" onclick="${clickAttr}" title="${_vendaSelectMode?'Selecionar para imagem':'Editar anúncio'}">
+      ${_vendaSelectMode?`<div class="cv-select-badge">${isSel?(selIdx+1):''}</div>`:''}
       ${imgSrc?`<img class="cv-item-img" src="${imgSrc}" alt="${l.card_name}" onerror="this.style.display='none'">`:
         `<div class="cv-item-icon">🏷️</div>`}
       <div class="cv-item-info">
@@ -1095,10 +1100,43 @@ function renderCardsVenda(){
       <div class="cv-item-right">
         <span class="cv-item-qty">×${l.qty}</span>
         <div class="cv-item-price">R$${fmtR(l.price)}</div>
-        <button class="cv-item-remove" onclick="event.stopPropagation();removeVenda('${l.slot_key}')">remover</button>
+        ${_vendaSelectMode?'':`<button class="cv-item-remove" onclick="event.stopPropagation();removeVenda('${l.slot_key}')">remover</button>`}
       </div>
     </div>`;
   }).join('');
+  updateVendaSelectUI();
+}
+
+// ── SELEÇÃO DE COMBO PARA GERAR IMAGEM (máx. 9 cartas) ────────────
+let _vendaSelectMode=false,_vendaSelected=[];
+const VIMG_MAX=9;
+
+function toggleVendaSelectMode(){
+  _vendaSelectMode=!_vendaSelectMode;
+  _vendaSelected=[];
+  renderCardsVenda();
+}
+
+function toggleVendaSelect(key){
+  const i=_vendaSelected.indexOf(key);
+  if(i>-1){_vendaSelected.splice(i,1);}
+  else{
+    if(_vendaSelected.length>=VIMG_MAX){setStatus(`Máximo de ${VIMG_MAX} cartas por imagem`,'warning');return;}
+    _vendaSelected.push(key);
+  }
+  renderCardsVenda();
+}
+
+function updateVendaSelectUI(){
+  const btn=document.getElementById('cv-select-toggle');
+  const bar=document.getElementById('cv-select-bar');
+  const cnt=document.getElementById('cv-select-count');
+  const genBtn=document.getElementById('cv-gen-img-btn');
+  if(btn)btn.classList.toggle('active',_vendaSelectMode);
+  if(btn)btn.textContent=_vendaSelectMode?'✕ Cancelar seleção':'☑️ Selecionar';
+  if(bar)bar.style.display=_vendaSelectMode?'flex':'none';
+  if(cnt)cnt.textContent=`${_vendaSelected.length}/${VIMG_MAX} selecionadas`;
+  if(genBtn)genBtn.disabled=_vendaSelected.length===0;
 }
 
 // ── MODAL COLOCAR À VENDA ─────────────────────────────────────────
@@ -1221,6 +1259,140 @@ async function removeVenda(key){
   cardListings=cardListings.filter(l=>l.slot_key!==key);
   closeModal('mvenda');_mvState=null;
   renderCardsAll();renderCardsVenda();
+}
+
+// ── GERAR IMAGEM DO COMBO (até 9 cartas selecionadas) ─────────────
+// Monta uma prévia em HTML (sempre funciona) e tenta gerar um PNG via
+// canvas para download (depende do servidor de imagens permitir CORS —
+// se ele bloquear, o usuário ainda tem a prévia pra printar a tela).
+let _vimgItems=[];
+function openVendaImageModal(){
+  if(!_vendaSelected.length)return;
+  const allCards=getAllCardsWithSet();
+  _vimgItems=_vendaSelected.map(key=>{
+    const l=cardListings.find(x=>x.slot_key===key);
+    if(!l)return null;
+    const c=allCards.find(cc=>cc._setId===l.set_id&&cc.n===l.card_n);
+    const imgSrc=c?getBinderImg(c,l.set_id):null;
+    return{l,c,imgSrc};
+  }).filter(Boolean);
+  if(!_vimgItems.length)return;
+
+  const total=_vimgItems.reduce((s,{l})=>s+Number(l.price||0),0);
+  document.getElementById('mvimg-content').innerHTML=`
+    <div class="vimg-wrap">
+      <div class="vimg-title">🖼️ Imagem do Combo</div>
+      <div class="vimg-sub">${_vimgItems.length} carta(s) selecionada(s) — prévia abaixo. Se o download automático não funcionar, tire um print desta prévia.</div>
+      <div class="vimg-canvas-shell">
+        <div class="vimg-grid" id="vimg-grid">
+          ${_vimgItems.map(({l,imgSrc})=>`
+            <div class="vimg-cell">
+              <div class="vimg-name">${l.card_name} · ${l.card_n}</div>
+              ${imgSrc?`<img src="${imgSrc}" alt="${l.card_name}" crossorigin="anonymous">`:`<div style="aspect-ratio:245/342;display:flex;align-items:center;justify-content:center;font-size:32px">🃏</div>`}
+              <div class="vimg-price">R$${fmtR(l.price)}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="vimg-actions">
+        <div class="vimg-total">Total do combo: <b>R$${fmtR(total)}</b></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-cx" onclick="closeModal('mvimg')">Fechar</button>
+          <button class="btn-add" onclick="downloadVendaImage()">⬇️ Baixar PNG</button>
+        </div>
+      </div>
+      <div class="vimg-fallback-note" id="vimg-fallback-note">⚠️ Não foi possível gerar o PNG automaticamente (o servidor de imagens das cartas bloqueia exportação). Tire um print da prévia acima.</div>
+    </div>`;
+  openModal('mvimg');
+}
+
+async function downloadVendaImage(){
+  if(!_vimgItems.length)return;
+  const note=document.getElementById('vimg-fallback-note');
+  if(note)note.style.display='none';
+  try{
+    if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+    const cols=Math.min(3,_vimgItems.length);
+    const rows=Math.ceil(_vimgItems.length/cols);
+    const cellW=320,cellH=Math.round(cellW*342/245),gap=14,pad=24,headerH=54;
+    const cw=pad*2+cols*cellW+(cols-1)*gap;
+    const ch=headerH+pad+rows*cellH+(rows-1)*gap+pad;
+
+    const canvas=document.createElement('canvas');
+    canvas.width=cw;canvas.height=ch;
+    const ctx=canvas.getContext('2d');
+    ctx.fillStyle='#0d0f18';ctx.fillRect(0,0,cw,ch);
+    ctx.fillStyle='#ffd166';
+    ctx.font="700 26px 'Bebas Neue', sans-serif";
+    ctx.textBaseline='top';
+    ctx.fillText('MYDECK — CARTAS À VENDA',pad,18);
+
+    // carrega todas as imagens em paralelo (com fallback null em caso de erro/CORS)
+    const imgs=await Promise.all(_vimgItems.map(({imgSrc})=>new Promise(res=>{
+      if(!imgSrc){res(null);return;}
+      const im=new Image();
+      im.crossOrigin='anonymous';
+      im.onload=()=>res(im);
+      im.onerror=()=>res(null);
+      im.src=imgSrc;
+    })));
+
+    _vimgItems.forEach(({l},i)=>{
+      const col=i%cols,row=Math.floor(i/cols);
+      const x=pad+col*(cellW+gap),y=headerH+pad+row*(cellH+gap);
+      const im=imgs[i];
+
+      // fundo do card + moldura arredondada
+      ctx.save();
+      roundRectPath(ctx,x,y,cellW,cellH,10);
+      ctx.clip();
+      ctx.fillStyle='#181c2e';ctx.fillRect(x,y,cellW,cellH);
+      if(im)ctx.drawImage(im,x,y,cellW,cellH);
+      else{
+        ctx.fillStyle='#52597a';ctx.font='40px sans-serif';ctx.textAlign='center';
+        ctx.fillText('🃏',x+cellW/2,y+cellH/2-20);ctx.textAlign='left';
+      }
+      // faixa do nome (topo)
+      const nameGrad=ctx.createLinearGradient(0,y,0,y+40);
+      nameGrad.addColorStop(0,'rgba(0,0,0,.8)');nameGrad.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=nameGrad;ctx.fillRect(x,y,cellW,40);
+      ctx.fillStyle='#fff';ctx.font="700 13px 'Space Mono', monospace";
+      ctx.fillText(`${l.card_name} · ${l.card_n}`.slice(0,34),x+8,y+8);
+      // faixa do preço (base)
+      const priceGrad=ctx.createLinearGradient(0,y+cellH-46,0,y+cellH);
+      priceGrad.addColorStop(0,'rgba(0,0,0,0)');priceGrad.addColorStop(1,'rgba(0,0,0,.88)');
+      ctx.fillStyle=priceGrad;ctx.fillRect(x,y+cellH-46,cellW,46);
+      ctx.fillStyle='#ffd166';ctx.font="700 24px 'Bebas Neue', sans-serif";ctx.textAlign='center';
+      ctx.fillText('R$'+fmtR(l.price),x+cellW/2,y+cellH-34);
+      ctx.textAlign='left';
+      ctx.restore();
+    });
+
+    const total=_vimgItems.reduce((s,{l})=>s+Number(l.price||0),0);
+    ctx.fillStyle='#06d6a0';ctx.font="700 15px 'Space Mono', monospace";ctx.textAlign='right';
+    ctx.fillText('Total: R$'+fmtR(total),cw-pad,18);
+    ctx.textAlign='left';
+
+    const blob=await new Promise(res=>canvas.toBlob(res,'image/png'));
+    if(!blob)throw new Error('toBlob retornou vazio');
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=`mydeck-combo-${Date.now()}.png`;
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+  }catch(e){
+    console.error('[downloadVendaImage] falha ao exportar PNG (provável bloqueio de CORS nas imagens):',e);
+    if(note)note.style.display='block';
+  }
+}
+
+function roundRectPath(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
 }
 
 // ── MODAL CARTA TIRADA EXPANDIDA ─────────────────────────────────

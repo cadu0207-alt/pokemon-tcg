@@ -1550,3 +1550,43 @@ body.share-view .btn-add { display: none !important; }
 .mv-final-price { display: flex; align-items: baseline; gap: 8px; margin: 14px 0 6px; }
 .mv-final-price input { font-family: 'Bebas Neue', sans-serif; font-size: 26px; width: 140px; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 6px 10px; color: var(--gold); }
 .mv-final-price input:disabled { opacity: .7; }
+
+/* ─── SELEÇÃO DE COMBO (gerar imagem) ─────────────────────────── */
+.cv-select-toggle {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 6px; padding: 5px 10px; font-family: 'Space Mono', monospace;
+  font-size: 10px; cursor: pointer; transition: all .15s ease;
+}
+.cv-select-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.cv-select-toggle.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.cv-select-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 7px;
+  padding: 8px 10px; margin-bottom: 12px; font-family: 'Space Mono', monospace; font-size: 10.5px; color: var(--muted);
+}
+.cv-item.cv-selected { border-color: var(--gold); background: rgba(255,209,102,.08); }
+.cv-select-badge {
+  width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700; color: var(--muted);
+  background: var(--surface);
+}
+.cv-item.cv-selected .cv-select-badge { border-color: var(--gold); background: var(--gold); color: #1c1f2e; }
+
+/* ─── PRÉVIA DA IMAGEM DO COMBO ───────────────────────────────── */
+.vimg-wrap { padding: 22px; }
+.vimg-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; margin-bottom: 4px; }
+.vimg-sub { font-family: 'Space Mono', monospace; font-size: 10.5px; color: var(--muted); margin-bottom: 16px; }
+.vimg-canvas-shell { background: #0d0f18; border-radius: 10px; padding: 16px; display: flex; justify-content: center; }
+.vimg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; max-width: 620px; }
+.vimg-cell { position: relative; border-radius: 8px; overflow: hidden; background: #181c2e; border: 1px solid #2a2e42; }
+.vimg-cell img { width: 100%; aspect-ratio: 245/342; object-fit: cover; display: block; }
+.vimg-name { position: absolute; top: 0; left: 0; right: 0; padding: 4px 6px; font-size: 9.5px; font-weight: 700;
+  color: #fff; background: linear-gradient(to bottom, rgba(0,0,0,.75), transparent); font-family: 'Space Mono', monospace; }
+.vimg-price { position: absolute; bottom: 0; left: 0; right: 0; padding: 5px 6px; text-align: center;
+  font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 1px; color: #ffd166;
+  background: linear-gradient(to top, rgba(0,0,0,.85), transparent 90%); }
+.vimg-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; flex-wrap: wrap; gap: 10px; }
+.vimg-total { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
+.vimg-total b { color: var(--teal); font-size: 14px; }
+.vimg-fallback-note { font-size: 10px; color: var(--gold); font-family: 'Space Mono', monospace; margin-top: 10px; display: none; }
