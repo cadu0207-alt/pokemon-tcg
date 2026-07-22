@@ -191,11 +191,22 @@
 
   <div id="cartas" class="pane">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
-      <div class="sec-title" style="margin:0">🃏 Cartas Tiradas</div>
-      <button class="btn-add" onclick="openModal('mc')">+ ADICIONAR</button>
+      <div class="sec-title" style="margin:0">🃏 Cartas Tiradas &amp; À Venda</div>
+      <button class="btn-add" onclick="openModal('mc')">+ ADICIONAR TIRADA</button>
     </div>
     <div id="cards-hdr"></div>
-    <div id="cards-list"></div>
+    <div class="cv-cols">
+      <div class="cv-col">
+        <div class="cv-col-t">📚 Todas as Cartas <span class="cv-count" id="cv-count-all"></span></div>
+        <input class="bsrch" id="cv-search-all" placeholder="Buscar carta..." oninput="renderCardsAll()">
+        <div id="cards-list-all" class="cv-list"></div>
+      </div>
+      <div class="cv-col">
+        <div class="cv-col-t">🏷️ À Venda <span class="cv-count" id="cv-count-venda"></span></div>
+        <input class="bsrch" id="cv-search-venda" placeholder="Buscar à venda..." oninput="renderCardsVenda()">
+        <div id="cards-list-venda" class="cv-list"></div>
+      </div>
+    </div>
   </div>
 
   <div id="fichario" class="pane">
@@ -378,6 +389,14 @@
   <div class="modal modal-card">
     <button class="mc-btn" onclick="closeModal('card-modal')">✕</button>
     <div id="card-modal-content"></div>
+  </div>
+</div>
+
+<!-- MODAL COLOCAR CARTA À VENDA -->
+<div class="ov" id="mvenda" onclick="if(event.target===this)closeModal('mvenda')">
+  <div class="modal modal-wide">
+    <button class="mc-btn" onclick="closeModal('mvenda')">✕</button>
+    <div id="mvenda-content"></div>
   </div>
 </div>
 

@@ -308,7 +308,7 @@ function lprice(setId,n,fallback){
 }
 
 // ── ESTADO ──────────────────────────────────────────────────────
-let purchases=[],pulledCards=[],collected=new Set(),collectedQty=new Map(),valueHistory=[];
+let purchases=[],pulledCards=[],collected=new Set(),collectedQty=new Map(),valueHistory=[],cardListings=[];
 
 // ── VERSÕES ──────────────────────────────────────────────────────
 const VER_COLOR={N:'#c8cfe8',F:'#118ab2',RH:'#06d6a0',SP:'#ff6b35'};
@@ -356,17 +356,19 @@ async function loadAll(){
   if(!uid()){setStatus('Faça login','warning');return;}
   try{
     const myUid=uid();
-    const[{data:p},{data:c},{data:col},{data:vh}]=await Promise.all([
+    const[{data:p},{data:c},{data:col},{data:vh},{data:lst}]=await Promise.all([
       sbClient.from('purchases').select('*').eq('user_id',myUid).order('date',{ascending:false}),
       sbClient.from('pulled_cards').select('*').eq('user_id',myUid).order('id',{ascending:true}),
       sbClient.from('collection').select('slot_key,quantity,origins').eq('user_id',myUid),
-      sbClient.from('value_history').select('date,total_value').eq('user_id',myUid).order('date',{ascending:true})
+      sbClient.from('value_history').select('date,total_value').eq('user_id',myUid).order('date',{ascending:true}),
+      sbClient.from('card_listings').select('*').eq('user_id',myUid).order('created_at',{ascending:false})
     ]);
     purchases=Array.isArray(p)?p:[];
     pulledCards=Array.isArray(c)?c:[];
     collected=new Set((Array.isArray(col)?col:[]).map(r=>r.slot_key));
     collectedQty=new Map((Array.isArray(col)?col:[]).map(r=>[r.slot_key,{qty:r.quantity||1,origins:r.origins||[]}]));
     valueHistory=Array.isArray(vh)?vh:[];
+    cardListings=Array.isArray(lst)?lst:[];
     setStatus('Online ✓','ok');
     fetchCambio();  // atualiza USD_BRL e EUR_BRL para conversão de preços
     renderAll();updateHomeStats();
@@ -970,80 +972,225 @@ function renderGastos(){
   }).join('');
 }
 
-// ── CARTAS TIRADAS ───────────────────────────────────────────────
-// Exibe cards coletados no fichário, agrupados por set, com seções colapsáveis
+// ── CARTAS TIRADAS & À VENDA ─────────────────────────────────────
+const cvSetLbl=id=>id.toUpperCase()
+  .replace('SV3PT5','151').replace('SV8PT5','SV8.5')
+  .replace('SV6PT5','SV6.5').replace('SV4PT5','SV4.5');
+
+const MV_DISCOUNTS=[5,10,15,20,25,30];
+
 function renderCartas(){
   const fichVal=calcCollectedValue();
   const invested=purchases.reduce((s,p)=>s+Number(p.price),0);
   const roi=invested>0?(fichVal/invested*100).toFixed(0):0;
+  const vendaTotal=cardListings.reduce((s,l)=>s+Number(l.price||0)*Number(l.qty||1),0);
   document.getElementById('cards-hdr').innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:22px">
     ${kpiHTML('teal','📚 Valor Fichário','R$'+fmtR(fichVal),collected.size+' slots')}
     ${kpiHTML('gold','📊 % Investimento',roi+'%','de R$'+fmtR(invested))}
     ${kpiHTML('red','🛍️ Investido','R$'+fmtR(invested),purchases.length+' compras')}
+    ${kpiHTML('teal','🏷️ À Venda','R$'+fmtR(vendaTotal),cardListings.length+' anúncios')}
   </div>`;
+  renderCardsAll();
+  renderCardsVenda();
+}
 
-  // Agrupa slots coletados por set
-  const bySet={};
+// Lista achatada de todos os slots coletados (qty>0), 1 item por versão/carta
+function getOwnedSlotsFlat(){
+  const out=[];
   getAllCardsWithSet().forEach(c=>{
     const sid=c._setId;
     getSlots(c,sid).forEach(s=>{
       const key=slotKey(sid+':',c.n,s.ver);
-      if(!collected.has(key))return;
-      if(!bySet[sid])bySet[sid]=[];
-      bySet[sid].push({c,ver:s.ver,price:s.price||c.price});
+      const entry=collectedQty.get(key);
+      if(!entry||!entry.qty)return;
+      out.push({c,sid,ver:s.ver,key,qty:entry.qty,ligaPrice:lprice(sid,c.n,s.price)});
     });
   });
+  return out;
+}
 
-  const setLbl=id=>id.toUpperCase()
-    .replace('SV3PT5','151').replace('SV8PT5','SV8.5')
-    .replace('SV6PT5','SV6.5').replace('SV4PT5','SV4.5');
-
-  const setOrder=['me04','me03','me02','meg','me05','me06','mep',
-    'sv1','sv2','sv3','sv3pt5','sv4','sv4pt5','sv5','sv6','sv6pt5','sv7','sv8','sv8pt5'];
-  const keys=[...setOrder.filter(k=>bySet[k]),...Object.keys(bySet).filter(k=>!setOrder.includes(k))];
-
-  if(!keys.length){
-    document.getElementById('cards-list').innerHTML=
-      `<div style="text-align:center;padding:60px 20px;color:var(--muted);font-family:'Space Mono',monospace;font-size:11px">
-        Nenhuma carta marcada no fichário ainda.<br>
-        <span style="color:var(--accent)">Acesse a aba Fichário e marque as cartas que você tem.</span>
-      </div>`;
+function renderCardsAll(){
+  const q=(document.getElementById('cv-search-all')?.value||'').trim().toLowerCase();
+  let slots=getOwnedSlotsFlat();
+  if(q)slots=slots.filter(({c,sid})=>c.name.toLowerCase().includes(q)||c.n.includes(q)||cvSetLbl(sid).toLowerCase().includes(q));
+  slots.sort((a,b)=>a.c.name.localeCompare(b.c.name));
+  const cEl=document.getElementById('cv-count-all');if(cEl)cEl.textContent=`(${slots.length})`;
+  const wrap=document.getElementById('cards-list-all');if(!wrap)return;
+  if(!slots.length){
+    wrap.innerHTML=`<div class="cv-item-empty">Nenhuma carta encontrada.<br>Marque cartas no Fichário para elas aparecerem aqui.</div>`;
     return;
   }
+  wrap.innerHTML=slots.map(({c,sid,ver,key,qty,ligaPrice})=>{
+    const imgSrc=getBinderImg(c,sid);
+    const col=VER_COLOR[ver]||'#888';
+    const listed=cardListings.find(l=>l.slot_key===key);
+    return`<div class="cv-item" onclick="openVendaModal('${sid}','${c.n}','${ver}')" title="Colocar à venda">
+      ${imgSrc?`<img class="cv-item-img" src="${imgSrc}" alt="${c.name}" onerror="this.style.display='none'">`:
+        `<div class="cv-item-icon">🃏</div>`}
+      <div class="cv-item-info">
+        <div class="cv-item-name">${c.name}</div>
+        <div class="cv-item-meta">${c.n} · ${cvSetLbl(sid)} · <span style="color:${col}">${VER_SHORT[ver]||ver}</span></div>
+      </div>
+      <div class="cv-item-right">
+        <span class="cv-item-qty">×${qty}</span>
+        ${ligaPrice?`<div class="cv-item-price">R$${fmtR(ligaPrice)}</div>`:''}
+        ${listed?`<div style="font-size:9px;color:var(--accent);font-family:'Space Mono',monospace;margin-top:3px">🏷️ à venda</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
 
-  let html='';
-  keys.forEach(sid=>{
-    const slots=bySet[sid];
-    const sTotal=slots.reduce((s,e)=>s+Number(e.price||0),0);
-    html+=`<details open style="margin-bottom:14px">
-      <summary style="font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);
-                      text-transform:uppercase;padding:9px 12px;border-bottom:1px solid var(--border);
-                      display:flex;justify-content:space-between;align-items:center;cursor:pointer;
-                      background:var(--surface2);border-radius:6px;list-style:none;user-select:none">
-        <span>📦 ${setLbl(sid)}</span>
-        <span style="color:var(--teal)">${slots.length} slots · R$${fmtR(sTotal)}</span>
-      </summary>
-      <div class="pulled-grid" style="padding-top:12px">`;
-    slots.forEach(({c,ver,price})=>{
-      const imgSrc=getBinderImg(c,sid);
-      const col=VER_COLOR[ver]||'#888';
-      html+=`<div class="pc" onclick='switchSet("${sid}",null)' title="Ir para ${setLbl(sid)} no fichário">
-        ${imgSrc?`<img class="pc-img" src="${imgSrc}" alt="${c.name}" onerror="this.style.display='none'">`:
-          `<div class="pc-icon fp">🃏</div>`}
-        <div class="pc-info">
-          <div class="pc-name">${c.name}</div>
-          <div class="pc-meta">${c.n} · ${setLbl(sid)}</div>
-          <div class="ver-dots"><div class="ver-dot" style="background:${col};border-color:${col}" title="${VER_LABEL[ver]||ver}"></div></div>
+function renderCardsVenda(){
+  const q=(document.getElementById('cv-search-venda')?.value||'').trim().toLowerCase();
+  let list=cardListings.filter(l=>!q||l.card_name.toLowerCase().includes(q)||l.card_n.includes(q)||cvSetLbl(l.set_id).toLowerCase().includes(q));
+  list=[...list].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  const cEl=document.getElementById('cv-count-venda');if(cEl)cEl.textContent=`(${list.length})`;
+  const wrap=document.getElementById('cards-list-venda');if(!wrap)return;
+  if(!list.length){
+    wrap.innerHTML=`<div class="cv-item-empty">Nenhuma carta à venda ainda.<br>Clique em uma carta à esquerda para anunciar.</div>`;
+    return;
+  }
+  const allCards=getAllCardsWithSet();
+  wrap.innerHTML=list.map(l=>{
+    const col=VER_COLOR[l.version]||'#888';
+    const c=allCards.find(cc=>cc._setId===l.set_id&&cc.n===l.card_n);
+    const imgSrc=c?getBinderImg(c,l.set_id):null;
+    return`<div class="cv-item" onclick="openVendaModal('${l.set_id}','${l.card_n}','${l.version}')" title="Editar anúncio">
+      ${imgSrc?`<img class="cv-item-img" src="${imgSrc}" alt="${l.card_name}" onerror="this.style.display='none'">`:
+        `<div class="cv-item-icon">🏷️</div>`}
+      <div class="cv-item-info">
+        <div class="cv-item-name">${l.card_name}</div>
+        <div class="cv-item-meta">${l.card_n} · ${cvSetLbl(l.set_id)} · <span style="color:${col}">${VER_SHORT[l.version]||l.version}</span></div>
+      </div>
+      <div class="cv-item-right">
+        <span class="cv-item-qty">×${l.qty}</span>
+        <div class="cv-item-price">R$${fmtR(l.price)}</div>
+        <button class="cv-item-remove" onclick="event.stopPropagation();removeVenda('${l.slot_key}')">remover</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── MODAL COLOCAR À VENDA ─────────────────────────────────────────
+let _mvState=null;
+function openVendaModal(setId,n,ver){
+  const c=getAllCardsWithSet().find(cc=>cc._setId===setId&&cc.n===n);
+  if(!c)return;
+  const slots=getSlots(c,setId);
+  const s=slots.find(sl=>sl.ver===ver)||slots[0];
+  const key=slotKey(setId+':',n,ver);
+  const owned=collectedQty.get(key)?.qty||0;
+  if(!owned){alert('Você não tem essa carta marcada no fichário.');return;}
+  const ligaPrice=lprice(setId,n,s.price)||0;
+  const existing=cardListings.find(l=>l.slot_key===key);
+  _mvState={
+    setId,n,ver,key,card:c,owned,ligaPrice,
+    qty: existing?Math.min(existing.qty,owned):1,
+    discountType: existing?existing.discount_type:'liga_10',
+    price: existing?Number(existing.price):+(ligaPrice*0.9).toFixed(2)
+  };
+  renderVendaModal();
+  openModal('mvenda');
+}
+
+function renderVendaModal(){
+  const st=_mvState;if(!st)return;
+  const c=st.card;
+  const imgSrc=getBinderImg(c,st.setId);
+  const col=VER_COLOR[st.ver]||'#888';
+  const isIndividual=st.discountType==='individual';
+  const existing=cardListings.find(l=>l.slot_key===st.key);
+  document.getElementById('mvenda-content').innerHTML=`
+    ${imgSrc?`<img class="mbinder-img" src="${imgSrc}" alt="${c.name}" onerror="this.style.display='none'">`:''}
+    <div class="mbinder-body">
+      <div class="mbinder-title">${c.name}</div>
+      <div class="mbinder-sub">#${c.n} · ${cvSetLbl(st.setId)} · <span style="color:${col}">${VER_LABEL[st.ver]||st.ver}</span> ${st.ligaPrice?`· Liga R$${fmtR(st.ligaPrice)}`:''}</div>
+
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px">QUANTIDADE À VENDA (você tem ${st.owned})</div>
+      <div class="mv-qty-row">
+        <button class="mv-qty-btn" onclick="mvChangeQty(-1)">−</button>
+        <div class="mv-qty-val" id="mv-qty-val">${st.qty}</div>
+        <button class="mv-qty-btn" onclick="mvChangeQty(1)">+</button>
+      </div>
+
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">PREÇO DE VENDA</div>
+      <div class="mv-disc-grid">
+        ${MV_DISCOUNTS.map(pct=>{
+          const dt='liga_'+pct;
+          const p=st.ligaPrice?+(st.ligaPrice*(1-pct/100)).toFixed(2):null;
+          return`<div class="mv-disc-opt${st.discountType===dt?' active':''}" onclick="mvSetDiscount('${dt}')">
+            <div class="mv-disc-label">Liga -${pct}%</div>
+            <div class="mv-disc-price">${p?'R$'+fmtR(p):'—'}</div>
+          </div>`;
+        }).join('')}
+        <div class="mv-disc-opt${isIndividual?' active':''}" onclick="mvSetDiscount('individual')">
+          <div class="mv-disc-label">Preço individual</div>
+          <div class="mv-disc-price">manual</div>
         </div>
-        <div class="pc-right">
-          <span class="rb" style="background:${col}22;color:${col};border-color:${col}">${VER_SHORT[ver]||ver}</span>
-          ${price?`<div class="pc-price">R$${fmtR(price)}</div>`:''}
-        </div>
-      </div>`;
-    });
-    html+='</div></details>';
-  });
-  document.getElementById('cards-list').innerHTML=html;
+      </div>
+
+      <div class="mv-final-price">
+        <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">R$</span>
+        <input type="number" id="mv-price" step="0.01" value="${st.price}" ${isIndividual?'':'disabled'} oninput="mvSetPrice(this.value)">
+      </div>
+
+      <div class="mact">
+        <button class="btn-cx" onclick="closeModal('mvenda')">Cancelar</button>
+        ${existing?`<button class="btn-cx" style="color:var(--accent)" onclick="removeVenda('${st.key}')">Remover da venda</button>`:''}
+        <button class="btn-add" onclick="saveVenda()">✓ Colocar à Venda</button>
+      </div>
+    </div>`;
+}
+
+function mvChangeQty(d){
+  const st=_mvState;if(!st)return;
+  st.qty=Math.max(1,Math.min(st.owned,st.qty+d));
+  const el=document.getElementById('mv-qty-val');if(el)el.textContent=st.qty;
+}
+
+function mvSetDiscount(dt){
+  const st=_mvState;if(!st)return;
+  st.discountType=dt;
+  if(dt!=='individual'){
+    const pct=+dt.split('_')[1];
+    st.price=st.ligaPrice?+(st.ligaPrice*(1-pct/100)).toFixed(2):0;
+  }
+  renderVendaModal();
+}
+
+function mvSetPrice(v){
+  const st=_mvState;if(!st)return;
+  st.price=parseFloat(v)||0;
+}
+
+async function saveVenda(){
+  const st=_mvState;if(!st||!uid())return;
+  if(st.qty<1||st.qty>st.owned){alert('Quantidade inválida.');return;}
+  if(!st.price||st.price<=0){alert('Informe um preço de venda válido.');return;}
+  const payload={
+    user_id:uid(),slot_key:st.key,set_id:st.setId,card_n:st.n,version:st.ver,
+    card_name:st.card.name,qty:st.qty,price:st.price,discount_type:st.discountType,
+    liga_price:st.ligaPrice||null,updated_at:new Date().toISOString()
+  };
+  const{data:res,error}=await sbClient.from('card_listings').upsert(payload,{onConflict:'user_id,slot_key'}).select();
+  if(error){
+    console.error('[card_listings upsert]',error);
+    alert('Não foi possível salvar o anúncio. Verifique se a tabela card_listings já foi criada no Supabase (rode card_listings_setup.sql).');
+    return;
+  }
+  cardListings=cardListings.filter(l=>l.slot_key!==st.key);
+  if(Array.isArray(res))cardListings.unshift(...res);
+  closeModal('mvenda');_mvState=null;
+  renderCardsAll();renderCardsVenda();
+}
+
+async function removeVenda(key){
+  if(!uid())return;
+  const{error}=await sbClient.from('card_listings').delete().eq('slot_key',key).eq('user_id',uid());
+  if(error){console.error('[card_listings delete]',error);alert('Não foi possível remover o anúncio.');return;}
+  cardListings=cardListings.filter(l=>l.slot_key!==key);
+  closeModal('mvenda');_mvState=null;
+  renderCardsAll();renderCardsVenda();
 }
 
 // ── MODAL CARTA TIRADA EXPANDIDA ─────────────────────────────────
