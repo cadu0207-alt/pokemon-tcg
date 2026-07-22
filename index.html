@@ -199,6 +199,22 @@
       <div class="cv-col">
         <div class="cv-col-t">📚 Todas as Cartas <span class="cv-count" id="cv-count-all"></span></div>
         <input class="bsrch" id="cv-search-all" placeholder="Buscar carta..." oninput="renderCardsAll()">
+        <div class="cv-filters">
+          <select class="cv-select" id="cv-filter-set" onchange="renderCardsAll()">
+            <option value="">Todas as coleções</option>
+          </select>
+          <select class="cv-select" id="cv-filter-rep" onchange="renderCardsAll()">
+            <option value="all">Todas as cartas</option>
+            <option value="rep">Só repetidas (qty &gt; 1)</option>
+          </select>
+          <select class="cv-select" id="cv-filter-ver" onchange="renderCardsAll()">
+            <option value="all">Todas as versões</option>
+            <option value="normal">Normais</option>
+            <option value="foil">Foil / Reverse Foil</option>
+            <option value="ir">IR (Ilustr. Rara)</option>
+            <option value="isr_sar">ISR / SAR / UR</option>
+          </select>
+        </div>
         <div id="cards-list-all" class="cv-list"></div>
       </div>
       <div class="cv-col">

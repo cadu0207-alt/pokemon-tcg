@@ -990,6 +990,7 @@ function renderCartas(){
     ${kpiHTML('red','🛍️ Investido','R$'+fmtR(invested),purchases.length+' compras')}
     ${kpiHTML('teal','🏷️ À Venda','R$'+fmtR(vendaTotal),cardListings.length+' anúncios')}
   </div>`;
+  populateCvSetFilter();
   renderCardsAll();
   renderCardsVenda();
 }
@@ -1009,9 +1010,38 @@ function getOwnedSlotsFlat(){
   return out;
 }
 
+// Preenche o dropdown "coleções" com os sets que têm cartas coletadas,
+// preservando a seleção atual do usuário (só reconstrói se a lista mudou).
+function populateCvSetFilter(){
+  const sel=document.getElementById('cv-filter-set');
+  if(!sel)return;
+  const sids=[...new Set(getOwnedSlotsFlat().map(s=>s.sid))].sort((a,b)=>cvSetLbl(a).localeCompare(cvSetLbl(b)));
+  const sig=sids.join(',');
+  if(sel.dataset.sig===sig)return;
+  const prev=sel.value;
+  sel.innerHTML='<option value="">Todas as coleções</option>'+
+    sids.map(sid=>`<option value="${sid}">${cvSetLbl(sid)}</option>`).join('');
+  sel.dataset.sig=sig;
+  if(sids.includes(prev))sel.value=prev;
+}
+
+// Classifica um slot em um dos 4 grupos de versão/raridade do filtro
+function cvVerGroup(c,ver){
+  if(ver==='N')return'normal';
+  if(ver==='F'||ver==='RH')return'foil';
+  // ver==='SP' (cartas sem versão base): separa IR das demais especiais (ISR/SAR/UR/Promo/Mega...)
+  return(c.rare==='Ilustr. Rara')?'ir':'isr_sar';
+}
+
 function renderCardsAll(){
   const q=(document.getElementById('cv-search-all')?.value||'').trim().toLowerCase();
+  const setFilter=document.getElementById('cv-filter-set')?.value||'';
+  const repFilter=document.getElementById('cv-filter-rep')?.value||'all';
+  const verFilter=document.getElementById('cv-filter-ver')?.value||'all';
   let slots=getOwnedSlotsFlat();
+  if(setFilter)slots=slots.filter(s=>s.sid===setFilter);
+  if(repFilter==='rep')slots=slots.filter(s=>s.qty>1);
+  if(verFilter!=='all')slots=slots.filter(({c,ver})=>cvVerGroup(c,ver)===verFilter);
   if(q)slots=slots.filter(({c,sid})=>c.name.toLowerCase().includes(q)||c.n.includes(q)||cvSetLbl(sid).toLowerCase().includes(q));
   slots.sort((a,b)=>a.c.name.localeCompare(b.c.name));
   const cEl=document.getElementById('cv-count-all');if(cEl)cEl.textContent=`(${slots.length})`;

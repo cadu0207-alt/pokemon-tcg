@@ -1466,6 +1466,20 @@ body.share-view .btn-add { display: none !important; }
   font-weight: 400;
 }
 .cv-col .bsrch { width: 100%; margin-bottom: 12px; }
+.cv-filters { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.cv-select {
+  flex: 1 1 130px;
+  min-width: 130px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 9px;
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 10.5px;
+  cursor: pointer;
+}
+.cv-select:focus { border-color: var(--accent); outline: none; }
 .cv-list {
   display: flex;
   flex-direction: column;
