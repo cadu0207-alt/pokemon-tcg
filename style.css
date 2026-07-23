@@ -1098,6 +1098,56 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
 
   /* Tabelas com muitas colunas: rola horizontalmente em vez de espremer o layout inteiro */
   .tbl { display: block; overflow-x: auto; white-space: nowrap; }
+
+  /* ─── FICHÁRIO NO CELULAR (22/07/2026) ────────────────────────
+     Eduardo reportou que os menus do fichário ficam pequenos demais no
+     celular. A causa: quase todos os controles do fichário (busca, checkboxes,
+     botões de copiar lista/imprimir/compartilhar/tamanho, abas de coleção) usam
+     style inline fixo (font-size:10px, padding:4-5px) direto no HTML/JS, sem
+     nenhuma regra responsiva — o !important aqui é necessário pra sobrepor
+     esse inline style só em telas pequenas. Meta: toque confortável (~40px+
+     de altura) e texto legível (11-12px) sem quebrar o layout desktop. */
+  .ctab {
+    padding: 12px 14px !important;
+    font-size: 10px !important;
+  }
+  .ctab-n { font-size: 9px !important; }
+  #binder-tabs {
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+  }
+  .bctl {
+    width: 100%;
+    gap: 8px !important;
+  }
+  .bctl .bsrch, .bctl input[type="text"] {
+    flex: 1 1 100% !important;
+    min-height: 40px;
+    font-size: 13px !important;
+    padding: 9px 12px !important;
+  }
+  .bctl label {
+    font-size: 12px !important;
+    min-height: 32px;
+  }
+  .bctl label input[type="checkbox"] {
+    width: 18px; height: 18px;
+  }
+  .bctl button, .bctl select,
+  #fic-binder-controls button,
+  #fic-view-grid, #fic-view-binder, #fic-share {
+    font-size: 11px !important;
+    padding: 9px 13px !important;
+    min-height: 38px;
+  }
+  #fic-binder-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  #fic-binder-controls button {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 @media (max-width: 400px) {

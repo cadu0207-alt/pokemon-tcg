@@ -1765,6 +1765,69 @@ function exportBinderText(){
   showTextExportModal(text,`${label} — ${rows.length} carta${rows.length!==1?'s':''}`);
 }
 
+// Mesma lógica de exportBinderText(), adaptada pra fichário personalizado:
+// cartas vêm de vários sets (c._setId por carta) em vez de um currentSet só,
+// e os filtros são os do próprio painel (#cb-view-q/oc/om) — ver [[project_pokemon_tcg]].
+function exportCustomBinderText(binder){
+  if(typeof binder==='string')binder=JSON.parse(binder);
+  const cards=getBinderCards(binder);
+  const q=(document.getElementById('cb-view-q')?.value||'').toLowerCase();
+  const oc=document.getElementById('cb-view-oc')?.checked||false;
+  const om=document.getElementById('cb-view-om')?.checked||false;
+
+  function visible(c){
+    if(q&&!(c.name+c.n+(c.type||'')).toLowerCase().includes(q))return false;
+    const slots=getSlots(c,c._setId);
+    const anyCol=slots.some(s=>collected.has(slotKey(c._setId+':',c.n,s.ver)));
+    const allCol=slots.every(s=>collected.has(slotKey(c._setId+':',c.n,s.ver)));
+    if(oc&&!anyCol)return false;if(om&&allCol)return false;
+    return true;
+  }
+
+  const filterLbl=oc?'✅ Só coletadas':om?'🔍 Só faltantes':'📚 Todas';
+  const visibleCards=cards.filter(visible);
+  let slotsTotal=0,slotsCol=0,cardsComplete=0,valorColetado=0,valorFaltante=0;
+  const rows=visibleCards.map(c=>{
+    const pfx=c._setId;
+    const slots=getSlots(c,pfx);
+    const dp=lprice(pfx,c.n,c.price);
+    const priceStr=dp?` — 💰 R$${fmtR(dp)}`:'';
+    const icon=TYPE_ICON[c.type||'']||'🃏';
+    const slotParts=slots.map(s=>{
+      const key=slotKey(pfx+':',c.n,s.ver);
+      const has=collected.has(key);
+      slotsTotal++;if(has)slotsCol++;
+      const sp=s.price!=null?s.price:dp;
+      if(has){
+        const qty=(typeof collectedQty!=='undefined'&&collectedQty.get(key)?.qty)||1;
+        if(sp)valorColetado+=sp*qty;
+        return oc&&qty>1?`${VER_SHORT[s.ver]}✅×${qty}`:`${VER_SHORT[s.ver]}✅`;
+      }
+      if(sp)valorFaltante+=sp;
+      return`${VER_SHORT[s.ver]}❌`;
+    }).join(' ');
+    const allCol=slots.every(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
+    const anyCol=slots.some(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
+    if(allCol)cardsComplete++;
+    const statusIcon=allCol?'✅':anyCol?'🟡':'❌';
+    return`${statusIcon} ${icon} *${(SET_CATALOG.find(s=>s.id===pfx)?.label||pfx.toUpperCase())} ${c.n}* ${c.name}${c.rare?` _(${c.rare})_`:''} [${slotParts}]${priceStr}`;
+  });
+
+  const dateStr=new Date().toLocaleDateString('pt-BR');
+  const pctSlots=slotsTotal>0?(slotsCol/slotsTotal*100).toFixed(0):0;
+  const header=`🎴✨ *${binder.emoji||'📚'} ${binder.name}* ✨🎴\n${filterLbl}${q?` · busca: "${q}"`:''}\n📅 ${dateStr}\n━━━━━━━━━━━━━━━━━━`;
+  let valorLine='';
+  if(oc)valorLine=`\n💰 *Valor total da coleção (o que já tenho):* R$${fmtR(valorColetado)}`;
+  else if(om)valorLine=`\n💸 *Valor pra fechar a coleção:* R$${fmtR(valorFaltante)}`;
+  const footer=`━━━━━━━━━━━━━━━━━━\n📦 Cartas completas: *${cardsComplete}/${rows.length}*\n🎯 Versões: *${slotsCol}/${slotsTotal}* (${pctSlots}%)${valorLine}\n\n🔥 Confira minha coleção completa e todas as novidades no *MyDeck*! 👉 ${MYDECK_SITE_URL} 🎉🃏`;
+  const text=`${header}\n${rows.join('\n')}\n${footer}`;
+
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>setStatus('Lista copiada! Cole no WhatsApp.','ok')).catch(()=>{});
+  }
+  showTextExportModal(text,`${binder.name} — ${rows.length} carta${rows.length!==1?'s':''}`);
+}
+
 function showTextExportModal(text,title){
   let ov=document.getElementById('text-export-overlay');
   if(ov)ov.remove();
@@ -2145,8 +2208,14 @@ let _currentCustomBinderId=null;
 
 // ── Presets temáticos ─────────────────────────────────────────────
 const BINDER_PRESETS=[
-  {key:'sv151_pokedex',   name:'Pokédex 151',         emoji:'💯',desc:'Base 001–165 da Coleção 151 em ordem de Pokédex',
-    filter:c=>c._setId==='sv3pt5'&&c.base,                                                                   color:'#E91E63'},
+  {key:'sv151_pokedex',   name:'Pokédex 151',         emoji:'💯',desc:'Base 001–165 da Coleção 151 em ordem de Pokédex (só Pokémon)',
+    // CORRIGIDO 22/07/2026: c.base sozinho pega 165 cartas, mas pelo menos 2 são
+    // treinador/energia (ex: "Big Air Balloon", "Energy Sticker"), não Pokémon —
+    // conferido carta por carta em cards_sv3pt5.js. Isso inflava a "Pokédex 151"
+    // com itens que não são bicho. Sem campo de "tipo de carta" estruturado no
+    // cadastro, a forma confiável de excluir é por tipo (todo Pokémon tem c.type
+    // definido como elemento; treinador/energia usam 'Treinador'/'Energia').
+    filter:c=>c._setId==='sv3pt5'&&c.base&&c.type!=='Treinador'&&c.type!=='Energia',                          color:'#E91E63'},
   {key:'sv151_arte',      name:'Galeria Kanto',       emoji:'🖼️',desc:'Ilustr. Rara + Esp. Rara da Coleção 151',
     filter:c=>c._setId==='sv3pt5'&&(c.rare==='Rara Ilustrada'||c.rare==='Rara Ilustrada Especial'),          color:'#7C3AED'},
   {key:'budget_151',      name:'151 de Pobre',        emoji:'🪙',desc:'Gen 1 < R$50 — carta mais barata de cada Pokémon original',
