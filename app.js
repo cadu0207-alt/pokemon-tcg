@@ -809,6 +809,24 @@ function _loadMyCollections(){
 }
 let myCollections=_loadMyCollections();
 function saveMyCollections(){try{localStorage.setItem('myCollections',JSON.stringify(myCollections));}catch(e){}}
+
+// ── Fichários personalizados fixados na aba principal (22/07/2026) ──────
+// Guardado local (mesmo padrão de myCollections) — não precisa de coluna nova
+// no Supabase. Guarda só os IDs; o binder em si continua vindo de customBinders.
+function _loadPinnedBinders(){
+  try{const v=JSON.parse(localStorage.getItem('pinnedBinders'));return Array.isArray(v)?v:[];}
+  catch(e){return[];}
+}
+let pinnedBinders=_loadPinnedBinders();
+function savePinnedBinders(){try{localStorage.setItem('pinnedBinders',JSON.stringify(pinnedBinders));}catch(e){}}
+function isBinderPinned(id){return pinnedBinders.includes(String(id));}
+function toggleBinderPinned(id){
+  id=String(id);
+  if(pinnedBinders.includes(id))pinnedBinders=pinnedBinders.filter(x=>x!==id);
+  else pinnedBinders.push(id);
+  savePinnedBinders();
+  renderTabs();
+}
 function toggleCollection(id){
   if(myCollections.includes(id)){
     myCollections=myCollections.filter(x=>x!==id);
@@ -1535,6 +1553,19 @@ function renderTabs(){
     onclick="switchSet('__custom__',this)"
     style="${cur==='__custom__'?'border-bottom:2px solid #a855f7;color:#a855f7':''}">
     ✨ Meus <span class="ctab-n">Fichários</span></div>`;
+  // Fichários personalizados fixados (22/07/2026) — aparecem como abas próprias,
+  // igual as coleções normais, além de dentro de "Meus Fichários".
+  pinnedBinders.forEach(pid=>{
+    const b=customBinders.find(x=>String(x.id)===pid);
+    if(!b)return;
+    const tabId='__cb__'+pid;
+    const isActive=cur===tabId;
+    const col=b.cover_color||'#a855f7';
+    html+=`<div class="ctab${isActive?' active':''}" id="fic-tab-cb-${pid}"
+      onclick="switchSet('${tabId}',this)"
+      style="${isActive?`border-bottom:2px solid ${col};color:${col}`:''}">
+      ${b.emoji||'📚'} ${b.name} <span class="ctab-n">${getBinderCards(b).length}</span></div>`;
+  });
   let lastSeries='';
   myCollections.forEach(id=>{
     const s=SET_CATALOG.find(s=>s.id===id);
@@ -1559,6 +1590,20 @@ function switchSet(id,el){
   currentSet=id;
   renderTabs();
   if(id==='__custom__'){renderCustomBindersHome();return;}
+  if(String(id).startsWith('__cb__')){
+    const binderId=id.slice(6);
+    const b=customBinders.find(x=>String(x.id)===binderId);
+    if(b)openCustomBinderView(b);
+    return;
+  }
+  // CORRIGIDO 22/07/2026: faltava restaurar .bctl aqui — abrir "Meus Fichários"
+  // ou um fichário personalizado (openCustomBinderView/renderCustomBindersHome)
+  // escondem a barra de busca/filtros/copiar lista/imprimir/compartilhar via
+  // display:none direto no elemento. Antes, só o go() (troca de página) restaurava
+  // isso — trocar de aba DENTRO do fichário (ex: "Meus Fichários" → ME04) não
+  // passava por lá, então a barra sumia pra sempre em qualquer coleção normal
+  // até recarregar a página. Ver [[feedback_coding]].
+  const bctl=document.querySelector('.bctl');if(bctl)bctl.style.display='';
   const binderCtrl=document.getElementById('fic-binder-controls');
   const setInfo=document.getElementById('fic-set-info');
   const bstats=document.getElementById('binder-stats');
@@ -1667,6 +1712,11 @@ function exportBinderText(){
   const filterLbl=oc?'✅ Só coletadas':om?'🔍 Só faltantes':'📚 Todas';
   const visibleCards=cards.filter(visible);
   let slotsTotal=0,slotsCol=0,cardsComplete=0;
+  // Valor consolidado — pedido do Eduardo: em "Só coletadas" mostra o total já
+  // gasto (preço × qtd de cada versão marcada); em "Cartas faltantes" mostra o
+  // total que falta pra fechar (preço × 1 de cada versão que ainda não tem,
+  // já que "fechar" só precisa de 1 cópia por slot, não da qtd que a pessoa quer).
+  let valorColetado=0,valorFaltante=0;
   const rows=visibleCards.map(c=>{
     const slots=getSlots(c,pfx);
     const dp=lprice(pfx,c.n,c.price);
@@ -1678,9 +1728,19 @@ function exportBinderText(){
     // Isso é o que fazia o master set "fechar" no texto exportado mesmo faltando
     // foils/reverse holos. Ver [[feedback_coding]].
     const slotParts=slots.map(s=>{
-      const has=collected.has(slotKey(pfx+':',c.n,s.ver));
+      const key=slotKey(pfx+':',c.n,s.ver);
+      const has=collected.has(key);
       slotsTotal++;if(has)slotsCol++;
-      return`${VER_SHORT[s.ver]}${has?'✅':'❌'}`;
+      const sp=s.price!=null?s.price:dp;
+      if(has){
+        const qty=(typeof collectedQty!=='undefined'&&collectedQty.get(key)?.qty)||1;
+        if(sp)valorColetado+=sp*qty;
+        // "quantidade de cada uma que listei": só faz sentido mostrar ×N em
+        // "Só coletadas" — nas outras visões (Todas/Faltantes) fica ruído.
+        return oc&&qty>1?`${VER_SHORT[s.ver]}✅×${qty}`:`${VER_SHORT[s.ver]}✅`;
+      }
+      if(sp)valorFaltante+=sp;
+      return`${VER_SHORT[s.ver]}❌`;
     }).join(' ');
     const allCol=slots.every(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
     const anyCol=slots.some(s=>collected.has(slotKey(pfx+':',c.n,s.ver)));
@@ -1692,7 +1752,10 @@ function exportBinderText(){
   const dateStr=new Date().toLocaleDateString('pt-BR');
   const pctSlots=slotsTotal>0?(slotsCol/slotsTotal*100).toFixed(0):0;
   const header=`🎴✨ *${label}* ✨🎴\n${filterLbl}${q?` · busca: "${q}"`:''}\n📅 ${dateStr}\n━━━━━━━━━━━━━━━━━━`;
-  const footer=`━━━━━━━━━━━━━━━━━━\n📦 Cartas completas: *${cardsComplete}/${rows.length}*\n🎯 Versões (master set): *${slotsCol}/${slotsTotal}* (${pctSlots}%)\n\n🔥 Confira minha coleção completa e todas as novidades no *MyDeck*! 👉 ${MYDECK_SITE_URL} 🎉🃏`;
+  let valorLine='';
+  if(oc)valorLine=`\n💰 *Valor total da coleção (o que já tenho):* R$${fmtR(valorColetado)}`;
+  else if(om)valorLine=`\n💸 *Valor pra fechar a coleção:* R$${fmtR(valorFaltante)}`;
+  const footer=`━━━━━━━━━━━━━━━━━━\n📦 Cartas completas: *${cardsComplete}/${rows.length}*\n🎯 Versões (master set): *${slotsCol}/${slotsTotal}* (${pctSlots}%)${valorLine}\n\n🔥 Confira minha coleção completa e todas as novidades no *MyDeck*! 👉 ${MYDECK_SITE_URL} 🎉🃏`;
   const text=`${header}\n${rows.join('\n')}\n${footer}`;
 
   // Tentar copiar direto pra área de transferência
@@ -2178,6 +2241,7 @@ async function deleteCustomBinder(id){
   await sbClient.from('custom_binders').delete().eq('id',id).eq('user_id',uid());
   customBinders=customBinders.filter(b=>b.id!==id);
   _currentCustomBinderId=null;
+  if(isBinderPinned(id)){pinnedBinders=pinnedBinders.filter(x=>x!==String(id));savePinnedBinders();}
   renderCustomBindersHome();
 }
 
@@ -2337,12 +2401,32 @@ function openCustomBinderView(binder){
   cards.forEach(c=>{if(getSlots(c,c._setId).some(s=>collected.has(slotKey(c._setId+':',c.n,s.ver))))colCount++;});
   const pct=cards.length>0?Math.round(colCount/cards.length*100):0;
 
-  const bySets={};
-  cards.forEach(c=>{if(!bySets[c._setId])bySets[c._setId]=[];bySets[c._setId].push(c);});
-
   window._cbCurrentBinder={...binder};
 
+  // Busca/filtros próprios do fichário personalizado (22/07/2026) — antes essa
+  // view não tinha busca nem "só coletadas"/"só faltantes", só o grid cru.
+  function applyFilters(list){
+    const q=(document.getElementById('cb-view-q')?.value||'').toLowerCase();
+    const oc=document.getElementById('cb-view-oc')?.checked||false;
+    const om=document.getElementById('cb-view-om')?.checked||false;
+    return list.filter(c=>{
+      if(q&&!(c.name+c.n+(c.type||'')).toLowerCase().includes(q))return false;
+      const slots=getSlots(c,c._setId);
+      const anyCol=slots.some(s=>collected.has(slotKey(c._setId+':',c.n,s.ver)));
+      const allCol=slots.every(s=>collected.has(slotKey(c._setId+':',c.n,s.ver)));
+      if(oc&&!anyCol)return false;
+      if(om&&allCol)return false;
+      return true;
+    });
+  }
+
   function buildGrid(lay){
+    const filteredCards=applyFilters(cards);
+    const bySets={};
+    filteredCards.forEach(c=>{if(!bySets[c._setId])bySets[c._setId]=[];bySets[c._setId].push(c);});
+    if(filteredCards.length===0){
+      return'<div style="text-align:center;padding:50px;color:var(--muted);font-family:\'Space Mono\',monospace;font-size:11px">Nenhuma carta encontrada.</div>';
+    }
     const cols=lay===2?'1fr 1fr':lay===4?'repeat(4,1fr)':'repeat(3,1fr)';
     return Object.entries(bySets).map(([setId,setCards])=>`
       <div class="bsec-lbl">${CB_SET_LABELS[setId]||setId}</div>
@@ -2400,17 +2484,46 @@ function openCustomBinderView(binder){
         ?`<button onclick="createBinderFromPreset(${safeJSON(binder)})"
             style="padding:8px 14px;background:var(--accent);color:#fff;border:none;border-radius:6px;
                    font-family:'Space Mono',monospace;font-size:10px;font-weight:700;cursor:pointer;letter-spacing:1px">+ SALVAR</button>`
-        :`<button onclick="openCreateBinderModal(${safeJSON(binder)})"
+        :`<button onclick="cbOpenAddCard(${safeJSON(binder)})"
+            style="padding:6px 12px;background:${color};border:none;border-radius:6px;
+                   color:#fff;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;cursor:pointer">+ Adicionar carta</button>
+          <button onclick="openCreateBinderModal(${safeJSON(binder)})"
             style="padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
                    color:var(--muted);font-family:'Space Mono',monospace;font-size:10px;cursor:pointer">✏️ Editar</button>`
       }
     </div>
+    ${isPreview?'':`
+    <div class="bctl" style="gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <input class="bsrch" id="cb-view-q" placeholder="Buscar carta..." oninput="_cbRefreshGrid()"
+        style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+               color:var(--text);font-size:12px;flex:1;min-width:120px;outline:none">
+      <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer">
+        <input type="checkbox" id="cb-view-oc" onchange="_cbRefreshGrid()">Só coletadas</label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer">
+        <input type="checkbox" id="cb-view-om" onchange="_cbRefreshGrid()">Só faltantes</label>
+      <button onclick="exportCustomBinderText(${safeJSON(binder)})"
+        style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+               color:var(--text);font-family:'Space Mono',monospace;font-size:10px;cursor:pointer">📋 Copiar lista</button>
+    </div>`}
     <div style="display:flex;gap:6px;margin-bottom:16px">${layoutBtns}</div>
-    <div id="cb-view-grid">
-      ${cards.length===0
-        ?'<div style="text-align:center;padding:50px;color:var(--muted);font-family:\'Space Mono\',monospace;font-size:11px">Nenhuma carta encontrada.</div>'
-        :buildGrid(layout)}
-    </div>`;
+    <div id="cb-view-grid">${buildGrid(layout)}</div>`;
+
+  // Exposto pro oninput/onchange dos filtros re-renderizarem só o grid, sem
+  // reconstruir o header/toolbar inteiro (evita perder foco do campo de busca).
+  window._cbRefreshGrid=function(){
+    const g=document.getElementById('cb-view-grid');
+    if(g)g.innerHTML=buildGrid(window._cbCurrentBinder?.layout||layout);
+  };
+}
+
+// Atalho pedido pelo Eduardo: abrir direto na aba de seleção manual (busca no
+// "banco de dados"/getAllCardsWithSet) em vez de precisar entrar em Editar e
+// trocar de aba manualmente toda vez que quiser só adicionar uma carta.
+function cbOpenAddCard(binder){
+  if(typeof binder==='string')binder=JSON.parse(binder);
+  openCreateBinderModal(binder);
+  cbPickFilterType('manual');
+  setTimeout(()=>document.getElementById('cb-msearch')?.focus(),50);
 }
 
 function changeCustomLayout(n){
@@ -2519,6 +2632,13 @@ function _renderCreateModal(isEdit,editId){
       </div>
     </div>
     <div style="margin-bottom:16px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text)">
+        <input type="checkbox" id="cb-pin-inp" ${isEdit&&isBinderPinned(editId)?'checked':''}
+          style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent)">
+        📌 Fixar na aba principal do Fichário (aparece junto com ME04, SV1 etc.)
+      </label>
+    </div>
+    <div style="margin-bottom:16px">
       <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">VISUALIZAÇÃO PADRÃO</div>
       <div style="display:flex;gap:6px">
         ${[2,3,4].map(n=>`<button onclick="cbPickLayout(${n})" id="cblay-${n}"
@@ -2565,12 +2685,18 @@ function _renderCreateModal(isEdit,editId){
             style="padding:7px 10px;background:var(--surface2);border:1px solid var(--border);
                    border-radius:6px;color:var(--text);font-size:12px;cursor:pointer">
             <option value="">Todos os sets</option>
-            <option value="me04">🔥 ME04</option>
-            <option value="me03">🔵 ME03</option>
-            <option value="me02">👻 ME02</option>
-            <option value="meg">🌿 MEG</option>
-            <option value="mep">⭐ MEP</option>
-            <option value="me05">🌑 ME05</option>
+            ${
+              /* CORRIGIDO 22/07/2026: antes era uma lista fixa de só 6 sets ME —
+                 buscar carta pra fichário personalizado não achava nada de SV,
+                 SVP ou legados mesmo esses estando em myCollections e disponíveis
+                 em getAllCardsWithSet(). Agora lista toda coleção ativa do usuário
+                 dinamicamente, na mesma ordem de exibição do fichário normal. */
+              myCollections.map(id=>{
+                const s=SET_CATALOG.find(x=>x.id===id);
+                if(!s)return'';
+                return`<option value="${id}">${s.emoji||''} ${id.toUpperCase()}</option>`;
+              }).join('')
+            }
           </select>
           <span id="cb-mcount" style="font-size:10px;color:var(--gold);font-family:'Space Mono',monospace;white-space:nowrap">${_cbManualSelected.size} selecionadas</span>
         </div>
@@ -2696,11 +2822,21 @@ async function cbConfirmSave(editId){
       :[],
     cover_color:_cbDraft.cover_color||'#a855f7',
   };
+  const wantsPin=!!(document.getElementById('cb-pin-inp')&&document.getElementById('cb-pin-inp').checked);
   closeModal('mcustom');
   await saveCustomBinder(payload);
   const binder=editId
     ?customBinders.find(b=>b.id===editId)
     :customBinders[0];
+  // Sincroniza o "fixar na aba" (guardado local, ver toggleBinderPinned) — só
+  // mexe se o estado mudou, e só depois de ter o id real (fichário novo só
+  // ganha id depois do insert em saveCustomBinder()).
+  if(binder){
+    const bid=String(binder.id);
+    if(wantsPin&&!isBinderPinned(bid)){pinnedBinders.push(bid);savePinnedBinders();}
+    else if(!wantsPin&&isBinderPinned(bid)){pinnedBinders=pinnedBinders.filter(x=>x!==bid);savePinnedBinders();}
+    renderTabs();
+  }
   if(binder)openCustomBinderView(binder);
   else renderCustomBindersHome();
 }
