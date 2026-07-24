@@ -23,6 +23,17 @@
   --text2:    #454b63;
   --muted:    #6b7288;
   --muted2:   #8b93ab;
+  /* variante de --muted com contraste garantido (~4.6:1) sobre --surface2/
+     --surface3 — --muted puro (#6b7288, ~3.2:1) fica abaixo do mínimo AA do
+     WCAG (4.5:1) quando usado sobre fundo cinza claro, só sobre --surface
+     branco que já funcionava. Ver ANALISE_FICHARIO_PROFISSIONAL_23jul2026.md
+     secao 3. */
+  --muted-oncard: #565d74;
+
+  /* radius padronizado — antes cada botao/card usava um valor solto (4 a
+     10px sem logica), agora só 2 escalas fixas pra qualquer elemento novo. */
+  --radius-sm: 6px;
+  --radius-md: 10px;
 
   --cw: 112px;
   --ch: 157px;
@@ -658,6 +669,85 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
 .bsrch::placeholder { color: var(--muted); }
 .bctl label { font-size: 13px; color: var(--muted); font-family: 'Space Mono', monospace; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: color .2s; }
 .bctl label:hover { color: var(--text2); }
+
+/* ─── BOTOES DO FICHARIO (fic-btn) ──────────────────────
+   Classes novas, reutilizaveis — substituem gradualmente os blocos de
+   style inline repetidos em cada botao da toolbar (busca/copiar/imprimir/
+   compartilhar/marcar raridade etc.). Ver ANALISE_FICHARIO_PROFISSIONAL_23jul2026.md
+   secao 1/3 — objetivo é 1 unico lugar pra mudar padding/radius/fonte de
+   botao em vez de N lugares espalhados em index.html/app.js/fichario_patch.js. */
+.fic-btn {
+  padding: 7px 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .18s;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+.fic-btn:hover { border-color: var(--muted2); color: var(--text); }
+.fic-btn:disabled { opacity: .55; cursor: default; }
+.fic-btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.fic-btn-primary:hover { opacity: .88; color: #fff; }
+.fic-btn-teal { background: rgba(6,163,127,.1); border-color: var(--teal); color: var(--teal); font-weight: 700; }
+.fic-btn-teal:hover { background: rgba(6,163,127,.18); color: var(--teal); }
+.fic-btn-danger { background: rgba(230,57,70,.1); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.fic-btn-danger:hover { background: rgba(230,57,70,.18); color: var(--accent); }
+.fic-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+@media (max-width: 600px) {
+  .fic-btn { font-size: 11px !important; padding: 9px 13px !important; min-height: 38px; }
+}
+
+.fic-toolbar-lbl {
+  font-size: 10px;
+  color: var(--muted-oncard);
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+/* Menu 'Mais ações' — dropdown simples, sem lib externa */
+.fic-more-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 32px rgba(0,0,0,.16);
+  padding: 6px;
+  min-width: 190px;
+  flex-direction: column;
+  gap: 2px;
+}
+.fic-more-menu.open { display: flex; }
+.fic-more-item {
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  color: var(--text2);
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.fic-more-item:hover { background: var(--surface2); color: var(--text); }
+@media (max-width: 600px) {
+  .fic-more-menu { right: 0; left: auto; min-width: 200px; }
+  .fic-more-item { font-size: 12px !important; padding: 11px 12px !important; min-height: 40px; }
+}
+
+
 .bsec-lbl { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 3px; color: var(--muted); margin-bottom: 12px; border-left: 3px solid var(--accent); padding-left: 10px; }
 .bgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--cw), 1fr)); gap: 10px; margin-bottom: 24px; }
 
@@ -1010,11 +1100,11 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
 .ctab {
   padding: 10px 18px;
   font-family: 'Space Mono', monospace;
-  font-size: 9px;
+  font-size: 11px; /* era 9px — abaixo do piso legivel, ver ANALISE_FICHARIO_PROFISSIONAL_23jul2026.md */
   font-weight: 700;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.2px;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--muted-oncard);
   cursor: pointer;
   border-bottom: 2px solid transparent;
   transition: all .2s cubic-bezier(.4,0,.2,1);
@@ -1022,7 +1112,7 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
 }
 .ctab:hover { color: var(--text2); }
 .ctab.active { color: var(--accent); border-bottom-color: var(--accent); }
-.ctab-n { opacity: .55; font-size: 8px; margin-left: 3px; }
+.ctab-n { opacity: .65; font-size: 10px; margin-left: 3px; } /* era 8px */
 
 /* ─── TABLES ─────────────────────────────────────────── */
 .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -1091,8 +1181,6 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
 
   .pcard-img-wrap { height: 110px; }
 
-  #fic-share, #fic-print { flex: 1; text-align: center; }
-
   .modal h3 { font-size: 18px; }
   .cmc-title, .mbinder-title { font-size: 19px; }
 
@@ -1109,9 +1197,9 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
      de altura) e texto legível (11-12px) sem quebrar o layout desktop. */
   .ctab {
     padding: 12px 14px !important;
-    font-size: 10px !important;
+    font-size: 11px !important; /* nao regredir o piso fixado no :root — era 10px */
   }
-  .ctab-n { font-size: 9px !important; }
+  .ctab-n { font-size: 10px !important; } /* era 9px */
   #binder-tabs {
     -webkit-overflow-scrolling: touch;
     scroll-snap-type: x proximity;
@@ -1133,9 +1221,11 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
   .bctl label input[type="checkbox"] {
     width: 18px; height: 18px;
   }
+  /* fic-view-grid/binder/fic-share ja migraram pra .fic-btn (com sua
+     propria regra mobile mais acima) — mantido aqui só pra qualquer botao
+     do .bctl que ainda nao foi convertido */
   .bctl button, .bctl select,
-  #fic-binder-controls button,
-  #fic-view-grid, #fic-view-binder, #fic-share {
+  #fic-binder-controls button {
     font-size: 11px !important;
     padding: 9px 13px !important;
     min-height: 38px;

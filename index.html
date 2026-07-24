@@ -243,72 +243,51 @@
     <!-- Tabs dos sets (populadas dinamicamente por renderTabs() em app.js) -->
     <div id="binder-tabs" style="display:flex;gap:2px;margin-bottom:12px;border-bottom:1px solid var(--border);overflow-x:auto;padding-bottom:0"></div>
 
-    <!-- Barra de controles -->
-    <div class="bctl" style="gap:10px;flex-wrap:wrap;margin-bottom:10px">
-      <!-- Busca -->
-      <input class="bsrch" id="bsrch" placeholder="Buscar carta..." oninput="renderBinder()">
+    <!-- Barra de controles — reorganizada 23/07/2026 em 2 linhas:
+         (1) busca+filtros sempre visíveis, (2) visualização+ações agrupadas
+         num menu 'Mais ações'. Ver ANALISE_FICHARIO_PROFISSIONAL_23jul2026.md
+         secao 1/2. Mantém 1 único .bctl (wrapper) pra não quebrar o
+         document.querySelector('.bctl') usado em vários lugares de app.js
+         pra esconder a toolbar inteira nas telas de fichário personalizado. -->
+    <div class="bctl" style="flex-direction:column;align-items:stretch;gap:10px;margin-bottom:10px">
 
-      <!-- Filtros -->
-      <label><input type="checkbox" id="fc"  onchange="renderBinder()"> Só coletadas</label>
-      <label><input type="checkbox" id="fm"  onchange="renderBinder()"> Só faltantes</label>
-      <label><input type="checkbox" id="fi2" onchange="renderBinder()"> Só importantes ★</label>
-
-      <!-- Separador -->
-      <div style="width:1px;height:22px;background:var(--border);margin:0 2px;align-self:center"></div>
-
-      <!-- Exportar lista em texto (Tenho/Não tenho) para cadastro na Liga Pokémon / MYP Cards -->
-      <button onclick="exportBinderText()"
-              style="padding:5px 10px;border-radius:5px;border:1px solid var(--border);
-                     background:var(--surface2);color:var(--text);font-family:'Space Mono',monospace;
-                     font-size:10px;cursor:pointer;transition:all .2s">📋 Copiar lista (texto)</button>
-
-      <!-- Separador -->
-      <div style="width:1px;height:22px;background:var(--border);margin:0 2px;align-self:center"></div>
-
-      <!-- Modo de visualização -->
-      <div style="display:flex;gap:4px;align-items:center">
-        <span style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:1px">MODO:</span>
-        <button id="fic-view-grid"
-                onclick="setFicView('grid')"
-                style="padding:5px 10px;border-radius:5px;border:1px solid var(--border);
-                       background:var(--accent);color:#fff;font-family:'Space Mono',monospace;
-                       font-size:10px;cursor:pointer;transition:all .2s">⊞ Grade</button>
-        <button id="fic-view-binder"
-                onclick="setFicView('binder')"
-                style="padding:5px 10px;border-radius:5px;border:1px solid var(--border);
-                       background:var(--surface);color:var(--muted);font-family:'Space Mono',monospace;
-                       font-size:10px;cursor:pointer;transition:all .2s">📖 Fichário</button>
+      <!-- Linha 1 — busca e filtros (sempre visível) -->
+      <div class="fic-toolbar-row1" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <input class="bsrch" id="bsrch" placeholder="Buscar carta..." oninput="renderBinder()">
+        <label><input type="checkbox" id="fc"  onchange="renderBinder()"> Só coletadas</label>
+        <label><input type="checkbox" id="fm"  onchange="renderBinder()"> Só faltantes</label>
+        <label><input type="checkbox" id="fi2" onchange="renderBinder()"> Só importantes ★</label>
       </div>
 
-      <!-- Controles de tamanho (só no modo fichário) -->
-      <div id="fic-binder-controls" style="display:none;gap:4px;align-items:center">
-        <span style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">TAMANHO:</span>
-        <button id="fic-binder-2" onclick="setBinderSize(2)"
-                style="padding:4px 8px;border-radius:4px;border:1px solid var(--border);
-                       background:var(--surface);color:var(--muted);font-family:'Space Mono',monospace;
-                       font-size:10px;cursor:pointer">2×2</button>
-        <button id="fic-binder-3" onclick="setBinderSize(3)"
-                style="padding:4px 8px;border-radius:4px;border:1px solid var(--gold);
-                       background:var(--surface);color:var(--gold);font-family:'Space Mono',monospace;
-                       font-size:10px;cursor:pointer;font-weight:700">3×3</button>
-        <button id="fic-binder-4" onclick="setBinderSize(4)"
-                style="padding:4px 8px;border-radius:4px;border:1px solid var(--border);
-                       background:var(--surface);color:var(--muted);font-family:'Space Mono',monospace;
-                       font-size:10px;cursor:pointer">4×4</button>
-        <button id="fic-print" onclick="printBinder()"
-                style="padding:4px 12px;border-radius:4px;border:1px solid var(--accent);
-                       background:rgba(230,57,70,.15);color:var(--accent);font-family:'Space Mono',monospace;
-                       font-size:10px;cursor:pointer;font-weight:700;margin-left:4px">🖨️ Imprimir PDF</button>
+      <!-- Linha 2 — visualização + ações -->
+      <div class="fic-toolbar-row2" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <div style="display:flex;gap:4px;align-items:center">
+          <span class="fic-toolbar-lbl">MODO:</span>
+          <button id="fic-view-grid" class="fic-btn active" onclick="setFicView('grid')">⊞ Grade</button>
+          <button id="fic-view-binder" class="fic-btn" onclick="setFicView('binder')">📖 Fichário</button>
+        </div>
+
+        <div id="fic-binder-controls" style="display:none;gap:4px;align-items:center">
+          <span class="fic-toolbar-lbl">TAMANHO:</span>
+          <button id="fic-binder-2" class="fic-btn" onclick="setBinderSize(2)">2×2</button>
+          <button id="fic-binder-3" class="fic-btn active" onclick="setBinderSize(3)">3×3</button>
+          <button id="fic-binder-4" class="fic-btn" onclick="setBinderSize(4)">4×4</button>
+        </div>
+
+        <span style="margin-left:auto"></span>
+
+        <!-- Menu 'Mais ações' — agrupa copiar lista / imprimir / compartilhar,
+             que antes eram 3 botões soltos disputando espaço com o resto -->
+        <div style="position:relative">
+          <button id="fic-more-btn" class="fic-btn" onclick="ficToggleMoreMenu(event)">⋯ Mais ações</button>
+          <div id="fic-more-menu" class="fic-more-menu">
+            <button class="fic-more-item" onclick="exportBinderText();ficCloseMoreMenu()">📋 Copiar lista (texto)</button>
+            <button id="fic-print" class="fic-more-item" onclick="printBinder();ficCloseMoreMenu()">🖨️ Imprimir PDF</button>
+            <button id="fic-share" class="fic-more-item" onclick="openShareModal();ficCloseMoreMenu()">🔗 Compartilhar</button>
+            <button id="fic-progress-card" class="fic-more-item" onclick="fmDownloadProgressCard();ficCloseMoreMenu()">🖼️ Cartão de progresso (PNG)</button>
+          </div>
+        </div>
       </div>
-
-      <button id="fic-share" onclick="openShareModal()"
-              style="padding:5px 10px;border-radius:5px;border:1px solid var(--teal);
-                     background:rgba(6,163,127,.1);color:var(--teal);font-family:'Space Mono',monospace;
-                     font-size:10px;cursor:pointer;font-weight:700">🔗 Compartilhar</button>
-
-      <span style="margin-left:auto;font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">
-        Clique na carta para editar slots
-      </span>
     </div>
 
     <!-- Progresso do set atual -->

@@ -285,7 +285,8 @@
    "year": "2019",
    "name": "Cosmic Eclipse",
    "file": "legacy_sm.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 272
   },
   {
    "id": "sm115",
@@ -295,7 +296,8 @@
    "year": "2019",
    "name": "Hidden Fates",
    "file": "legacy_sm.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 69
   },
   {
    "id": "sma",
@@ -305,7 +307,8 @@
    "year": "2019",
    "name": "Hidden Fates Shiny Vault",
    "file": "legacy_sm.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 94
   },
   {
    "id": "sm11",
@@ -315,7 +318,8 @@
    "year": "2019",
    "name": "Unified Minds",
    "file": "legacy_sm.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 261
   },
   {
    "id": "sm10",
@@ -325,7 +329,8 @@
    "year": "2019",
    "name": "Unbroken Bonds",
    "file": "legacy_sm.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 238
   },
   {
    "id": "det1",
@@ -335,7 +340,8 @@
    "year": "2019",
    "name": "Detective Pikachu",
    "file": "legacy_sm.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 18
   },
   {
    "id": "sm9",
@@ -345,7 +351,8 @@
    "year": "2019",
    "name": "Team Up",
    "file": "legacy_sm.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 198
   },
   {
    "id": "sm8",
@@ -355,7 +362,8 @@
    "year": "2018",
    "name": "Lost Thunder",
    "file": "legacy_sm.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 240
   },
   {
    "id": "sm75",
@@ -365,7 +373,8 @@
    "year": "2018",
    "name": "Dragon Majesty",
    "file": "legacy_sm.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 80
   },
   {
    "id": "sm7",
@@ -375,7 +384,8 @@
    "year": "2018",
    "name": "Celestial Storm",
    "file": "legacy_sm.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 187
   },
   {
    "id": "sm6",
@@ -385,7 +395,8 @@
    "year": "2018",
    "name": "Forbidden Light",
    "file": "legacy_sm.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 150
   },
   {
    "id": "sm5",
@@ -395,7 +406,8 @@
    "year": "2018",
    "name": "Ultra Prism",
    "file": "legacy_sm.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 178
   },
   {
    "id": "sm4",
@@ -405,7 +417,8 @@
    "year": "2017",
    "name": "Crimson Invasion",
    "file": "legacy_sm.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 126
   },
   {
    "id": "sm35",
@@ -415,7 +428,8 @@
    "year": "2017",
    "name": "Shining Legends",
    "file": "legacy_sm.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 81
   },
   {
    "id": "sm3",
@@ -425,7 +439,8 @@
    "year": "2017",
    "name": "Burning Shadows",
    "file": "legacy_sm.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 177
   },
   {
    "id": "sm2",
@@ -435,7 +450,8 @@
    "year": "2017",
    "name": "Guardians Rising",
    "file": "legacy_sm.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 180
   },
   {
    "id": "sm1",
@@ -445,7 +461,8 @@
    "year": "2017",
    "name": "Sun & Moon",
    "file": "legacy_sm.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 173
   },
   {
    "id": "smp",
@@ -455,7 +472,8 @@
    "year": "2017",
    "name": "SM Black Star Promos",
    "file": "legacy_sm.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 251
   },
   {
    "id": "xy12",
@@ -465,7 +483,9 @@
    "year": "2016",
    "name": "Evolutions",
    "file": "legacy_xy.js",
-   "status": "pending"
+   "status": "done",
+   "motivo": "falhou após 5 tentativas: https://api.pokemontcg.io/v2/cards?q=set.id%3Axy12&pageSize=250&page=1 (HTTP Error 500: Internal Server Error)",
+   "cards_importados": 113
   },
   {
    "id": "xy11",
@@ -475,7 +495,8 @@
    "year": "2016",
    "name": "Steam Siege",
    "file": "legacy_xy.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 116
   },
   {
    "id": "xy10",
@@ -485,7 +506,8 @@
    "year": "2016",
    "name": "Fates Collide",
    "file": "legacy_xy.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 129
   },
   {
    "id": "g1",
@@ -495,7 +517,8 @@
    "year": "2016",
    "name": "Generations",
    "file": "legacy_xy.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 117
   },
   {
    "id": "xy9",
@@ -505,7 +528,8 @@
    "year": "2016",
    "name": "BREAKpoint",
    "file": "legacy_xy.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 126
   },
   {
    "id": "xy8",
@@ -515,7 +539,8 @@
    "year": "2015",
    "name": "BREAKthrough",
    "file": "legacy_xy.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 165
   },
   {
    "id": "xy7",
@@ -525,7 +550,8 @@
    "year": "2015",
    "name": "Ancient Origins",
    "file": "legacy_xy.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 101
   },
   {
    "id": "xy6",
@@ -535,7 +561,8 @@
    "year": "2015",
    "name": "Roaring Skies",
    "file": "legacy_xy.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 112
   },
   {
    "id": "dc1",
@@ -545,7 +572,8 @@
    "year": "2015",
    "name": "Double Crisis",
    "file": "legacy_xy.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 34
   },
   {
    "id": "xy5",
@@ -555,7 +583,8 @@
    "year": "2015",
    "name": "Primal Clash",
    "file": "legacy_xy.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 164
   },
   {
    "id": "xy4",
@@ -565,7 +594,8 @@
    "year": "2014",
    "name": "Phantom Forces",
    "file": "legacy_xy.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 124
   },
   {
    "id": "xy3",
@@ -575,7 +605,8 @@
    "year": "2014",
    "name": "Furious Fists",
    "file": "legacy_xy.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 114
   },
   {
    "id": "xy2",
@@ -585,7 +616,8 @@
    "year": "2014",
    "name": "Flashfire",
    "file": "legacy_xy.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 110
   },
   {
    "id": "xy1",
@@ -595,7 +627,8 @@
    "year": "2014",
    "name": "XY",
    "file": "legacy_xy.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 146
   },
   {
    "id": "xy0",
@@ -605,7 +638,8 @@
    "year": "2013",
    "name": "Kalos Starter Set",
    "file": "legacy_xy.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 39
   },
   {
    "id": "bw11",
@@ -615,7 +649,8 @@
    "year": "2013",
    "name": "Legendary Treasures",
    "file": "legacy_bw.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 140
   },
   {
    "id": "xyp",
@@ -625,7 +660,8 @@
    "year": "2013",
    "name": "XY Black Star Promos",
    "file": "legacy_xy.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 216
   },
   {
    "id": "bw10",
@@ -635,7 +671,9 @@
    "year": "2013",
    "name": "Plasma Blast",
    "file": "legacy_bw.js",
-   "status": "pending"
+   "status": "done",
+   "motivo": "falhou após 5 tentativas: https://api.pokemontcg.io/v2/cards?q=set.id%3Abw10&pageSize=250&page=1 (HTTP Error 500: Internal Server Error)",
+   "cards_importados": 105
   },
   {
    "id": "bw9",
@@ -645,7 +683,8 @@
    "year": "2013",
    "name": "Plasma Freeze",
    "file": "legacy_bw.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 122
   },
   {
    "id": "bw8",
@@ -655,7 +694,8 @@
    "year": "2013",
    "name": "Plasma Storm",
    "file": "legacy_bw.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 138
   },
   {
    "id": "bw7",
@@ -665,7 +705,8 @@
    "year": "2012",
    "name": "Boundaries Crossed",
    "file": "legacy_bw.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 153
   },
   {
    "id": "dv1",
@@ -675,7 +716,8 @@
    "year": "2012",
    "name": "Dragon Vault",
    "file": "legacy_bw.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 21
   },
   {
    "id": "bw6",
@@ -685,7 +727,8 @@
    "year": "2012",
    "name": "Dragons Exalted",
    "file": "legacy_bw.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 128
   },
   {
    "id": "bw5",
@@ -695,7 +738,8 @@
    "year": "2012",
    "name": "Dark Explorers",
    "file": "legacy_bw.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 111
   },
   {
    "id": "bw4",
@@ -705,7 +749,8 @@
    "year": "2012",
    "name": "Next Destinies",
    "file": "legacy_bw.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 103
   },
   {
    "id": "bw3",
@@ -715,7 +760,8 @@
    "year": "2011",
    "name": "Noble Victories",
    "file": "legacy_bw.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 102
   },
   {
    "id": "bw2",
@@ -725,7 +771,8 @@
    "year": "2011",
    "name": "Emerging Powers",
    "file": "legacy_bw.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 98
   },
   {
    "id": "bw1",
@@ -735,7 +782,8 @@
    "year": "2011",
    "name": "Black & White",
    "file": "legacy_bw.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 115
   },
   {
    "id": "bwp",
@@ -745,7 +793,8 @@
    "year": "2011",
    "name": "BW Black Star Promos",
    "file": "legacy_bw.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 101
   },
   {
    "id": "col1",
@@ -755,7 +804,8 @@
    "year": "2011",
    "name": "Call of Legends",
    "file": "legacy_hgss.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 106
   },
   {
    "id": "hgss4",
@@ -765,7 +815,8 @@
    "year": "2010",
    "name": "HS—Triumphant",
    "file": "legacy_hgss.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 103
   },
   {
    "id": "hgss3",
@@ -775,7 +826,8 @@
    "year": "2010",
    "name": "HS—Undaunted",
    "file": "legacy_hgss.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 91
   },
   {
    "id": "hgss2",
@@ -785,7 +837,8 @@
    "year": "2010",
    "name": "HS—Unleashed",
    "file": "legacy_hgss.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 96
   },
   {
    "id": "hgss1",
@@ -795,7 +848,8 @@
    "year": "2010",
    "name": "HeartGold & SoulSilver",
    "file": "legacy_hgss.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 124
   },
   {
    "id": "hsp",
@@ -805,7 +859,8 @@
    "year": "2010",
    "name": "HGSS Black Star Promos",
    "file": "legacy_hgss.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 25
   },
   {
    "id": "pl4",
@@ -815,7 +870,8 @@
    "year": "2009",
    "name": "Arceus",
    "file": "legacy_dp.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 111
   },
   {
    "id": "pl3",
@@ -825,7 +881,8 @@
    "year": "2009",
    "name": "Supreme Victors",
    "file": "legacy_dp.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 153
   },
   {
    "id": "pl2",
@@ -835,7 +892,8 @@
    "year": "2009",
    "name": "Rising Rivals",
    "file": "legacy_dp.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 120
   },
   {
    "id": "pl1",
@@ -845,7 +903,8 @@
    "year": "2009",
    "name": "Platinum",
    "file": "legacy_dp.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 133
   },
   {
    "id": "dp7",
@@ -855,7 +914,8 @@
    "year": "2008",
    "name": "Stormfront",
    "file": "legacy_dp.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 106
   },
   {
    "id": "dp6",
@@ -865,7 +925,8 @@
    "year": "2008",
    "name": "Legends Awakened",
    "file": "legacy_dp.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 146
   },
   {
    "id": "dp5",
@@ -875,7 +936,8 @@
    "year": "2008",
    "name": "Majestic Dawn",
    "file": "legacy_dp.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 100
   },
   {
    "id": "dp4",
@@ -885,7 +947,8 @@
    "year": "2008",
    "name": "Great Encounters",
    "file": "legacy_dp.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 106
   },
   {
    "id": "dp3",
@@ -895,7 +958,8 @@
    "year": "2007",
    "name": "Secret Wonders",
    "file": "legacy_dp.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 132
   },
   {
    "id": "dp2",
@@ -905,7 +969,8 @@
    "year": "2007",
    "name": "Mysterious Treasures",
    "file": "legacy_dp.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 124
   },
   {
    "id": "dp1",
@@ -915,7 +980,8 @@
    "year": "2007",
    "name": "Diamond & Pearl",
    "file": "legacy_dp.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 130
   },
   {
    "id": "dpp",
@@ -925,7 +991,8 @@
    "year": "2007",
    "name": "DP Black Star Promos",
    "file": "legacy_dp.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 56
   },
   {
    "id": "ex16",
@@ -935,7 +1002,8 @@
    "year": "2007",
    "name": "Power Keepers",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 108
   },
   {
    "id": "ex15",
@@ -945,7 +1013,8 @@
    "year": "2006",
    "name": "Dragon Frontiers",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 101
   },
   {
    "id": "ex14",
@@ -955,7 +1024,8 @@
    "year": "2006",
    "name": "Crystal Guardians",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 100
   },
   {
    "id": "ex13",
@@ -965,7 +1035,8 @@
    "year": "2006",
    "name": "Holon Phantoms",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 111
   },
   {
    "id": "tk2a",
@@ -975,7 +1046,8 @@
    "year": "2006",
    "name": "EX Trainer Kit 2 Plusle",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 12
   },
   {
    "id": "tk2b",
@@ -985,7 +1057,8 @@
    "year": "2006",
    "name": "EX Trainer Kit 2 Minun",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 12
   },
   {
    "id": "ex12",
@@ -995,7 +1068,8 @@
    "year": "2006",
    "name": "Legend Maker",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 93
   },
   {
    "id": "ex11",
@@ -1005,7 +1079,8 @@
    "year": "2005",
    "name": "Delta Species",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 114
   },
   {
    "id": "ex10",
@@ -1015,7 +1090,8 @@
    "year": "2005",
    "name": "Unseen Forces",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 145
   },
   {
    "id": "ex9",
@@ -1025,7 +1101,8 @@
    "year": "2005",
    "name": "Emerald",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 107
   },
   {
    "id": "ex8",
@@ -1035,7 +1112,8 @@
    "year": "2005",
    "name": "Deoxys",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 108
   },
   {
    "id": "ex7",
@@ -1045,7 +1123,8 @@
    "year": "2004",
    "name": "Team Rocket Returns",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 111
   },
   {
    "id": "ex6",
@@ -1055,7 +1134,8 @@
    "year": "2004",
    "name": "FireRed & LeafGreen",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 116
   },
   {
    "id": "ex5",
@@ -1065,7 +1145,8 @@
    "year": "2004",
    "name": "Hidden Legends",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 102
   },
   {
    "id": "tk1a",
@@ -1075,7 +1156,8 @@
    "year": "2004",
    "name": "EX Trainer Kit Latias",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 10
   },
   {
    "id": "tk1b",
@@ -1085,7 +1167,8 @@
    "year": "2004",
    "name": "EX Trainer Kit Latios",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 10
   },
   {
    "id": "ex4",
@@ -1095,7 +1178,8 @@
    "year": "2004",
    "name": "Team Magma vs Team Aqua",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 97
   },
   {
    "id": "ex3",
@@ -1105,7 +1189,8 @@
    "year": "2003",
    "name": "Dragon",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 100
   },
   {
    "id": "ex2",
@@ -1115,7 +1200,8 @@
    "year": "2003",
    "name": "Sandstorm",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 100
   },
   {
    "id": "ex1",
@@ -1125,7 +1211,8 @@
    "year": "2003",
    "name": "Ruby & Sapphire",
    "file": "legacy_ex.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 109
   },
   {
    "id": "ecard3",
@@ -1135,7 +1222,8 @@
    "year": "2003",
    "name": "Skyridge",
    "file": "legacy_classic.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 182
   },
   {
    "id": "ecard2",
@@ -1145,7 +1233,8 @@
    "year": "2003",
    "name": "Aquapolis",
    "file": "legacy_classic.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 182
   },
   {
    "id": "ecard1",
@@ -1155,7 +1244,8 @@
    "year": "2002",
    "name": "Expedition Base Set",
    "file": "legacy_classic.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 165
   },
   {
    "id": "neo4",
@@ -1165,7 +1255,8 @@
    "year": "2002",
    "name": "Neo Destiny",
    "file": "legacy_classic.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 113
   },
   {
    "id": "neo3",
@@ -1175,7 +1266,8 @@
    "year": "2001",
    "name": "Neo Revelation",
    "file": "legacy_classic.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 66
   },
   {
    "id": "neo2",
@@ -1185,7 +1277,8 @@
    "year": "2001",
    "name": "Neo Discovery",
    "file": "legacy_classic.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 75
   },
   {
    "id": "neo1",
@@ -1195,7 +1288,8 @@
    "year": "2000",
    "name": "Neo Genesis",
    "file": "legacy_classic.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 111
   },
   {
    "id": "gym2",
@@ -1205,7 +1299,8 @@
    "year": "2000",
    "name": "Gym Challenge",
    "file": "legacy_classic.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 132
   },
   {
    "id": "gym1",
@@ -1215,7 +1310,8 @@
    "year": "2000",
    "name": "Gym Heroes",
    "file": "legacy_classic.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 132
   },
   {
    "id": "base5",
@@ -1225,7 +1321,8 @@
    "year": "2000",
    "name": "Team Rocket",
    "file": "legacy_classic.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 83
   },
   {
    "id": "base4",
@@ -1235,7 +1332,8 @@
    "year": "2000",
    "name": "Base Set 2",
    "file": "legacy_classic.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 130
   },
   {
    "id": "base3",
@@ -1245,7 +1343,8 @@
    "year": "1999",
    "name": "Fossil",
    "file": "legacy_classic.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 62
   },
   {
    "id": "basep",
@@ -1255,7 +1354,9 @@
    "year": "1999",
    "name": "Wizards Black Star Promos",
    "file": "legacy_classic.js",
-   "status": "pending"
+   "status": "done",
+   "motivo": "falhou após 5 tentativas: https://api.pokemontcg.io/v2/cards?q=set.id%3Abasep&pageSize=250&page=1 (HTTP Error 500: Internal Server Error)",
+   "cards_importados": 53
   },
   {
    "id": "base2",
@@ -1265,7 +1366,8 @@
    "year": "1999",
    "name": "Jungle",
    "file": "legacy_classic.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 64
   },
   {
    "id": "base1",
@@ -1275,7 +1377,8 @@
    "year": "1999",
    "name": "Base",
    "file": "legacy_classic.js",
-   "status": "pending"
+   "status": "done",
+   "cards_importados": 102
   }
  ]
 }

@@ -305,6 +305,11 @@ function xpToast(msg) {
     const originalToggle = window.toggleSlot;
     window.toggleSlot = async function (key) {
       const prevLevel = xpState.progress ? xpState.progress.level : null;
+      // #33 (23/07/2026): antes o XP só aparecia depois, na Dashboard — o
+      // Eduardo pediu feedback imediato ao marcar a carta. Guarda o total
+      // de XP de ANTES pra calcular a diferença real (não é um valor
+      // chutado no cliente — vem do mesmo fetch que já é feito aqui).
+      const prevXp = xpState.progress ? xpState.progress.total_xp : null;
       const prevAchvCodes = new Set((xpState.achievements || []).map(a => a.achievement_code));
       await originalToggle(key);
       // pequeno respiro pra garantir que o trigger do Supabase já commitou
@@ -312,6 +317,9 @@ function xpToast(msg) {
         await xpFetchAll();
         xpRenderBadge(currentUser);
         if (document.getElementById('dash')?.classList.contains('active')) xpRenderDashPanel();
+        if (prevXp != null && xpState.progress && xpState.progress.total_xp > prevXp) {
+          xpToast(`✨ +${xpState.progress.total_xp - prevXp} XP`);
+        }
         if (prevLevel != null && xpState.progress && xpState.progress.level > prevLevel) {
           xpToast(`🎉 Você subiu para o nível ${xpState.progress.level} — ${xpTitleForLevel(xpState.progress.level)}!`);
         }
