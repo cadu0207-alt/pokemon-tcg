@@ -1015,6 +1015,15 @@ const cvSetLbl=id=>id.toUpperCase()
 
 const MV_DISCOUNTS=[5,10,15,20,25,30];
 
+// Estado de conservação da carta anunciada (padrão internacional TCG)
+const CV_CONDITIONS=[
+  {code:'M', label:'Nova',                  sub:'Mint',              color:'#06d6a0'},
+  {code:'NM',label:'Praticamente Nova',     sub:'Near Mint',         color:'#ffd166'},
+  {code:'MP',label:'Usada Moderadamente',   sub:'Moderately Played', color:'#ff6b35'},
+  {code:'D', label:'Danificada',            sub:'Damaged',           color:'#e63946'},
+];
+const cvCondInfo=code=>CV_CONDITIONS.find(x=>x.code===code)||CV_CONDITIONS[0];
+
 function renderCartas(){
   const fichVal=calcCollectedValue();
   const invested=purchases.reduce((s,p)=>s+Number(p.price),0);
@@ -1131,7 +1140,7 @@ function renderCardsVenda(){
         `<div class="cv-item-icon">🏷️</div>`}
       <div class="cv-item-info">
         <div class="cv-item-name">${l.card_name}</div>
-        <div class="cv-item-meta">${l.card_n} · ${cvSetLbl(l.set_id)} · <span style="color:${col}">${VER_SHORT[l.version]||l.version}</span></div>
+        <div class="cv-item-meta">${l.card_n} · ${cvSetLbl(l.set_id)} · <span style="color:${col}">${VER_SHORT[l.version]||l.version}</span> · <span class="cv-cond-chip" style="color:${cvCondInfo(l.condition).color};border-color:${cvCondInfo(l.condition).color}55">${l.condition||'M'}</span></div>
       </div>
       <div class="cv-item-right">
         <span class="cv-item-qty">×${l.qty}</span>
@@ -1193,7 +1202,8 @@ function openVendaModal(setId,n,ver){
     setId,n,ver,key,card:c,owned,ligaPrice,
     qty: existing?Math.min(existing.qty,owned):1,
     discountType: existing?existing.discount_type:'liga_10',
-    price: existing?Number(existing.price):+(ligaPrice*0.9).toFixed(2)
+    price: existing?Number(existing.price):+(ligaPrice*0.9).toFixed(2),
+    condition: existing?.condition||'M'
   };
   renderVendaModal();
   openModal('mvenda');
@@ -1217,6 +1227,15 @@ function renderVendaModal(){
         <button class="mv-qty-btn" onclick="mvChangeQty(-1)">−</button>
         <div class="mv-qty-val" id="mv-qty-val">${st.qty}</div>
         <button class="mv-qty-btn" onclick="mvChangeQty(1)">+</button>
+      </div>
+
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">ESTADO DE CONSERVAÇÃO</div>
+      <div class="mv-cond-grid">
+        ${CV_CONDITIONS.map(cd=>`<div class="mv-cond-opt${st.condition===cd.code?' active':''}" onclick="mvSetCondition('${cd.code}')" style="${st.condition===cd.code?`border-color:${cd.color};background:${cd.color}18`:''}">
+          <div class="mv-cond-code" style="color:${cd.color}">${cd.code}</div>
+          <div class="mv-cond-label">${cd.label}</div>
+          <div class="mv-cond-sub">${cd.sub}</div>
+        </div>`).join('')}
       </div>
 
       <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">PREÇO DE VENDA</div>
@@ -1269,6 +1288,12 @@ function mvSetPrice(v){
   st.price=parseFloat(v)||0;
 }
 
+function mvSetCondition(code){
+  const st=_mvState;if(!st)return;
+  st.condition=code;
+  renderVendaModal();
+}
+
 async function saveVenda(){
   const st=_mvState;if(!st||!uid())return;
   if(st.qty<1||st.qty>st.owned){alert('Quantidade inválida.');return;}
@@ -1276,7 +1301,7 @@ async function saveVenda(){
   const payload={
     user_id:uid(),slot_key:st.key,set_id:st.setId,card_n:st.n,version:st.ver,
     card_name:st.card.name,qty:st.qty,price:st.price,discount_type:st.discountType,
-    liga_price:st.ligaPrice||null,updated_at:new Date().toISOString()
+    liga_price:st.ligaPrice||null,condition:st.condition||'M',updated_at:new Date().toISOString()
   };
   const{data:res,error}=await sbClient.from('card_listings').upsert(payload,{onConflict:'user_id,slot_key'}).select();
   if(error){
@@ -1332,6 +1357,7 @@ function openVendaImageModal(){
   const cellHTML=({l,imgSrc})=>`
     <div class="vimg-cell">
       <div class="vimg-name">${l.card_name} · ${l.card_n}</div>
+      <div class="vimg-cond" style="color:${cvCondInfo(l.condition).color};border-color:${cvCondInfo(l.condition).color}">${l.condition||'M'}</div>
       ${imgSrc?`<img src="${imgSrc}" alt="${l.card_name}" loading="lazy">`:`<div style="aspect-ratio:245/342;display:flex;align-items:center;justify-content:center;font-size:32px">🃏</div>`}
       <div class="vimg-price">R$${fmtR(l.price)}</div>
     </div>`;
@@ -1439,6 +1465,17 @@ async function downloadVendaImage(){
         ctx.fillStyle=nameGrad;ctx.fillRect(x,y,cellW,40);
         ctx.fillStyle='#fff';ctx.font="700 13px 'Space Mono', monospace";
         ctx.fillText(`${l.card_name} · ${l.card_n}`.slice(0,34),x+8,y+8);
+        // selo de condição (canto superior direito)
+        const cond=cvCondInfo(l.condition);
+        ctx.font="700 12px 'Space Mono', monospace";
+        const condW=ctx.measureText(cond.code).width+16;
+        ctx.fillStyle='rgba(13,15,24,.85)';
+        roundRectPath(ctx,x+cellW-condW-8,y+8,condW,20,5);ctx.fill();
+        ctx.strokeStyle=cond.color;ctx.lineWidth=1.5;
+        roundRectPath(ctx,x+cellW-condW-8,y+8,condW,20,5);ctx.stroke();
+        ctx.fillStyle=cond.color;ctx.textAlign='center';
+        ctx.fillText(cond.code,x+cellW-condW/2-8,y+13);
+        ctx.textAlign='left';
         // faixa do preço (base)
         const priceGrad=ctx.createLinearGradient(0,y+cellH-46,0,y+cellH);
         priceGrad.addColorStop(0,'rgba(0,0,0,0)');priceGrad.addColorStop(1,'rgba(0,0,0,.88)');
@@ -1484,7 +1521,8 @@ function buildVendaMessage(items){
   const lines=[`🃏 *CARTAS À VENDA* — MyDeck TCG`,''];
   items.forEach(({l})=>{
     const qtyStr=l.qty>1?` (${l.qty}x)`:'';
-    lines.push(`🔹 ${l.card_name} #${l.card_n} [${VER_LABEL[l.version]||l.version}]${qtyStr} — *R$${fmtR(l.price)}*`);
+    const cond=cvCondInfo(l.condition);
+    lines.push(`🔹 ${l.card_name} #${l.card_n} [${VER_LABEL[l.version]||l.version} · ${cond.code} - ${cond.label}]${qtyStr} — *R$${fmtR(l.price)}*`);
   });
   const total=items.reduce((s,{l})=>s+Number(l.price||0)*Number(l.qty||1),0);
   lines.push('',`💰 Total: *R$${fmtR(total)}*`,'',`🔥 Quer vender/comprar rápido e fácil? Acesse ${MYDECK_SITE_URL}`);

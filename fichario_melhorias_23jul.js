@@ -1066,6 +1066,45 @@ function fmOpenArtistsReport(){
 window.fmOpenArtistsReport=fmOpenArtistsReport;
 
 // ─────────────────────────────────────────────────────────────────
+// QUICK-TOGGLE nos "dots de versão" (estilo pkmn.gg) — clicar direto
+// no marcador colorido de uma versão marca/desmarca 1 cópia daquela
+// versão na hora, sem abrir o modal. Clicar em qualquer outra parte
+// do card continua abrindo o modal completo (pra qty>1/origem etc).
+// ─────────────────────────────────────────────────────────────────
+function fmInjectQuickToggleDots(){
+  if (typeof ficViewMode !== 'undefined' && ficViewMode !== 'grid') return; // só existe na grid
+  const wrap = document.getElementById('bwrap');
+  if (!wrap || typeof getSetCards !== 'function' || typeof getSlots !== 'function') return;
+  const cards = getSetCards();
+  wrap.querySelectorAll('.fic-card').forEach(cardEl => {
+    const n = cardEl.dataset.n;
+    if (n === undefined || n === null) return;
+    const card = cards.find(c => String(c.n) === String(n));
+    if (!card) return;
+    const vers = getSlots(card, currentSet).map(s => s.ver);
+    if (vers.length < 1) return;
+    // localiza o wrapper dos dots: <div style="position:absolute;bottom:3px;left:3px;...">
+    const dotsWrap = Array.from(cardEl.querySelectorAll('div')).find(d => {
+      const st = d.getAttribute('style') || '';
+      return st.includes('bottom:3px') && st.includes('left:3px');
+    });
+    if (!dotsWrap || dotsWrap.__fmWired) return;
+    dotsWrap.__fmWired = true;
+    Array.from(dotsWrap.children).forEach((dotEl, i) => {
+      const ver = vers[i];
+      if (!ver) return;
+      dotEl.dataset.ver = ver;
+      dotEl.style.cursor = 'pointer';
+      dotEl.addEventListener('click', function(e){
+        e.stopPropagation();
+        const key = `${currentSet}:${n}:${ver}`;
+        if (typeof toggleSlot === 'function') toggleSlot(key);
+      });
+    });
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────
 // WIRING — monkey-patch das funções globais, na ordem certa
 // ─────────────────────────────────────────────────────────────────
 function fmAfterRenderBinder(){
@@ -1077,6 +1116,7 @@ function fmAfterRenderBinder(){
   try{ fmInjectRarityBulk(); }catch(e){}
   try{ fmInjectDexSortControl(); }catch(e){}
   try{ fmInjectArtistFilter(); }catch(e){}
+  try{ fmInjectQuickToggleDots(); }catch(e){}
 }
 if(typeof window.renderBinder==='function'){
   const _fmOrigRenderBinder=window.renderBinder;

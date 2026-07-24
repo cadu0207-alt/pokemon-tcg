@@ -1747,3 +1747,23 @@ body.share-view .btn-add { display: none !important; }
   font-size: 10px; cursor: pointer; transition: all .15s ease;
 }
 .cv-msg-btn:hover { border-color: var(--teal); background: rgba(6,214,160,.08); }
+
+/* ─── ESTADO DE CONSERVAÇÃO (condition) ───────────────────────── */
+.mv-cond-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.mv-cond-opt {
+  border: 1px solid var(--border); border-radius: 7px; padding: 8px 6px; text-align: center;
+  cursor: pointer; background: var(--surface2); transition: all .15s ease;
+}
+.mv-cond-opt:hover { border-color: var(--border2); }
+.mv-cond-code { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 1px; }
+.mv-cond-label { font-family: 'Space Mono', monospace; font-size: 9px; font-weight: 700; margin-top: 2px; }
+.mv-cond-sub { font-family: 'Space Mono', monospace; font-size: 8.5px; color: var(--muted); margin-top: 1px; }
+.cv-cond-chip {
+  border: 1px solid; border-radius: 4px; padding: 0 4px; font-size: 9px; font-weight: 700;
+  font-family: 'Space Mono', monospace; display: inline-block;
+}
+.vimg-cond {
+  position: absolute; top: 6px; right: 6px; z-index: 1;
+  background: rgba(13,15,24,.85); border: 1.5px solid; border-radius: 5px;
+  padding: 1px 6px; font-family: 'Space Mono', monospace; font-size: 10px; font-weight: 700;
+}
