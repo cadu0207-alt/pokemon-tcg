@@ -324,7 +324,18 @@ function getSlots(c,setId){
   // registros já coletados de quem tinha marcado a versão N dessas cartas
   // (o app parava de reconhecer o slot e a carta "sumia" do fichário/estatísticas,
   // embora o registro continuasse no Supabase). Ver [[feedback_coding]].
-  if(r==='Rara'||r.startsWith('Rara ')&&!r.includes('Ultra')){
+  // CORRIGIDO 24/07/2026: o branch abaixo era `r.startsWith('Rara ')&&!r.includes('Ultra')`
+  // — pego geral demais. Até ontem só existiam raridades ME/SV nesse vocabulário
+  // (lista abaixo), então funcionava por acidente. Hoje os sets legados (SM/XY/
+  // BW/HGSS/DP/EX/Classic) trouxeram dezenas de raridades "Rara X" que NÃO têm
+  // reverse-holo físico (GX/EX/V/VMAX/VSTAR, Rainbow, Secreta, Shiny, Incrível,
+  // Radiante, BREAK, Prime, Star) — o branch antigo inventava uma 2ª versão (RH)
+  // que não existe, inflando o master set com um slot impossível de completar.
+  // A lista abaixo trava o comportamento EXATO de antes pros rótulos que já
+  // existiam em produção (evita orfanar coleção já marcada — ver
+  // [[feedback_coding]]); 'Rara Ultra' fica de fora de propósito, igual sempre
+  // esteve (cai no N+RH do final, sem mudança).
+  if(r==='Rara'||r==='Rara Holo'||r==='Rara Brilhante'||r==='Rara Ilustrada'||r==='Rara Ilustrada Especial'){
     // CORRIGIDO 13/07/2026: cartas "Rara"/"Rara Holo" nos sets modernos (ME/SV)
     // nascem impressas SÓ em holo — não existe versão Normal física (conferido
     // contra pokecottage.com: Chesnaught, Ho-Oh, Delphox etc. só têm holo/reverse
@@ -337,6 +348,13 @@ function getSlots(c,setId){
       {ver:'RH',price:c.priceRH||(c.price?+(c.price*1.2).toFixed(2):null)}
     ];
   }
+  // NOVO 24/07/2026 — raridades holo-únicas dos sets legados recém-populados
+  // (nenhum usuário tinha coleção marcada nesses sets antes de hoje, então não
+  // há risco de orfanar registro nenhum ao introduzir esse slot único agora).
+  const RARA_HOLO_UNICA_LEGADA=['Rara Holo EX','Rara Holo GX','Rara Holo V','Rara Holo VMAX',
+    'Rara Holo VSTAR','Rara Holo LV.X','Rara BREAK','Rara Incrível','Rara Radiante','Rara Rainbow',
+    'Rara Secreta','Rara Shiny','Rara Shiny GX','Rara Shiny V','Rara Star','Rara Prime'];
+  if(RARA_HOLO_UNICA_LEGADA.includes(r)) return [{ver:'SP',price:c.price}];
   // MEP: só tem IR (SP)
   if(setId==='mep'||setId==='svp') return [{ver:'SP',price:c.price}];
   return [{ver:'N',price:c.price},{ver:'RH',price:c.priceRH||(c.price?+(c.price*1.2).toFixed(2):null)}];

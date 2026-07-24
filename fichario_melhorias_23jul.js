@@ -462,6 +462,16 @@ function fmInstallGenPresets(){
   // outros 8, com a mesma lógica cross-coleção. 'Pokédex 151' continua
   // existindo à parte (é diferente: ordem exata de impressão dentro de 1 set
   // só, útil pra quem quer montar o fichário físico da Coleção 151).
+  // ATUALIZADO 24/07/2026: antes usava só speciesFromCardName() (casamento por
+  // nome — perdia formas/variantes com nome diferente da espécie base e ficava
+  // em 824/1025 = 80.4% de cobertura real). Agora que expand_card_database.py
+  // trouxe o `dex` real da API pra quase todo o catálogo, fmDexOf(c) usa esse
+  // campo primeiro (dado oficial, não adivinhação por texto) e só cai pro
+  // casamento por nome nas poucas cartas que ainda não têm `dex` (sets que
+  // falharam na API mesmo após 5 tentativas). Cobertura real medida depois
+  // dessa troca: 1022/1025 espécies (99,7%) — faltam só #1014/#1021/#1022,
+  // prováveis Pokémon de Ascended Heroes (me2pt5/ASC), que ainda não está
+  // cadastrado no site (ver [[project_pokemon_tcg]]).
   const genPresets = POKEDEX_GEN_RANGES.map((g,idx)=>({
     key:'fm_gen_'+g.gen,
     name:'Pokédex '+g.label,
@@ -469,8 +479,8 @@ function fmInstallGenPresets(){
     desc:`Geração ${g.gen} (${g.label}, #${g.from}-#${g.to}) — 1 carta por espécie que você tiver em qualquer coleção ativa`,
     color:genColors[idx%genColors.length],
     filter:function(c){
-      const sp=speciesFromCardName(c.name);
-      return !!sp && sp.dex>=g.from && sp.dex<=g.to;
+      const dex=fmDexOf(c);
+      return dex!=null && dex>=g.from && dex<=g.to;
     }
   }));
 
@@ -481,7 +491,7 @@ function fmInstallGenPresets(){
     emoji:'🌐',
     desc:'Todas as 1025 espécies conhecidas — mostra sua cobertura real com as coleções que você tem ativas (não é master set 100%, é o que existe nos sets cadastrados)',
     color:'#118ab2',
-    filter:function(c){ return !!speciesFromCardName(c.name); }
+    filter:function(c){ return fmDexOf(c)!=null; }
   };
 
   // Pedido do Eduardo: Nacional + regionais aparecem PRIMEIRO na lista de
@@ -793,10 +803,14 @@ function fmInjectDexBadges(){
     if(dex==null) return;
     const box=el.firstElementChild;
     if(!box||box.querySelector('.fm-dex-badge')) return;
+    // CORRIGIDO na revisão 24/07: top:3px;right:3px colidia visualmente com o
+    // ★ de "importante" (top:3px;right:4px, quando não coletada) e com o ✓ de
+    // completa (top:-7px;right:-7px). Empilha acima do badge de preço
+    // (bottom:3px;right:3px) em vez de disputar o canto superior direito.
     const b=document.createElement('div');
     b.className='fm-dex-badge';
     b.textContent='#'+dex;
-    b.style.cssText="position:absolute;top:3px;right:3px;background:rgba(255,255,255,.92);color:#111;font-size:8px;font-weight:800;padding:1px 4px;border-radius:4px;font-family:'Space Mono',monospace;z-index:2";
+    b.style.cssText="position:absolute;bottom:15px;right:3px;background:rgba(255,255,255,.92);color:#111;font-size:8px;font-weight:800;padding:1px 4px;border-radius:4px;font-family:'Space Mono',monospace;z-index:2";
     box.appendChild(b);
   });
 }
@@ -833,6 +847,11 @@ function fmToggleDexSort(){
 }
 window.fmToggleDexSort=fmToggleDexSort;
 function fmInjectDexSortControl(){
+  // Mesmo guard que fmInjectRarityBulk usa: não injeta se a toolbar (.bctl)
+  // estiver escondida (telas de fichário personalizado/compartilhado, que
+  // também podem passar por renderBinder() em certos fluxos).
+  const bctl=document.querySelector('.bctl');
+  if(!bctl||bctl.style.display==='none') return;
   const row2=document.querySelector('.fic-toolbar-row2');
   if(!row2) return;
   let btn=document.getElementById('fm-dexsort-btn');
@@ -892,6 +911,8 @@ function fmOnArtistChange(){
 }
 window.fmOnArtistChange=fmOnArtistChange;
 function fmInjectArtistFilter(){
+  const bctl=document.querySelector('.bctl');
+  if(!bctl||bctl.style.display==='none') return;
   const row1=document.querySelector('.fic-toolbar-row1');
   if(!row1) return;
   let sel=document.getElementById('fm-artist-select');
