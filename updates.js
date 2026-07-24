@@ -14,7 +14,10 @@ async function renderUpdatesLog() {
 
   holder.innerHTML =
     '<div class="updates-log-card">' +
-      '<div class="sec-title" style="margin-top:0">📢 Atualizações</div>' +
+      '<div class="updates-log-hdr">' +
+        '<div class="sec-title" style="margin-top:0">📢 Atualizações</div>' +
+        '<button class="update-minimize-btn" title="Minimizar" onclick="toggleUpdatesLogCollapse()">−</button>' +
+      '</div>' +
       (admin ?
         '<div class="update-admin-form">' +
           '<input id="update-title-input" placeholder="Título (ex: Nova feature)" maxlength="80">' +
@@ -23,9 +26,23 @@ async function renderUpdatesLog() {
         '</div>'
         : '') +
       '<div class="updates-log-list" id="updates-log-list">Carregando...</div>' +
-    '</div>';
+    '</div>' +
+    '<div class="updates-log-collapsed-btn" onclick="toggleUpdatesLogCollapse()" title="Ver atualizações">✉️ Mensagens e Atualizações</div>';
+
+  // Restaura o estado (aberto/minimizado) salvo da última visita
+  let wasCollapsed = false;
+  try { wasCollapsed = localStorage.getItem('updatesLogCollapsed') === '1'; } catch (e) {}
+  holder.classList.toggle('updates-log-collapsed', wasCollapsed);
 
   await loadUpdatesList();
+}
+
+function toggleUpdatesLogCollapse(forceState) {
+  const holder = document.getElementById('updates-log-wrap');
+  if (!holder) return;
+  const collapsed = typeof forceState === 'boolean' ? forceState : !holder.classList.contains('updates-log-collapsed');
+  holder.classList.toggle('updates-log-collapsed', collapsed);
+  try { localStorage.setItem('updatesLogCollapsed', collapsed ? '1' : '0'); } catch (e) {}
 }
 
 async function loadUpdatesList() {

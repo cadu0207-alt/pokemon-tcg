@@ -1806,10 +1806,44 @@ body.share-view .btn-add { display: none !important; }
 }
 .update-item-del:hover { color: var(--accent); }
 
+.updates-log-hdr { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.update-minimize-btn {
+  background: var(--surface2, transparent); border: 1px solid var(--border);
+  color: var(--muted); width: 22px; height: 22px; border-radius: 6px;
+  font-size: 15px; line-height: 1; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.update-minimize-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Estado minimizado: some o card, sobra só o "envelope" clicável */
+.updates-log-collapsed-btn {
+  display: none; cursor: pointer; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); font-family: 'Space Mono', monospace; font-weight: 700;
+  font-size: 11px; letter-spacing: .5px;
+}
+.updates-log-panel.updates-log-collapsed .updates-log-card { display: none; }
+.updates-log-panel.updates-log-collapsed .updates-log-collapsed-btn { display: flex; }
+.updates-log-collapsed-btn {
+  width: 100%; justify-content: center; padding: 10px 14px; border-radius: 10px;
+}
+
 @media (min-width: 1440px) {
   .updates-log-panel {
     position: fixed; top: 130px; right: 28px; width: 300px;
-    max-height: calc(100vh - 160px); overflow-y: auto; margin: 0; z-index: 50;
+    max-height: calc(100vh - 160px); overflow-y: auto; margin: 0;
+    z-index: 300; /* acima das .tabs (z-index:100) — sempre por cima */
   }
   .updates-log-list { max-height: none; }
+
+  /* Minimizado em telas largas: encolhe pra uma abinha vertical
+     encostada na borda direita, só com o ícone/texto do envelope. */
+  .updates-log-panel.updates-log-collapsed {
+    width: auto; right: 0; max-height: none; overflow: visible;
+  }
+  .updates-log-panel.updates-log-collapsed .updates-log-collapsed-btn {
+    width: auto; writing-mode: vertical-rl; text-orientation: mixed;
+    border-radius: 10px 0 0 10px; border-right: none; padding: 14px 9px;
+    box-shadow: -3px 3px 10px rgba(0,0,0,.1);
+  }
 }
