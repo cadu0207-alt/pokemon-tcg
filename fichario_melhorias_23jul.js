@@ -789,6 +789,14 @@ function fmDexOf(c){
   }
   return null;
 }
+// CORRIGIDO 24/07/2026: fmDexOf() nunca era exposta em window — como
+// fichario_masterdex.js é um IIFE separado, ele não enxergava essa função
+// (só o que é atribuído a window cruza a fronteira entre os dois arquivos).
+// O guard `typeof fmDexOf==='function'` lá falhava em silêncio (sem erro no
+// console), então TODA carta do catálogo era pulada e o Master Set Nacional
+// nunca achava candidato nenhum — nem pro Bulbasaur (#1), reportado pelo
+// Eduardo como "0/1025 vagas preenchidas" e picker sempre vazio.
+window.fmDexOf = fmDexOf;
 
 function fmInjectDexBadges(){
   if(typeof ficViewMode!=='undefined' && ficViewMode!=='grid') return;
