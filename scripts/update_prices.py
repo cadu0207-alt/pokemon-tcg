@@ -152,34 +152,103 @@ def fetch_liga_prices(url: str, debug_key: str = "") -> dict:
 
 
 # ── Atualização dos arquivos JS ──────────────────────────────────────────────
+# ATUALIZADO 24/jul/2026: agora que expand_card_database.py populou os sets
+# legados (legacy_*.js), este arquivo passou a ter dois "sotaques" diferentes
+# de card no repo — e o update_prices.py precisa entender os dois:
+#   • cards_*.js (ME/SV): 1 carta por linha, aspas simples, número sempre
+#     zero-padded de 3 dígitos — n:'001'. Ordem dos campos pode variar
+#     (dex/artist podem vir antes ou depois de name/price) desde o retrofit.
+#   • legacy_*.js: objetos JSON (aspas duplas) gerados via json.dumps, vários
+#     por linha/arquivo, número SEM zero à esquerda — "n":"1". Ordem dos
+#     campos também varia (populate bota dex/artist no fim; o retrofit do
+#     legacy_swsh.js bota logo depois de "n").
+# `normalize_num()` faz as duas convenções de numeração se encontrarem, e a
+# extração por regex de objeto inteiro (`CARD_OBJ_RE`) elimina a dependência
+# de ordem de campos no estilo JSON.
+
+CARD_OBJ_RE = re.compile(r'\{"n":"(\d+)"[^{}]*\}')
+
+
+def normalize_num(n) -> str:
+    """'001' e '1' viram a mesma chave, pra casar as duas convenções de numeração."""
+    m = re.search(r"\d+", str(n))
+    return str(int(m.group())) if m else str(n)
+
+
+def _check_alerta(n: str, old_price: float, new_price: float, alertas: list) -> None:
+    if old_price > 0 and (new_price > old_price * ALERTA_VARIACAO or
+                           new_price < old_price / ALERTA_VARIACAO):
+        alertas.append(f"#{n}: R${old_price:.2f} → R${new_price:.2f}")
+
+
+def _update_json_style(content: str, norm_prices: dict) -> tuple:
+    """legacy_*.js — objetos JSON (aspas duplas), número sem zero à esquerda,
+    ordem de campos livre. Casa o objeto inteiro (sem nested braces nos cards
+    gerados) e troca só o "price" de dentro dele."""
+    updates, skipped, alertas = 0, [], []
+
+    def repl(m):
+        nonlocal updates
+        obj = m.group(0)
+        num = normalize_num(m.group(1))
+        if num not in norm_prices:
+            skipped.append(m.group(1))
+            return obj
+        pm = re.search(r'"price":([\d.]+)', obj)
+        if not pm:
+            return obj
+        new_price = norm_prices[num]
+        old_price = float(pm.group(1))
+        _check_alerta(m.group(1), old_price, new_price, alertas)
+        updates += 1
+        return re.sub(r'"price":[\d.]+', f'"price":{new_price:.2f}', obj, count=1)
+
+    new_content = CARD_OBJ_RE.sub(repl, content)
+    return new_content, updates, skipped, alertas
+
+
+def _update_singlequote_style(content: str, norm_prices: dict) -> tuple:
+    """cards_*.js — 1 carta por linha, aspas simples (n:'001'). Continua
+    linha-a-linha (mais legível pro diff), mas agora casando por número
+    normalizado em vez de exigir exatamente 3 dígitos."""
+    updates, skipped, alertas = 0, [], []
+    lines = content.splitlines(keepends=True)
+    new_lines = []
+    for line in lines:
+        m = re.search(r"n:'(\d+)'", line)
+        if m and "price:" in line:
+            num = normalize_num(m.group(1))
+            if num in norm_prices:
+                new_price = norm_prices[num]
+                old_m = re.search(r"price:([\d.]+)", line)
+                old_price = float(old_m.group(1)) if old_m else 0
+                _check_alerta(m.group(1), old_price, new_price, alertas)
+                new_lines.append(re.sub(r"price:[\d.]+", f"price:{new_price:.2f}", line))
+                updates += 1
+                continue
+            else:
+                skipped.append(m.group(1))
+        new_lines.append(line)
+    return "".join(new_lines), updates, skipped, alertas
+
 
 def update_js_file(filepath: str, prices: dict, dry: bool) -> tuple:
-    """Atualiza price: em cada linha. Retorna (updates, skipped, alertas)."""
+    """Detecta o estilo do arquivo (JSON legado vs. aspas simples ME/SV) e
+    atualiza o campo de preço de cada carta. Retorna (updates, skipped, alertas)."""
     with open(filepath, "r", encoding="utf-8") as f:
-        original_lines = f.readlines()
+        content = f.read()
 
-    new_lines, updates, skipped, alertas = [], 0, [], []
+    norm_prices = {normalize_num(k): v for k, v in prices.items()}
+    is_legacy_json = '"n":"' in content
 
-    for line in original_lines:
-        m = re.search(r"n:'(\d{3})'", line)
-        if m and "price:" in line and m.group(1) in prices:
-            n = m.group(1)
-            new_price = prices[n]
-            old_m = re.search(r"price:([\d.]+)", line)
-            old_price = float(old_m.group(1)) if old_m else 0
-            if old_price > 0 and (new_price > old_price * ALERTA_VARIACAO or
-                                  new_price < old_price / ALERTA_VARIACAO):
-                alertas.append(f"#{n}: R${old_price:.2f} → R${new_price:.2f}")
-            new_lines.append(re.sub(r"price:[\d.]+", f"price:{new_price:.2f}", line))
-            updates += 1
-        else:
-            if m and "price:" in line and m.group(1) not in prices:
-                skipped.append(m.group(1))
-            new_lines.append(line)
+    if is_legacy_json:
+        new_content, updates, skipped, alertas = _update_json_style(content, norm_prices)
+    else:
+        new_content, updates, skipped, alertas = _update_singlequote_style(content, norm_prices)
 
     if not dry:
         with open(filepath, "w", encoding="utf-8") as f:
-            f.writelines(new_lines)
+            f.write(new_content)
 
     return updates, skipped, alertas
 

@@ -758,6 +758,235 @@ function fmInjectEvBridge(){
 }
 
 // ─────────────────────────────────────────────────────────────────
+// #43 (24/07/2026) — Número da Pokédex nas cartas + ordenar por Dex.
+// expand_card_database.py agora preenche `dex` (Pokédex nacional REAL, vindo
+// da API oficial) em quase todas as cartas cadastradas — mais preciso que o
+// casamento por nome (speciesFromCardName, usado pelos presets de geração
+// desde a Pokédex Nacional) porque não depende de bater texto do nome.
+// fmDexOf() usa o campo real quando existe e cai pro casamento por nome só
+// pras cartas que ainda não têm `dex` (os 3 sets que falharam na API mesmo
+// depois de 5 tentativas — ver ANALISE_FICHARIO_PROFISSIONAL_23jul2026.md /
+// scripts/legacy_queue.json status:"erro").
+// ─────────────────────────────────────────────────────────────────
+function fmDexOf(c){
+  if(c && c.dex!=null && c.dex!==''){
+    const n=parseInt(String(c.dex).split(',')[0],10);
+    if(!isNaN(n)) return n;
+  }
+  if(typeof speciesFromCardName==='function'){
+    const sp=speciesFromCardName(c.name);
+    if(sp) return sp.dex;
+  }
+  return null;
+}
+
+function fmInjectDexBadges(){
+  if(typeof ficViewMode!=='undefined' && ficViewMode!=='grid') return;
+  const wrap=document.getElementById('bwrap');
+  if(!wrap||typeof getSetCards!=='function') return;
+  const cards=getSetCards();
+  wrap.querySelectorAll('.fic-card').forEach(el=>{
+    const n=el.dataset.n;
+    const card=cards.find(c=>String(c.n)===String(n));
+    if(!card) return;
+    const dex=fmDexOf(card);
+    if(dex==null) return;
+    const box=el.firstElementChild;
+    if(!box||box.querySelector('.fm-dex-badge')) return;
+    const b=document.createElement('div');
+    b.className='fm-dex-badge';
+    b.textContent='#'+dex;
+    b.style.cssText="position:absolute;top:3px;right:3px;background:rgba(255,255,255,.92);color:#111;font-size:8px;font-weight:800;padding:1px 4px;border-radius:4px;font-family:'Space Mono',monospace;z-index:2";
+    box.appendChild(b);
+  });
+}
+
+let fmSortByDex = localStorage.getItem('fm_sort_by_dex')==='1';
+function fmApplyDexSort(){
+  const btn=document.getElementById('fm-dexsort-btn');
+  if(btn){
+    btn.style.color = fmSortByDex ? 'var(--gold)' : 'var(--muted)';
+    btn.style.borderColor = fmSortByDex ? 'var(--gold)' : 'var(--border)';
+  }
+  if(typeof ficViewMode!=='undefined' && ficViewMode!=='grid') return; // só faz sentido na Grade
+  const wrap=document.getElementById('bwrap');
+  if(!wrap||typeof getSetCards!=='function'||!fmSortByDex) return;
+  const cards=getSetCards();
+  wrap.querySelectorAll('.bgrid').forEach(grid=>{
+    const els=[...grid.children];
+    els.sort((a,b)=>{
+      const ca=cards.find(c=>String(c.n)===String(a.dataset.n));
+      const cb=cards.find(c=>String(c.n)===String(b.dataset.n));
+      const da=ca?fmDexOf(ca):null, db=cb?fmDexOf(cb):null;
+      if(da==null&&db==null) return 0;
+      if(da==null) return 1;
+      if(db==null) return -1;
+      return da-db;
+    });
+    els.forEach(el=>grid.appendChild(el));
+  });
+}
+function fmToggleDexSort(){
+  fmSortByDex=!fmSortByDex;
+  localStorage.setItem('fm_sort_by_dex', fmSortByDex?'1':'0');
+  fmApplyDexSort();
+}
+window.fmToggleDexSort=fmToggleDexSort;
+function fmInjectDexSortControl(){
+  const row2=document.querySelector('.fic-toolbar-row2');
+  if(!row2) return;
+  let btn=document.getElementById('fm-dexsort-btn');
+  if(!btn){
+    btn=document.createElement('button');
+    btn.id='fm-dexsort-btn';
+    btn.type='button';
+    btn.className='fic-btn';
+    btn.title='Reordena as cartas visíveis pelo número da Pokédex nacional em vez do número do set';
+    btn.textContent='🔢 Ordenar por Dex';
+    btn.onclick=fmToggleDexSort;
+    const firstBlock=row2.firstElementChild;
+    if(firstBlock) row2.insertBefore(btn, firstBlock.nextSibling);
+    else row2.appendChild(btn);
+  }
+  fmApplyDexSort();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// #44 (24/07/2026) — Filtro por artista/ilustrador dentro do fichário.
+// Responde a pergunta original do Eduardo ("dá pra montar fichário só de um
+// artista?") — filtro visual dentro do set aberto (esconde as cartas que não
+// são daquele ilustrador). É um filtro de exibição, igual às badges: não
+// reconta os %/slots do cabeçalho, que continuam refletindo o set inteiro.
+// ─────────────────────────────────────────────────────────────────
+let fmArtistFilter = '';
+function fmRefreshArtistOptions(){
+  const sel=document.getElementById('fm-artist-select');
+  if(!sel||typeof getSetCards!=='function') return;
+  const cards=getSetCards();
+  const artists=[...new Set(cards.map(c=>c.artist).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+  if(!artists.length){ sel.style.display='none'; fmArtistFilter=''; return; }
+  sel.style.display='';
+  const prev=fmArtistFilter;
+  sel.innerHTML='<option value="">🎨 Todos os artistas</option>'+
+    artists.map(a=>`<option value="${a.replace(/"/g,'&quot;')}">${a}</option>`).join('');
+  sel.value = artists.includes(prev) ? prev : '';
+  fmArtistFilter = sel.value;
+}
+function fmApplyArtistFilter(){
+  const wrap=document.getElementById('bwrap');
+  if(!wrap||typeof getSetCards!=='function') return;
+  if(!fmArtistFilter){
+    wrap.querySelectorAll('.fic-card').forEach(el=>{ el.style.display=''; });
+    return;
+  }
+  const cards=getSetCards();
+  wrap.querySelectorAll('.fic-card').forEach(el=>{
+    const card=cards.find(c=>String(c.n)===String(el.dataset.n));
+    el.style.display = (card && card.artist===fmArtistFilter) ? '' : 'none';
+  });
+}
+function fmOnArtistChange(){
+  const sel=document.getElementById('fm-artist-select');
+  fmArtistFilter=sel?sel.value:'';
+  fmApplyArtistFilter();
+}
+window.fmOnArtistChange=fmOnArtistChange;
+function fmInjectArtistFilter(){
+  const row1=document.querySelector('.fic-toolbar-row1');
+  if(!row1) return;
+  let sel=document.getElementById('fm-artist-select');
+  if(!sel){
+    sel=document.createElement('select');
+    sel.id='fm-artist-select';
+    sel.className='fic-btn';
+    sel.style.maxWidth='190px';
+    sel.onchange=fmOnArtistChange;
+    row1.appendChild(sel);
+  }
+  fmRefreshArtistOptions();
+  fmApplyArtistFilter();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// #45 (24/07/2026) — Relatório "Meus Artistas": cruza `collected` com o
+// campo `artist` de TODAS as coleções cadastradas (SET_CARDS_MAP inteiro),
+// não só o fichário aberto no momento. O modal é criado dinamicamente e
+// reaproveita as classes .ov/.modal já existentes no style.css — evita
+// editar index.html de novo pra isso.
+// ─────────────────────────────────────────────────────────────────
+function fmBuildArtistStats(){
+  const stats={};
+  if(typeof SET_CARDS_MAP==='undefined') return stats;
+  Object.keys(SET_CARDS_MAP).forEach(setId=>{
+    let cards=[];
+    try{ cards=SET_CARDS_MAP[setId]()||[]; }catch(e){ return; }
+    cards.forEach(c=>{
+      if(!c.artist) return;
+      if(!stats[c.artist]) stats[c.artist]={owned:0,total:0};
+      stats[c.artist].total++;
+      let owned=false;
+      try{
+        const slots=(typeof getSlots==='function')?getSlots(c,setId):[{ver:'N'}];
+        owned=slots.some(s=>collected.has(`${setId}:${c.n}:${s.ver}`));
+      }catch(e){}
+      if(owned) stats[c.artist].owned++;
+    });
+  });
+  return stats;
+}
+function fmEnsureArtistsModal(){
+  if(document.getElementById('martists')) return;
+  const ov=document.createElement('div');
+  ov.className='ov';
+  ov.id='martists';
+  ov.addEventListener('click', function(e){ if(e.target===ov) closeModal('martists'); });
+  ov.innerHTML=`<div class="modal modal-wide" style="max-height:85vh;overflow-y:auto">
+    <button class="mc-btn" onclick="closeModal('martists')">✕</button>
+    <div id="martists-content"></div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+function fmOpenArtistsReport(){
+  if(typeof SET_CARDS_MAP==='undefined'){ if(typeof setStatus==='function') setStatus('Dados de coleções ainda carregando, tenta de novo em 1s','error'); return; }
+  fmEnsureArtistsModal();
+  const stats=fmBuildArtistStats();
+  const entries=Object.entries(stats).sort((a,b)=> b[1].owned-a[1].owned || b[1].total-a[1].total || a[0].localeCompare(b[0],'pt-BR'));
+  const totalArtists=entries.length;
+  const withAny=entries.filter(([,v])=>v.owned>0).length;
+  const rows=entries.map(([name,v])=>{
+    const pct=v.total?Math.round(v.owned/v.total*100):0;
+    return `<tr>
+      <td style="padding:5px 8px;color:var(--text)">${name}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--teal);font-weight:700">${v.owned}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--muted)">${v.total}</td>
+      <td style="padding:5px 8px;text-align:right;color:${pct>=50?'var(--teal)':'var(--gold)'}">${pct}%</td>
+    </tr>`;
+  }).join('');
+  const content=document.getElementById('martists-content');
+  if(!content) return;
+  content.innerHTML=`
+    <h3 style="margin:0 0 4px">🎨 Meus Artistas</h3>
+    <p style="font-size:11px;color:var(--muted);margin:0 0 12px;line-height:1.5">
+      Quantas cartas você já tem de cada ilustrador, considerando todas as coleções cadastradas no site.
+      Cartas sem dado de artista ainda (alguns sets legados que falharam na API) não entram nessa conta.
+      <b style="color:var(--teal)">${withAny}</b> de <b>${totalArtists}</b> artistas com pelo menos 1 carta sua.
+    </p>
+    <div style="max-height:60vh;overflow-y:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:11px">
+      <thead><tr style="text-align:left;border-bottom:1px solid var(--border)">
+        <th style="padding:5px 8px">Artista</th>
+        <th style="padding:5px 8px;text-align:right">Suas</th>
+        <th style="padding:5px 8px;text-align:right">Existem</th>
+        <th style="padding:5px 8px;text-align:right">%</th>
+      </tr></thead>
+      <tbody>${rows||'<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--muted)">Nenhum dado de artista disponível ainda.</td></tr>'}</tbody>
+    </table>
+    </div>`;
+  openModal('martists');
+}
+window.fmOpenArtistsReport=fmOpenArtistsReport;
+
+// ─────────────────────────────────────────────────────────────────
 // WIRING — monkey-patch das funções globais, na ordem certa
 // ─────────────────────────────────────────────────────────────────
 function fmAfterRenderBinder(){
@@ -765,7 +994,10 @@ function fmAfterRenderBinder(){
   try{ fmInjectEvBridge(); }catch(e){}
   try{ fmInjectAlmostBadges(); }catch(e){}
   try{ fmInjectPriceBadges(); }catch(e){}
+  try{ fmInjectDexBadges(); }catch(e){}
   try{ fmInjectRarityBulk(); }catch(e){}
+  try{ fmInjectDexSortControl(); }catch(e){}
+  try{ fmInjectArtistFilter(); }catch(e){}
 }
 if(typeof window.renderBinder==='function'){
   const _fmOrigRenderBinder=window.renderBinder;
