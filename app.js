@@ -2208,14 +2208,16 @@ let _currentCustomBinderId=null;
 
 // ── Presets temáticos ─────────────────────────────────────────────
 const BINDER_PRESETS=[
-  {key:'sv151_pokedex',   name:'Pokédex 151',         emoji:'💯',desc:'Base 001–165 da Coleção 151 em ordem de Pokédex (só Pokémon)',
-    // CORRIGIDO 22/07/2026: c.base sozinho pega 165 cartas, mas pelo menos 2 são
-    // treinador/energia (ex: "Big Air Balloon", "Energy Sticker"), não Pokémon —
-    // conferido carta por carta em cards_sv3pt5.js. Isso inflava a "Pokédex 151"
-    // com itens que não são bicho. Sem campo de "tipo de carta" estruturado no
-    // cadastro, a forma confiável de excluir é por tipo (todo Pokémon tem c.type
-    // definido como elemento; treinador/energia usam 'Treinador'/'Energia').
-    filter:c=>c._setId==='sv3pt5'&&c.base&&c.type!=='Treinador'&&c.type!=='Energia',                          color:'#E91E63'},
+  {key:'sv151_pokedex',   name:'Pokédex 151',         emoji:'💯',desc:'001–151 da Coleção 151, em ordem exata de Pokédex (só Pokémon)',
+    // CORRIGIDO 22/07/2026: c.base sozinho pega 165 cartas (001-165), mas 152-165
+    // são treinador (Antique Dome Fossil, Big Air Balloon, Energy Sticker, Erika's
+    // Invitation etc.) — conferido carta por carta em cards_sv3pt5.js. Como as
+    // cartas SV usam type:'Incolor' tanto pra Pokémon Normal quanto pra treinador
+    // (não tem campo de supertipo separado — ver [[project_pokemon_tcg]]), filtrar
+    // por tipo não funciona aqui. A sorte é que nesse set especificamente o número
+    // da carta BATE com o número da Pokédex Nacional (n:150=Mewtwo, n:151=Mew ex,
+    // conferido) — então basta cortar em 151 pelo número, não pelo tipo.
+    filter:c=>c._setId==='sv3pt5'&&parseInt(c.n)<=151,                                                          color:'#E91E63'},
   {key:'sv151_arte',      name:'Galeria Kanto',       emoji:'🖼️',desc:'Ilustr. Rara + Esp. Rara da Coleção 151',
     filter:c=>c._setId==='sv3pt5'&&(c.rare==='Rara Ilustrada'||c.rare==='Rara Ilustrada Especial'),          color:'#7C3AED'},
   {key:'budget_151',      name:'151 de Pobre',        emoji:'🪙',desc:'Gen 1 < R$50 — carta mais barata de cada Pokémon original',
@@ -2334,15 +2336,26 @@ function renderCustomBindersHome(){
         const cards=getBinderCards(b);
         const pct=binderProgress(b);
         const col=b.cover_color||'#a855f7';
+        const pinned=isBinderPinned(b.id);
         return`<div onclick="openCustomBinderView(${safeJSON(b)})"
           style="padding:16px;border-radius:10px;cursor:pointer;transition:all .2s;
                  border:1px solid var(--border);background:var(--surface2);position:relative;
                  border-left:3px solid ${col}"
           onmouseover="this.style.transform='translateY(-2px)';this.style.borderColor='${col}'"
           onmouseout="this.style.transform='';this.style.borderColor='var(--border)'">
-          <div style="font-size:26px;margin-bottom:6px">${b.emoji||'📚'}</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <div onclick="event.stopPropagation();toggleBinderPinned('${b.id}')"
+              title="${pinned?'Fixado na aba principal — clique pra desfixar':'Fixar na aba principal do Fichário'}"
+              style="width:15px;height:15px;border-radius:50%;flex-shrink:0;cursor:pointer;
+                     border:2px solid ${pinned?col:'var(--muted)'};
+                     background:${pinned?col:'transparent'};
+                     display:flex;align-items:center;justify-content:center;
+                     font-size:8px;color:#fff;font-weight:700;transition:all .15s">
+              ${pinned?'✓':''}</div>
+            <div style="font-size:26px">${b.emoji||'📚'}</div>
+          </div>
           <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;word-break:break-word;line-height:1.3">${b.name}</div>
-          <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:8px">${cards.length} cartas</div>
+          <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:8px">${cards.length} cartas${pinned?' · 📌 fixado':''}</div>
           <div style="height:3px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-bottom:4px">
             <div style="height:100%;width:${pct}%;background:${col};border-radius:2px"></div>
           </div>
