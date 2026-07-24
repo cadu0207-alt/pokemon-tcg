@@ -1,0 +1,122 @@
+// ================================================================
+// MyDeck — Log de Atualizações (updates.js)
+// Mural de novidades exibido no Dashboard: todo usuário vê as últimas
+// mensagens publicadas pelo admin (Eduardo); só o admin vê o formulário
+// pra publicar/apagar. Depende de sbClient/currentUser/uid() (app.js)
+// e isAdmin() (lojas.js), então precisa carregar depois dos dois.
+// ================================================================
+
+async function renderUpdatesLog() {
+  const holder = document.getElementById('updates-log-wrap');
+  if (!holder || !sbClient || !currentUser) return;
+
+  const admin = typeof isAdmin === 'function' && isAdmin();
+
+  holder.innerHTML =
+    '<div class="updates-log-card">' +
+      '<div class="sec-title" style="margin-top:0">📢 Atualizações</div>' +
+      (admin ?
+        '<div class="update-admin-form">' +
+          '<input id="update-title-input" placeholder="Título (ex: Nova feature)" maxlength="80">' +
+          '<textarea id="update-msg-input" placeholder="O que mudou..." maxlength="400"></textarea>' +
+          '<button class="btn-mini" id="update-publish-btn" onclick="publishUpdate()">📨 Publicar</button>' +
+        '</div>'
+        : '') +
+      '<div class="updates-log-list" id="updates-log-list">Carregando...</div>' +
+    '</div>';
+
+  await loadUpdatesList();
+}
+
+async function loadUpdatesList() {
+  const list = document.getElementById('updates-log-list');
+  if (!list) return;
+
+  const { data, error } = await sbClient
+    .from('site_updates')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(8);
+
+  if (error) {
+    list.innerHTML = '<div class="admin-stats-loading">Erro ao carregar: ' + error.message + '</div>';
+    return;
+  }
+
+  const rows = data || [];
+  if (!rows.length) {
+    list.innerHTML = '<div class="admin-stats-loading">Nenhuma atualização publicada ainda.</div>';
+    return;
+  }
+
+  const admin = typeof isAdmin === 'function' && isAdmin();
+
+  list.innerHTML = rows.map(function (u) {
+    const dt = u.created_at ? new Date(u.created_at).toLocaleDateString('pt-BR') : '';
+    return (
+      '<div class="update-item">' +
+        '<div class="update-item-hdr">' +
+          '<span class="update-item-title">🆕 ' + u.title + '</span>' +
+          '<span class="update-item-date">' + dt +
+            (admin ? ' <button class="update-item-del" title="Apagar" onclick="deleteUpdate(' + u.id + ')">✕</button>' : '') +
+          '</span>' +
+        '</div>' +
+        '<div class="update-item-text">' + u.message + '</div>' +
+      '</div>'
+    );
+  }).join('');
+}
+
+async function publishUpdate() {
+  if (typeof isAdmin !== 'function' || !isAdmin()) return;
+  const titleInput = document.getElementById('update-title-input');
+  const msgInput = document.getElementById('update-msg-input');
+  const btn = document.getElementById('update-publish-btn');
+  if (!titleInput || !msgInput) return;
+
+  const title = titleInput.value.trim();
+  const message = msgInput.value.trim();
+  if (!title || !message) { alert('Preencha título e mensagem antes de publicar.'); return; }
+
+  btn.disabled = true;
+  const { error } = await sbClient.from('site_updates').insert({ title, message });
+  btn.disabled = false;
+
+  if (error) { alert('Erro ao publicar: ' + error.message); return; }
+
+  titleInput.value = '';
+  msgInput.value = '';
+  loadUpdatesList();
+}
+
+async function deleteUpdate(id) {
+  if (typeof isAdmin !== 'function' || !isAdmin()) return;
+  if (!confirm('Apagar essa atualização?')) return;
+  const { error } = await sbClient.from('site_updates').delete().eq('id', id);
+  if (error) { alert('Erro ao apagar: ' + error.message); return; }
+  loadUpdatesList();
+}
+
+// ── HOOKS ────────────────────────────────────────────────────────
+(function hookUpdatesIntoApp() {
+  const tryHook = () => {
+    if (typeof window._updateUserChip !== 'function' || typeof window.go !== 'function') {
+      setTimeout(tryHook, 50);
+      return;
+    }
+    const originalUpdateChip = window._updateUserChip;
+    window._updateUserChip = function (user) {
+      originalUpdateChip(user);
+      if (user) renderUpdatesLog(); else {
+        const holder = document.getElementById('updates-log-wrap');
+        if (holder) holder.innerHTML = '';
+      }
+    };
+    const originalGo = window.go;
+    window.go = function (id, el) {
+      originalGo(id, el);
+      if (id === 'dash' && typeof renderUpdatesLog === 'function') renderUpdatesLog();
+    };
+  };
+  tryHook();
+})();
