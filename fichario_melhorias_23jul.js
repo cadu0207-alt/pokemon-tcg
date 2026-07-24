@@ -955,6 +955,56 @@ function fmBuildArtistStats(){
   });
   return stats;
 }
+
+// ─────────────────────────────────────────────────────────────────
+// Fichário PERSISTENTE por artista (24/07/2026) — antes só existia o filtro
+// dentro de 1 set (item #44) e o relatório read-only acima (#45). Eduardo
+// pediu de novo, mais explícito: "dá pra fazer no site o fichário por
+// artista?" — ou seja, um fichário de verdade (salvo, cross-coleção,
+// acompanha progresso), não só um filtro temporário. Reaproveita o mesmo
+// mecanismo do Master Set Nacional (custom_binders + filter_config.type
+// novo), mas SEM estado por vaga: é 100% dinâmico (como um preset), porque
+// "essa carta é ou não é desse artista" não precisa de escolha manual —
+// só filtra `c.artist===cfg.artist` em TODO o catálogo (não só myCollections,
+// senão um artista com cartas só em coleção legada nunca apareceria).
+// ─────────────────────────────────────────────────────────────────
+function fmFindArtistBinder(artist){
+  if(typeof customBinders==='undefined') return null;
+  return customBinders.find(b=>b.filter_config&&b.filter_config.type==='artist'&&b.filter_config.artist===artist)||null;
+}
+async function fmCreateArtistBinder(encodedArtist){
+  const artist=decodeURIComponent(encodedArtist);
+  const existing=fmFindArtistBinder(artist);
+  if(existing){ closeModal('martists'); if(typeof openCustomBinderView==='function') openCustomBinderView(existing); return; }
+  if(typeof saveCustomBinder!=='function'){ return; }
+  const payload={
+    name:'🎨 '+artist, emoji:'🎨', layout:3,
+    filter_config:{type:'artist',artist}, card_ids:[], cover_color:'#a855f7'
+  };
+  const saved=await saveCustomBinder(payload);
+  if(saved){ closeModal('martists'); openCustomBinderView(saved); }
+  else alert('Erro ao criar — confira se está logado.');
+}
+window.fmCreateArtistBinder=fmCreateArtistBinder;
+
+// getBinderCards: resolve filter_config.type==='artist' varrendo TODO o
+// catálogo (SET_CARDS_MAP inteiro), igual ao Master Set Nacional faz.
+if(typeof window.getBinderCards==='function'){
+  const _fmOrigGetBinderCardsArtist=window.getBinderCards;
+  window.getBinderCards=function(binder){
+    const cfg=(binder&&binder.filter_config)||{};
+    if(cfg.type==='artist'&&typeof SET_CARDS_MAP!=='undefined'){
+      const out=[];
+      Object.keys(SET_CARDS_MAP).forEach(setId=>{
+        let cards=[];
+        try{ cards=SET_CARDS_MAP[setId]()||[]; }catch(e){ return; }
+        cards.forEach(c=>{ if(c.artist===cfg.artist) out.push({...c,_setId:setId}); });
+      });
+      return out;
+    }
+    return _fmOrigGetBinderCardsArtist.apply(this,arguments);
+  };
+}
 function fmEnsureArtistsModal(){
   if(document.getElementById('martists')) return;
   const ov=document.createElement('div');
@@ -976,11 +1026,18 @@ function fmOpenArtistsReport(){
   const withAny=entries.filter(([,v])=>v.owned>0).length;
   const rows=entries.map(([name,v])=>{
     const pct=v.total?Math.round(v.owned/v.total*100):0;
+    const already=fmFindArtistBinder(name);
     return `<tr>
       <td style="padding:5px 8px;color:var(--text)">${name}</td>
       <td style="padding:5px 8px;text-align:right;color:var(--teal);font-weight:700">${v.owned}</td>
       <td style="padding:5px 8px;text-align:right;color:var(--muted)">${v.total}</td>
       <td style="padding:5px 8px;text-align:right;color:${pct>=50?'var(--teal)':'var(--gold)'}">${pct}%</td>
+      <td style="padding:5px 8px;text-align:right">
+        <button data-artist="${encodeURIComponent(name)}" onclick="fmCreateArtistBinder(this.dataset.artist)"
+          style="background:none;border:1px solid var(--border);border-radius:5px;color:${already?'var(--teal)':'var(--accent)'};
+                 cursor:pointer;font-size:9px;padding:3px 7px;font-family:'Space Mono',monospace;white-space:nowrap">
+          ${already?'📂 abrir fichário':'+ criar fichário'}</button>
+      </td>
     </tr>`;
   }).join('');
   const content=document.getElementById('martists-content');
@@ -999,8 +1056,9 @@ function fmOpenArtistsReport(){
         <th style="padding:5px 8px;text-align:right">Suas</th>
         <th style="padding:5px 8px;text-align:right">Existem</th>
         <th style="padding:5px 8px;text-align:right">%</th>
+        <th style="padding:5px 8px"></th>
       </tr></thead>
-      <tbody>${rows||'<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--muted)">Nenhum dado de artista disponível ainda.</td></tr>'}</tbody>
+      <tbody>${rows||'<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--muted)">Nenhum dado de artista disponível ainda.</td></tr>'}</tbody>
     </table>
     </div>`;
   openModal('martists');
