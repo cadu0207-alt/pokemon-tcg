@@ -1,0 +1,40 @@
+name: Publicar Log de Atualizacoes
+
+on:
+  push:
+    branches: [Rotower]
+    paths:
+      - 'changelog/**.md'
+  workflow_dispatch:
+    # Permite rodar manualmente pela aba Actions do GitHub
+
+permissions:
+  contents: write
+
+jobs:
+  publish-changelog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (branch Rotower)
+        uses: actions/checkout@v4
+        with:
+          ref: Rotower
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Publicar entradas novas no mural
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/publish_changelog.js
+
+      - name: Marcar arquivos como publicados
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add changelog/.published.json
+          git diff --cached --quiet || git commit -m "chore: marca changelog publicado [skip ci]"
+          git push
