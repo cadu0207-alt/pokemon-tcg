@@ -158,6 +158,7 @@
     <div class="tab" onclick="go('cartas',this)">🃏 Cartas Tiradas</div>
     <div class="tab" onclick="go('preco',this)">💰 Preço Justo</div>
     <div class="tab" onclick="go('lojas',this)">🛍️ Lojas & Ofertas</div>
+    <div class="tab" onclick="go('mercado',this)">🏪 Lojas Confiáveis</div>
     <div class="tab" onclick="go('iniciantes',this)">🔰 Iniciantes</div>
     <div class="tab" onclick="window.open('simulador.html','_blank')" style="background:linear-gradient(90deg,#7b2ff744,#f107a322);color:#c084fc">🎰 Simulador</div>
   </nav>
@@ -235,6 +236,84 @@
         <div id="cards-list-venda" class="cv-list"></div>
       </div>
     </div>
+  </div>
+
+  <div id="mercado" class="pane">
+    <div class="sec-title" style="margin-bottom:18px">🏪 Lojas Confiáveis</div>
+    <div class="mkt-note">
+      Sistema de venda com intermediação de loja física: o vendedor envia a carta pra loja mais próxima do comprador,
+      a loja confere estado/originalidade, o comprador paga a loja, e a loja repassa o valor (menos comissão) pro vendedor.
+      <b>O MyDeck não processa pagamento</b> — isso acontece direto entre comprador e loja, fora do app.
+    </div>
+
+    <div class="mkt-grid">
+      <div class="panel">
+        <div class="panel-t">📍 Meu Endereço</div>
+        <div style="font-size:10.5px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:12px">
+          Usado só pra sugerir a loja confiável mais próxima de você (como comprador ou vendedor).
+        </div>
+        <div class="ff"><label>Cidade</label><input id="addr-cidade" placeholder="Ex: Belo Horizonte"></div>
+        <div class="ff"><label>UF</label>
+          <select id="addr-uf">
+            <option value="">—</option>
+            <option value="MG">MG</option>
+            <option value="SP">SP</option>
+          </select>
+        </div>
+        <div class="ff"><label>CEP (opcional)</label><input id="addr-cep" placeholder="00000-000"></div>
+        <div class="ff"><label>Bairro (opcional)</label><input id="addr-bairro"></div>
+        <button class="btn-add" onclick="saveMyAddress()">✓ Salvar Endereço</button>
+        <div id="addr-status" style="font-size:10px;color:var(--teal);font-family:'Space Mono',monospace;margin-top:8px"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-t">🏪 Cadastrar Loja Confiável</div>
+        <div style="font-size:10.5px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:12px">
+          Só lojas com CNPJ. Fica pendente até aprovação manual.
+        </div>
+        <div class="ff"><label>Nome Fantasia</label><input id="store-nome"></div>
+        <div class="ff"><label>Razão Social</label><input id="store-razao"></div>
+        <div class="ff"><label>CNPJ</label><input id="store-cnpj" placeholder="00.000.000/0000-00"></div>
+        <div class="ff"><label>Cidade</label>
+          <select id="store-cidade">
+            <option value="">—</option>
+            <option value="Belo Horizonte|MG">Belo Horizonte — MG</option>
+            <option value="São Paulo|SP">São Paulo — SP</option>
+          </select>
+        </div>
+        <div class="ff"><label>Endereço (rua, número, bairro)</label><input id="store-endereco"></div>
+        <div class="ff"><label>WhatsApp</label><input id="store-whatsapp" placeholder="(00) 00000-0000"></div>
+        <div class="ff"><label>E-mail</label><input id="store-email"></div>
+        <div class="ff"><label>Comissão sugerida (%)</label><input type="number" id="store-comissao" value="10" step="0.5"></div>
+
+        <div class="mkt-term-box" id="mkt-term-box">
+          <b>TERMO DE RESPONSABILIDADE — v1</b><br><br>
+          Ao se cadastrar como loja confiável no MyDeck, a loja acima identificada declara que: (1) receberá cartas
+          físicas de vendedores para conferência de estado, integridade e originalidade; (2) é responsável pela guarda
+          da carta enquanto estiver em sua posse; (3) receberá o pagamento do comprador e se compromete a repassar o
+          valor total ao vendedor, descontada a comissão acordada, em prazo razoável após a confirmação da venda;
+          (4) o MyDeck atua apenas como ferramenta de cadastro e indicação — não processa, retém ou garante nenhum
+          valor financeiro, e não se responsabiliza por disputas entre comprador, vendedor e loja; (5) qualquer
+          litígio decorrente da intermediação é de responsabilidade exclusiva da loja e das partes envolvidas na
+          transação.
+        </div>
+        <div class="ff"><label style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="store-termo-check"> Li e concordo com o termo acima
+        </label></div>
+        <div class="ff"><label>Nome do responsável que está aceitando</label><input id="store-termo-nome"></div>
+
+        <button class="btn-add" onclick="submitTrustedStore()">✓ Enviar Cadastro</button>
+        <div id="store-status" style="font-size:10px;color:var(--teal);font-family:'Space Mono',monospace;margin-top:8px"></div>
+      </div>
+    </div>
+
+    <div id="mkt-pending-wrap" style="display:none;margin-top:24px">
+      <div class="sec-title">🔎 Aprovações Pendentes (admin)</div>
+      <div id="mkt-pending-list" class="mkt-store-list"></div>
+    </div>
+
+    <div class="sec-title" style="margin-top:24px">✅ Lojas Ativas</div>
+    <div id="mkt-active-list" class="mkt-store-list"></div>
   </div>
 
   <div id="fichario" class="pane">
@@ -620,6 +699,7 @@
 <script defer src="fichario_masterdex.js"></script>
 <script defer src="ev_calculator.js"></script>
 <script defer src="lojas.js"></script>
+<script defer src="marketplace.js"></script>
 <script defer src="lojas_store_vespa.js"></script>
 <script defer src="lojas_destaques.js"></script>
 <script defer src="lojas_admin_collapse.js"></script>

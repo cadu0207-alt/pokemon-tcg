@@ -454,6 +454,7 @@ function go(id,el){
   if(id==='cartas'){renderCartas();}
   if(id==='gastos'){renderGastos();}
   if(id==='lojas'){if(typeof renderLojas==='function')renderLojas();}
+  if(id==='mercado'){if(typeof renderMercado==='function')renderMercado();}
   if(id==='iniciantes'){if(typeof renderIniciantes==='function')renderIniciantes();}
 }
 function renderAll(){renderDash();renderGastos();renderCartas();updateDashProgress();if(typeof renderEvolucao==='function')renderEvolucao();renderPatrimonio();}

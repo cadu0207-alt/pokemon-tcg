@@ -16,7 +16,10 @@ async function renderUpdatesLog() {
     '<div class="updates-log-card">' +
       '<div class="updates-log-hdr">' +
         '<div class="sec-title" style="margin-top:0">📢 Atualizações</div>' +
-        '<button class="update-minimize-btn" title="Minimizar" onclick="toggleUpdatesLogCollapse()">−</button>' +
+        '<div class="updates-log-hdr-actions">' +
+          '<a class="update-whatsapp-btn" href="https://chat.whatsapp.com/KAEFJ5pGZrsDZeusCE0Sxs?s=cl&p=i&ilr=4&amv=2" target="_blank" rel="noopener" title="Grupo da Comunidade — dúvidas e sugestões">💬</a>' +
+          '<button class="update-minimize-btn" title="Minimizar" onclick="toggleUpdatesLogCollapse()">−</button>' +
+        '</div>' +
       '</div>' +
       (admin ?
         '<div class="update-admin-form">' +
