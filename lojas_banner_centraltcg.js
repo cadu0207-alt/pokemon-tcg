@@ -16,23 +16,19 @@
 // 22/07/2026 (loja em InfinitePay, sem API pública — lista colada à
 // mão aqui; precisa atualizar manualmente se os preços mudarem lá).
 //
-// PENDENTE: número de WhatsApp da loja — não encontrado publicamente
-// no Instagram nem no link-in-bio (centraltcgbh.taplink.site). Deixe
-// o campo `whatsapp` abaixo vazio até o Eduardo passar o número; o
-// link de "conversa pré-carregada" (?text=...) já está pronto pra
-// receber o número assim que ele chegar.
+// Sem endereço fixo — presença digital + eventos físicos em lojas
+// parceiras em Belo Horizonte (confirmado com o Eduardo em 28/07/2026).
 // ================================================================
 
 // ── Loja em destaque (STORES) ────────────────────────────────────
 if (typeof STORES !== 'undefined') {
   STORES.unshift({
     name: 'Central TCG BH',
-    city: 'Belo Horizonte · MG',
+    city: 'Digital + eventos em lojas parceiras · Belo Horizonte',
     logo: 'central-tcg-bh-logo.png',
     tiktok: 'https://www.tiktok.com/@centraltcgbh',
     instagram: 'https://www.instagram.com/centraltcgbh/',
-    // TODO(Eduardo): colar o número assim que tiver — formato 55DDDXXXXXXXXX.
-    whatsapp: '' /* ex: 'https://wa.me/55XXXXXXXXXXX?text=' + encodeURIComponent('Oi! Vim pelo site MyDeck (mydecktcg.com.br) 👋') */,
+    whatsapp: 'https://wa.me/5531984682495?text=' + encodeURIComponent('Oi! Vim pelo site MyDeck (mydecktcg.com.br) 👋'),
     color: '#4c1d95',
     tag: '🤝 Loja em destaque'
   });
