@@ -1,16 +1,17 @@
 // ================================================================
 // MyDeck — Banner animado da Central TCG BH (lojas_banner_centraltcg.js)
 //
-// Loja parceira em destaque na aba "Lojas & Ofertas". Não edita
-// lojas.js (arquivo grande, com histórico de truncamento no mount do
-// sandbox — ver feedback de coding do projeto). Em vez disso:
-//   1. Sobrescreve window.renderLojas (mesmo padrão de monkey-patch
-//      de lojas_destaques.js/admin_stats.js/xp_system.js/
-//      lojas_admin_collapse.js) — chama a função original e depois
-//      injeta o banner no topo do #lojas-wrap.
-//   2. Coloca a Central TCG BH em destaque no array STORES (ver
-//      lojas_store_vespa.js pro mesmo padrão) — unshift pra ficar
-//      primeira na grade de lojas recomendadas.
+// Banner GLOBAL — aparece em todas as abas, logo acima do menu
+// (<nav class="tabs">). Renderiza direto em #global-ctcg-banner-wrap,
+// uma div nova colocada no index.html entre o header e o <nav>, fora
+// de qualquer .pane — por isso fica visível não importa a aba ativa.
+// Não edita lojas.js nem index.html além dessa 1 div vazia (arquivo
+// grande, com histórico de truncamento no mount do sandbox — ver
+// feedback de coding do projeto). Além do banner, este arquivo
+// também:
+//   - Coloca a Central TCG BH em destaque no array STORES (ver
+//     lojas_store_vespa.js pro mesmo padrão) — unshift pra ficar
+//     primeira na grade de lojas recomendadas (aba Lojas & Ofertas).
 //
 // Produtos e preços puxados de loja.infinitepay.io/centraltcgbh em
 // 22/07/2026 (loja em InfinitePay, sem API pública — lista colada à
@@ -137,9 +138,15 @@ function ctcgBannerHtml() {
   );
 }
 
-const _ctcgOrigRenderLojas = window.renderLojas;
-window.renderLojas = async function() {
-  await _ctcgOrigRenderLojas();
-  const wrap = document.getElementById('lojas-wrap');
-  if (wrap) wrap.insertAdjacentHTML('afterbegin', ctcgBannerHtml());
-};
+function renderCtcgGlobalBanner() {
+  const wrap = document.getElementById('global-ctcg-banner-wrap');
+  if (wrap && !document.getElementById('central-tcg-banner')) {
+    wrap.innerHTML = ctcgBannerHtml();
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderCtcgGlobalBanner);
+} else {
+  renderCtcgGlobalBanner();
+}
