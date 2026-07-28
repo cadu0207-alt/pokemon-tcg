@@ -123,12 +123,14 @@ function ctcgProductCardHtml(p) {
   );
 }
 
+const CTCG_BANNER_WHATSAPP_URL = 'https://wa.me/5531984682495?text=' + encodeURIComponent('Vim pelo MyDeck TCG, quero saber mais sobre produtos!');
+
 function ctcgBannerHtml() {
   // Duplica a lista pra loop contínuo (translateX -50% → 0% cobre exatamente 1 cópia).
   const track = CTCG_BANNER_PRODUCTS.concat(CTCG_BANNER_PRODUCTS).map(ctcgProductCardHtml).join('');
   return (
     '<div class="ctcg-banner" id="central-tcg-banner">' +
-      '<a class="ctcg-banner-brand" href="https://www.instagram.com/centraltcgbh/" target="_blank" rel="noopener">' +
+      '<a class="ctcg-banner-brand" href="' + CTCG_BANNER_WHATSAPP_URL + '" target="_blank" rel="noopener">' +
         '<img src="central-tcg-bh-logo.png" alt="Central TCG BH">' +
         '<div class="ctcg-banner-brand-name">CENTRAL<br>TCG BH</div>' +
         '<div class="ctcg-banner-brand-tag">🤝 Loja parceira</div>' +
