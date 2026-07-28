@@ -508,18 +508,27 @@ function init3DCards(){
 }
 
 // ── VALOR DO FICHÁRIO ────────────────────────────────────────────
+// CORRIGIDO 27/07/2026: antes somava só getAllCardsWithSet() (escopado a
+// myCollections, que vive só no localStorage). Se um set fosse desativado
+// ou o usuário trocasse de navegador, os slots continuavam no Supabase mas
+// o valor deles sumia do KPI "Valor Fichário" — enquanto o snapshot diário
+// (scripts/snapshot_value.js, usado na "Evolução do Patrimônio") sempre
+// somou a tabela `collection` inteira, sem esse filtro. Agora soma por
+// TODOS os sets em SET_CARDS_MAP, igual ao snapshot, pra nunca mais
+// divergir por causa de myCollections. Ver [[project_mycollections_sync_futuro]].
 function calcCollectedValue(){
   let total=0;
-  const all=getAllCardsWithSet();
-  all.forEach(c=>{
-    const sid=c._setId;
-    getSlots(c,sid).forEach(s=>{
-      const key=slotKey(sid+':',c.n,s.ver);
-      if(collected.has(key)){
-        const p=s.price||c.price;
-        const qty=collectedQty.get(key)?.qty||1;
-        if(p)total+=p*qty;
-      }
+  Object.keys(SET_CARDS_MAP).forEach(sid=>{
+    const cards=SET_CARDS_MAP[sid]?.()||[];
+    cards.forEach(c=>{
+      getSlots(c,sid).forEach(s=>{
+        const key=slotKey(sid+':',c.n,s.ver);
+        if(collected.has(key)){
+          const p=s.price||c.price;
+          const qty=collectedQty.get(key)?.qty||1;
+          if(p)total+=p*qty;
+        }
+      });
     });
   });
   return total;
@@ -532,14 +541,18 @@ function renderDash(){
   const tb=bst.reduce((s,p)=>s+p.boost,0),tg=bst.reduce((s,p)=>s+Number(p.price),0);
   const pull=pulledCards.reduce((s,c)=>s+Number(c.price||0),0);
   const fichVal=calcCollectedValue();
-  const roi=invested>0?(fichVal/invested*100).toFixed(0):0;
+  // CORRIGIDO 27/07/2026: ROI usava `invested` (inclui acessórios — sleeves,
+  // caixas etc., que não geram valor de coleção), o que puxava o % pra baixo
+  // artificialmente. Agora usa `tg` (só boosters/cartas, mesma base já usada
+  // no R$/Booster logo abaixo).
+  const roi=tg>0?(fichVal/tg*100).toFixed(0):0;
   const apb=tb>0?(tg/tb).toFixed(2):'0,00';
   document.getElementById('kpi-dash').innerHTML=
     kpiHTML('red','💰 Total Investido','R$'+fmtR(invested),purchases.length+' compras')+
     kpiHTML('orange','📦 Boosters',''+tb,'~'+(tb*6)+' cartas')+
     kpiHTML('gold','💵 R$/Booster','R$'+apb.replace('.',','),'média ponderada')+
     kpiHTML('teal','📚 Valor Fichário','R$'+fmtR(fichVal),collected.size+' slots coletados')+
-    kpiHTML('blue','📊 Retorno',roi+'%','fichário ÷ investido');
+    kpiHTML('blue','📊 ROI Fichário',roi+'%','fichário ÷ investido em cartas');
 
   // Gráfico raridades com dot colorido
   const rCount={},rVer={};
@@ -867,10 +880,14 @@ function countSlotsFor(cards,pfx){
 function updateDashProgress(){
   let grand=0,grandC=0;
 
-  // Monta lista de sets ativos: usa myCollections se disponível, senão todos de SET_META
+  // Monta lista de sets ativos: usa myCollections se disponível, senão todos
+  // do SET_CATALOG. CORRIGIDO 27/07/2026: o fallback antigo usava só
+  // Object.keys(SET_META), que só tem os sets ME — se myCollections ficasse
+  // vazio, todos os sets SV desapareciam do progresso "Master Set" nesse
+  // cenário. SET_CATALOG cobre ME+SV.
   const activeIds=(typeof myCollections!=='undefined'&&myCollections.length)
     ?myCollections
-    :Object.keys(SET_META);
+    :SET_CATALOG.map(s=>s.id);
 
   const html=activeIds.map(id=>{
     const meta=SET_META[id]||null;
@@ -960,7 +977,7 @@ function renderGastos(){
     ${kpiHTML('gold','📦 R$/Booster','R$'+apb.replace('.',','),'média ponderada')}
     ${kpiHTML('orange','🃏 R$/Carta','R$'+apc.replace('.',','),'~'+tc+' cartas')}
     ${kpiHTML('teal','💎 Valor Tirado','R$'+fmtR(pull),pulledCards.length+' cartas')}
-    ${kpiHTML('blue','📊 Retorno',roi+'%',pull>=total?'✅ acima do gasto':'📉 abaixo do gasto')}
+    ${kpiHTML('blue','📊 ROI Pulls',roi+'%',pull>=total?'✅ acima do gasto':'📉 abaixo do gasto')}
   </div>`;
 
   document.getElementById('gastos-cards').innerHTML=purchases.map(p=>{
@@ -3223,13 +3240,24 @@ function renderEvolucao(){
     const k=(p.date||'').slice(0,7);if(!k)return;
     (byMonth[k]=byMonth[k]||{inv:0,pull:0}).inv+=Number(p.price)||0;
   });
-  // pulls: tenta extrair "dd mmm" do lote; ano = ano de compra mais próximo
+  // pulls: tenta extrair "dd mmm" do lote; ano = ano de compra mais próximo.
+  // CORRIGIDO 27/07/2026: cartas cujo lote não batia com o regex eram
+  // simplesmente ignoradas (return sem somar nada) — o "Valor tirado" (accP)
+  // deste gráfico ficava menor que o KPI "💎 Valor Tirado" da aba Gastos
+  // (que soma pulledCards inteiro, sem depender de parse de texto). Agora
+  // toda carta sem match cai no bucket "sem data", então accP sempre bate
+  // com o total real.
   const anos=[...new Set(purchases.map(p=>(p.date||'').slice(0,4)).filter(Boolean))];
+  const SEM_DATA='9999-00';
   pulledCards.forEach(c=>{
     const m=(c.lote||'').toLowerCase().match(/(\d{1,2})\s*(?:de\s*)?([a-zç]{3})/);
-    if(!m||!(m[2]in MESES))return;
-    const mm=String(MESES[m[2]]+1).padStart(2,'0');
-    const k=(anos.find(a=>byMonth[`${a}-${mm}`])||anos[anos.length-1]||new Date().getFullYear())+'-'+mm;
+    let k;
+    if(m&&m[2]in MESES){
+      const mm=String(MESES[m[2]]+1).padStart(2,'0');
+      k=(anos.find(a=>byMonth[`${a}-${mm}`])||anos[anos.length-1]||new Date().getFullYear())+'-'+mm;
+    }else{
+      k=SEM_DATA;
+    }
     (byMonth[k]=byMonth[k]||{inv:0,pull:0}).pull+=Number(c.price)||0;
   });
   const keys=Object.keys(byMonth).sort();
@@ -3237,7 +3265,7 @@ function renderEvolucao(){
   let accI=0,accP=0;
   el.innerHTML=keys.map(k=>{
     const{inv,pull}=byMonth[k];accI+=inv;accP+=pull;
-    const lbl=new Date(k+'-15T12:00:00').toLocaleDateString('pt-BR',{month:'short',year:'2-digit'});
+    const lbl=k===SEM_DATA?'sem data':new Date(k+'-15T12:00:00').toLocaleDateString('pt-BR',{month:'short',year:'2-digit'});
     return barHTML(lbl,inv,maxV,'var(--accent)','R$'+fmtR(inv))+
            (pull>0?barHTML('↳ pulls',pull,maxV,'var(--teal)','R$'+fmtR(pull)):'');
   }).join('')+
