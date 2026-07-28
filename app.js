@@ -462,6 +462,24 @@ function renderAll(){renderDash();renderGastos();renderCartas();updateDashProgre
 // ── UTILS ────────────────────────────────────────────────────────
 const fmtR=v=>(+v||0).toFixed(2).replace('.',',');
 const kpiHTML=(cls,lbl,val,sub)=>`<div class="kpi ${cls}"><div class="kpi-label">${lbl}</div><div class="kpi-value">${val}</div><div class="kpi-sub">${sub}</div></div>`;
+
+// ── ÍCONES DO DASHBOARD (27/07/2026) ────────────────────────────
+// CORRIGIDO: KPIs/títulos do Dashboard usavam emoji solto (💰📦💵📊 etc.),
+// que renderiza diferente em cada SO/navegador e destoa do resto do type
+// system (Bebas Neue + Space Mono, bem cuidado). Set próprio de ícones SVG
+// monocromáticos (herdam currentColor), inline, sem dependência de CDN.
+const DICO_PATHS={
+  wallet:'<circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M9.7 9.8c0-1.3 1.1-2 2.3-2s2.3.8 2.3 2c0 2.6-4.6 2-4.6 4.4 0 1.2 1.1 2 2.3 2s2.3-.6 2.3-2"/>',
+  box:'<path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',
+  coins:'<circle cx="9" cy="9" r="6"/><path d="M15 9a6 6 0 1 1 -5.7 8"/>',
+  book:'<path d="M4 5a2 2 0 0 1 2-2h11a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2Z"/><path d="M4 5v14a2 2 0 0 0 2 2h11"/>',
+  trend:'<path d="M3 17l6-6 4 4 8-8"/><path d="M15 6h6v6"/>',
+  bars:'<rect x="3" y="12" width="4" height="8"/><rect x="10" y="7" width="4" height="13"/><rect x="17" y="3" width="4" height="17"/>',
+  cart:'<circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.5 3h2l2.7 12.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21.5 7H6"/>',
+  star:'<path d="M12 2l2.9 6.5L22 9.3l-5 4.9 1.2 7.1L12 17.9l-6.2 3.4L7 14.2 2 9.3l7.1-.8Z"/>',
+  lchart:'<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>',
+};
+const dico=(name,size=13)=>`<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">${DICO_PATHS[name]||''}</svg>`;
 const barHTML=(lbl,v,max,color,txt,dot='')=>{const w=max>0?Math.round(v/max*100):0;
   return`<div class="brow"><div class="blbl">${dot}${lbl}</div><div class="btrack"><div class="bfill" style="width:${w}%;background:${color}">${txt}</div></div></div>`;};
 function safeJSON(obj){return JSON.stringify(obj).replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
@@ -548,11 +566,11 @@ function renderDash(){
   const roi=tg>0?(fichVal/tg*100).toFixed(0):0;
   const apb=tb>0?(tg/tb).toFixed(2):'0,00';
   document.getElementById('kpi-dash').innerHTML=
-    kpiHTML('red','💰 Total Investido','R$'+fmtR(invested),purchases.length+' compras')+
-    kpiHTML('orange','📦 Boosters',''+tb,'~'+(tb*6)+' cartas')+
-    kpiHTML('gold','💵 R$/Booster','R$'+apb.replace('.',','),'média ponderada')+
-    kpiHTML('teal','📚 Valor Fichário','R$'+fmtR(fichVal),collected.size+' slots coletados')+
-    kpiHTML('blue','📊 ROI Fichário',roi+'%','fichário ÷ investido em cartas');
+    kpiHTML('red',dico('wallet')+' Total Investido','R$'+fmtR(invested),purchases.length+' compras')+
+    kpiHTML('orange',dico('box')+' Boosters',''+tb,'~'+(tb*6)+' cartas')+
+    kpiHTML('gold',dico('coins')+' R$/Booster','R$'+apb.replace('.',','),'média ponderada')+
+    kpiHTML('teal',dico('book')+' Valor Fichário','R$'+fmtR(fichVal),collected.size+' slots coletados')+
+    kpiHTML('blue',dico('trend')+' ROI Fichário',roi+'%','fichário ÷ investido em cartas');
 
   // Gráfico raridades com dot colorido
   const rCount={},rVer={};
@@ -903,7 +921,10 @@ function updateDashProgress(){
     if(meta){
       // ── Display completo (sets ME com SET_META) ──
       const color=meta.color;
-      const upBadge=meta.upcoming?`<div style="position:absolute;top:10px;right:10px;background:#f0932b;color:#fff;font-size:9px;letter-spacing:1px;padding:2px 8px;border-radius:4px;font-family:'Space Mono',monospace">EM BREVE ${meta.releaseDate||''}</div>`:'';
+      // CORRIGIDO 27/07/2026: cor hardcoded (#f0932b) não batia com nenhum token
+      // do design system — trocado por var(--accent2), a mesma laranja usada em
+      // "Boosters" e no resto do site.
+      const upBadge=meta.upcoming?`<div style="position:absolute;top:10px;right:10px;background:var(--accent2);color:#fff;font-size:9px;letter-spacing:1px;padding:2px 8px;border-radius:4px;font-family:'Space Mono',monospace">EM BREVE ${meta.releaseDate||''}</div>`:'';
       return`<div class="panel" style="border-color:${color}44;overflow:hidden;position:relative;${meta.upcoming?'opacity:.8':''}">
         ${upBadge}
         <div style="position:absolute;right:-8px;top:-8px;width:70px;height:100px;opacity:.1;pointer-events:none">
@@ -3311,15 +3332,20 @@ function renderPatrimonio(){
   el.innerHTML=`
     <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;overflow:visible">
       <defs>
+        <!-- CORRIGIDO 27/07/2026: usava --accent2 (laranja, mesma cor de
+             "Boosters"/gasto) — mas em todo o resto do dashboard teal =
+             "valor/dinheiro que você tem" (Valor Fichário, Valor Tirado).
+             Trocado pra teal, consistente com a linguagem de cor do resto
+             da tela. -->
         <linearGradient id="pat-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="var(--accent2)" stop-opacity="0.28"/>
-          <stop offset="100%" stop-color="var(--accent2)" stop-opacity="0"/>
+          <stop offset="0%" stop-color="var(--teal)" stop-opacity="0.28"/>
+          <stop offset="100%" stop-color="var(--teal)" stop-opacity="0"/>
         </linearGradient>
       </defs>
       ${guides}
       <polygon points="${areaPts}" fill="url(#pat-fill)"/>
-      <polyline points="${pts}" fill="none" stroke="var(--accent2)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-      ${vals.map((v,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i===n-1?3.5:2}" fill="var(--accent2)"><title>${valueHistory[i].date}: R$${fmtR(v)}</title></circle>`).join('')}
+      <polyline points="${pts}" fill="none" stroke="var(--teal)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${vals.map((v,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i===n-1?3.5:2}" fill="var(--teal)"><title>${valueHistory[i].date}: R$${fmtR(v)}</title></circle>`).join('')}
       ${dateLbls}
     </svg>
     <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-family:'Space Mono',monospace;font-size:11px;display:flex;gap:18px;flex-wrap:wrap">
