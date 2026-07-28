@@ -147,8 +147,17 @@ function renderCtcgGlobalBanner() {
   }
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', renderCtcgGlobalBanner);
-} else {
-  renderCtcgGlobalBanner();
-}
+// ── DESATIVADO (29/07/2026) ─────────────────────────────────────
+// Banner tirado do ar a pedido do Eduardo — lista de produtos era
+// colada à mão do InfinitePay (fonte de dados de teste). Quando
+// tivermos uma base de dados melhor pros produtos da Central TCG BH,
+// reativar chamando renderCtcgGlobalBanner() abaixo (ou trocar por
+// uma versão que puxe CTCG_BANNER_PRODUCTS de outro lugar).
+// A loja continua normalmente na aba Lojas & Ofertas (STORES.unshift
+// acima não foi tocado).
+//
+// if (document.readyState === 'loading') {
+//   document.addEventListener('DOMContentLoaded', renderCtcgGlobalBanner);
+// } else {
+//   renderCtcgGlobalBanner();
+// }
