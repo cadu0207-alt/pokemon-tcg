@@ -876,6 +876,9 @@ function toggleBinderPinned(id){
   else pinnedBinders.push(id);
   savePinnedBinders();
   renderTabs();
+  // NOVO 27/07/2026: fixar/desafixar agora também atualiza o "Progresso
+  // Master Set" do Dashboard na hora, sem precisar trocar de aba e voltar.
+  if(typeof updateDashProgress==='function')updateDashProgress();
 }
 function toggleCollection(id){
   if(myCollections.includes(id)){
@@ -894,6 +897,30 @@ function countSlotsFor(cards,pfx){
   let total=0,col=0;
   cards.forEach(c=>{getSlots(c,pfx).forEach(s=>{total++;if(collected.has(slotKey(pfx+':',c.n,s.ver)))col++;});});
   return{total,col};
+}
+// NOVO 27/07/2026: conta slots + valor (R$ já coletado e R$ faltante pra
+// completar) — pedido do Eduardo pro "Progresso Master Set" mostrar preço
+// acumulado de cada coleção, não só %/contagem. `sid` fixo pra coleções
+// oficiais (mesmo set pra toda a lista); se `sid` for null, usa `c._setId`
+// de cada carta — necessário pros fichários personalizados fixados, que
+// podem misturar cartas de vários sets diferentes.
+function slotsAndValue(cards,sid){
+  let total=0,col=0,have=0,missing=0;
+  cards.forEach(c=>{
+    const s2=sid||c._setId;
+    getSlots(c,s2).forEach(s=>{
+      total++;
+      const key=slotKey(s2+':',c.n,s.ver);
+      const p=s.price||c.price||0;
+      if(collected.has(key)){
+        col++;
+        have+=p*(collectedQty.get(key)?.qty||1);
+      }else{
+        missing+=p;
+      }
+    });
+  });
+  return{total,col,have,missing};
 }
 function updateDashProgress(){
   let grand=0,grandC=0;
@@ -917,6 +944,12 @@ function updateDashProgress(){
     const tot=base.total+sec.total,col=base.col+sec.col;
     grand+=tot;grandC+=col;
     const pct=tot>0?(col/tot*100).toFixed(0):0;
+    // NOVO 27/07/2026: valor R$ já coletado e R$ faltante pra completar esta coleção.
+    const{have,missing}=slotsAndValue(cards,id);
+    const valorRow=tot>0?`<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;font-family:'Space Mono',monospace">
+      <span style="color:var(--teal)">R$${fmtR(have)} coletado</span>
+      <span style="color:var(--muted)">faltam R$${fmtR(missing)}</span>
+    </div>`:'';
 
     if(meta){
       // ── Display completo (sets ME com SET_META) ──
@@ -938,7 +971,8 @@ function updateDashProgress(){
         ${!meta.upcoming?`<div class="prog"><div class="prog-lbl"><span>Base</span><span>${base.col}/${base.total}</span></div>
           <div class="prog-t"><div class="prog-f" style="width:${base.total>0?(base.col/base.total*100).toFixed(1):0}%;background:${color}"></div></div></div>
         ${sec.total>0?`<div class="prog" style="margin:0"><div class="prog-lbl"><span>Especiais</span><span>${sec.col}/${sec.total}</span></div>
-          <div class="prog-t"><div class="prog-f" style="width:${sec.total>0?(sec.col/sec.total*100).toFixed(1):0}%;background:${color}88"></div></div></div>`:''}`:''}
+          <div class="prog-t"><div class="prog-f" style="width:${sec.total>0?(sec.col/sec.total*100).toFixed(1):0}%;background:${color}88"></div></div></div>`:''}
+        ${valorRow}`:''}
         <div style="margin-top:10px;font-size:10px;font-family:'Space Mono',monospace;color:var(--muted)">Chase: <span style="color:${color}">${chaseFor(id)||meta.chase}</span></div>
       </div>`;
     }else{
@@ -960,13 +994,44 @@ function updateDashProgress(){
           <div class="prog-t"><div class="prog-f" style="width:${base.total>0?(base.col/base.total*100).toFixed(1):0}%;background:${color}"></div></div></div>
         ${sec.total>0?`<div class="prog" style="margin:0"><div class="prog-lbl"><span>Especiais</span><span>${sec.col}/${sec.total}</span></div>
           <div class="prog-t"><div class="prog-f" style="width:${(sec.col/sec.total*100).toFixed(1)}%;background:${color}88"></div></div></div>`:''}
+        ${valorRow}
         `:`<div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;padding:6px 0">
           ${upcoming?'Lançamento em breve':'Ative o set no Fichário para carregar as cartas'}</div>`}
       </div>`;
     }
   }).filter(Boolean).join('');
 
-  document.getElementById('progress-sets').innerHTML=html||
+  // NOVO 27/07/2026: pedido do Eduardo — o Progresso Master Set deve incluir
+  // também os fichários personalizados que ele fixou (pinnedBinders), com o
+  // mesmo R$ coletado/faltante dos painéis oficiais. NÃO entram em
+  // grand/grandC (o resumo "Master Set Completo" lá embaixo) porque um
+  // fichário fixado é um recorte de cartas que já pertencem a algum set
+  // oficial — contar os dois somaria o mesmo slot 2x.
+  const pinnedHtml=(typeof pinnedBinders!=='undefined'?pinnedBinders:[]).map(pid=>{
+    const b=(typeof customBinders!=='undefined'?customBinders:[]).find(x=>String(x.id)===pid);
+    if(!b)return'';
+    const cards=getBinderCards(b);
+    const{total,col,have,missing}=slotsAndValue(cards,null);
+    const pct=total>0?(col/total*100).toFixed(0):0;
+    const color=b.cover_color||'#a855f7';
+    return`<div class="panel" style="border-color:${color}44;overflow:hidden;position:relative;cursor:pointer" onclick="switchSet('__cb__${pid}',null)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="font-size:26px;line-height:1">${b.emoji||'📚'}</div>
+        <div style="flex:1"><div style="font-weight:700;font-size:12px;line-height:1.3">${b.name}</div>
+          <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:2px">
+            ${total>0?total+' slots · fichário fixado':'sem cartas neste filtro'}</div></div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:${color};line-height:1">${total>0?pct+'%':'–'}</div>
+      </div>
+      ${total>0?`<div class="prog"><div class="prog-lbl"><span>Slots</span><span>${col}/${total}</span></div>
+        <div class="prog-t"><div class="prog-f" style="width:${pct}%;background:${color}"></div></div></div>
+        <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;font-family:'Space Mono',monospace">
+          <span style="color:var(--teal)">R$${fmtR(have)} coletado</span>
+          <span style="color:var(--muted)">faltam R$${fmtR(missing)}</span>
+        </div>`:''}
+    </div>`;
+  }).filter(Boolean).join('');
+
+  document.getElementById('progress-sets').innerHTML=(html+pinnedHtml)||
     `<div style="color:var(--muted);font-size:12px;font-family:'Space Mono',monospace;padding:20px;text-align:center">
       Nenhuma coleção ativa — vá em Fichário → Minhas Coleções para selecionar sets.</div>`;
 
@@ -2384,6 +2449,14 @@ async function loadCustomBinders(){
   if(!uid())return;
   const{data}=await sbClient.from('custom_binders').select('*').eq('user_id',uid()).order('created_at',{ascending:false});
   customBinders=data||[];
+  // CORRIGIDO 27/07/2026: no login inicial, loadCustomBinders() é chamado
+  // sem await (fire-and-forget) — renderTabs()/updateDashProgress() já
+  // tinham rodado antes de customBinders chegar do Supabase, então
+  // fichários fixados podiam não aparecer nem nas abas nem no Progresso
+  // Master Set até o usuário trocar de aba e voltar. Agora, ao terminar de
+  // carregar, dispara os dois re-renders sozinho.
+  if(typeof renderTabs==='function')renderTabs();
+  if(typeof updateDashProgress==='function')updateDashProgress();
 }
 
 async function saveCustomBinder(binder){
