@@ -154,18 +154,23 @@ function getSetLabel() {
   }[currentSet] || currentSet.toUpperCase();
 }
 
-function imgUrl(n) {
+function imgUrl(n, setId) {
+  // CORRIGIDO 29/07/2026: aceita setId opcional (2º parâmetro) — necessário pra
+  // fichário personalizado/fixado, que mistura cartas de vários sets ao mesmo
+  // tempo e não pode depender só do `currentSet` global. Sem o 2º argumento,
+  // comportamento 100% igual a antes (usa currentSet).
+  const sid = setId || currentSet;
   // Delega para getBinderImg do app.js quando disponível (cobre todos os sets)
   if (typeof getBinderImg === 'function') {
-    return getBinderImg({ n }, currentSet);
+    return getBinderImg({ n }, sid);
   }
   // Fallback inline (caso app.js ainda não tenha carregado)
   const num = parseInt(n, 10);
-  if (currentSet.startsWith('sv')) {
+  if (sid.startsWith('sv')) {
     const safe = isNaN(num) ? n : num;
-    return `https://images.pokemontcg.io/${currentSet}/${safe}.png`;
+    return `https://images.pokemontcg.io/${sid}/${safe}.png`;
   }
-  switch (currentSet) {
+  switch (sid) {
     case 'me06': return `https://images.scrydex.com/pokemon/me6-${num}/large`;
     case 'me05': return `https://images.scrydex.com/pokemon/me5-${num}/large`;
     case 'me03': return `https://images.scrydex.com/pokemon/me3-${num}/large`;
@@ -286,86 +291,99 @@ function renderBinder() {
 
   // Click handlers para abrir modal de slot
   wrap.querySelectorAll('.fic-card').forEach(el => {
-    el.addEventListener('click', () => openSlotModal(el.dataset.n, el.dataset.ver));
+    el.addEventListener('click', () => openSlotModal(el.dataset.n, el.dataset.ver, el.dataset.setid));
   });
 }
 
 /* ─────────────────────────────────────────────
    RENDER — MODO GRADE
 ───────────────────────────────────────────── */
-function renderGridView(cards) {
+// CORRIGIDO 29/07/2026 (pedido do Eduardo: fichários fixados devem ter "mesmo
+// tamanho, mesmas funções" que os fichários oficiais ME04/ME05/etc): extraído
+// de dentro de renderGridView() pra escopo de módulo, recebendo `setId`
+// explícito em vez de usar `currentSet` direto — assim pode ser reaproveitado
+// por qualquer lista de cartas de QUALQUER set, inclusive fichário personalizado
+// (que mistura cartas de vários sets na mesma tela). Chamado por renderGridView
+// abaixo (fichário oficial) e por openCustomBinderView em app.js (fichário
+// personalizado/fixado) — os dois produzem exatamente o mesmo HTML/CSS agora.
+function ficCardHtml(c, setId) {
+  const slots  = getSlots(c, setId);
+  const vers   = slots.map(s => s.ver);
+  const allCol = vers.every(v => collected.has(`${setId}:${c.n}:${v}`));
+  const hasAny = vers.some(v  => collected.has(`${setId}:${c.n}:${v}`));
+  const isImp  = c.important;
+
+  const imgFilter = allCol ? 'none' : hasAny ? 'saturate(.6) brightness(.75)' : 'grayscale(80%) brightness(.55)';
+  const border    = allCol ? '2px solid var(--teal)' : hasAny ? '2px solid var(--blue)' : (isImp ? '2px solid var(--gold)' : '2px solid var(--border)');
+  const glow      = allCol ? '0 0 14px rgba(6,214,160,.45)' : hasAny ? '0 0 8px rgba(17,138,178,.3)' : (isImp ? '0 0 8px rgba(255,209,102,.3)' : 'none');
+
+  const dots = vers.map(v => {
+    const key = `${setId}:${c.n}:${v}`;
+    const qty = ficCollection[key]?.qty || (collected.has(key) ? 1 : 0);
+    const vc  = VERSIONS.find(x => x.code === v);
+    return `<div style="width:8px;height:8px;border-radius:50%;background:${qty>0?vc.color:'var(--border)'};
+      flex-shrink:0;position:relative" title="${v}×${qty}">
+      ${qty>1?`<span style="position:absolute;top:-4px;right:-4px;font-size:7px;color:${vc.color};font-weight:900">×${qty}</span>`:''}
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="bc2 fic-card${allCol?' collected':''}${isImp?' important':''}"
+       data-n="${c.n}" data-ver="${vers[0]}" data-setid="${setId}"
+       style="cursor:pointer;border-radius:7px;transition:transform .2s"
+       onmouseover="this.style.transform='scale(1.1) translateY(-4px)'"
+       onmouseout="this.style.transform=''">
+    <div style="width:var(--cw,90px);height:var(--ch,126px);border-radius:7px;border:${border};
+         box-shadow:${glow};position:relative;overflow:hidden;background:#0a0b10">
+      <img src="${imgUrl(c.n, setId)}" alt="${c.name}" loading="lazy"
+           style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:${imgFilter}"
+           onerror="handleCardImgError(this,'${setId}','${c.n}')">
+      <div style="display:none;flex-direction:column;align-items:center;justify-content:center;
+           gap:3px;position:absolute;inset:0;padding:5px;text-align:center">
+        <div style="font-family:'Space Mono',monospace;font-size:7px;color:var(--muted)">${c.n}</div>
+        <div style="font-size:7px;font-weight:700;color:var(--text);line-height:1.2">${c.name}</div>
+        <div style="font-size:6px;color:var(--muted)">${c.type||''}</div>
+        <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:${c.color||'#666'}"></div>
+      </div>
+      <!-- dots de versão -->
+      <div style="position:absolute;bottom:3px;left:3px;display:flex;gap:3px">${dots}</div>
+      <!-- check completo -->
+      ${allCol?`<div style="position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;
+        background:var(--teal);color:var(--bg);font-size:11px;display:flex;align-items:center;
+        justify-content:center;font-weight:900;box-shadow:0 2px 8px rgba(6,214,160,.6)">✓</div>`:''}
+      ${isImp&&!hasAny?`<div style="position:absolute;top:3px;right:4px;font-size:11px;color:var(--gold)">★</div>`:''}
+    </div>
+    <!-- tooltip -->
+    <div class="tip" style="position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
+         background:rgba(8,9,13,.96);border:1px solid var(--border);border-radius:6px;padding:8px 11px;
+         font-size:11px;white-space:nowrap;opacity:0;pointer-events:none;z-index:100;min-width:140px;
+         transition:opacity .15s">
+      <div style="font-weight:700;color:var(--text)">${c.name}</div>
+      <div style="color:var(--muted);font-family:'Space Mono',monospace;font-size:9px">#${c.n} · ${c.type||''}</div>
+      <div style="color:var(--accent2);font-size:9px;margin-top:2px">${c.rare||''}</div>
+      ${c.price?`<div style="color:var(--teal);font-size:10px;font-weight:700;margin-top:3px">R$${fmtR(c.price)}</div>`:''}
+      <div style="margin-top:4px;display:flex;gap:4px">
+        ${vers.map(v => {
+          const key = `${setId}:${c.n}:${v}`;
+          const qty = ficCollection[key]?.qty || (collected.has(key) ? 1 : 0);
+          const vc = VERSIONS.find(x => x.code === v);
+          return `<span style="font-size:8px;padding:2px 5px;border-radius:3px;background:${qty>0?vc.bg:'rgba(0,0,0,.3)'};
+            color:${qty>0?vc.color:'var(--muted)'};">${v}${qty>1?' ×'+qty:''}</span>`;
+        }).join('')}
+      </div>
+      <div style="font-size:9px;color:var(--muted);margin-top:3px">Clique para editar</div>
+    </div>
+  </div>`;
+}
+
+function renderGridView(cards, setIdOf) {
   const base = cards.filter(c => c.base !== false);
   const sec  = cards.filter(c => c.base === false);
-
-  function cardHtml(c) {
-    const slots  = getSlots(c, currentSet);
-    const vers   = slots.map(s => s.ver);
-    const allCol = vers.every(v => collected.has(`${currentSet}:${c.n}:${v}`));
-    const hasAny = vers.some(v  => collected.has(`${currentSet}:${c.n}:${v}`));
-    const isImp  = c.important;
-
-    const imgFilter = allCol ? 'none' : hasAny ? 'saturate(.6) brightness(.75)' : 'grayscale(80%) brightness(.55)';
-    const border    = allCol ? '2px solid var(--teal)' : hasAny ? '2px solid var(--blue)' : (isImp ? '2px solid var(--gold)' : '2px solid var(--border)');
-    const glow      = allCol ? '0 0 14px rgba(6,214,160,.45)' : hasAny ? '0 0 8px rgba(17,138,178,.3)' : (isImp ? '0 0 8px rgba(255,209,102,.3)' : 'none');
-
-    const dots = vers.map(v => {
-      const key = `${currentSet}:${c.n}:${v}`;
-      const qty = ficCollection[key]?.qty || (collected.has(key) ? 1 : 0);
-      const vc  = VERSIONS.find(x => x.code === v);
-      return `<div style="width:8px;height:8px;border-radius:50%;background:${qty>0?vc.color:'var(--border)'};
-        flex-shrink:0;position:relative" title="${v}×${qty}">
-        ${qty>1?`<span style="position:absolute;top:-4px;right:-4px;font-size:7px;color:${vc.color};font-weight:900">×${qty}</span>`:''}
-      </div>`;
-    }).join('');
-
-    return `
-    <div class="bc2 fic-card${allCol?' collected':''}${isImp?' important':''}"
-         data-n="${c.n}" data-ver="${vers[0]}"
-         style="cursor:pointer;border-radius:7px;transition:transform .2s"
-         onmouseover="this.style.transform='scale(1.1) translateY(-4px)'"
-         onmouseout="this.style.transform=''">
-      <div style="width:var(--cw,90px);height:var(--ch,126px);border-radius:7px;border:${border};
-           box-shadow:${glow};position:relative;overflow:hidden;background:#0a0b10">
-        <img src="${imgUrl(c.n)}" alt="${c.name}" loading="lazy"
-             style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:${imgFilter}"
-             onerror="handleCardImgError(this,'${currentSet}','${c.n}')">
-        <div style="display:none;flex-direction:column;align-items:center;justify-content:center;
-             gap:3px;position:absolute;inset:0;padding:5px;text-align:center">
-          <div style="font-family:'Space Mono',monospace;font-size:7px;color:var(--muted)">${c.n}</div>
-          <div style="font-size:7px;font-weight:700;color:var(--text);line-height:1.2">${c.name}</div>
-          <div style="font-size:6px;color:var(--muted)">${c.type||''}</div>
-          <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:${c.color||'#666'}"></div>
-        </div>
-        <!-- dots de versão -->
-        <div style="position:absolute;bottom:3px;left:3px;display:flex;gap:3px">${dots}</div>
-        <!-- check completo -->
-        ${allCol?`<div style="position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;
-          background:var(--teal);color:var(--bg);font-size:11px;display:flex;align-items:center;
-          justify-content:center;font-weight:900;box-shadow:0 2px 8px rgba(6,214,160,.6)">✓</div>`:''}
-        ${isImp&&!hasAny?`<div style="position:absolute;top:3px;right:4px;font-size:11px;color:var(--gold)">★</div>`:''}
-      </div>
-      <!-- tooltip -->
-      <div class="tip" style="position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
-           background:rgba(8,9,13,.96);border:1px solid var(--border);border-radius:6px;padding:8px 11px;
-           font-size:11px;white-space:nowrap;opacity:0;pointer-events:none;z-index:100;min-width:140px;
-           transition:opacity .15s">
-        <div style="font-weight:700;color:var(--text)">${c.name}</div>
-        <div style="color:var(--muted);font-family:'Space Mono',monospace;font-size:9px">#${c.n} · ${c.type||''}</div>
-        <div style="color:var(--accent2);font-size:9px;margin-top:2px">${c.rare||''}</div>
-        ${c.price?`<div style="color:var(--teal);font-size:10px;font-weight:700;margin-top:3px">R$${fmtR(c.price)}</div>`:''}
-        <div style="margin-top:4px;display:flex;gap:4px">
-          ${vers.map(v => {
-            const key = `${currentSet}:${c.n}:${v}`;
-            const qty = ficCollection[key]?.qty || (collected.has(key) ? 1 : 0);
-            const vc = VERSIONS.find(x => x.code === v);
-            return `<span style="font-size:8px;padding:2px 5px;border-radius:3px;background:${qty>0?vc.bg:'rgba(0,0,0,.3)'};
-              color:${qty>0?vc.color:'var(--muted)'};">${v}${qty>1?' ×'+qty:''}</span>`;
-          }).join('')}
-        </div>
-        <div style="font-size:9px;color:var(--muted);margin-top:3px">Clique para editar</div>
-      </div>
-    </div>`;
-  }
+  // setIdOf é opcional — sem ele, comportamento idêntico a antes (currentSet
+  // pra toda carta). Fichário personalizado passa uma função que lê o set de
+  // origem de cada carta (c._setId), já que mistura cartas de vários sets.
+  const sIdOf = setIdOf || (() => currentSet);
+  const cardHtml = c => ficCardHtml(c, sIdOf(c));
 
   let html = '';
   if (base.length) html += `<div class="bsec-lbl">📄 Cartas Base</div><div class="bgrid">${base.map(cardHtml).join('')}</div>`;
@@ -463,12 +481,28 @@ function renderBinderView(cards) {
 /* ─────────────────────────────────────────────
    MODAL DE SLOT
 ───────────────────────────────────────────── */
-async function openSlotModal(cardN, defaultVer) {
-  const cards = getSetCards();
-  const card  = cards.find(c => c.n === cardN);
+// CORRIGIDO 29/07/2026 (pedido do Eduardo: fichário fixado com as mesmas
+// funções do fichário oficial): 3 novos parâmetros opcionais.
+//  - setIdOverride: set de origem da carta (fichário personalizado passa
+//    c._setId, já que mistura cartas de vários sets — sem isso o modal ia
+//    tentar usar `currentSet`, que não corresponde à carta clicada).
+//  - cardOverride: objeto da carta já em mãos (fichário personalizado não
+//    pode achar a carta via getSetCards(), que só cobre o set ATIVO na aba).
+//  - onSaved: callback de re-render pós-salvar (default: renderBinder(), igual
+//    a antes — fichário personalizado passa sua própria função de refresh).
+// Sem esses argumentos, comportamento 100% igual a antes.
+let _ficModalSetId    = null;
+let _ficModalCardObj  = null;
+let _ficModalOnSaved  = null;
+async function openSlotModal(cardN, defaultVer, setIdOverride, cardOverride, onSaved) {
+  const setId = setIdOverride || currentSet;
+  const card  = cardOverride || getSetCards().find(c => c.n === cardN);
   if (!card) return;
+  _ficModalSetId   = setId;
+  _ficModalCardObj = card;
+  _ficModalOnSaved = onSaved || null;
 
-  const slots = getSlots(card, currentSet);
+  const slots = getSlots(card, setId);
 
   // CORRIGIDO: usa purchases[] já carregado pelo app.js (sem chamada extra ao Supabase)
   const purchaseOptions = [...purchases].map(p =>
@@ -477,7 +511,7 @@ async function openSlotModal(cardN, defaultVer) {
 
   const slotsHtml = slots.map(s => {
     const v     = s.ver;
-    const key   = `${currentSet}:${cardN}:${v}`;
+    const key   = `${setId}:${cardN}:${v}`;
     const entry = ficCollection[key] || { qty: collected.has(key) ? 1 : 0, origins: [] };
     const vc    = VERSIONS.find(x => x.code === v);
     const active = entry.qty > 0;
@@ -532,8 +566,8 @@ async function openSlotModal(cardN, defaultVer) {
     <button onclick="closeSlotModal()" style="position:absolute;top:12px;right:12px;background:none;
       border:none;color:var(--muted);font-size:18px;cursor:pointer;z-index:2">✕</button>
     <div class="slot-modal-head">
-      <img class="slot-modal-img" src="${imgUrl(cardN)}" alt="${card.name}"
-           onerror="handleCardImgError(this,'${currentSet}','${cardN}')">
+      <img class="slot-modal-img" src="${imgUrl(cardN, setId)}" alt="${card.name}"
+           onerror="handleCardImgError(this,'${setId}','${cardN}')">
       <div class="slot-modal-info">
         <div class="slot-modal-title">${card.name}</div>
         <div class="slot-modal-sub">#${card.n} · ${card.type||''}</div>
@@ -565,7 +599,7 @@ async function openSlotModal(cardN, defaultVer) {
   window._ficModalOrigins = {};
   slots.forEach(s => {
     const v   = s.ver;
-    const key = `${currentSet}:${cardN}:${v}`;
+    const key = `${setId}:${cardN}:${v}`;
     const entry = ficCollection[key] || { qty: collected.has(key) ? 1 : 0, origins: [] };
     window._ficModalQtys[v]    = entry.qty;
     window._ficModalOrigins[v] = [...entry.origins];
@@ -600,20 +634,24 @@ function addOrigin(ver) {
 }
 
 async function saveSlotModal(cardN) {
-  const cards = getSetCards();
-  const card  = cards.find(c => c.n === cardN);
+  // CORRIGIDO 29/07/2026: usa o setId/carta guardados por openSlotModal em vez
+  // de currentSet/getSetCards() — necessário pro fichário personalizado, cuja
+  // carta clicada pode não pertencer ao set atualmente ativo na aba.
+  const setId = _ficModalSetId || currentSet;
+  const card  = _ficModalCardObj || getSetCards().find(c => c.n === cardN);
   if (!card) return;
-  const slots = getSlots(card, currentSet);
+  const slots = getSlots(card, setId);
 
   for (const s of slots) {
-    const key     = `${currentSet}:${cardN}:${s.ver}`;
+    const key     = `${setId}:${cardN}:${s.ver}`;
     const qty     = window._ficModalQtys[s.ver]     || 0;
     const origins = window._ficModalOrigins[s.ver]  || [];
     await saveSlot(key, qty, origins);
   }
 
   closeSlotModal();
-  renderBinder();
+  if (typeof _ficModalOnSaved === 'function') _ficModalOnSaved();
+  else renderBinder();
   updateDashProgress();
 }
 
@@ -720,3 +758,8 @@ window.printBinder       = printBinder;
 window.renderFicharioUI  = renderFicharioUI;
 window.renderGlobalStats = renderGlobalStats;
 window.loadCollection    = loadCollection;
+// CORRIGIDO 29/07/2026: exposto pra fichário personalizado/fixado (app.js)
+// poder renderizar cards com a MESMA função/HTML/CSS do fichário oficial.
+window.ficCardHtml       = ficCardHtml;
+window.renderGridView    = renderGridView;
+window.imgUrl            = imgUrl;

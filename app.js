@@ -2670,6 +2670,13 @@ function openCustomBinderView(binder){
     });
   }
 
+  // CORRIGIDO 29/07/2026 (pedido do Eduardo: "mesmo tamanho, mesmas funções"
+  // dos fichários oficiais ME04/ME05/etc): antes esse grid tinha card fluido
+  // (aspect-ratio 2/3, tamanho variável conforme a tela) e abria um modal mais
+  // simples (openBinderModal, sem contador de quantidade). Agora usa
+  // window.ficCardHtml() — a MESMA função/CSS (.bc2/.fic-card/--cw/--ch) do
+  // fichário oficial (fichario_patch.js) — e abre o MESMO modal de slot
+  // (openSlotModal, com +/- de quantidade e registro de origem).
   function buildGrid(lay){
     const filteredCards=applyFilters(cards);
     const bySets={};
@@ -2677,34 +2684,33 @@ function openCustomBinderView(binder){
     if(filteredCards.length===0){
       return'<div style="text-align:center;padding:50px;color:var(--muted);font-family:\'Space Mono\',monospace;font-size:11px">Nenhuma carta encontrada.</div>';
     }
-    const cols=lay===2?'1fr 1fr':lay===4?'repeat(4,1fr)':'repeat(3,1fr)';
+    // lay (2/3/4) agora só define quantas colunas o grid força no máximo —
+    // o TAMANHO de cada card continua fixo em --cw/--ch, igual ao oficial.
     return Object.entries(bySets).map(([setId,setCards])=>`
       <div class="bsec-lbl">${CB_SET_LABELS[setId]||setId}</div>
-      <div style="display:grid;grid-template-columns:${cols};gap:8px;margin-bottom:18px">
-        ${setCards.map(c=>{
-          const anyCol=getSlots(c,setId).some(s=>collected.has(slotKey(setId+':',c.n,s.ver)));
-          const allCol=getSlots(c,setId).every(s=>collected.has(slotKey(setId+':',c.n,s.ver)));
-          const imgFn=IMG_FNS[setId];
-          const imgSrc=imgFn?imgFn(c.n):'';
-          return`<div onclick='openBinderModal(${safeJSON(c)},"${setId}")'
-            title="${c.name} #${c.n}"
-            style="aspect-ratio:2/3;border-radius:8px;overflow:hidden;cursor:pointer;position:relative;
-                   border:1px solid ${anyCol?color:'var(--border)'};
-                   box-shadow:${allCol?`0 0 14px ${color}55`:'none'};transition:all .2s"
-            onmouseover="this.style.transform='translateY(-2px) scale(1.02)'"
-            onmouseout="this.style.transform=''">
-            <img src="${imgSrc}" alt="${c.name}" loading="lazy"
-              style="width:100%;height:100%;object-fit:cover;
-                     filter:${allCol?'none':anyCol?'saturate(.55) brightness(.7)':'grayscale(80%) brightness(.45)'}">
-            ${allCol?`<div style="position:absolute;top:4px;right:4px;width:16px;height:16px;background:${color};
-                       border-radius:50%;display:flex;align-items:center;justify-content:center;
-                       font-size:8px;font-weight:700;color:#fff">✓</div>`:''}
-            <div style="position:absolute;bottom:0;left:0;right:0;padding:3px 5px;
-                        background:linear-gradient(transparent,rgba(0,0,0,.85));
-                        font-size:7px;color:rgba(255,255,255,.65);font-family:'Space Mono',monospace">${c.n}</div>
-          </div>`;
-        }).join('')}
+      <div class="bgrid" style="grid-template-columns:repeat(${lay},var(--cw,90px))">
+        ${setCards.map(c=>(typeof window.ficCardHtml==='function'?window.ficCardHtml(c,setId):'')).join('')}
       </div>`).join('');
+  }
+
+  // Clique na carta abre o MESMO modal do fichário oficial (qty +/-, origem
+  // da compra), passando o set de origem e o objeto da carta explicitamente
+  // (o fichário personalizado mistura cartas de vários sets ao mesmo tempo,
+  // então não dá pra confiar em currentSet/getSetCards() como o modal faz
+  // por padrão). Ao salvar, re-renderiza esta mesma tela (onSaved).
+  function wireGridClicks(){
+    const cardsByKey={};
+    cards.forEach(c=>{cardsByKey[c._setId+':'+c.n]=c;});
+    document.querySelectorAll('#cb-view-grid .fic-card').forEach(el=>{
+      el.addEventListener('click',()=>{
+        const setId=el.dataset.setid;
+        const cardObj=cardsByKey[setId+':'+el.dataset.n];
+        if(typeof openSlotModal==='function'){
+          openSlotModal(el.dataset.n, el.dataset.ver, setId, cardObj,
+            ()=>openCustomBinderView(window._cbCurrentBinder||binder));
+        }
+      });
+    });
   }
 
   const isPreview=!!binder._preview;
@@ -2757,12 +2763,14 @@ function openCustomBinderView(binder){
     </div>`}
     <div style="display:flex;gap:6px;margin-bottom:16px">${layoutBtns}</div>
     <div id="cb-view-grid">${buildGrid(layout)}</div>`;
+  wireGridClicks();
 
   // Exposto pro oninput/onchange dos filtros re-renderizarem só o grid, sem
   // reconstruir o header/toolbar inteiro (evita perder foco do campo de busca).
   window._cbRefreshGrid=function(){
     const g=document.getElementById('cb-view-grid');
     if(g)g.innerHTML=buildGrid(window._cbCurrentBinder?.layout||layout);
+    wireGridClicks();
   };
 }
 
