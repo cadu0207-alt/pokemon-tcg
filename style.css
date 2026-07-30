@@ -37,6 +37,10 @@
 
   --cw: 112px;
   --ch: 157px;
+  /* ADICIONADO 30/07/2026: tamanho dos quadradinhos de marcar normal/foil
+     direto no card (fmInjectQuickToggleDots) — precisa de variável própria
+     pra poder encolher no mobile sem tocar --cw/--ch (tamanho do card). */
+  --dotsize: 20px;
 }
 
 /* ─── TEMA ESCURO ────────────────────────────────────── */
@@ -1239,7 +1243,10 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
   .pane   { padding: 16px 14px; }
   header  { padding: 14px 16px; }
   .tabs   { padding: 6px 14px; top: 60px; }
-  :root { --cw: 72px; --ch: 101px; }
+  /* ADICIONADO 30/07/2026 (pedido do Eduardo: "no mobile está muito grande,
+     toma muita tela" — quadradinho tinha ficado 20px fixo, igual no desktop
+     e no mobile, desproporcional num card de só 72px de largura) */
+  :root { --cw: 72px; --ch: 101px; --dotsize: 12px; }
 
   h1 { font-size: 26px; letter-spacing: 2px; }
   .hbadge { font-size: 8px; padding: 2px 7px; }

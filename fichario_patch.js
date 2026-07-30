@@ -326,19 +326,21 @@ function ficCardHtml(c, setId) {
 
   // CORRIGIDO 30/07/2026 (pedido do Eduardo: "aumentar o tamanho, estão
   // pequenos" + precisa funcionar em QUALQUER fichário, não só o oficial):
-  // quadradinhos maiores (14px → 20px nesta 2ª rodada, pedido explícito
-  // "pode aumentar mais ainda", cantos levemente arredondados em vez de
-  // bolinha 8px original) e cada um leva `data-ver` direto —
-  // fmInjectQuickToggleDots() (em fichario_melhorias_23jul.js) não precisa
-  // mais recalcular a ordem das versões via getSetCards()/currentSet, só lê
-  // o atributo. Card tem 90px de largura (--cw), então 2 dots de 20px + 4px
-  // de gap (44px) cabem tranquilo sem estourar.
+  // quadradinhos maiores (14px → 20px numa 2ª rodada, pedido "pode aumentar
+  // mais ainda") e cada um leva `data-ver` direto — fmInjectQuickToggleDots()
+  // (em fichario_melhorias_23jul.js) não precisa mais recalcular a ordem das
+  // versões via getSetCards()/currentSet, só lê o atributo.
+  // CORRIGIDO 30/07/2026 (pedido do Eduardo: "no mobile está muito grande,
+  // toma muita tela") — tamanho agora usa var(--dotsize) em vez de px fixo,
+  // que o style.css encolhe pra 12px no media query mobile (@600px), igual
+  // já é feito com --cw/--ch (tamanho do card) pro mesmo breakpoint.
   const dots = vers.map(v => {
     const key = `${setId}:${c.n}:${v}`;
     const qty = ficCollection[key]?.qty || (collected.has(key) ? 1 : 0);
     const vc  = VERSIONS.find(x => x.code === v);
-    return `<div data-ver="${v}" style="width:20px;height:20px;border-radius:5px;background:${qty>0?vc.color:'var(--border)'};
-      flex-shrink:0;position:relative;box-shadow:0 1px 3px rgba(0,0,0,.4)" title="${v}×${qty} — clique pra marcar/desmarcar 1 cópia">
+    return `<div data-ver="${v}" style="width:var(--dotsize,20px);height:var(--dotsize,20px);border-radius:5px;
+      background:${qty>0?vc.color:'var(--border)'};flex-shrink:0;position:relative;box-shadow:0 1px 3px rgba(0,0,0,.4)"
+      title="${v}×${qty} — clique pra marcar/desmarcar 1 cópia">
       ${qty>1?`<span style="position:absolute;top:-6px;right:-6px;font-size:9px;color:${vc.color};font-weight:900;
         text-shadow:0 0 2px rgba(0,0,0,.8)">×${qty}</span>`:''}
     </div>`;
