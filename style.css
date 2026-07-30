@@ -78,7 +78,7 @@ body, .panel, .kpi, .tab, header, .home-bg, input, select, textarea {
 /* ─── BOTÃO DE TEMA (fixo, topo direito) ─────────────── */
 .theme-toggle-btn {
   position: fixed;
-  top: 14px;
+  top: 64px;
   right: 14px;
   z-index: 999;
   display: flex;
@@ -99,7 +99,7 @@ body, .panel, .kpi, .tab, header, .home-bg, input, select, textarea {
 .theme-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
 .theme-toggle-btn .tt-icon { font-size: 14px; line-height: 1; }
 @media (max-width: 640px) {
-  .theme-toggle-btn { top: 8px; right: 8px; padding: 6px 10px 6px 9px; font-size: 10px; }
+  .theme-toggle-btn { top: 54px; right: 8px; padding: 6px 10px 6px 9px; font-size: 10px; }
 }
 
 /* ─── RESET ──────────────────────────────────────────── */

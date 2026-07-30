@@ -216,6 +216,54 @@ function fmMdexFilteredSpecies(binder,species,bySpecies){
     return true;
   });
 }
+// NOVO 30/07/2026 (pedido do Eduardo: "opção de visualização de grade e
+// fichário" também no Master Set) — extraído da lógica que antes vivia direto
+// em fmMdexRender/fmMdexRefreshGrid, pra não duplicar. Master Set não tem o
+// conceito de "versão"/getSlots como os fichários normais (é uma vaga por
+// espécie), então o modo Fichário aqui é uma paginação NxN das mesmas vagas
+// (fmMdexSlotHtml), não o renderBinderView() usado nos outros fichários.
+function fmMdexBuildGridHtml(species,bySpecies,color,binderId){
+  if(!species.length){
+    return `<div style="padding:30px;text-align:center;color:var(--muted);font-size:11px">Nenhuma espécie encontrada com esses filtros.</div>`;
+  }
+  const slotHtml=(sp)=>window._fmMdexSlotHtml(sp,bySpecies,color,binderId);
+  if((window._fmMdexViewMode||'grid')==='binder'){
+    const n=window._fmMdexPageSize||3;
+    const perPage=n*n;
+    const pages=[];
+    for(let i=0;i<species.length;i+=perPage) pages.push(species.slice(i,i+perPage));
+    return pages.map((pg,idx)=>`
+      <div style="margin-bottom:18px">
+        <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px">Página ${idx+1}/${pages.length}</div>
+        <div style="display:grid;grid-template-columns:repeat(${n},1fr);gap:8px;border:1px solid var(--border);
+                    border-radius:10px;padding:10px;background:var(--surface2)">
+          ${pg.map(slotHtml).join('')}
+        </div>
+      </div>`).join('');
+  }
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px">
+    ${species.map(slotHtml).join('')}
+  </div>`;
+}
+window.fmMdexBuildGridHtml=fmMdexBuildGridHtml;
+
+// Alterna Grade/Fichário físico; re-renderiza a tela inteira (igual troca de
+// layout nos outros fichários) pra reconstruir a toolbar (some/aparece o
+// seletor de tamanho de página).
+function fmMdexSetView(mode,binderId){
+  window._fmMdexViewMode=mode;
+  const binder=fmMdexFindBinder(binderId);
+  if(binder) fmMdexRender(binder,true);
+}
+window.fmMdexSetView=fmMdexSetView;
+
+function fmMdexSetPageSize(n,binderId){
+  window._fmMdexPageSize=n;
+  const binder=fmMdexFindBinder(binderId);
+  if(binder) fmMdexRender(binder,true);
+}
+window.fmMdexSetPageSize=fmMdexSetPageSize;
+
 // Só troca o conteúdo de #fm-mdex-grid (não o wrap.innerHTML inteiro) — assim
 // o campo de busca não perde o foco a cada letra digitada, igual o padrão
 // _cbRefreshGrid() já usado no fichário personalizado normal.
@@ -232,9 +280,7 @@ function fmMdexRefreshGrid(){
   const allSpecies=fmMdexSpeciesFor(binder);
   const species=fmMdexFilteredSpecies(binder,allSpecies,bySpecies);
   const color=binder.cover_color||'#118ab2';
-  grid.innerHTML=species.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px">
-    ${species.map(sp=>window._fmMdexSlotHtml(sp,bySpecies,color,binder.id)).join('')}
-  </div>`:`<div style="padding:30px;text-align:center;color:var(--muted);font-size:11px">Nenhuma espécie encontrada com esses filtros.</div>`;
+  grid.innerHTML=fmMdexBuildGridHtml(species,bySpecies,color,binder.id);
 }
 window.fmMdexRefreshGrid=fmMdexRefreshGrid;
 
@@ -300,12 +346,26 @@ function fmMdexRender(binder,keepFilters){
   const prevOC=keepFilters?(document.getElementById('cb-view-oc')?.checked||false):false;
   const prevOM=keepFilters?(document.getElementById('cb-view-om')?.checked||false):false;
 
-  const slotHtml=(sp)=>window._fmMdexSlotHtml(sp,bySpecies,color,binder.id);
-
   const species=fmMdexFilteredSpecies(binder,allSpecies,bySpecies);
-  const gridHtml=species.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px">
-    ${species.map(slotHtml).join('')}
-  </div>`:`<div style="padding:30px;text-align:center;color:var(--muted);font-size:11px">Nenhuma espécie encontrada com esses filtros.</div>`;
+  const gridHtml=fmMdexBuildGridHtml(species,bySpecies,color,binder.id);
+  const fmViewMode=window._fmMdexViewMode||'grid';
+  const fmPageSize=window._fmMdexPageSize||3;
+  const fmViewToggleBtns=`
+    <button onclick="fmMdexSetView('grid','${binder.id}')"
+      style="padding:6px 10px;border-radius:6px;border:1px solid ${fmViewMode==='grid'?color:'var(--border)'};
+             background:${fmViewMode==='grid'?color:'var(--surface2)'};
+             color:${fmViewMode==='grid'?'#fff':'var(--muted)'};font-family:'Space Mono',monospace;font-size:10px;
+             cursor:pointer;font-weight:${fmViewMode==='grid'?700:400};white-space:nowrap">🔲 Grade</button>
+    <button onclick="fmMdexSetView('binder','${binder.id}')"
+      style="padding:6px 10px;border-radius:6px;border:1px solid ${fmViewMode==='binder'?color:'var(--border)'};
+             background:${fmViewMode==='binder'?color:'var(--surface2)'};
+             color:${fmViewMode==='binder'?'#fff':'var(--muted)'};font-family:'Space Mono',monospace;font-size:10px;
+             cursor:pointer;font-weight:${fmViewMode==='binder'?700:400};white-space:nowrap">📖 Fichário físico</button>`;
+  const fmPageSizeBtns=fmViewMode==='binder'?[2,3,4].map(n=>`<button onclick="fmMdexSetPageSize(${n},'${binder.id}')"
+    style="padding:5px 10px;border-radius:6px;border:1px solid ${n===fmPageSize?'var(--gold)':'var(--border)'};
+           background:var(--surface2);color:${n===fmPageSize?'var(--gold)':'var(--muted)'};
+           font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;
+           font-weight:${n===fmPageSize?700:400}">${n}×${n} por página</button>`).join(''):'';
 
   wrap.innerHTML=`
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
@@ -354,6 +414,8 @@ function fmMdexRender(binder,keepFilters){
       preenchida ou vazia — pra escolher qual carta ocupa ela, entre todas as coleções cadastradas no site.
       Vagas preenchidas automaticamente mostram a carta mais valiosa que você já tem daquela espécie.
     </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">${fmViewToggleBtns}</div>
+    ${fmPageSizeBtns?`<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">${fmPageSizeBtns}</div>`:''}
     <div id="fm-mdex-grid">${gridHtml}</div>`;
 
   const qEl=document.getElementById('cb-view-q'); if(qEl) qEl.value=prevQ;

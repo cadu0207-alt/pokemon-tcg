@@ -2697,11 +2697,20 @@ function openCustomBinderView(binder){
   // (openSlotModal, com +/- de quantidade e registro de origem).
   function buildGrid(lay){
     const filteredCards=applyFilters(cards);
-    const bySets={};
-    filteredCards.forEach(c=>{if(!bySets[c._setId])bySets[c._setId]=[];bySets[c._setId].push(c);});
     if(filteredCards.length===0){
       return'<div style="text-align:center;padding:50px;color:var(--muted);font-family:\'Space Mono\',monospace;font-size:11px">Nenhuma carta encontrada.</div>';
     }
+    // NOVO 30/07/2026 (pedido do Eduardo: "opção de visualização de grade e
+    // fichário" também nos personalizados) — modo Fichário físico usa a mesma
+    // renderBinderView() do oficial (páginas NxN), agnóstica de set (recebe
+    // setIdOf explícito), então funciona igual mesmo com cartas de vários sets.
+    if((window._cbViewMode||'grid')==='binder'){
+      return (typeof window.renderBinderView==='function')
+        ? window.renderBinderView(filteredCards, c=>c._setId)
+        : '<div style="text-align:center;padding:30px;color:var(--muted)">Modo Fichário indisponível.</div>';
+    }
+    const bySets={};
+    filteredCards.forEach(c=>{if(!bySets[c._setId])bySets[c._setId]=[];bySets[c._setId].push(c);});
     // lay (2/3/4) agora só define quantas colunas o grid força no máximo —
     // o TAMANHO de cada card continua fixo em --cw/--ch, igual ao oficial.
     return Object.entries(bySets).map(([setId,setCards])=>`
@@ -2737,6 +2746,30 @@ function openCustomBinderView(binder){
            background:${n===layout?color+'22':'var(--surface2)'};
            color:${n===layout?color:'var(--muted)'};font-family:'Space Mono',monospace;font-size:10px;
            cursor:pointer;font-weight:${n===layout?700:400};transition:all .15s">${n}×${n}</button>`).join('');
+
+  // NOVO 30/07/2026 (pedido do Eduardo: "opção de visualização de grade e
+  // fichário" nos personalizados, igual já existe no oficial) — dois botões
+  // que alternam window._cbViewMode; em modo Fichário troca os botões de
+  // coluna (2×2/3×3/4×4) pelo seletor de tamanho de página física (mesma
+  // lógica/global ficBinderSize do fichário oficial).
+  const cbViewMode=window._cbViewMode||'grid';
+  const viewToggleBtns=`
+    <button onclick="cbSetView('grid')"
+      style="padding:5px 12px;border-radius:5px;border:1px solid ${cbViewMode==='grid'?color:'var(--border)'};
+             background:${cbViewMode==='grid'?color:'var(--surface2)'};
+             color:${cbViewMode==='grid'?'#fff':'var(--muted)'};font-family:'Space Mono',monospace;font-size:10px;
+             cursor:pointer;font-weight:${cbViewMode==='grid'?700:400};white-space:nowrap">🔲 Grade</button>
+    <button onclick="cbSetView('binder')"
+      style="padding:5px 12px;border-radius:5px;border:1px solid ${cbViewMode==='binder'?color:'var(--border)'};
+             background:${cbViewMode==='binder'?color:'var(--surface2)'};
+             color:${cbViewMode==='binder'?'#fff':'var(--muted)'};font-family:'Space Mono',monospace;font-size:10px;
+             cursor:pointer;font-weight:${cbViewMode==='binder'?700:400};white-space:nowrap">📖 Fichário físico</button>`;
+  const cbBinderSize=(typeof ficBinderSize!=='undefined'&&ficBinderSize)||3;
+  const binderSizeBtns=[2,3,4].map(n=>`<button id="cb-binder-${n}" onclick="cbSetBinderSize(${n})"
+    style="padding:4px 12px;border-radius:5px;border:1px solid ${n===cbBinderSize?'var(--gold)':'var(--border)'};
+           background:var(--surface2);color:${n===cbBinderSize?'var(--gold)':'var(--muted)'};
+           font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;
+           font-weight:${n===cbBinderSize?700:400}">${n}×${n} por página</button>`).join('');
 
   document.getElementById('bwrap').innerHTML=`
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
@@ -2798,7 +2831,8 @@ function openCustomBinderView(binder){
         style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
                color:var(--text);font-family:'Space Mono',monospace;font-size:10px;cursor:pointer">🖨️ Imprimir</button>
     </div>`;})()}
-    <div style="display:flex;gap:6px;margin-bottom:16px">${layoutBtns}</div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">${viewToggleBtns}</div>
+    <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">${cbViewMode==='binder'?binderSizeBtns:layoutBtns}</div>
     <div id="cb-view-grid">${buildGrid(layout)}</div>`;
   wireGridClicks();
 
@@ -2842,6 +2876,24 @@ function changeCustomLayout(n){
     if(idx>=0)customBinders[idx].layout=n;
   }
   openCustomBinderView(b);
+}
+
+// NOVO 30/07/2026 (pedido do Eduardo: toggle Grade/Fichário físico nos
+// personalizados) — window._cbViewMode persiste entre re-renders da mesma
+// aba; re-abre a view inteira (igual changeCustomLayout) pra reconstruir a
+// toolbar (troca layoutBtns<->binderSizeBtns) e o grid de uma vez.
+function cbSetView(mode){
+  window._cbViewMode=mode;
+  openCustomBinderView(window._cbCurrentBinder);
+}
+
+// Reaproveita setBinderSize() de fichario_patch.js (mesmo global ficBinderSize
+// do fichário oficial) só que com ids próprios (cb-binder-2/3/4) e refresh
+// próprio, pra não interferir na toolbar oficial quando ambas existirem.
+function cbSetBinderSize(n){
+  if(typeof setBinderSize==='function'){
+    setBinderSize(n, ()=>openCustomBinderView(window._cbCurrentBinder), {sizePrefix:'cb-binder-'});
+  }
 }
 
 function openPresetPreview(key){

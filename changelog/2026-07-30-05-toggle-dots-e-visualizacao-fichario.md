@@ -1,0 +1,4 @@
+---
+title: 🔲📖 Grade/Fichário físico em todos + quadradinhos de marcar maiores e funcionando
+---
+Duas melhorias em todos os fichários (oficiais, personalizados e Master Set): 1) a alternância entre visualização em Grade e Fichário físico (páginas com N cartas por linha/coluna), que só existia no fichário oficial, agora também aparece nos fichários personalizados e no Master Set (Nacional/Regional). 2) Os quadradinhos pequenos pra marcar/desmarcar uma cópia (normal/foil) direto na carta, sem abrir o modal, ficaram maiores (14px) e agora funcionam de verdade em qualquer fichário — inclusive os personalizados, onde nunca tinham sido ligados. Bônus: encontramos e corrigimos um bug antigo em que esses quadradinhos, mesmo no fichário oficial, não faziam nada ao clicar (chamavam uma função que nunca existiu no código) — agora usam o mesmo sistema de salvar do resto do site.

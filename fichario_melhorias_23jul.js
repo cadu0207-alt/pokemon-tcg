@@ -448,6 +448,20 @@ function fmInjectBinderSetSummary(){
 // #22/#23 — Presets por geração + Pokédex Nacional (usa pokedex_nacional.js)
 // ─────────────────────────────────────────────────────────────────
 function fmInstallGenPresets(){
+  // DESATIVADO 30/07/2026 (bug real reportado pelo Eduardo): esses presets
+  // (type:'preset') usam getAllCardsWithSet(), que só busca nas coleções que
+  // o usuário tem ATIVAS em myCollections — não no catálogo inteiro — e não
+  // têm nenhuma função de "vaga por espécie" (não dá pra clicar e trocar a
+  // carta, só listam tudo que bate no filtro). O Master Set Nacional/Regional
+  // (fichario_masterdex.js, filter_config.type:'masterdex') resolve os dois
+  // problemas: busca em TODAS as ~143 coleções cadastradas e tem o picker de
+  // troca por vaga. Manter os dois ativos ao mesmo tempo só confundia — o
+  // Eduardo criava um fichário achando que era o Master Set Regional novo,
+  // mas caía nesse preset antigo e via "poucas coleções" + "não consigo
+  // trocar a carta". Fichários JÁ CRIADOS a partir desses presets antigos
+  // continuam funcionando exatamente como antes (não foram tocados) — só
+  // paramos de OFERECER esse caminho pra fichário novo.
+  return;
   if(typeof BINDER_PRESETS==='undefined'||typeof POKEDEX_NACIONAL==='undefined') return;
   if(BINDER_PRESETS.some(p=>p.key==='fm_pokedex_nacional')) return; // já instalado
   const genColors=['#8E24AA','#E91E63','#BF360C','#673AB7','#FFD700','#00BCD4','#FFC107','#607D8B','#3F51B5'];
@@ -1079,34 +1093,63 @@ window.fmOpenArtistsReport=fmOpenArtistsReport;
 // versão na hora, sem abrir o modal. Clicar em qualquer outra parte
 // do card continua abrindo o modal completo (pra qty>1/origem etc).
 // ─────────────────────────────────────────────────────────────────
+// CORRIGIDO 30/07/2026 (pedido do Eduardo: "quero em todos" — fichário
+// oficial E personalizado/fixado): antes dependia de `currentSet`/
+// `getSetCards()`, então só existia na aba de UM set oficial por vez. Agora
+// lê `data-setid` direto do próprio card (todo `.fic-card` carrega isso desde
+// a unificação de tamanho/funções — ver [[project_pokemon_tcg]]) e acha o
+// wrapper dos dots pelo atributo `data-dotswrap` (estável, não pelo texto do
+// style) — funciona em QUALQUER `.fic-card` na tela, seja fichário oficial ou
+// personalizado. Não se aplica ao Master Set/regional (lá cada vaga mostra 1
+// carta escolhida por espécie, sem conceito de "versão" pra marcar aqui).
+// CORRIGIDO 30/07/2026 — BUG REAL achado nesta revisão (não reportado pelo
+// Eduardo, achado auditando o código): esta função chamava `toggleSlot(key)`,
+// que NUNCA existiu em lugar nenhum do projeto — o guard `typeof toggleSlot
+// ==='function'` sempre dava falso, então clicar no quadradinho não fazia
+// ABSOLUTAMENTE NADA, silenciosamente (sem erro no console, sem nada). Trocado
+// por `fmQuickToggleDot()`, que usa `saveSlot()` (a mesma função real que o
+// modal completo usa) — liga/desliga 1 cópia daquela versão de verdade.
+async function fmQuickToggleDot(setId, n, ver){
+  const key = `${setId}:${n}:${ver}`;
+  const already = collected.has(key) || (typeof ficCollection!=='undefined' && ficCollection[key]?.qty>0);
+  if (typeof saveSlot !== 'function') return;
+  await saveSlot(key, already?0:1, []);
+  if (typeof updateDashProgress==='function') updateDashProgress();
+  // Re-renderiza a view certa: dentro de um fichário personalizado/fixado usa
+  // o refresh próprio dele (preserva busca/filtro); no fichário oficial usa
+  // renderBinder() — mesmo padrão de onSaved já usado em openSlotModal.
+  if (window._cbCurrentBinder && typeof window._cbRefreshGrid==='function') window._cbRefreshGrid();
+  else if (typeof renderBinder==='function') renderBinder();
+}
+window.fmQuickToggleDot = fmQuickToggleDot;
+
+// CORRIGIDO 30/07/2026 (pedido do Eduardo: "quero em todos" — fichário
+// oficial E personalizado/fixado): antes dependia de `currentSet`/
+// `getSetCards()`, então só existia na aba de UM set oficial por vez. Agora
+// lê `data-setid` direto do próprio card (todo `.fic-card` carrega isso desde
+// a unificação de tamanho/funções — ver [[project_pokemon_tcg]]) e acha o
+// wrapper dos dots pelo atributo `data-dotswrap` (estável, não pelo texto do
+// style) — funciona em QUALQUER `.fic-card` na tela, seja fichário oficial ou
+// personalizado. Não se aplica ao Master Set/regional (lá cada vaga mostra 1
+// carta escolhida por espécie, sem conceito de "versão" pra marcar aqui).
 function fmInjectQuickToggleDots(){
   if (typeof ficViewMode !== 'undefined' && ficViewMode !== 'grid') return; // só existe na grid
   const wrap = document.getElementById('bwrap');
-  if (!wrap || typeof getSetCards !== 'function' || typeof getSlots !== 'function') return;
-  const cards = getSetCards();
-  wrap.querySelectorAll('.fic-card').forEach(cardEl => {
+  if (!wrap) return;
+  wrap.querySelectorAll('.fic-card[data-setid]').forEach(cardEl => {
     const n = cardEl.dataset.n;
-    if (n === undefined || n === null) return;
-    const card = cards.find(c => String(c.n) === String(n));
-    if (!card) return;
-    const vers = getSlots(card, currentSet).map(s => s.ver);
-    if (vers.length < 1) return;
-    // localiza o wrapper dos dots: <div style="position:absolute;bottom:3px;left:3px;...">
-    const dotsWrap = Array.from(cardEl.querySelectorAll('div')).find(d => {
-      const st = d.getAttribute('style') || '';
-      return st.includes('bottom:3px') && st.includes('left:3px');
-    });
+    const setId = cardEl.dataset.setid;
+    if (n === undefined || n === null || !setId) return;
+    const dotsWrap = cardEl.querySelector('[data-dotswrap]');
     if (!dotsWrap || dotsWrap.__fmWired) return;
     dotsWrap.__fmWired = true;
-    Array.from(dotsWrap.children).forEach((dotEl, i) => {
-      const ver = vers[i];
+    dotsWrap.querySelectorAll('[data-ver]').forEach(dotEl => {
+      const ver = dotEl.dataset.ver;
       if (!ver) return;
-      dotEl.dataset.ver = ver;
       dotEl.style.cursor = 'pointer';
       dotEl.addEventListener('click', function(e){
         e.stopPropagation();
-        const key = `${currentSet}:${n}:${ver}`;
-        if (typeof toggleSlot === 'function') toggleSlot(key);
+        fmQuickToggleDot(setId, n, ver);
       });
     });
   });
@@ -1158,13 +1201,18 @@ if(typeof window.openCustomBinderView==='function'){
   window.openCustomBinderView=function(){
     _fmOrigOCBV.apply(this, arguments);
     try{ fmInjectBinderSetSummary(); }catch(e){}
+    // NOVO 30/07/2026 (pedido do Eduardo: "quero em todos"): quadradinhos de
+    // marcar versão direto no card, agora também no fichário personalizado
+    // (só não se aplica ao Master Set/regional, que não passa por aqui — ver
+    // fichario_masterdex.js, tem UI própria de 1 carta por vaga).
+    try{ fmInjectQuickToggleDots(); }catch(e){}
   };
   // _cbRefreshGrid (busca dentro do fichário personalizado) é reatribuída a
   // cada abertura — reaplica o resumo depois de cada refresh de filtro também
   const _fmWrapRefreshGrid=function(){
     if(typeof window._cbRefreshGrid==='function' && !window._cbRefreshGrid.__fmWrapped){
       const _origRefresh=window._cbRefreshGrid;
-      window._cbRefreshGrid=function(){ _origRefresh.apply(this,arguments); try{fmInjectBinderSetSummary();}catch(e){} };
+      window._cbRefreshGrid=function(){ _origRefresh.apply(this,arguments); try{fmInjectBinderSetSummary();}catch(e){} try{fmInjectQuickToggleDots();}catch(e){} };
       window._cbRefreshGrid.__fmWrapped=true;
     }
   };

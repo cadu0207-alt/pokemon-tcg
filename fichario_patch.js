@@ -190,11 +190,17 @@ function switchFicSet(setId) {
   if (typeof switchSet === 'function' && tab) switchSet(setId, tab);
 }
 
-function setFicView(mode) {
+function setFicView(mode, onRefresh, ids) {
+  // ids opcional: {grid,binder,controls} — permite reusar esta função em toolbars
+  // de fichário personalizado/Master Set que têm seus próprios ids de botão
+  // (retrocompat: sem 'ids', usa os ids do fichário oficial, comportamento igual a antes)
   ficViewMode = mode;
-  const gBtn = document.getElementById('fic-view-grid');
-  const bBtn = document.getElementById('fic-view-binder');
-  const ctrl = document.getElementById('fic-binder-controls');
+  const gid = (ids && ids.grid) || 'fic-view-grid';
+  const bid = (ids && ids.binder) || 'fic-view-binder';
+  const cid = (ids && ids.controls) || 'fic-binder-controls';
+  const gBtn = document.getElementById(gid);
+  const bBtn = document.getElementById(bid);
+  const ctrl = document.getElementById(cid);
   if (gBtn) {
     gBtn.style.background  = mode === 'grid' ? 'var(--accent)' : 'var(--surface)';
     gBtn.style.color       = mode === 'grid' ? '#fff' : 'var(--muted)';
@@ -207,19 +213,20 @@ function setFicView(mode) {
   }
   // CORRIGIDO: era classList.toggle('hidden') — o elemento usa style="display:none"
   if (ctrl) ctrl.style.display = mode === 'binder' ? 'flex' : 'none';
-  renderBinder();
+  if (typeof onRefresh === 'function') onRefresh(); else renderBinder();
 }
 
-function setBinderSize(n) {
+function setBinderSize(n, onRefresh, ids) {
   ficBinderSize = n;
+  const prefix = (ids && ids.sizePrefix) || 'fic-binder-';
   [2, 3, 4].forEach(s => {
-    const btn = document.getElementById('fic-binder-' + s);
+    const btn = document.getElementById(prefix + s);
     if (!btn) return;
     btn.style.borderColor = s === n ? 'var(--gold)' : 'var(--border)';
     btn.style.color       = s === n ? 'var(--gold)' : 'var(--muted)';
     btn.style.fontWeight  = s === n ? '700' : '400';
   });
-  renderBinder();
+  if (typeof onRefresh === 'function') onRefresh(); else renderBinder();
 }
 
 /* ─────────────────────────────────────────────
@@ -317,13 +324,19 @@ function ficCardHtml(c, setId) {
   const border    = allCol ? '2px solid var(--teal)' : hasAny ? '2px solid var(--blue)' : (isImp ? '2px solid var(--gold)' : '2px solid var(--border)');
   const glow      = allCol ? '0 0 14px rgba(6,214,160,.45)' : hasAny ? '0 0 8px rgba(17,138,178,.3)' : (isImp ? '0 0 8px rgba(255,209,102,.3)' : 'none');
 
+  // CORRIGIDO 30/07/2026 (pedido do Eduardo: "aumentar o tamanho, estão
+  // pequenos" + precisa funcionar em QUALQUER fichário, não só o oficial):
+  // quadradinhos maiores (14px, cantos levemente arredondados em vez de bolinha
+  // 8px) e cada um leva `data-ver` direto — fmInjectQuickToggleDots() (em
+  // fichario_melhorias_23jul.js) não precisa mais recalcular a ordem das
+  // versões via getSetCards()/currentSet, só lê o atributo.
   const dots = vers.map(v => {
     const key = `${setId}:${c.n}:${v}`;
     const qty = ficCollection[key]?.qty || (collected.has(key) ? 1 : 0);
     const vc  = VERSIONS.find(x => x.code === v);
-    return `<div style="width:8px;height:8px;border-radius:50%;background:${qty>0?vc.color:'var(--border)'};
-      flex-shrink:0;position:relative" title="${v}×${qty}">
-      ${qty>1?`<span style="position:absolute;top:-4px;right:-4px;font-size:7px;color:${vc.color};font-weight:900">×${qty}</span>`:''}
+    return `<div data-ver="${v}" style="width:14px;height:14px;border-radius:4px;background:${qty>0?vc.color:'var(--border)'};
+      flex-shrink:0;position:relative" title="${v}×${qty} — clique pra marcar/desmarcar 1 cópia">
+      ${qty>1?`<span style="position:absolute;top:-5px;right:-5px;font-size:8px;color:${vc.color};font-weight:900">×${qty}</span>`:''}
     </div>`;
   }).join('');
 
@@ -345,8 +358,8 @@ function ficCardHtml(c, setId) {
         <div style="font-size:6px;color:var(--muted)">${c.type||''}</div>
         <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:${c.color||'#666'}"></div>
       </div>
-      <!-- dots de versão -->
-      <div style="position:absolute;bottom:3px;left:3px;display:flex;gap:3px">${dots}</div>
+      <!-- dots de versão (data-dotswrap: marcador estável pra fmInjectQuickToggleDots achar isto sem depender do texto do style) -->
+      <div data-dotswrap="1" style="position:absolute;bottom:3px;left:3px;display:flex;gap:4px">${dots}</div>
       <!-- check completo -->
       ${allCol?`<div style="position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;
         background:var(--teal);color:var(--bg);font-size:11px;display:flex;align-items:center;
@@ -395,11 +408,17 @@ function renderGridView(cards, setIdOf) {
 /* ─────────────────────────────────────────────
    RENDER — MODO FICHÁRIO FÍSICO (páginas NxN)
 ───────────────────────────────────────────── */
-function renderBinderView(cards) {
+// CORRIGIDO 30/07/2026 (pedido do Eduardo: fichários personalizados/Master
+// Set também precisam do toggle "Grade/Fichário") — mesmo padrão retrocompatível
+// de renderGridView: setIdOf opcional, sem ele usa currentSet pra toda carta
+// (comportamento idêntico a antes).
+function renderBinderView(cards, setIdOf) {
   const N = ficBinderSize;
+  const sIdOf = setIdOf || (() => currentSet);
   const slots = [];
   cards.forEach(c => {
-    getSlots(c, currentSet).forEach(s => slots.push({ card: c, ver: s.ver }));
+    const setId = sIdOf(c);
+    getSlots(c, setId).forEach(s => slots.push({ card: c, ver: s.ver, setId }));
   });
 
   const slotsPerPage = N * N;
@@ -415,8 +434,8 @@ function renderBinderView(cards) {
   function slotHtml(slot) {
     if (!slot) return `<div style="width:${cellSize}px;height:${Math.round(cellSize*1.4)}px;
       border:2px dashed var(--border);border-radius:6px;opacity:.3"></div>`;
-    const { card: c, ver: v } = slot;
-    const key = `${currentSet}:${c.n}:${v}`;
+    const { card: c, ver: v, setId } = slot;
+    const key = `${setId}:${c.n}:${v}`;
     const isCollected = collected.has(key);
     const qty = ficCollection[key]?.qty || (isCollected ? 1 : 0);
     const vc  = VERSIONS.find(x => x.code === v);
@@ -425,14 +444,14 @@ function renderBinderView(cards) {
     const glow       = isCollected ? `0 0 10px ${vc.color}55` : 'none';
 
     return `
-    <div class="fic-card" data-n="${c.n}" data-ver="${v}"
+    <div class="fic-card" data-n="${c.n}" data-ver="${v}" data-setid="${setId}"
          style="width:${cellSize}px;cursor:pointer;position:relative;transition:transform .15s"
          onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform=''">
       <div style="width:${cellSize}px;height:${Math.round(cellSize*1.4)}px;border-radius:6px;
            border:2px solid ${borderColor};box-shadow:${glow};background:#0a0b10;overflow:hidden;position:relative">
-        <img src="${imgUrl(c.n)}" alt="${c.name}" loading="lazy"
+        <img src="${imgUrl(c.n, setId)}" alt="${c.name}" loading="lazy"
              style="width:100%;height:100%;object-fit:cover;filter:${imgFilter}"
-             onerror="handleCardImgError(this,'${currentSet}','${c.n}')">
+             onerror="handleCardImgError(this,'${setId}','${c.n}')">
         <div style="display:none;flex-direction:column;align-items:center;justify-content:center;
              gap:2px;position:absolute;inset:0;padding:4px;text-align:center">
           <div style="font-size:${cellSize>90?7:6}px;color:var(--muted);font-family:'Space Mono',monospace">${c.n}</div>
@@ -771,3 +790,7 @@ window.loadCollection    = loadCollection;
 window.ficCardHtml       = ficCardHtml;
 window.renderGridView    = renderGridView;
 window.imgUrl            = imgUrl;
+// ADICIONADO 30/07/2026: exposto pra fichário personalizado/Master Set poderem
+// oferecer o toggle Grade/Fichário físico (renderBinderView já aceita setIdOf
+// explícito, então funciona com cartas de múltiplos sets misturados).
+window.renderBinderView  = renderBinderView;
