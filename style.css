@@ -39,6 +39,69 @@
   --ch: 157px;
 }
 
+/* ─── TEMA ESCURO ────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:       #0d0f18;
+  --surface:  #111422;
+  --surface2: #181c2e;
+  --surface3: #212540;
+  --border:   #2a2e42;
+  --border2:  #3a3f5c;
+
+  --accent:   #ff4d5a;
+  --accent2:  #ff6b35;
+  --gold:     #ffd166;
+  --teal:     #06d6a0;
+  --blue:     #3fb6dd;
+  --purple:   #c084fc;
+
+  --text:     #eef0fa;
+  --text2:    #c3c8e0;
+  --muted:    #8891b3;
+  --muted2:   #6b7292;
+  --muted-oncard: #a3aac9;
+}
+
+[data-theme="dark"] body {
+  background-image:
+    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+}
+
+[data-theme="dark"] #app-mosaic::after { background: rgba(13,15,24,.9); }
+
+/* transição suave ao alternar tema */
+body, .panel, .kpi, .tab, header, .home-bg, input, select, textarea {
+  transition: background-color .25s ease, border-color .25s ease, color .25s ease;
+}
+
+/* ─── BOTÃO DE TEMA (fixo, topo direito) ─────────────── */
+.theme-toggle-btn {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px 7px 11px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,.14);
+}
+.theme-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+.theme-toggle-btn .tt-icon { font-size: 14px; line-height: 1; }
+@media (max-width: 640px) {
+  .theme-toggle-btn { top: 8px; right: 8px; padding: 6px 10px 6px 9px; font-size: 10px; }
+}
+
 /* ─── RESET ──────────────────────────────────────────── */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 

@@ -670,11 +670,19 @@ function renderGlobalStats() {
 /* ─────────────────────────────────────────────
    IMPRESSÃO / PDF
 ───────────────────────────────────────────── */
-async function printBinder() {
+// CORRIGIDO 29/07/2026 (pedido do Eduardo: "imprimir o pdf" também nos
+// fichários personalizados) — 3 parâmetros opcionais, mesma ideia de
+// retrocompatibilidade usada em renderGridView/openSlotModal: sem eles,
+// comportamento 100% igual a antes (set ativo na aba, currentSet pra toda
+// carta). Com eles, imprime QUALQUER lista de cartas de QUALQUER set(s) —
+// fichário personalizado passa suas próprias cartas (com _setId cada uma)
+// e um resolver de setId por carta.
+async function printBinder(cardsOverride, setIdOf, labelOverride) {
   const N     = ficBinderSize;
-  const cards = getSetCards();
+  const cards = cardsOverride || getSetCards();
+  const sIdOf = setIdOf || (() => currentSet);
   const slots = [];
-  cards.forEach(c => getSlots(c, currentSet).forEach(s => slots.push({ card: c, ver: s.ver })));
+  cards.forEach(c => getSlots(c, sIdOf(c)).forEach(s => slots.push({ card: c, ver: s.ver, setId: sIdOf(c) })));
 
   const slotsPerPage = N * N;
   const CARD_W_MM = 63, CARD_H_MM = 88, GAP_MM = 3;
@@ -684,7 +692,7 @@ async function printBinder() {
   const popup = window.open('', '_blank');
   if (!popup) { alert('Permita pop-ups para imprimir.'); return; }
 
-  popup.document.write(`<!DOCTYPE html><html><head><title>Fichário ${getSetLabel()}</title>
+  popup.document.write(`<!DOCTYPE html><html><head><title>Fichário ${labelOverride || getSetLabel()}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body { background:#fff; font-family:sans-serif; }
@@ -715,14 +723,14 @@ async function printBinder() {
     popup.document.write(`<div class="page">`);
     page.forEach(slot => {
       if (!slot) { popup.document.write(`<div class="slot"><div class="empty">vazio</div></div>`); return; }
-      const { card: c, ver: v } = slot;
-      const key = `${currentSet}:${c.n}:${v}`;
+      const { card: c, ver: v, setId } = slot;
+      const key = `${setId}:${c.n}:${v}`;
       const qty = ficCollection[key]?.qty || (collected.has(key) ? 1 : 0);
       const col = verColors[v] || '#999';
       const grayFilter = qty > 0 ? '' : 'filter:grayscale(100%) opacity(0.4);';
       popup.document.write(`
       <div class="slot">
-        <img src="${imgUrl(c.n)}" alt="${c.name}" style="${grayFilter}"
+        <img src="${imgUrl(c.n, setId)}" alt="${c.name}" style="${grayFilter}"
              onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=empty>${c.n}<br>${c.name}</div>')">
         <div class="badge" style="background:${col}33;color:${col}">${v}${qty>1?' ×'+qty:''}</div>
         <div class="num">${c.n}</div>

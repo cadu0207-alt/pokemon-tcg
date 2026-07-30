@@ -59,18 +59,47 @@ function fmMdexPickDefault(candidates){
   return candidates.reduce((best,cur)=> fmMdexPrice(cur.card)<fmMdexPrice(best.card)?cur:best, candidates[0]);
 }
 
-function fmMdexBuildDefaultCardIds(){
+// CORRIGIDO 29/07/2026 (pedido do Eduardo: "a mesma função de trocar carta
+// do Nacional" pros fichários regionais/temáticos, ex: Kanto, Sinnoh): agora
+// aceita uma lista de espécies explícita, em vez de sempre a Pokédex inteira
+// — assim o mesmo motor de "1 vaga por espécie + picker de troca" serve tanto
+// pro Master Set Nacional (1-1025) quanto pra um Master Set regional (ex:
+// Sinnoh, #387-#493).
+function fmMdexBuildDefaultCardIds(species){
   const byDex=fmMdexCatalogByDex();
   const ids=[];
-  (typeof POKEDEX_NACIONAL!=='undefined'?POKEDEX_NACIONAL:[]).forEach(sp=>{
+  (species||[]).forEach(sp=>{
     const pick=fmMdexPickDefault(byDex[sp.dex]||[]);
     if(pick) ids.push({set:pick.setId, n:String(pick.card.n), dex:sp.dex});
   });
   return ids;
 }
 
-function fmMdexFindBinder(){
+// Faixa de dex de um binder masterdex — sem dexFrom/dexTo (binder criado
+// antes desta mudança, ou o Nacional) = faixa completa 1-1025, mantendo o
+// comportamento de sempre pro Master Set Nacional já existente.
+function fmMdexRangeOf(binder){
+  const cfg=(binder&&binder.filter_config)||{};
+  const total=(typeof POKEDEX_NACIONAL!=='undefined')?POKEDEX_NACIONAL.length:1025;
+  return {from:cfg.dexFrom||1, to:cfg.dexTo||total};
+}
+function fmMdexSpeciesFor(binder){
+  const all=(typeof POKEDEX_NACIONAL!=='undefined')?POKEDEX_NACIONAL:[];
+  const r=fmMdexRangeOf(binder);
+  return all.filter(sp=>sp.dex>=r.from&&sp.dex<=r.to);
+}
+
+// CORRIGIDO 29/07/2026: agora pode existir MAIS DE UM binder masterdex ao
+// mesmo tempo (Nacional + um por região) — precisa de um id explícito pra
+// saber qual. Sem id (chamadas antigas), cai no comportamento de sempre:
+// acha o primeiro binder do tipo 'masterdex' (o Nacional, na prática, já que
+// costuma ser criado primeiro).
+function fmMdexFindBinder(id){
+  if(id) return (customBinders||[]).find(b=>String(b.id)===String(id));
   return (customBinders||[]).find(b=>b.filter_config&&b.filter_config.type==='masterdex');
+}
+function fmMdexAllBinders(){
+  return (customBinders||[]).filter(b=>b.filter_config&&b.filter_config.type==='masterdex');
 }
 
 // NOVO 24/07/2026: preenche automaticamente só as vagas AINDA VAZIAS (nunca
@@ -78,12 +107,14 @@ function fmMdexFindBinder(){
 // o fichário já criado hoje ficou 0/1025 por causa do bug do fmDexOf (ver
 // [[project_pokemon_tcg]]) — sem isso, o único jeito de recuperar seria
 // excluir e criar de novo, perdendo eventuais trocas manuais já feitas.
-async function fmMdexAutoFillEmpty(){
-  const binder=fmMdexFindBinder();
+// CORRIGIDO 29/07/2026: recebe o id do binder (pode ser o Nacional ou
+// qualquer regional) em vez de assumir que só existe um.
+async function fmMdexAutoFillEmpty(binderId){
+  const binder=fmMdexFindBinder(binderId);
   if(!binder) return;
   const byDex=fmMdexCatalogByDex();
   const filled=new Set((binder.card_ids||[]).map(r=>r.dex));
-  const species=(typeof POKEDEX_NACIONAL!=='undefined')?POKEDEX_NACIONAL:[];
+  const species=fmMdexSpeciesFor(binder);
   let added=0;
   species.forEach(sp=>{
     if(filled.has(sp.dex)) return;
@@ -98,11 +129,11 @@ async function fmMdexAutoFillEmpty(){
 window.fmMdexAutoFillEmpty=fmMdexAutoFillEmpty;
 
 async function fmMdexCreate(){
-  const existing=fmMdexFindBinder();
+  const existing=fmMdexAllBinders().find(b=>!b.filter_config.dexFrom&&!b.filter_config.dexTo);
   if(existing){ openCustomBinderView(existing); return; }
   if(typeof POKEDEX_NACIONAL==='undefined'){ alert('Pokédex Nacional ainda não carregou — tenta de novo em 1s.'); return; }
   if(!confirm('Isso vai criar um fichário com 1025 vagas (1 por espécie), já preenchendo com a carta MAIS VALIOSA que você já tiver de cada espécie (ou a mais barata disponível, se não tiver nenhuma). Depois dá pra trocar/esvaziar cada vaga. Continuar?')) return;
-  const card_ids=fmMdexBuildDefaultCardIds();
+  const card_ids=fmMdexBuildDefaultCardIds(POKEDEX_NACIONAL);
   const payload={
     name:'🌐 Master Set Nacional (1025)', emoji:'🌐', layout:3,
     filter_config:{type:'masterdex'}, card_ids, cover_color:'#118ab2'
@@ -112,6 +143,37 @@ async function fmMdexCreate(){
   else alert('Erro ao criar — confira se está logado.');
 }
 window.fmMdexCreate=fmMdexCreate;
+
+// NOVO 29/07/2026 (pedido do Eduardo: "a mesma função de trocar carta do
+// Nacional" pra Kanto, Sinnoh e as outras regiões) — cria um Master Set do
+// mesmo jeito, só que limitado à faixa de dex de UMA geração (usa
+// POKEDEX_GEN_RANGES, já existente em pokedex_nacional.js).
+const FM_MDEX_REGION_META={
+  1:{emoji:'🔴',color:'#E53935'}, 2:{emoji:'🟡',color:'#FDD835'}, 3:{emoji:'🟢',color:'#43A047'},
+  4:{emoji:'💎',color:'#5C6BC0'}, 5:{emoji:'⚫',color:'#424242'}, 6:{emoji:'🌸',color:'#EC407A'},
+  7:{emoji:'🌺',color:'#FF7043'}, 8:{emoji:'⚔️',color:'#7E57C2'}, 9:{emoji:'🍇',color:'#8E24AA'},
+};
+async function fmMdexCreateRegional(gen){
+  if(typeof POKEDEX_GEN_RANGES==='undefined'||typeof POKEDEX_NACIONAL==='undefined'){
+    alert('Pokédex ainda não carregou — tenta de novo em 1s.'); return;
+  }
+  const g=POKEDEX_GEN_RANGES.find(x=>x.gen===gen);
+  if(!g) return;
+  const existing=fmMdexAllBinders().find(b=>b.filter_config.dexFrom===g.from&&b.filter_config.dexTo===g.to);
+  if(existing){ openCustomBinderView(existing); return; }
+  if(!confirm(`Isso vai criar um Master Set de ${g.label} (#${g.from}-#${g.to}, ${g.to-g.from+1} vagas), já preenchendo com a carta mais valiosa que você já tiver de cada espécie (ou a mais barata disponível). Depois dá pra trocar/esvaziar cada vaga. Continuar?`)) return;
+  const species=POKEDEX_NACIONAL.filter(sp=>sp.dex>=g.from&&sp.dex<=g.to);
+  const card_ids=fmMdexBuildDefaultCardIds(species);
+  const meta=FM_MDEX_REGION_META[gen]||{emoji:'🗺️',color:'#118ab2'};
+  const payload={
+    name:`${meta.emoji} Master Set ${g.label} (#${g.from}-${g.to})`, emoji:meta.emoji, layout:3,
+    filter_config:{type:'masterdex',dexFrom:g.from,dexTo:g.to}, card_ids, cover_color:meta.color
+  };
+  const saved=await saveCustomBinder(payload);
+  if(saved) openCustomBinderView(saved);
+  else alert('Erro ao criar — confira se está logado.');
+}
+window.fmMdexCreateRegional=fmMdexCreateRegional;
 
 // ── getBinderCards: resolve 'masterdex' a partir do catálogo INTEIRO ────────
 if(typeof window.getBinderCards==='function'){
@@ -158,17 +220,20 @@ function fmMdexFilteredSpecies(binder,species,bySpecies){
 // o campo de busca não perde o foco a cada letra digitada, igual o padrão
 // _cbRefreshGrid() já usado no fichário personalizado normal.
 function fmMdexRefreshGrid(){
-  const binder=fmMdexFindBinder();
+  // CORRIGIDO 29/07/2026: usa o binder ATUALMENTE aberto (window._cbCurrentBinder,
+  // já rastreado por fmMdexRender), não mais "o primeiro masterdex que achar" —
+  // necessário agora que pode haver Nacional + vários regionais ao mesmo tempo.
+  const binder=fmMdexFindBinder(window._cbCurrentBinder&&window._cbCurrentBinder.id);
   const grid=document.getElementById('fm-mdex-grid');
   if(!binder||!grid||typeof window._fmMdexSlotHtml!=='function') return;
   const cards=getBinderCards(binder);
   const bySpecies={};
   cards.forEach(c=>{ bySpecies[c._dex]=c; });
-  const allSpecies=(typeof POKEDEX_NACIONAL!=='undefined')?POKEDEX_NACIONAL:[];
+  const allSpecies=fmMdexSpeciesFor(binder);
   const species=fmMdexFilteredSpecies(binder,allSpecies,bySpecies);
   const color=binder.cover_color||'#118ab2';
   grid.innerHTML=species.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px">
-    ${species.map(sp=>window._fmMdexSlotHtml(sp,bySpecies,color)).join('')}
+    ${species.map(sp=>window._fmMdexSlotHtml(sp,bySpecies,color,binder.id)).join('')}
   </div>`:`<div style="padding:30px;text-align:center;color:var(--muted);font-size:11px">Nenhuma espécie encontrada com esses filtros.</div>`;
 }
 window.fmMdexRefreshGrid=fmMdexRefreshGrid;
@@ -176,10 +241,10 @@ window.fmMdexRefreshGrid=fmMdexRefreshGrid;
 // Markup de UMA vaga (preenchida ou vazia) — função pura, sem closure, pra
 // poder ser chamada tanto do render completo (fmMdexRender) quanto do
 // refresh parcial (fmMdexRefreshGrid, que só troca #fm-mdex-grid).
-function fmMdexSlotHtml(sp,bySpecies,color){
+function fmMdexSlotHtml(sp,bySpecies,color,binderId){
   const c=bySpecies[sp.dex];
   if(!c){
-    return `<div onclick="fmMdexOpenPicker(${sp.dex})" title="#${sp.dex} ${sp.name} — vaga vazia, clique pra escolher uma carta"
+    return `<div onclick="fmMdexOpenPicker(${sp.dex},'${binderId}')" title="#${sp.dex} ${sp.name} — vaga vazia, clique pra escolher uma carta"
       style="aspect-ratio:2/3;border-radius:8px;border:2px dashed var(--border);cursor:pointer;
              display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
              background:var(--surface2);padding:4px;text-align:center;transition:all .15s"
@@ -191,7 +256,7 @@ function fmMdexSlotHtml(sp,bySpecies,color){
   }
   const owned=fmMdexIsOwned(c._setId,c);
   const imgSrc=(typeof getBinderImg==='function')?getBinderImg(c,c._setId):'';
-  return `<div onclick="fmMdexOpenPicker(${sp.dex})" title="#${sp.dex} ${sp.name} (${c._setId.toUpperCase()} #${c.n}) — clique pra trocar"
+  return `<div onclick="fmMdexOpenPicker(${sp.dex},'${binderId}')" title="#${sp.dex} ${sp.name} (${c._setId.toUpperCase()} #${c.n}) — clique pra trocar"
     style="aspect-ratio:2/3;border-radius:8px;overflow:hidden;cursor:pointer;position:relative;
            border:1px solid ${owned?color:'var(--border)'};box-shadow:${owned?`0 0 10px ${color}55`:'none'};transition:all .15s"
     onmouseover="this.style.transform='translateY(-2px) scale(1.03)'" onmouseout="this.style.transform=''">
@@ -221,7 +286,9 @@ function fmMdexRender(binder,keepFilters){
   cards.forEach(c=>{ bySpecies[c._dex]=c; });
   let colCount=0;
   cards.forEach(c=>{ if(fmMdexIsOwned(c._setId,c)) colCount++; });
-  const allSpecies=(typeof POKEDEX_NACIONAL!=='undefined')?POKEDEX_NACIONAL:[];
+  // CORRIGIDO 29/07/2026: faixa de espécies do PRÓPRIO binder (Nacional = 1-1025,
+  // regional = só a geração dele) em vez de sempre a Pokédex inteira.
+  const allSpecies=fmMdexSpeciesFor(binder);
   const totalSlots=allSpecies.length||1025;
   const pct=totalSlots?Math.round(colCount/totalSlots*100):0;
   const color=binder.cover_color||'#118ab2';
@@ -233,7 +300,7 @@ function fmMdexRender(binder,keepFilters){
   const prevOC=keepFilters?(document.getElementById('cb-view-oc')?.checked||false):false;
   const prevOM=keepFilters?(document.getElementById('cb-view-om')?.checked||false):false;
 
-  const slotHtml=(sp)=>window._fmMdexSlotHtml(sp,bySpecies,color);
+  const slotHtml=(sp)=>window._fmMdexSlotHtml(sp,bySpecies,color,binder.id);
 
   const species=fmMdexFilteredSpecies(binder,allSpecies,bySpecies);
   const gridHtml=species.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px">
@@ -275,12 +342,15 @@ function fmMdexRender(binder,keepFilters){
       <button onclick='shareCustomBinderPrompt(${safeJSON(binder)})' title="Gera um link (e QR code) pra compartilhar este Master Set"
         style="padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
                color:var(--text);font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap">🔗 Compartilhar</button>
-      <button onclick="fmMdexAutoFillEmpty()" title="Preenche as vagas ainda vazias com a carta mais valiosa que você já tem de cada espécie (ou a mais barata disponível, se não tiver nenhuma) — nunca mexe numa vaga que você já escolheu na mão"
+      <button onclick="fmMdexPrint('${binder.id}')" title="Gera um PDF pra imprimir (páginas NxN, igual o fichário oficial)"
+        style="padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+               color:var(--text);font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap">🖨️ Imprimir</button>
+      <button onclick="fmMdexAutoFillEmpty('${binder.id}')" title="Preenche as vagas ainda vazias com a carta mais valiosa que você já tem de cada espécie (ou a mais barata disponível, se não tiver nenhuma) — nunca mexe numa vaga que você já escolheu na mão"
         style="padding:6px 10px;background:${color};border:none;border-radius:6px;color:#fff;
                font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap">🔄 Preencher vagas vazias</button>
     </div>
     <div style="font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.5">
-      Uma vaga por espécie, na ordem oficial da Pokédex Nacional (#1–#${totalSlots}). Clique em qualquer vaga —
+      Uma vaga por espécie, na faixa #${allSpecies[0]?.dex??1}–#${allSpecies[allSpecies.length-1]?.dex??totalSlots} da Pokédex. Clique em qualquer vaga —
       preenchida ou vazia — pra escolher qual carta ocupa ela, entre todas as coleções cadastradas no site.
       Vagas preenchidas automaticamente mostram a carta mais valiosa que você já tem daquela espécie.
     </div>
@@ -303,18 +373,21 @@ function fmMdexEnsurePickerModal(){
   </div>`;
   document.body.appendChild(ov);
 }
-function fmMdexOpenPicker(dex){
+// CORRIGIDO 29/07/2026: agora recebe binderId — a mesma vaga (mesmo #dex)
+// pode existir em MAIS de um binder ao mesmo tempo (Nacional + regional que
+// cobre aquela espécie), então precisa saber em qual está mexendo.
+function fmMdexOpenPicker(dex,binderId){
   fmMdexEnsurePickerModal();
   const byDex=fmMdexCatalogByDex();
   const cands=(byDex[dex]||[]).slice().sort((a,b)=>fmMdexPrice(a.card)-fmMdexPrice(b.card));
   const sp=(typeof POKEDEX_NACIONAL!=='undefined'?POKEDEX_NACIONAL:[]).find(s=>s.dex===dex);
-  const binder=fmMdexFindBinder();
+  const binder=fmMdexFindBinder(binderId);
   const current=binder?(binder.card_ids||[]).find(r=>r.dex===dex):null;
   const rows=cands.map(x=>{
     const owned=fmMdexIsOwned(x.setId,x.card);
     const isCurrent=current&&current.set===x.setId&&String(current.n)===String(x.card.n);
     const price=x.card.price?('R$'+x.card.price.toFixed(2).replace('.',',')):'—';
-    return `<div onclick="fmMdexChooseCard(${dex},'${x.setId}','${x.card.n}')"
+    return `<div onclick="fmMdexChooseCard(${dex},'${x.setId}','${x.card.n}','${binderId}')"
       style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:6px;cursor:pointer;
              background:${isCurrent?'var(--surface3)':'transparent'};border:1px solid ${isCurrent?'var(--accent)':'transparent'}">
       <img src="${(typeof getBinderImg==='function')?getBinderImg(x.card,x.setId):''}" style="width:36px;height:50px;object-fit:cover;border-radius:4px;flex-shrink:0">
@@ -335,7 +408,7 @@ function fmMdexOpenPicker(dex){
     <div style="max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
       ${rows||'<div style="padding:16px;text-align:center;color:var(--muted);font-size:11px">Nenhuma carta cadastrada pra essa espécie ainda em nenhuma coleção do site.</div>'}
     </div>
-    ${current?`<button onclick="fmMdexRemoveSlot(${dex})" style="margin-top:12px;width:100%;padding:8px;
+    ${current?`<button onclick="fmMdexRemoveSlot(${dex},'${binderId}')" style="margin-top:12px;width:100%;padding:8px;
       background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--accent);
       font-family:'Space Mono',monospace;font-size:10px;cursor:pointer">🗑️ deixar esta vaga vazia</button>`:''}`;
   openModal('mmdexpick');
@@ -347,8 +420,8 @@ async function fmMdexPersist(binder){
   const idx=(customBinders||[]).findIndex(b=>b.id===binder.id);
   if(idx>=0) customBinders[idx]=binder;
 }
-async function fmMdexChooseCard(dex,setId,n){
-  const binder=fmMdexFindBinder();
+async function fmMdexChooseCard(dex,setId,n,binderId){
+  const binder=fmMdexFindBinder(binderId);
   if(!binder) return;
   binder.card_ids=(binder.card_ids||[]).filter(r=>r.dex!==dex);
   binder.card_ids.push({set:setId,n:String(n),dex});
@@ -357,8 +430,8 @@ async function fmMdexChooseCard(dex,setId,n){
   fmMdexRender(binder,true);
 }
 window.fmMdexChooseCard=fmMdexChooseCard;
-async function fmMdexRemoveSlot(dex){
-  const binder=fmMdexFindBinder();
+async function fmMdexRemoveSlot(dex,binderId){
+  const binder=fmMdexFindBinder(binderId);
   if(!binder) return;
   binder.card_ids=(binder.card_ids||[]).filter(r=>r.dex!==dex);
   await fmMdexPersist(binder);
@@ -366,6 +439,18 @@ async function fmMdexRemoveSlot(dex){
   fmMdexRender(binder,true);
 }
 window.fmMdexRemoveSlot=fmMdexRemoveSlot;
+
+// NOVO 29/07/2026 (pedido do Eduardo: "imprimir o pdf" pros fichários
+// personalizados também) — reaproveita o mesmo printBinder() do fichário
+// oficial (fichario_patch.js), que agora aceita cartas+setId explícitos
+// em vez de só currentSet/getSetCards().
+function fmMdexPrint(binderId){
+  const binder=fmMdexFindBinder(binderId);
+  if(!binder||typeof printBinder!=='function') return;
+  const cards=getBinderCards(binder); // já vem com _setId por carta
+  printBinder(cards, c=>c._setId, binder.name);
+}
+window.fmMdexPrint=fmMdexPrint;
 
 // ── openCustomBinderView: desvia pro render especial se for masterdex ───────
 if(typeof window.openCustomBinderView==='function'){
@@ -384,55 +469,85 @@ if(typeof window.openCustomBinderView==='function'){
 // ── Entrada dedicada na Home de "Meus Fichários" (fora da grade genérica,
 // pra não expor Editar/Excluir padrão — que não entendem filter_config
 // type:'masterdex' — em cima dele) ──────────────────────────────────────────
+// CORRIGIDO 29/07/2026 (pedido do Eduardo: "a mesma função... pra Kanto,
+// Sinnoh e etc") — antes só existia UM Master Set possível (o Nacional).
+// Agora lista TODOS os já criados (Nacional + qualquer regional) como
+// cards, e oferece criar um novo regional por geração (Kanto, Johto, Hoenn,
+// Sinnoh, Unova, Kalos, Alola, Galar/Hisui, Paldea) além do Nacional.
+function fmMdexHomeCardHtml(binder){
+  const cards=getBinderCards(binder);
+  let col=0; cards.forEach(c=>{ if(fmMdexIsOwned(c._setId,c)) col++; });
+  const total=fmMdexSpeciesFor(binder).length;
+  const pct=total?Math.round(col/total*100):0;
+  const cor=binder.cover_color||'#118ab2';
+  return `<div style="padding:16px;border-radius:10px;border:1px solid var(--border);
+         background:var(--surface2);border-left:3px solid ${cor};display:flex;align-items:center;gap:14px">
+    <div onclick='openCustomBinderView(${safeJSON(binder)})' style="font-size:30px;cursor:pointer">${binder.emoji||'🌐'}</div>
+    <div onclick='openCustomBinderView(${safeJSON(binder)})' style="flex:1;cursor:pointer">
+      <div style="font-size:13px;font-weight:700;color:var(--text)">${binder.name}</div>
+      <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${pct}% das ${total} espécies coletadas · ${cards.length}/${total} vagas preenchidas — clique pra continuar</div>
+    </div>
+    <button onclick="deleteCustomBinder('${binder.id}')" title="Excluir Master Set"
+      style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:4px;opacity:.6"
+      onmouseover="this.style.opacity='1';this.style.color='var(--accent)'"
+      onmouseout="this.style.opacity='.6';this.style.color='var(--muted)'">✕</button>
+  </div>`;
+}
 function fmMdexInjectHomeEntry(){
   const wrap=document.getElementById('bwrap');
   if(!wrap||!wrap.firstElementChild) return;
-  const existing=fmMdexFindBinder();
+  const existingAll=fmMdexAllBinders();
+  const hasNacional=existingAll.some(b=>!b.filter_config.dexFrom&&!b.filter_config.dexTo);
   const box=document.createElement('div');
   box.id='fm-mdex-entry';
   box.style.cssText='margin:18px 0 28px';
-  if(existing){
-    const cards=getBinderCards(existing);
-    let col=0; cards.forEach(c=>{ if(fmMdexIsOwned(c._setId,c)) col++; });
-    const total=(typeof POKEDEX_NACIONAL!=='undefined')?POKEDEX_NACIONAL.length:1025;
-    const pct=total?Math.round(col/total*100):0;
-    box.innerHTML=`<div style="padding:16px;border-radius:10px;border:1px solid var(--border);
-           background:var(--surface2);border-left:3px solid #118ab2;display:flex;align-items:center;gap:14px">
-      <div onclick='openCustomBinderView(${safeJSON(existing)})' style="font-size:30px;cursor:pointer">🌐</div>
-      <div onclick='openCustomBinderView(${safeJSON(existing)})' style="flex:1;cursor:pointer">
-        <div style="font-size:13px;font-weight:700;color:var(--text)">${existing.name}</div>
-        <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${pct}% das ${total} espécies coletadas · ${cards.length}/${total} vagas preenchidas — clique pra continuar</div>
-      </div>
-      <button onclick="deleteCustomBinder('${existing.id}')" title="Excluir Master Set"
-        style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:4px;opacity:.6"
-        onmouseover="this.style.opacity='1';this.style.color='var(--accent)'"
-        onmouseout="this.style.opacity='.6';this.style.color='var(--muted)'">✕</button>
-    </div>`;
-  }else{
-    box.innerHTML=`<div onclick="fmMdexCreate()"
+
+  const cardsHtml=existingAll.map(fmMdexHomeCardHtml).join('');
+  const createNacionalHtml=hasNacional?'':`<div onclick="fmMdexCreate()"
       style="padding:16px;border-radius:10px;cursor:pointer;border:1px dashed #118ab2;
-             background:var(--surface2);display:flex;align-items:center;gap:14px">
+             background:var(--surface2);display:flex;align-items:center;gap:14px;margin-bottom:10px">
       <div style="font-size:30px">🌐</div>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:700;color:var(--text)">Criar Master Set Nacional (1–1025)</div>
         <div style="font-size:9px;color:var(--muted);line-height:1.5">Uma vaga por espécie, na ordem oficial da Pokédex — preenche automaticamente com a carta MAIS VALIOSA que você já tem de cada espécie (ou a mais barata disponível, se não tiver nenhuma), e você pode trocar ou esvaziar qualquer vaga depois.</div>
       </div>
     </div>`;
-  }
+
+  const regionsHtml=(typeof POKEDEX_GEN_RANGES!=='undefined'?POKEDEX_GEN_RANGES:[])
+    .filter(g=>!existingAll.some(b=>b.filter_config.dexFrom===g.from&&b.filter_config.dexTo===g.to))
+    .map(g=>{
+      const meta=FM_MDEX_REGION_META[g.gen]||{emoji:'🗺️',color:'#118ab2'};
+      return `<button onclick="fmMdexCreateRegional(${g.gen})"
+        style="padding:8px 12px;border-radius:8px;border:1px dashed ${meta.color};background:var(--surface2);
+               color:var(--text);font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;
+               display:flex;align-items:center;gap:6px;white-space:nowrap">${meta.emoji} ${g.label} <span style="color:var(--muted)">#${g.from}-${g.to}</span></button>`;
+    }).join('');
+
+  box.innerHTML=`
+    ${createNacionalHtml}
+    ${cardsHtml}
+    ${regionsHtml?`<div style="margin-top:10px">
+      <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:1px;margin-bottom:6px">
+        + CRIAR MASTER SET REGIONAL (1 vaga por espécie, só daquela geração)</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${regionsHtml}</div>
+    </div>`:''}`;
   wrap.firstElementChild.insertAdjacentElement('afterend', box);
 }
 if(typeof window.renderCustomBindersHome==='function'){
   const _fmOrigRCBHmdex=window.renderCustomBindersHome;
   window.renderCustomBindersHome=function(){
-    // Esconde o Master Set da grade genérica de "Meus Fichários" durante o
-    // render original (que não sabe renderizar/editar filter_config tipo
-    // 'masterdex') — evita ele aparecer duplicado (uma vez normal + uma vez
-    // na entrada dedicada abaixo) e evita expor "✏️ Editar" genérico nele.
-    const mdex=fmMdexFindBinder();
-    let removedIdx=-1, removed=null;
-    if(mdex){ removedIdx=customBinders.indexOf(mdex); if(removedIdx>=0) removed=customBinders.splice(removedIdx,1)[0]; }
+    // CORRIGIDO 29/07/2026: agora pode haver VÁRIOS binders masterdex
+    // (Nacional + um por região) — esconde todos da grade genérica durante
+    // o render original (que não entende filter_config tipo 'masterdex') e
+    // recoloca todos depois, na mesma posição de antes.
+    const removidos=[]; // [{idx,binder}]
+    fmMdexAllBinders().forEach(b=>{
+      const idx=customBinders.indexOf(b);
+      if(idx>=0) removidos.push({idx,binder:customBinders.splice(idx,1)[0]});
+    });
     _fmOrigRCBHmdex.apply(this,arguments);
-    if(removed) customBinders.splice(removedIdx,0,removed);
+    // reinsere na ordem original (índices crescentes)
+    removidos.sort((a,b)=>a.idx-b.idx).forEach(r=>customBinders.splice(r.idx,0,r.binder));
     try{ fmMdexInjectHomeEntry(); }catch(e){}
   };
 }

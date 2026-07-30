@@ -27,6 +27,16 @@
 <meta name="twitter:image" content="https://mydecktcg.com.br/icon-512.png">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<script>
+(function(){
+  var t = localStorage.getItem('mydeck-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', t);
+  document.addEventListener('DOMContentLoaded', function(){
+    var m = document.querySelector('meta[name="theme-color"]');
+    if(m) m.setAttribute('content', t === 'dark' ? '#0d0f18' : '#f7f7fa');
+  });
+})();
+</script>
 <style>
 @keyframes cardFloat {
   0%   { transform: translateY(0px)   rotate(-0.6deg); filter:brightness(.8); }
@@ -93,6 +103,10 @@
 </head>
 <body>
 
+<button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Alternar tema claro/escuro">
+  <span class="tt-icon" id="theme-toggle-icon">🌙</span><span id="theme-toggle-label">Tema</span>
+</button>
+
 <!-- ===== PÁGINA INICIAL ===== -->
 <div id="pg-home" class="page active">
   <div class="home-bg">
@@ -141,10 +155,10 @@
       <span id="status-dot" class="dot dot-warning"></span>
       <span id="status-txt">Conectando...</span>
       <span id="usd-brl" style="margin-left:14px;opacity:.6"></span>
-      <div id="user-chip" style="display:none;align-items:center;gap:8px;margin-left:12px;padding:4px 10px 4px 4px;background:#f0f1f6;border:1px solid #dcdfe8;border-radius:30px">
-        <img id="user-avatar" style="width:26px;height:26px;border-radius:50%;object-fit:cover;background:#dcdfe8" src="" onerror="this.style.display='none'">
-        <span id="user-display-name" style="font-family:'Space Mono',monospace;font-size:10px;color:#1c1f2e;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-        <button onclick="signOut()" title="Sair" style="background:none;border:none;color:#6b7288;font-size:14px;cursor:pointer;padding:0;line-height:1" onmouseover="this.style.color='#e63946'" onmouseout="this.style.color='#6b7288'">⏻</button>
+      <div id="user-chip" style="display:none;align-items:center;gap:8px;margin-left:12px;padding:4px 10px 4px 4px;background:var(--surface2);border:1px solid var(--border);border-radius:30px">
+        <img id="user-avatar" style="width:26px;height:26px;border-radius:50%;object-fit:cover;background:var(--border)" src="" onerror="this.style.display='none'">
+        <span id="user-display-name" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+        <button onclick="signOut()" title="Sair" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0;line-height:1" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">⏻</button>
       </div>
     </div>
   </header>

@@ -428,6 +428,24 @@ async function toggleSlot(key){
   renderBinder();updateDashProgress();
 }
 
+// ── TEMA CLARO/ESCURO ───────────────────────────────────────────
+function applyThemeIcon(t){
+  const icon=document.getElementById('theme-toggle-icon');
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(icon) icon.textContent = t==='dark' ? '☀️' : '🌙';
+  if(meta) meta.setAttribute('content', t==='dark' ? '#0d0f18' : '#f7f7fa');
+}
+function toggleTheme(){
+  const cur=document.documentElement.getAttribute('data-theme')||'light';
+  const next=cur==='dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  localStorage.setItem('mydeck-theme',next);
+  applyThemeIcon(next);
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  applyThemeIcon(document.documentElement.getAttribute('data-theme')||'light');
+});
+
 // ── PÁGINAS / ABAS ───────────────────────────────────────────────
 function goPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -2748,7 +2766,15 @@ function openCustomBinderView(binder){
                    color:var(--muted);font-family:'Space Mono',monospace;font-size:10px;cursor:pointer">✏️ Editar</button>`
       }
     </div>
-    ${isPreview?'':`
+    ${isPreview?'':(()=>{
+      // CORRIGIDO 29/07/2026 (pedido do Eduardo: "fazer exatamente assim pra
+      // todos os fichários personalizados, inclusive Kanto/Sinnoh/etc, igual
+      // já fazemos no fichário nacional") — o Master Set Nacional já tinha
+      // ganhado botão de fixar aba + compartilhar (24/07/2026); esta toolbar
+      // é a mesma usada por TODO fichário personalizado (preset regional,
+      // manual, temático), então generalizando aqui cobre todos de uma vez.
+      const pinned=(typeof isBinderPinned==='function')&&binder.id&&isBinderPinned(binder.id);
+      return `
     <div class="bctl" style="gap:10px;flex-wrap:wrap;margin-bottom:10px">
       <input class="bsrch" id="cb-view-q" placeholder="Buscar carta..." oninput="_cbRefreshGrid()"
         style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
@@ -2757,10 +2783,21 @@ function openCustomBinderView(binder){
         <input type="checkbox" id="cb-view-oc" onchange="_cbRefreshGrid()">Só coletadas</label>
       <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer">
         <input type="checkbox" id="cb-view-om" onchange="_cbRefreshGrid()">Só faltantes</label>
+      ${binder.id?`<button onclick="toggleBinderPinned('${binder.id}')"
+        title="${pinned?'Remover da aba principal':'Fixar na aba principal (aparece junto com ME04, SV1 etc.)'}"
+        style="padding:7px 12px;background:${pinned?color:'var(--surface2)'};border:1px solid ${pinned?color:'var(--border)'};
+               border-radius:6px;color:${pinned?'#fff':'var(--text)'};font-family:'Space Mono',monospace;
+               font-size:10px;cursor:pointer;white-space:nowrap">📌 ${pinned?'Fixado':'Fixar aba'}</button>`:''}
       <button onclick="exportCustomBinderText(${safeJSON(binder)})"
         style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
                color:var(--text);font-family:'Space Mono',monospace;font-size:10px;cursor:pointer">📋 Copiar lista</button>
-    </div>`}
+      ${binder.id?`<button onclick="shareCustomBinderPrompt(${safeJSON(binder)})"
+        style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+               color:var(--text);font-family:'Space Mono',monospace;font-size:10px;cursor:pointer">🔗 Compartilhar</button>`:''}
+      <button onclick="cbPrintBinder(${safeJSON(binder)})"
+        style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+               color:var(--text);font-family:'Space Mono',monospace;font-size:10px;cursor:pointer">🖨️ Imprimir</button>
+    </div>`;})()}
     <div style="display:flex;gap:6px;margin-bottom:16px">${layoutBtns}</div>
     <div id="cb-view-grid">${buildGrid(layout)}</div>`;
   wireGridClicks();
@@ -2782,6 +2819,16 @@ function cbOpenAddCard(binder){
   openCreateBinderModal(binder);
   cbPickFilterType('manual');
   setTimeout(()=>document.getElementById('cb-msearch')?.focus(),50);
+}
+
+// NOVO 29/07/2026 (pedido do Eduardo: "imprimir o pdf" pros fichários
+// personalizados também) — reaproveita o printBinder() de fichario_patch.js,
+// que agora aceita cartas+setId explícitos (mesma ideia usada em ficCardHtml/
+// openSlotModal pra tudo funcionar com cartas de vários sets misturados).
+function cbPrintBinder(binder){
+  if(typeof binder==='string')binder=JSON.parse(binder);
+  const cards=getBinderCards(binder);
+  if(typeof printBinder==='function') printBinder(cards, c=>c._setId, binder.name);
 }
 
 function changeCustomLayout(n){
