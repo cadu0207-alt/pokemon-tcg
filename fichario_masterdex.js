@@ -510,7 +510,10 @@ function fmMdexPrint(binderId){
   const binder=fmMdexFindBinder(binderId);
   if(!binder||typeof printBinder!=='function') return;
   const cards=getBinderCards(binder); // já vem com _setId por carta
-  printBinder(cards, c=>c._setId, binder.name);
+  // NOVO 30/07/2026 (pedido do Eduardo: imprimir só o que a tela está
+  // mostrando — respeita "Só coletadas"/"Só faltantes" também no Master Set)
+  const onlyState=typeof _printOnlyState==='function'?_printOnlyState():undefined;
+  printBinder(cards, c=>c._setId, binder.name, onlyState);
 }
 window.fmMdexPrint=fmMdexPrint;
 

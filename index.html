@@ -377,7 +377,7 @@
           <button id="fic-more-btn" class="fic-btn" onclick="ficToggleMoreMenu(event)">⋯ Mais ações</button>
           <div id="fic-more-menu" class="fic-more-menu">
             <button class="fic-more-item" onclick="exportBinderText();ficCloseMoreMenu()">📋 Copiar lista (texto)</button>
-            <button id="fic-print" class="fic-more-item" onclick="printBinder();ficCloseMoreMenu()">🖨️ Imprimir PDF</button>
+            <button id="fic-print" class="fic-more-item" onclick="printBinder(null,null,null,typeof _printOnlyState==='function'?_printOnlyState():undefined);ficCloseMoreMenu()">🖨️ Imprimir PDF</button>
             <button id="fic-share" class="fic-more-item" onclick="openShareModal();ficCloseMoreMenu()">🔗 Compartilhar</button>
             <button id="fic-progress-card" class="fic-more-item" onclick="fmDownloadProgressCard();ficCloseMoreMenu()">🖼️ Cartão de progresso (PNG)</button>
             <button id="fic-artists-report" class="fic-more-item" onclick="fmOpenArtistsReport();ficCloseMoreMenu()">🎨 Meus artistas (todas as coleções)</button>

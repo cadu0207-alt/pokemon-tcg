@@ -81,7 +81,18 @@ function loadCollection() {
    localStorage continua sendo atualizado como cache local.
 ───────────────────────────────────────────── */
 async function saveSlot(key, qty, origins) {
-  if (!uid()) return; // não salva sem login
+  // CORRIGIDO 30/07/2026 (bug relatado: "marco a carta mas não salva" — num
+  // caso testado com SV7/Coroas Estelares, mas a causa não é do set, é
+  // genérica) — antes retornava aqui SEM NENHUM aviso quando !uid(). O modal
+  // fecha normal (saveSlotModal chama closeSlotModal() de qualquer jeito),
+  // dando a impressão de que salvou, mas nada persiste — some ao recarregar
+  // a página. Acontece se currentUser ainda não carregou (corrida entre o
+  // check de auth e o clique) ou se a sessão expirou no meio do uso.
+  if (!uid()) {
+    if (typeof setStatus === 'function') setStatus('Faça login pra salvar sua coleção', 'error');
+    alert('Não foi possível salvar — parece que você não está logado (ou sua sessão expirou). Faça login de novo e tente marcar a carta.');
+    return;
+  }
   const wasCollected = collected.has(key);
   const prevEntry = (typeof collectedQty !== 'undefined') ? collectedQty.get(key) : null;
   let error = null;
@@ -702,12 +713,40 @@ function renderGlobalStats() {
 // carta). Com eles, imprime QUALQUER lista de cartas de QUALQUER set(s) —
 // fichário personalizado passa suas próprias cartas (com _setId cada uma)
 // e um resolver de setId por carta.
-async function printBinder(cardsOverride, setIdOf, labelOverride) {
+// NOVO 30/07/2026 (pedido do Eduardo: "seria legal se pudesse escolher quais
+// imprimir, por exemplo se escolher visualizar só as faltantes, poder
+// imprimir só as faltantes") — lê o MESMO checkbox "Só coletadas"/"Só
+// faltantes" que já existe na tela (oficial usa #fc/#fm, personalizado e
+// Master Set usam #cb-view-oc/#cb-view-om), sem precisar de UI nova.
+function _printOnlyState() {
+  const oc = document.getElementById('fc')?.checked ?? document.getElementById('cb-view-oc')?.checked ?? false;
+  const om = document.getElementById('fm')?.checked ?? document.getElementById('cb-view-om')?.checked ?? false;
+  if (om) return 'missing';
+  if (oc) return 'collected';
+  return undefined; // sem filtro — imprime tudo, igual sempre foi
+}
+window._printOnlyState = _printOnlyState;
+
+async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
   const N     = ficBinderSize;
   const cards = cardsOverride || getSetCards();
   const sIdOf = setIdOf || (() => currentSet);
-  const slots = [];
+  let slots = [];
   cards.forEach(c => getSlots(c, sIdOf(c)).forEach(s => slots.push({ card: c, ver: s.ver, setId: sIdOf(c) })));
+
+  // Filtra ANTES de paginar — imprime só o que o filtro pede, sem página
+  // vazia sobrando pros slots que ficaram de fora.
+  if (onlyState === 'missing' || onlyState === 'collected') {
+    slots = slots.filter(slot => {
+      const key = `${slot.setId}:${slot.card.n}:${slot.ver}`;
+      const qty = ficCollection[key]?.qty || (collected.has(key) ? 1 : 0);
+      return onlyState === 'missing' ? qty <= 0 : qty > 0;
+    });
+  }
+  if (slots.length === 0) {
+    alert('Nenhuma carta encontrada com esse filtro pra imprimir.');
+    return;
+  }
 
   const slotsPerPage = N * N;
   const CARD_W_MM = 63, CARD_H_MM = 88, GAP_MM = 3;
@@ -734,8 +773,9 @@ async function printBinder(cardsOverride, setIdOf, labelOverride) {
     @media print { html,body{width:${PAGE_W}mm;} .page{page-break-after:always;break-after:page;} .no-print{display:none!important;} }
   </style></head><body>`);
 
+  const onlyLabel = onlyState === 'missing' ? ' · só faltantes' : onlyState === 'collected' ? ' · só coletadas' : '';
   popup.document.write(`<div class="no-print" style="position:fixed;top:10px;right:10px;z-index:999;display:flex;gap:8px">
-    <span style="font-size:12px;color:#666;align-self:center">${slots.length} slots · ${Math.ceil(slots.length/slotsPerPage)} páginas</span>
+    <span style="font-size:12px;color:#666;align-self:center">${slots.length} slots${onlyLabel} · ${Math.ceil(slots.length/slotsPerPage)} páginas</span>
     <button onclick="window.print()" style="background:#06d6a0;color:#000;border:none;padding:8px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">🖨️ Imprimir</button>
     <button onclick="window.close()" style="background:#1e2436;color:#aaa;border:none;padding:8px 12px;border-radius:6px;cursor:pointer">✕</button>
   </div>`);

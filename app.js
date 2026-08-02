@@ -335,7 +335,24 @@ function getSlots(c,setId){
   // existiam em produção (evita orfanar coleção já marcada — ver
   // [[feedback_coding]]); 'Rara Ultra' fica de fora de propósito, igual sempre
   // esteve (cai no N+RH do final, sem mudança).
-  if(r==='Rara'||r==='Rara Holo'||r==='Rara Brilhante'||r==='Rara Ilustrada'||r==='Rara Ilustrada Especial'){
+  // CORRIGIDO 30/07/2026 (bug relatado pelo Eduardo: "vários fichários de
+  // coleções de 2024 pra trás não estão salvando as cartas marcadas") — a
+  // condição abaixo (r==='Rara') foi escrita pensando SÓ em sets modernos
+  // (ME/SV), onde "Rara" nasce impressa só em holo. Mas nos sets legados
+  // (SM/XY/BW/HGSS/DP/EX/Classic) "Rara"/"Rare" é a raridade comum antiga —
+  // NÃO nasce holo, tem print Normal + reverse holo igual Comum/Incomum
+  // (só "Rara Holo", que é um rótulo DIFERENTE, é que nasce holo mesmo nos
+  // sets antigos). Como esta condição batia com r==='Rara' em QUALQUER set,
+  // as 2140+ cartas "Rara" dos sets legados (populados 24/07/2026) perderam
+  // o slot N do dia pro outro — quem marcava a versão Normal via não via
+  // opção nenhuma de N pra clicar (só F/RH), e quem já tinha marcado antes
+  // ficou com o registro órfão no Supabase (não deletado, só invisível na
+  // tela — mesmo padrão do bug de 13/07 documentado abaixo, só que ao
+  // contrário). 'Rara Holo'/'Rara Brilhante'/'Rara Ilustrada'/'Rara
+  // Ilustrada Especial' não existem em nenhum set legado (conferido), então
+  // continuam holo-only em qualquer set sem risco.
+  const isLegacySet=(window.LEGACY_SETS||[]).some(s=>s.id===setId);
+  if((r==='Rara'&&!isLegacySet)||r==='Rara Holo'||r==='Rara Brilhante'||r==='Rara Ilustrada'||r==='Rara Ilustrada Especial'){
     // CORRIGIDO 13/07/2026: cartas "Rara"/"Rara Holo" nos sets modernos (ME/SV)
     // nascem impressas SÓ em holo — não existe versão Normal física (conferido
     // contra pokecottage.com: Chesnaught, Ho-Oh, Delphox etc. só têm holo/reverse
@@ -2862,7 +2879,10 @@ function cbOpenAddCard(binder){
 function cbPrintBinder(binder){
   if(typeof binder==='string')binder=JSON.parse(binder);
   const cards=getBinderCards(binder);
-  if(typeof printBinder==='function') printBinder(cards, c=>c._setId, binder.name);
+  // NOVO 30/07/2026 (pedido do Eduardo: imprimir só o que a tela está
+  // mostrando — se marcou "Só faltantes", o PDF sai só com faltantes)
+  const onlyState=typeof _printOnlyState==='function'?_printOnlyState():undefined;
+  if(typeof printBinder==='function') printBinder(cards, c=>c._setId, binder.name, onlyState);
 }
 
 function changeCustomLayout(n){
