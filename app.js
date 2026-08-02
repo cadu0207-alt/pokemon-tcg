@@ -842,7 +842,7 @@ const SET_CARDS_MAP={
 // ── CATÁLOGO DE COLEÇÕES ─────────────────────────────────────────
 const SET_CATALOG=[
   {id:'me06',label:'ME06 — Esmeralda Tempestuosa',emoji:'💎',cards:0,  color:'#00c853',series:'ME',upcoming:true},
-  {id:'me05',label:'ME05(PBL) — Escuridão Absoluta', emoji:'🌑',cards:118,color:'#757575',series:'ME'},
+  {id:'me05',label:'ME05(PBL) — Escuridão Absoluta', emoji:'🌑',cards:typeof CARDS_ME05!=='undefined'?CARDS_ME05.length:120,color:'#757575',series:'ME'},
   {id:'me04',label:'ME04(CRI) — Caos Ascendente',  emoji:'🔥',cards:122,color:'#FF5722',series:'ME'},
   {id:'me03',label:'ME03(POR) — Ordem Perfeita',   emoji:'🔵',cards:typeof CARDS_ME03!=='undefined'?CARDS_ME03.length:120,color:'#1565C0',series:'ME'},
   {id:'me02',label:'ME02(PFL) — Fogo Fantasmagórico', emoji:'👻',cards:130,color:'#9C27B0',series:'ME'},
@@ -1772,10 +1772,17 @@ function renderTabs(){
     const isActive=cur===id;
     const lbl=id.toUpperCase().replace('SV8PT5','SV8.5').replace('SV6PT5','SV6.5')
                 .replace('SV4PT5','SV4.5').replace('SV3PT5','151');
+    // NOVO 02/08/2026 (relato de usuários: queriam o nome completo da coleção
+    // na aba, não só o código ME05/ME06/etc) — s.label já tinha o nome certo
+    // (ex "ME05(PBL) — Escuridão Absoluta"), só nunca era usado aqui. Pega só
+    // a parte depois do "—" (o nome bonito, sem repetir o código/sigla entre
+    // parênteses) e mostra ao lado do código, num span separado que não herda
+    // o uppercase do .ctab (nome próprio fica mais legível em minúsculas).
+    const niceName=(s.label.split('—')[1]||'').trim();
     html+=`<div class="ctab${isActive?' active':''}" id="fic-tab-${id}"
       onclick="switchSet('${id}',this)"
       ${s.upcoming?'style="opacity:.7"':''}>
-      ${s.emoji} ${lbl} <span class="ctab-n">${s.upcoming?'breve':s.cards}</span></div>`;
+      ${s.emoji} ${lbl}${niceName?` <span class="ctab-name">${niceName}</span>`:''} <span class="ctab-n">${s.upcoming?'breve':s.cards}</span></div>`;
   });
   container.innerHTML=html;
   if(typeof updateHsub==='function')updateHsub();

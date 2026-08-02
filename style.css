@@ -1233,6 +1233,17 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
 .ctab:hover { color: var(--text2); }
 .ctab.active { color: var(--accent); border-bottom-color: var(--accent); }
 .ctab-n { opacity: .65; font-size: 10px; margin-left: 3px; } /* era 8px */
+/* ADICIONADO 02/08/2026 (relato de usuários: queriam o nome completo da
+   coleção na aba, ex "Escuridão Absoluta" além de só "ME05") — texto normal
+   (não upper/bold como o código), meio apagado pra não competir com ele. */
+.ctab-name {
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+  opacity: .6;
+  margin-left: 6px;
+  font-family: system-ui, sans-serif;
+}
 
 /* ─── TABLES ─────────────────────────────────────────── */
 .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -1323,6 +1334,11 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
     font-size: 11px !important; /* nao regredir o piso fixado no :root — era 10px */
   }
   .ctab-n { font-size: 10px !important; } /* era 9px */
+  /* ADICIONADO 02/08/2026: nome completo (.ctab-name) some no celular — com
+     tantas abas já disputando espaço horizontal, mostrar "Escuridão Absoluta"
+     por extenso em cada uma deixaria a barra gigante de rolar. Desktop mostra
+     o nome completo (pedido dos usuários); celular mantém só o código. */
+  .ctab-name { display: none; }
   #binder-tabs {
     -webkit-overflow-scrolling: touch;
     scroll-snap-type: x proximity;

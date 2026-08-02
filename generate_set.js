@@ -58,6 +58,15 @@ const RARE_PT = {
   'Shiny Ultra Rare':              { pt: 'Ultra Rara Brilhante',     base: false },
   'Trainer Gallery Rare Holo':     { pt: 'Rara Galeria',             base: false },
   'Promo':                         { pt: 'Promo',                    base: false },
+  // ADICIONADO 02/08/2026 (set Ascended Heroes/Heróis Excelsos — primeiro set
+  // a usar essas raridades novas): 'Rara Mega Ataque' é o nome oficial em PT
+  // confirmado via tcg.pokemon.com/pt-br ("cartas Rara Mega Ataque brilham na
+  // expansão"). 'Hiper Rara Mega' é uma tradução provisória (não confirmada
+  // em fonte oficial em PT ainda) pro equivalente do "Mega Hyper Rare" (gold
+  // etched) — revisar se aparecer o nome oficial depois.
+  'MEGA_ATTACK_RARE':              { pt: 'Rara Mega Ataque',         base: false },
+  'Mega Attack Rare':              { pt: 'Rara Mega Ataque',         base: false },
+  'Mega Hyper Rare':               { pt: 'Hiper Rara Mega',          base: false },
 };
 
 // Rarity → preço base BRL aproximado (sem dado de mercado)
@@ -83,18 +92,39 @@ const RARE_PRICE_FALLBACK = {
   'Ultra Rara Brilhante':  100.00,
   'Rara Galeria':           20.00,
   'Promo':                   5.00,
+  'Rara Mega Ataque':      100.00,
+  'Hiper Rara Mega':       400.00,
 };
 
 // ── Busca da API ─────────────────────────────────────────────────────────────
 
 async function fetchCards(setId) {
   const base = 'https://api.pokemontcg.io/v2/cards';
-  const params = `q=set.id:${setId}&pageSize=250&orderBy=number&select=id,name,number,rarity,types,supertype,tcgplayer,cardmarket,set`;
-  const url = `${base}?${params}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  return data.data || [];
+  const select = 'id,name,number,rarity,types,supertype,tcgplayer,cardmarket,set,nationalPokedexNumbers';
+  const pageSize = 250;
+  let page = 1, all = [], totalCount = Infinity;
+  // NOVO 02/08/2026: paginação — sets com mais de 250 cartas (ex: Ascended
+  // Heroes/Heróis Excelsos, 295) perdiam o resto silenciosamente, já que o
+  // script antigo só pedia 1 página. A API às vezes devolve vazio numa página
+  // válida (instabilidade observada ao testar Ascended Heroes) — retry com
+  // pequeno delay antes de desistir dessa página.
+  while (all.length < totalCount) {
+    const url = `${base}?q=set.id:${setId}&pageSize=${pageSize}&page=${page}&orderBy=number&select=${select}`;
+    let pageData = null;
+    for (let attempt = 0; attempt < 3 && !pageData; attempt++) {
+      if (attempt > 0) await new Promise(r => setTimeout(r, 1500));
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.data && data.data.length) pageData = data;
+      totalCount = data.totalCount ?? totalCount;
+    }
+    if (!pageData) break; // 3 tentativas vazias — desiste dessa página
+    all = all.concat(pageData.data);
+    if (pageData.data.length < pageSize) break; // última página
+    page++;
+  }
+  return all;
 }
 
 async function fetchSetInfo(setId) {
@@ -145,6 +175,12 @@ function mapCard(c) {
     base: rarePT.base,
   };
 
+  // ADICIONADO 02/08/2026: dex # quando a API tem (cartas de Treinador/Energia
+  // não têm nationalPokedexNumbers — ficam sem o campo, igual já acontecia em
+  // cards_sv8pt5.js).
+  const dex = c.nationalPokedexNumbers?.[0];
+  if (dex) entry.dex = dex;
+
   // Marca cartas importantes (preço > R$50 e não-base)
   if (!rarePT.base && price >= 50) entry.important = true;
 
@@ -156,13 +192,16 @@ function mapCard(c) {
 function formatEntry(e) {
   const parts = [
     `n:'${e.n}'`,
+  ];
+  if (e.dex) parts.push(`dex:${e.dex}`);
+  parts.push(
     `name:'${e.name.replace(/'/g, "\\'")}'`,
     `type:'${e.type}'`,
     `color:'${e.color}'`,
     `rare:'${e.rare}'`,
     `price:${e.price}`,
     `base:${e.base}`,
-  ];
+  );
   if (e.important) parts.push('important:true');
   return `  {${parts.join(',')}}`;
 }
