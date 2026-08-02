@@ -654,6 +654,11 @@ h1 {
      escuro) — sobre fundo branco (--surface) é praticamente invisível.
      Removido; a borda de 1px já dá contorno suficiente no tema claro. */
 }
+/* NOVO 02/08/2026: painéis do Dashboard que levam pra aba de onde os dados
+   vêm (Cartas Tiradas/Gastos/Fichário) — pedido do Eduardo de hiperlinks
+   entre o resumo do Dashboard e o dado completo na aba correspondente. */
+.panel-link { cursor: pointer; transition: border-color .15s ease, transform .15s ease; }
+.panel-link:hover { border-color: var(--accent2); transform: translateY(-2px); }
 .panel-t {
   font-family: 'Space Mono', monospace;
   font-size: 9px;

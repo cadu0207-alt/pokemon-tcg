@@ -492,11 +492,30 @@ function go(id,el){
   if(id==='mercado'){if(typeof renderMercado==='function')renderMercado();}
   if(id==='iniciantes'){if(typeof renderIniciantes==='function')renderIniciantes();}
 }
+// NOVO 02/08/2026: navega pra uma aba a partir de QUALQUER lugar do site
+// (não só clicando na .tab em si) — ex: cards do Dashboard que referenciam
+// uma coleção ou uma carta puxada. Acha o elemento da aba pelo id
+// `nav-tab-<id>` (index.html) e chama go() com ele, exatamente como um
+// clique de verdade na navegação faria.
+// CORRIGIDO na mesma tarefa: switchSet() (usado pelos cards de "Destaques
+// do Fichário"/fichários fixados) só atualizava o fichário por baixo dos
+// panos — nunca chamava go('fichario',...), então clicar neles a partir do
+// Dashboard não levava a lugar nenhum visualmente. Qualquer onclick que
+// combine switchSet(...) com uma coleção/fichário agora chama goToTab
+// primeiro.
+function goToTab(id){
+  const el=document.getElementById('nav-tab-'+id);
+  if(el)go(id,el);
+}
 function renderAll(){renderDash();renderGastos();renderCartas();updateDashProgress();if(typeof renderEvolucao==='function')renderEvolucao();renderPatrimonio();}
 
 // ── UTILS ────────────────────────────────────────────────────────
 const fmtR=v=>(+v||0).toFixed(2).replace('.',',');
-const kpiHTML=(cls,lbl,val,sub)=>`<div class="kpi ${cls}"><div class="kpi-label">${lbl}</div><div class="kpi-value">${val}</div><div class="kpi-sub">${sub}</div></div>`;
+// NOVO 02/08/2026: 5º parâmetro opcional `nav` — quando presente, faz a KPI
+// virar um link clicável pra aba correspondente (goToTab). Chamadas
+// existentes que não passam esse parâmetro continuam idênticas (KPI sem
+// onclick), então não muda nada nas outras telas que reusam kpiHTML().
+const kpiHTML=(cls,lbl,val,sub,nav)=>`<div class="kpi ${cls}"${nav?` onclick="goToTab('${nav}')" style="cursor:pointer" title="Ver na aba correspondente"`:''}><div class="kpi-label">${lbl}</div><div class="kpi-value">${val}</div><div class="kpi-sub">${sub}</div></div>`;
 
 // ── ÍCONES DO DASHBOARD (27/07/2026) ────────────────────────────
 // CORRIGIDO: KPIs/títulos do Dashboard usavam emoji solto (💰📦💵📊 etc.),
@@ -601,11 +620,11 @@ function renderDash(){
   const roi=tg>0?(fichVal/tg*100).toFixed(0):0;
   const apb=tb>0?(tg/tb).toFixed(2):'0,00';
   document.getElementById('kpi-dash').innerHTML=
-    kpiHTML('red',dico('wallet')+' Total Investido','R$'+fmtR(invested),purchases.length+' compras')+
-    kpiHTML('orange',dico('box')+' Boosters',''+tb,'~'+(tb*6)+' cartas')+
-    kpiHTML('gold',dico('coins')+' R$/Booster','R$'+apb.replace('.',','),'média ponderada')+
-    kpiHTML('teal',dico('book')+' Valor Fichário','R$'+fmtR(fichVal),collected.size+' slots coletados')+
-    kpiHTML('blue',dico('trend')+' ROI Fichário',roi+'%','fichário ÷ investido em cartas');
+    kpiHTML('red',dico('wallet')+' Total Investido','R$'+fmtR(invested),purchases.length+' compras','gastos')+
+    kpiHTML('orange',dico('box')+' Boosters',''+tb,'~'+(tb*6)+' cartas','gastos')+
+    kpiHTML('gold',dico('coins')+' R$/Booster','R$'+apb.replace('.',','),'média ponderada','gastos')+
+    kpiHTML('teal',dico('book')+' Valor Fichário','R$'+fmtR(fichVal),collected.size+' slots coletados','fichario')+
+    kpiHTML('blue',dico('trend')+' ROI Fichário',roi+'%','fichário ÷ investido em cartas','fichario');
 
   // Gráfico raridades com dot colorido
   const rCount={},rVer={};
@@ -662,7 +681,11 @@ function renderDash(){
     const catMeta=SET_CATALOG.find(s=>s.id===sid);
     const setShort=sid.toUpperCase().replace('SV3PT5','151').replace('SV8PT5','SV8.5').replace('SV6PT5','SV6.5').replace('SV4PT5','SV4.5');
     const rarLbl=rl[c.rare]||c.rare?.split(' ')[0]||'';
-    return`<div class="pc" onclick="switchSet('${sid}',null)">
+    // CORRIGIDO 02/08/2026: só chamava switchSet(), que atualiza o fichário
+    // por baixo dos panos mas nunca ativa a pane #fichario — clicar aqui a
+    // partir do Dashboard não levava a lugar nenhum visualmente. goToTab
+    // primeiro faz a troca de aba de verdade.
+    return`<div class="pc" onclick="goToTab('fichario');switchSet('${sid}',null)">
       <img class="pc-img" src="${imgSrc}" alt="${c.name}"
         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
       <div class="fb" style="display:none"><div class="fb-n">${c.n}</div><div class="fb-name">${c.name}</div>
@@ -706,101 +729,13 @@ const GEN1=[
   'Mewtwo','Mew'
 ]; // 151 em ordem de Pokédex
 
-// Extrai o nome base do Pokémon de nomes como "Mega Charizard X ex" → "Charizard"
-function basePokeNames(name){
-  // strip prefixes
-  let n=name.replace(/^(Mega|Shadow|Dark|Light|Alolan|Galarian|Hisuian|Paldean)\s+/i,'');
-  // strip suffixes comuns do TCG
-  n=n.replace(/\s+(ex|EX|GX|V|VMAX|VSTAR|tera|tera\w+|[XY])$|\s+ex$|\s+EX$/i,'').trim();
-  // strip " X" e " Y" isolados (Charizard X)
-  n=n.replace(/\s+[XY]$/, '').trim();
-  return n;
-}
-
-function renderGen1Pobre(){
-  const el=document.getElementById('gen1-pobre');if(!el)return;
-  const LIMIT=50;
-
-  // Varre todas as coleções disponíveis
-  const allCards=[];
-  Object.entries(SET_CARDS_MAP).forEach(([setId,fn])=>{
-    const cards=fn();
-    cards.forEach(c=>{
-      if(!c.price||c.price<=0||c.price>=LIMIT)return;
-      const base=basePokeNames(c.name);
-      const idx=GEN1.findIndex(g=>g.toLowerCase()===base.toLowerCase()
-        ||base.toLowerCase().startsWith(g.toLowerCase())
-        ||c.name.toLowerCase().includes(g.toLowerCase()));
-      if(idx===-1)return;
-      allCards.push({...c,_setId:setId,_gen1idx:idx,_gen1name:GEN1[idx]});
-    });
-  });
-
-  if(!allCards.length){
-    el.innerHTML='<div style="color:var(--muted);font-size:.85rem;padding:16px">Nenhuma carta Gen 1 abaixo de R$50 encontrada nas coleções ativas.</div>';
-    return;
-  }
-
-  // Agrupa por Pokémon (Pokédex order), dentro de cada grupo ordena por preço asc
-  const byPoke={};
-  allCards.forEach(c=>{
-    const k=c._gen1idx;
-    if(!byPoke[k])byPoke[k]=[];
-    byPoke[k].push(c);
-  });
-
-  // Ordena entradas por índice Pokédex
-  const entries=Object.entries(byPoke)
-    .sort((a,b)=>Number(a[0])-Number(b[0]));
-
-  const setShortLabel=id=>id.toUpperCase()
-    .replace('SV3PT5','151').replace('SV8PT5','SV8.5')
-    .replace('SV6PT5','SV6.5').replace('SV4PT5','SV4.5');
-
-  let html=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px">`;
-  entries.forEach(([idxStr,cards])=>{
-    const dexN=Number(idxStr)+1; // 1-based
-    const pokeName=GEN1[Number(idxStr)];
-    // ordena por preço crescente
-    const sorted=[...cards].sort((a,b)=>a.price-b.price);
-    const cheapest=sorted[0];
-    const imgSrc=getBinderImg(cheapest,cheapest._setId);
-    const isCol=getSlots(cheapest,cheapest._setId)
-      .some(s=>collected.has(slotKey(cheapest._setId+':',cheapest.n,s.ver)));
-
-    html+=`<div class="panel" style="display:flex;gap:12px;align-items:flex-start;padding:12px;cursor:pointer"
-        onclick="switchSet('${cheapest._setId}',null)"
-        title="Ir para ${setShortLabel(cheapest._setId)}">
-      <div style="position:relative;flex-shrink:0">
-        <img src="${imgSrc}" alt="${cheapest.name}"
-          style="width:54px;height:76px;object-fit:cover;border-radius:5px;border:1px solid var(--border)"
-          onerror="this.style.display='none'">
-        ${isCol?`<div style="position:absolute;top:-4px;right:-4px;background:var(--teal);color:#000;
-          font-size:8px;font-weight:700;border-radius:50%;width:16px;height:16px;
-          display:flex;align-items:center;justify-content:center">✓</div>`:''}
-      </div>
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:2px">
-          <span style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted)">#${String(dexN).padStart(3,'0')}</span>
-          <span style="font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${pokeName}</span>
-        </div>
-        <div style="font-size:11px;color:var(--teal);font-weight:700;margin-bottom:4px">R$${fmtR(cheapest.price)} — ${cheapest.name}</div>
-        <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:6px">${setShortLabel(cheapest._setId)} · #${cheapest.n} · ${cheapest.rare}</div>
-        ${sorted.length>1?`<div style="display:flex;flex-wrap:wrap;gap:4px">${sorted.slice(1,4).map(c=>
-          `<span style="font-size:8px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;
-            padding:2px 5px;font-family:'Space Mono',monospace;white-space:nowrap">
-            ${setShortLabel(c._setId)} R$${fmtR(c.price)}</span>`).join('')}
-          ${sorted.length>4?`<span style="font-size:8px;color:var(--muted);padding:2px 4px">+${sorted.length-4}</span>`:''}
-        </div>`:''}
-      </div>
-    </div>`;
-  });
-  html+=`</div>
-  <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-top:10px;text-align:right">
-    ${entries.length} Pokémon da Gen 1 encontrados · ${allCards.length} cartas ≤ R$${LIMIT}
-  </div>`;
-  el.innerHTML=html;
-}
+// REMOVIDO 02/08/2026 (confirmado com o Eduardo — feature descontinuada):
+// basePokeNames() + renderGen1Pobre() renderizavam um widget "151 de Pobre"
+// num elemento #gen1-pobre que nunca existiu em nenhuma página do site —
+// código morto, nunca chamado, nunca visível. A ideia sobrevive como o
+// preset "🪙 151 de Pobre" dentro de Fichário → Meus Fichários
+// (BINDER_PRESETS, key 'budget_151', mais abaixo) — esse continua ativo e
+// usa o array GEN1 (mantido). Ver [[project_pokemon_tcg]].
 
 // ── PROGRESS ────────────────────────────────────────────────────
 const SET_META={
@@ -993,7 +928,10 @@ function updateDashProgress(){
       // do design system — trocado por var(--accent2), a mesma laranja usada em
       // "Boosters" e no resto do site.
       const upBadge=meta.upcoming?`<div style="position:absolute;top:10px;right:10px;background:var(--accent2);color:#fff;font-size:9px;letter-spacing:1px;padding:2px 8px;border-radius:4px;font-family:'Space Mono',monospace">EM BREVE ${meta.releaseDate||''}</div>`:'';
-      return`<div class="panel" style="border-color:${color}44;overflow:hidden;position:relative;${meta.upcoming?'opacity:.8':''}">
+      // NOVO 02/08/2026: painel agora navega pro Fichário dessa coleção ao
+      // clicar — mesmo padrão de goToTab+switchSet usado nos outros cards
+      // do Dashboard que referenciam uma coleção.
+      return`<div class="panel panel-link" style="border-color:${color}44;overflow:hidden;position:relative;${meta.upcoming?'opacity:.8':''}" onclick="goToTab('fichario');switchSet('${id}',null)">
         ${upBadge}
         <div style="position:absolute;right:-8px;top:-8px;width:70px;height:100px;opacity:.1;pointer-events:none">
           <img src="${meta.imgFn(meta.heroCard)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
@@ -1014,7 +952,7 @@ function updateDashProgress(){
       // ── Display simplificado (sets SV via SET_CATALOG) ──
       const color=cat.color||'#666';
       const upcoming=cat.upcoming||false;
-      return`<div class="panel" style="border-color:${color}44;overflow:hidden;position:relative;${upcoming?'opacity:.7':''}">
+      return`<div class="panel panel-link" style="border-color:${color}44;overflow:hidden;position:relative;${upcoming?'opacity:.7':''}" onclick="goToTab('fichario');switchSet('${id}',null)">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
           <div style="font-size:28px;line-height:1">${cat.emoji||'📦'}</div>
           <div style="flex:1">
@@ -1049,7 +987,8 @@ function updateDashProgress(){
     const{total,col,have,missing}=slotsAndValue(cards,null);
     const pct=total>0?(col/total*100).toFixed(0):0;
     const color=b.cover_color||'#a855f7';
-    return`<div class="panel" style="border-color:${color}44;overflow:hidden;position:relative;cursor:pointer" onclick="switchSet('__cb__${pid}',null)">
+    // CORRIGIDO 02/08/2026: mesmo bug do switchSet() sem goToTab — ver nota acima nos cards de "Destaques do Fichário".
+    return`<div class="panel panel-link" style="border-color:${color}44;overflow:hidden;position:relative" onclick="goToTab('fichario');switchSet('__cb__${pid}',null)">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
         <div style="font-size:26px;line-height:1">${b.emoji||'📚'}</div>
         <div style="flex:1"><div style="font-weight:700;font-size:12px;line-height:1.3">${b.name}</div>

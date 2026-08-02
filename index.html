@@ -171,15 +171,18 @@
   <div id="feedback-bar-wrap"></div>
   <div id="global-ctcg-banner-wrap"></div>
 
+  <!-- ids nav-tab-* adicionados 02/08/2026 — permitem goToTab(id) (app.js) navegar
+       pra aba certa a partir de qualquer clique fora do <nav> (cards do Dashboard
+       etc.), marcando a aba como ativa igual um clique nela mesma. -->
   <nav class="tabs">
-    <div class="tab active" onclick="go('dash',this)">📊 Dashboard</div>
-    <div class="tab" onclick="go('fichario',this)">📚 Fichário</div>
-    <div class="tab" onclick="go('gastos',this)">💸 Gastos</div>
-    <div class="tab" onclick="go('cartas',this)">🃏 Cartas Tiradas</div>
-    <div class="tab" onclick="go('preco',this)">💰 Preço Justo</div>
-    <div class="tab" onclick="go('lojas',this)">🛍️ Lojas & Ofertas</div>
-    <div class="tab" onclick="go('mercado',this)">🏪 Lojas Confiáveis</div>
-    <div class="tab" onclick="go('iniciantes',this)">🔰 Iniciantes</div>
+    <div class="tab active" id="nav-tab-dash" onclick="go('dash',this)">📊 Dashboard</div>
+    <div class="tab" id="nav-tab-fichario" onclick="go('fichario',this)">📚 Fichário</div>
+    <div class="tab" id="nav-tab-gastos" onclick="go('gastos',this)">💸 Gastos</div>
+    <div class="tab" id="nav-tab-cartas" onclick="go('cartas',this)">🃏 Cartas Tiradas</div>
+    <div class="tab" id="nav-tab-preco" onclick="go('preco',this)">💰 Preço Justo</div>
+    <div class="tab" id="nav-tab-lojas" onclick="go('lojas',this)">🛍️ Lojas & Ofertas</div>
+    <div class="tab" id="nav-tab-mercado" onclick="go('mercado',this)">🏪 Lojas Confiáveis</div>
+    <div class="tab" id="nav-tab-iniciantes" onclick="go('iniciantes',this)">🔰 Iniciantes</div>
     <div class="tab" onclick="window.open('simulador.html','_blank')" style="background:linear-gradient(90deg,#7b2ff744,#f107a322);color:#c084fc">🎰 Simulador</div>
   </nav>
 
@@ -191,12 +194,19 @@
     <div class="sec-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 5a2 2 0 0 1 2-2h11a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2Z"/><path d="M4 5v14a2 2 0 0 0 2 2h11"/></svg> Progresso Master Set</div>
     <div id="progress-sets" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:28px"></div>
     <div class="dual">
-      <div class="panel"><div class="panel-t" style="display:flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="7" width="4" height="13"/><rect x="17" y="3" width="4" height="17"/></svg> Raridades do Pull</div><div class="bc" id="chart-rarity"></div></div>
-      <div class="panel"><div class="panel-t" style="display:flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.5 3h2l2.7 12.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21.5 7H6"/></svg> Gastos por Data</div><div class="bc" id="chart-gastos"></div></div>
+      <!-- CORRIGIDO 02/08/2026: painéis agora são clicáveis (.panel-link) e levam
+           pra aba de onde os dados realmente vêm — pedido do Eduardo de hiperlinks
+           entre o Dashboard e as abas correspondentes (Cartas Tiradas/Gastos). -->
+      <div class="panel panel-link" onclick="goToTab('cartas')" title="Ver em Cartas Tiradas"><div class="panel-t" style="display:flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="7" width="4" height="13"/><rect x="17" y="3" width="4" height="17"/></svg> Raridades do Pull</div><div class="bc" id="chart-rarity"></div></div>
+      <div class="panel panel-link" onclick="goToTab('gastos')" title="Ver em Gastos"><div class="panel-t" style="display:flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.5 3h2l2.7 12.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21.5 7H6"/></svg> Gastos por Data</div><div class="bc" id="chart-gastos"></div></div>
     </div>
-    <div class="panel" style="margin-bottom:28px"><div class="panel-t" style="display:flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg> Evolução Mensal — Investido × Pulls</div><div class="bc" id="chart-evolucao"></div></div>
+    <div class="panel panel-link" style="margin-bottom:28px" onclick="goToTab('gastos')" title="Ver em Gastos"><div class="panel-t" style="display:flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg> Evolução Mensal — Investido × Pulls</div><div class="bc" id="chart-evolucao"></div></div>
     <div class="panel" style="margin-bottom:28px"><div class="panel-t" style="display:flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 6h6v6"/></svg> Evolução do Patrimônio</div><div id="chart-patrimonio"></div></div>
-    <div class="sec-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 2l2.9 6.5L22 9.3l-5 4.9 1.2 7.1L12 17.9l-6.2 3.4L7 14.2 2 9.3l7.1-.8Z"/></svg> Destaques do Pull</div>
+    <!-- CORRIGIDO 02/08/2026: título dizia "Destaques do Pull", mas os cards vêm do
+         FICHÁRIO (cartas coletadas, ver renderDash() em app.js — cada card já mostra
+         a etiqueta "Fichário"), não do log de "Cartas Tiradas". Renomeado pra bater
+         com o dado real, em vez de corrigir o dado pra bater com um título errado. -->
+    <div class="sec-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 2l2.9 6.5L22 9.3l-5 4.9 1.2 7.1L12 17.9l-6.2 3.4L7 14.2 2 9.3l7.1-.8Z"/></svg> Destaques do Fichário</div>
     <div class="pulled-grid" id="dash-highlights"></div>
   </div>
 
