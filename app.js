@@ -627,16 +627,38 @@ function renderDash(){
     kpiHTML('blue',dico('trend')+' ROI Fichário',roi+'%','fichário ÷ investido em cartas','fichario');
 
   // Gráfico raridades com dot colorido
+  // CORRIGIDO 02/08/2026: classificador antigo usava .includes() com códigos
+  // em inglês (SAR/RR/UR/IR/RH) que não existem nos valores reais de `rar`
+  // (vêm de card.rare, em português — "Comum","Rara Ultra","Ultra Rara" etc.),
+  // então quase tudo caía em "Outro" (mesmo bug de design já corrigido uma vez
+  // em getSlots() — ver memória do projeto). Agora mapeia por valor exato
+  // (whitelist) e só cai num fallback por substring pra strings desconhecidas.
+  const RAR_BUCKET={
+    'Comum':['Comum','N'],'Regular':['Comum','N'],
+    'Incomum':['Incomum','N'],'Incomum (RH)':['Reverse Holo','RH'],
+    'Rara':['Rara','F'],'Rara (Holo)':['Rara Holo','F'],'Rara Holo':['Rara Holo','F'],
+    'Rara Dupla':['Dupla Rara','F'],'Rara Brilhante':['Rara Brilhante','F'],
+    'Rara Ilustrada':['Ilustr. Rara','SP'],'Ilustr. Rara':['Ilustr. Rara','SP'],
+    'Ilustração Rara (IR)':['Ilustr. Rara','SP'],
+    'Rara Ilustrada Especial':['Ilustr. Esp. Rara','SP'],'Ilustr. Esp. Rara':['Ilustr. Esp. Rara','SP'],
+    'Ultra Rara':['Rara Ultra','SP'],'Rara Ultra':['Rara Ultra','SP'],
+    'Ultra Rara Brilhante':['Rara Ultra Brilhante','SP'],
+    'Hiper Rara':['Hiper Rara','SP'],'ACE SPEC':['ACE SPEC','SP'],
+    'Super Rare':['Super Rare','SP'],'Art Rare':['Art Rare','SP'],
+    'Special Art Rare':['Special Art Rare','SP'],
+    'Mega Hyper Rare':['Mega Rara','SP'],'Mega Attack Rare':['Mega Rara','SP'],'Mega Ultra Rare':['Mega Rara','SP']
+  };
   const rCount={},rVer={};
   pulledCards.forEach(c=>{
-    const raw=c.rar||'';let k='Outro',ver='N';
-    if(raw.includes('SAR')){k='SAR';ver='SP';}
-    else if(raw.includes('RR')||raw.includes('Dupla')){k='Dupla Rara';ver='F';}
-    else if(raw.includes('UR')){k='Rara Ultra';ver='SP';}
-    else if(raw.includes('IR')||raw.includes('Ilustr')){k='Ilustr. Rara';ver='SP';}
-    else if(raw.includes('Promo')){k='Promo';ver='SP';}
-    else if(raw.includes('Holo')&&raw.includes('Rara')&&!raw.includes('RH')){k='Rara Holo';ver='F';}
+    const raw=c.rar||'';let k,ver;
+    if(RAR_BUCKET[raw]){[k,ver]=RAR_BUCKET[raw];}
+    else if(raw.startsWith('Promo')){k='Promo';ver='SP';}
+    else if(raw.includes('Ilustr')){k='Ilustr. Rara';ver='SP';}
+    else if(raw.includes('Ultra')){k='Rara Ultra';ver='SP';}
+    else if(raw.includes('Dupla')){k='Dupla Rara';ver='F';}
+    else if(raw.includes('Holo')&&raw.includes('Rara')){k='Rara Holo';ver='F';}
     else if(raw.includes('RH')){k='Reverse Holo';ver='RH';}
+    else{k='Outro';ver='N';}
     rCount[k]=(rCount[k]||0)+1;rVer[k]=ver;
   });
   const rMax=Math.max(...Object.values(rCount),1);
