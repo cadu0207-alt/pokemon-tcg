@@ -73,6 +73,8 @@
 }
 
 [data-theme="dark"] #app-mosaic::after { background: rgba(13,15,24,.9); }
+[data-theme="dark"] header { background: linear-gradient(to bottom, rgba(17,20,34,.98), rgba(13,15,24,.96)); }
+[data-theme="dark"] .tabs { background: rgba(17,20,34,.96); }
 
 /* transição suave ao alternar tema */
 body, .panel, .kpi, .tab, header, .home-bg, input, select, textarea {
@@ -80,11 +82,20 @@ body, .panel, .kpi, .tab, header, .home-bg, input, select, textarea {
 }
 
 /* ─── BOTÃO DE TEMA (fixo, topo direito) ─────────────── */
-.theme-toggle-btn {
+/* CORRIGIDO/AMPLIADO 02/08/2026: o botão de tema virou um grupo de ações
+   fixas no canto superior direito (`.top-fixed-actions`) — a posição fixa
+   saiu do `.theme-toggle-btn` pra esse wrapper, que agora também segura o
+   botão do grupo do WhatsApp (antes só dentro do card de Atualizações). */
+.top-fixed-actions {
   position: fixed;
   top: 64px;
   right: 14px;
   z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.theme-toggle-btn {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -102,8 +113,35 @@ body, .panel, .kpi, .tab, header, .home-bg, input, select, textarea {
 }
 .theme-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
 .theme-toggle-btn .tt-icon { font-size: 14px; line-height: 1; }
+
+/* Botão do grupo da comunidade — maior e com identidade do WhatsApp (verde),
+   pra se destacar do botão utilitário de tema ao lado. */
+.wa-community-btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 18px 9px 14px;
+  background: #22c55e;
+  border: 1px solid #16a34a;
+  border-radius: 30px;
+  color: #fff;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(34,197,94,.35);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.wa-community-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(34,197,94,.45); }
+.wa-community-btn .wa-icon { font-size: 17px; line-height: 1; }
+
 @media (max-width: 640px) {
-  .theme-toggle-btn { top: 54px; right: 8px; padding: 6px 10px 6px 9px; font-size: 10px; }
+  .top-fixed-actions { top: 54px; right: 8px; gap: 6px; }
+  .theme-toggle-btn { padding: 6px 10px 6px 9px; font-size: 10px; }
+  .wa-community-btn { padding: 7px 12px 7px 10px; font-size: 10px; }
+  .wa-community-btn .wa-label { display: none; } /* só o ícone no mobile, pra não apertar */
 }
 
 /* ─── RESET ──────────────────────────────────────────── */
@@ -1923,8 +1961,14 @@ body.share-view .btn-add { display: none !important; }
 
 @media (min-width: 1440px) {
   .updates-log-panel {
-    position: fixed; top: 130px; right: 28px; width: 300px;
-    max-height: calc(100vh - 160px); overflow-y: auto; margin: 0;
+    /* CORRIGIDO 02/08/2026: top:130px fixo ficava por cima da barra de abas
+       em telas onde o header (logo+status+badge de XP) é mais alto que o
+       previsto — a barra de "SIMULADOR" etc. ficava parcialmente coberta.
+       --updates-log-top é calculado em JS (updates.js, positionUpdatesLogPanel())
+       medindo a posição real do fim da .tabs, então acompanha qualquer
+       mudança de altura do header/abas em vez de um valor chutado. */
+    position: fixed; top: var(--updates-log-top, 130px); right: 28px; width: 300px;
+    max-height: calc(100vh - var(--updates-log-top, 130px) - 30px); overflow-y: auto; margin: 0;
     z-index: 300; /* acima das .tabs (z-index:100) — sempre por cima */
   }
   .updates-log-list { max-height: none; }

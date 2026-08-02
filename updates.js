@@ -16,8 +16,11 @@ async function renderUpdatesLog() {
     '<div class="updates-log-card">' +
       '<div class="updates-log-hdr">' +
         '<div class="sec-title" style="margin-top:0">📢 Atualizações</div>' +
+        // CORRIGIDO 02/08/2026: botão do WhatsApp saiu daqui — agora vive no
+        // grupo de ações fixas do topo (.top-fixed-actions, index.html),
+        // maior e ao lado do botão de tema, não escondido dentro do card
+        // de Atualizações.
         '<div class="updates-log-hdr-actions">' +
-          '<a class="update-whatsapp-btn" href="https://chat.whatsapp.com/KAEFJ5pGZrsDZeusCE0Sxs?s=cl&p=i&ilr=4&amv=2" target="_blank" rel="noopener" title="Grupo da Comunidade — dúvidas e sugestões">💬</a>' +
           '<button class="update-minimize-btn" title="Minimizar" onclick="toggleUpdatesLogCollapse()">−</button>' +
         '</div>' +
       '</div>' +
@@ -38,7 +41,29 @@ async function renderUpdatesLog() {
   holder.classList.toggle('updates-log-collapsed', wasCollapsed);
 
   await loadUpdatesList();
+  positionUpdatesLogPanel();
 }
+
+// CORRIGIDO 02/08/2026: o painel ficava sobrepondo a barra de abas em telas
+// largas (top:130px fixo no CSS não batia com a altura real do header —
+// varia com o conteúdo do lado direito, ex. badge de XP/tema). Em vez de
+// chutar um pixel novo, mede a posição real do fim da .tabs (que já é
+// sticky, então getBoundingClientRect().bottom reflete onde ela realmente
+// "gruda" na tela) e escreve isso numa CSS var que o .updates-log-panel usa.
+function positionUpdatesLogPanel() {
+  const tabs = document.querySelector('.tabs');
+  if (!tabs) return;
+  const top = Math.ceil(tabs.getBoundingClientRect().bottom) + 14;
+  document.documentElement.style.setProperty('--updates-log-top', top + 'px');
+}
+(function watchUpdatesLogPosition() {
+  window.addEventListener('resize', () => positionUpdatesLogPanel());
+  window.addEventListener('load', () => setTimeout(positionUpdatesLogPanel, 300));
+  // Recalcula de novo um pouco depois do primeiro render — cobre o caso do
+  // badge de XP/status do usuário carregar de forma assíncrona e mudar a
+  // altura do header depois do primeiro cálculo.
+  setTimeout(positionUpdatesLogPanel, 1200);
+})();
 
 function toggleUpdatesLogCollapse(forceState) {
   const holder = document.getElementById('updates-log-wrap');
