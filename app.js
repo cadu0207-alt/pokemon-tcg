@@ -3438,14 +3438,28 @@ function renderEvolucao(){
   // com o total real.
   const anos=[...new Set(purchases.map(p=>(p.date||'').slice(0,4)).filter(Boolean))];
   const SEM_DATA='9999-00';
+  // CORRIGIDO 02/08/2026: antes só existia o parse por regex do texto livre
+  // `lote` — que quebra pra qualquer carta cujo lote não siga o padrão
+  // "dd mmm" (ex: cartas adicionadas manualmente via addCard(), com lote
+  // digitado à mão). Cartas que vieram de uma compra real (saveBinderModal,
+  // saveBoosterOpening) já guardam `purchase_id` — usar a data real da
+  // compra primeiro, só cair pro parse de texto (e depois "sem data") quando
+  // não há purchase_id associado.
+  const purchaseById={};
+  purchases.forEach(p=>{purchaseById[p.id]=p;});
   pulledCards.forEach(c=>{
-    const m=(c.lote||'').toLowerCase().match(/(\d{1,2})\s*(?:de\s*)?([a-zç]{3})/);
+    const linked=c.purchase_id!=null?purchaseById[c.purchase_id]:null;
     let k;
-    if(m&&m[2]in MESES){
-      const mm=String(MESES[m[2]]+1).padStart(2,'0');
-      k=(anos.find(a=>byMonth[`${a}-${mm}`])||anos[anos.length-1]||new Date().getFullYear())+'-'+mm;
+    if(linked&&linked.date){
+      k=linked.date.slice(0,7);
     }else{
-      k=SEM_DATA;
+      const m=(c.lote||'').toLowerCase().match(/(\d{1,2})\s*(?:de\s*)?([a-zç]{3})/);
+      if(m&&m[2]in MESES){
+        const mm=String(MESES[m[2]]+1).padStart(2,'0');
+        k=(anos.find(a=>byMonth[`${a}-${mm}`])||anos[anos.length-1]||new Date().getFullYear())+'-'+mm;
+      }else{
+        k=SEM_DATA;
+      }
     }
     (byMonth[k]=byMonth[k]||{inv:0,pull:0}).pull+=Number(c.price)||0;
   });
