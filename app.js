@@ -490,6 +490,7 @@ function go(id,el){
   if(id==='gastos'){renderGastos();}
   if(id==='lojas'){if(typeof renderLojas==='function')renderLojas();}
   if(id==='mercado'){if(typeof renderMercado==='function')renderMercado();}
+  if(id==='positivo'){if(typeof renderPositivo==='function')renderPositivo();}
   if(id==='iniciantes'){if(typeof renderIniciantes==='function')renderIniciantes();}
 }
 // NOVO 02/08/2026: navega pra uma aba a partir de QUALQUER lugar do site
