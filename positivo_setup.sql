@@ -62,16 +62,24 @@ create policy "positive_companies_delete_admin" on positive_companies
 -- ── SEED INICIAL (03/08/2026) ──────────────────────────────────
 -- Lojas que o Eduardo já verificou vendendo a preço tabelado ou abaixo.
 -- Entram direto como 'ativa' (não precisam passar pela fila de aprovação).
-insert into positive_companies (nome, instagram, cidade, uf, status) values
-  ('ManaCard Store',       'https://www.instagram.com/manacardstore',       'Campinas',                  'SP', 'ativa'),
-  ('Eternatus Card House', 'https://www.instagram.com/eternatuscardhouse',  'Itu',                       'SP', 'ativa'),
-  ('Loja Life Geek',       'https://www.instagram.com/lojalifegeek',        'Itu',                       'SP', 'ativa'),
-  ('Shisui Store BR',      'https://www.instagram.com/shisuistorebr',       'Salto',                     'SP', 'ativa'),
-  ('Arteus TCG',           'https://www.instagram.com/arteustcg',           'Cachoeiro de Itapemirim',   'ES', 'ativa'),
-  ('Tuzzy Cards',          'https://www.instagram.com/tuzzycards',          'Barueri',                   'SP', 'ativa'),
-  ('USA Trendies',         'https://www.instagram.com/usatrendies',         'Santo André',               'SP', 'ativa'),
-  ('Voltz TCG',            'https://www.instagram.com/voltztcg',            'Curitiba',                  'PR', 'ativa')
-on conflict (nome) do nothing;
+-- Dados de instagram/tiktok/site conferidos via busca antes de cadastrar
+-- (alguns não têm site próprio ainda — só Instagram/TikTok/Linktree).
+insert into positive_companies (nome, instagram, tiktok, site, cidade, uf, status) values
+  ('ManaCard Store',       'https://www.instagram.com/manacardstore/',       null,                                        'https://linktr.ee/manacardstore',       'Campinas',                'SP', 'ativa'),
+  ('Eternatus Card House', 'https://www.instagram.com/eternatuscardhouse/',  null,                                        'https://www.eternatus.com.br/',          'Itu',                     'SP', 'ativa'),
+  ('Loja Life Geek',       'https://www.instagram.com/lojalifegeek/',        null,                                        'https://www.lojalifegeek.com.br/',       'Itu',                     'SP', 'ativa'),
+  ('Shisui Store BR',      'https://www.instagram.com/shisuistorebr/',       'https://www.tiktok.com/@shisuistore',       'https://linktr.ee/shisuistorebr',        'Salto',                   'SP', 'ativa'),
+  ('Arteus TCG',           'https://www.instagram.com/arteustcg/',           null,                                        'https://arteustcg.com.br/',              'Cachoeiro de Itapemirim', 'ES', 'ativa'),
+  ('Tuzzy Cards',          'https://www.instagram.com/tuzzycards/',          null,                                        null,                                      'Barueri',                 'SP', 'ativa'),
+  ('USA Trendies',         'https://www.instagram.com/usatrendies/',         null,                                        'https://www.usatrendies.com.br/',        'Santo André',             'SP', 'ativa'),
+  ('Voltz TCG',            'https://www.instagram.com/voltztcg/',            null,                                        null,                                      'Curitiba',                'PR', 'ativa')
+on conflict (nome) do update set
+  instagram  = excluded.instagram,
+  tiktok     = coalesce(excluded.tiktok, positive_companies.tiktok),
+  site       = coalesce(excluded.site, positive_companies.site),
+  cidade     = excluded.cidade,
+  uf         = excluded.uf,
+  updated_at = now();
 
 -- Pra conferir depois de rodar:
 -- select * from positive_companies order by created_at desc;
