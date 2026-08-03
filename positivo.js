@@ -40,14 +40,34 @@ function renderPositivo() {
   const wrap = document.getElementById('positivo-wrap');
   if (!wrap) return;
   wrap.innerHTML = `
-    <div class="sec-title" style="margin-bottom:18px">✅ Cadastro Positivo de Empresas</div>
-    <div class="mkt-note">
-      Lojas que, até onde conseguimos verificar, estão vendendo produtos de Pokémon TCG
-      <b>a preço tabelado ou abaixo</b>. Não é um selo oficial nem garantia de preço eterno —
-      é um retrato do que vimos até agora. Conhece uma loja assim? Indique abaixo; ela entra
-      na lista depois de uma checagem rápida.
+    <div class="sec-title" style="margin-bottom:16px">✅ Cadastro Positivo de Empresas</div>
+
+    <!-- BANNER — bem visível, primeiro que tudo -->
+    <div style="margin-bottom:22px;padding:20px 24px;border-radius:16px;position:relative;overflow:hidden;
+      background:linear-gradient(135deg, rgba(255,209,102,.14), rgba(6,214,160,.10) 60%, rgba(230,57,70,.08));
+      border:1px solid var(--gold);box-shadow:0 6px 28px rgba(255,209,102,.12);
+      display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+      <div style="font-size:38px;line-height:1;filter:drop-shadow(0 2px 6px rgba(255,209,102,.4))">🏆</div>
+      <div style="flex:1;min-width:220px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase">
+          Lojas com Preços Recomendados
+        </div>
+        <div style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:4px;line-height:1.5">
+          Preço tabelado ou abaixo — <b style="color:var(--teal)">avaliações e preços informados pelos próprios usuários</b>
+          da comunidade, não por nós. Ninguém aqui garante preço eterno; é um retrato do que a galera já viu e comprou.
+        </div>
+      </div>
     </div>
 
+    <div class="sec-title" style="margin-top:4px">🏪 Lojas Verificadas</div>
+    <div id="pc-active-list" class="mkt-store-list"></div>
+
+    <div id="pc-pending-wrap" style="display:none;margin-top:24px">
+      <div class="sec-title">🔎 Indicações Pendentes (admin)</div>
+      <div id="pc-pending-list" class="mkt-store-list"></div>
+    </div>
+
+    <div class="sec-title" style="margin-top:28px">📋 Indicar uma Loja</div>
     <div class="mkt-grid" style="grid-template-columns:1fr;max-width:520px">
       <div class="panel">
         <div class="panel-t">📋 Indicar uma Loja</div>
@@ -67,14 +87,6 @@ function renderPositivo() {
         <div id="pc-status" style="font-size:10px;color:var(--teal);font-family:'Space Mono',monospace;margin-top:8px"></div>
       </div>
     </div>
-
-    <div id="pc-pending-wrap" style="display:none;margin-top:24px">
-      <div class="sec-title">🔎 Indicações Pendentes (admin)</div>
-      <div id="pc-pending-list" class="mkt-store-list"></div>
-    </div>
-
-    <div class="sec-title" style="margin-top:24px">🏪 Lojas Verificadas</div>
-    <div id="pc-active-list" class="mkt-store-list"></div>
   `;
   loadPositiveCompanies()
     .then(loadCompanyReviews)
@@ -109,11 +121,18 @@ function pcReviewStats(companyId) {
   const list = companyReviews[companyId] || [];
   if (!list.length) return null;
   const avg = list.reduce((s, r) => s + r.nota, 0) / list.length;
+  const comPreco = list.filter(r => r.preco_sugerido != null && r.preco_sugerido > 0);
+  const avgPreco = comPreco.length ? comPreco.reduce((s, r) => s + Number(r.preco_sugerido), 0) / comPreco.length : null;
   return {
     avg, count: list.length,
     elogios: list.filter(r => r.tipo === 'elogio').length,
-    reclamacoes: list.filter(r => r.tipo === 'reclamacao').length
+    reclamacoes: list.filter(r => r.tipo === 'reclamacao').length,
+    avgPreco, precoCount: comPreco.length
   };
+}
+
+function pcFmtBRL(v) {
+  return 'R$ ' + (+v || 0).toFixed(2).replace('.', ',');
 }
 
 // Bloco de nota + elogio/reclamação — só aparece nas lojas já ativas
@@ -124,9 +143,13 @@ function pcReviewsBlock(c) {
   const statsLine = stats
     ? `<div class="mkt-store-meta">${pcStars(stats.avg)} ${stats.avg.toFixed(1)} · ${stats.count} avaliaç${stats.count > 1 ? 'ões' : 'ão'} (👍 ${stats.elogios} · 👎 ${stats.reclamacoes})</div>`
     : `<div class="mkt-store-meta">Ainda sem avaliações.</div>`;
+  const precoLine = stats && stats.avgPreco
+    ? `<div class="mkt-store-meta" style="color:var(--gold)">💰 Preço médio sugerido: ${pcFmtBRL(stats.avgPreco)} (${stats.precoCount} avaliaç${stats.precoCount > 1 ? 'ões' : 'ão'})</div>`
+    : '';
 
   return `
     ${statsLine}
+    ${precoLine}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
       ${stats ? `<button class="cv-item-remove" style="color:var(--muted);border-color:var(--muted)" onclick="pcToggleReviewsList('${c.id}')">💬 Ver avaliações</button>` : ''}
       <button class="cv-item-remove" style="color:var(--gold);border-color:var(--gold)" onclick="pcToggleReviewForm('${c.id}')">⭐ ${mine ? 'Editar minha avaliação' : 'Avaliar'}</button>
@@ -147,6 +170,10 @@ function pcReviewsBlock(c) {
           <option value="elogio" ${!mine || mine.tipo === 'elogio' ? 'selected' : ''}>👍 Elogio</option>
           <option value="reclamacao" ${mine && mine.tipo === 'reclamacao' ? 'selected' : ''}>👎 Reclamação</option>
         </select>
+      </div>
+      <div class="ff"><label>Preço sugerido (opcional) — o que você pagou ou viu de bom lá</label>
+        <input type="number" id="pc-preco-${c.id}" step="0.01" min="0" placeholder="Ex: 24.90"
+          value="${mine && mine.preco_sugerido != null ? mine.preco_sugerido : ''}">
       </div>
       <div class="ff"><label>Comentário (opcional)</label>
         <textarea id="pc-comentario-${c.id}" rows="3" style="width:100%;resize:vertical">${mine && mine.comentario ? mine.comentario : ''}</textarea>
@@ -174,7 +201,8 @@ function pcToggleReviewsList(id) {
     const list = (companyReviews[id] || []).slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     el.innerHTML = list.map(r => `
       <div style="padding:8px 0;border-top:1px solid var(--border);font-size:10.5px;font-family:'Space Mono',monospace">
-        <div>${pcStars(r.nota)} <span style="color:${r.tipo === 'elogio' ? 'var(--teal)' : 'var(--accent)'}">${r.tipo === 'elogio' ? '👍 Elogio' : '👎 Reclamação'}</span></div>
+        <div>${pcStars(r.nota)} <span style="color:${r.tipo === 'elogio' ? 'var(--teal)' : 'var(--accent)'}">${r.tipo === 'elogio' ? '👍 Elogio' : '👎 Reclamação'}</span>
+          ${r.preco_sugerido != null ? ` · <span style="color:var(--gold)">💰 ${pcFmtBRL(r.preco_sugerido)}</span>` : ''}</div>
         ${r.comentario ? `<div style="color:var(--muted);margin-top:4px">${r.comentario}</div>` : ''}
       </div>
     `).join('') || '<div class="cv-item-empty" style="padding:12px">Nenhum comentário ainda.</div>';
@@ -190,8 +218,11 @@ async function submitCompanyReview(id) {
   const nota = parseInt(document.getElementById('pc-nota-' + id).value, 10);
   const tipo = document.getElementById('pc-tipo-' + id).value;
   const comentario = document.getElementById('pc-comentario-' + id).value.trim();
+  const precoRaw = document.getElementById('pc-preco-' + id).value.trim();
+  const preco = precoRaw ? parseFloat(precoRaw) : null;
   const payload = {
     company_id: id, user_id: uid(), nota, tipo,
+    preco_sugerido: (preco != null && !isNaN(preco) && preco > 0) ? preco : null,
     comentario: comentario || null, updated_at: new Date().toISOString()
   };
   const { error } = await sbClient.from('company_reviews').upsert(payload, { onConflict: 'company_id,user_id' });

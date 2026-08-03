@@ -30,7 +30,7 @@ create table if not exists positive_companies (
 -- adiciona a constraint agora sem quebrar caso ela já exista.
 do $$ begin
   alter table positive_companies add constraint positive_companies_nome_key unique (nome);
-exception when duplicate_object then null;
+exception when duplicate_table or duplicate_object then null;
 end $$;
 
 alter table positive_companies enable row level security;
