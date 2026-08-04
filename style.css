@@ -21,13 +21,13 @@
 
   --text:     #1c1f2e;
   --text2:    #454b63;
-  --muted:    #6b7288;
+  /* AJUSTADO 03/08/2026 (auditoria): #6b7288 dava 4.48:1 sobre --bg (#f7f7fa),
+     um fio abaixo do AA (4.5:1). #676d84 garante 4.79:1 sobre --bg e 4.54:1
+     sobre --surface2 — AA em todos os fundos claros. */
+  --muted:    #676d84;
   --muted2:   #8b93ab;
   /* variante de --muted com contraste garantido (~4.6:1) sobre --surface2/
-     --surface3 — --muted puro (#6b7288, ~3.2:1) fica abaixo do mínimo AA do
-     WCAG (4.5:1) quando usado sobre fundo cinza claro, só sobre --surface
-     branco que já funcionava. Ver ANALISE_FICHARIO_PROFISSIONAL_23jul2026.md
-     secao 3. */
+     --surface3 — ver ANALISE_FICHARIO_PROFISSIONAL_23jul2026.md secao 3. */
   --muted-oncard: #565d74;
 
   /* radius padronizado — antes cada botao/card usava um valor solto (4 a
@@ -463,7 +463,9 @@ header {
   display: inline-block;
   text-transform: uppercase;
 }
-h1 {
+/* .hlogo = logo do app (pg-app) — mesmo visual do h1, mas sem ser um segundo
+   <h1> no DOM (SEO/a11y: só a landing tem h1 agora — auditoria 03/08/2026) */
+h1, .hlogo {
   font-family: 'Bebas Neue', sans-serif;
   font-size: clamp(26px, 4vw, 50px);
   letter-spacing: 3.5px;
@@ -531,6 +533,14 @@ h1 {
   transition: all .2s cubic-bezier(.4,0,.2,1);
   white-space: nowrap;
   position: relative;
+  /* reset pra quando .tab é <button> (acessibilidade — auditoria 03/08/2026) */
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .tab:hover { color: var(--text2); background: rgba(0,0,0,.04); }
 .tab.active {
@@ -1302,7 +1312,7 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
      e no mobile, desproporcional num card de só 72px de largura) */
   :root { --cw: 72px; --ch: 101px; --dotsize: 12px; }
 
-  h1 { font-size: 26px; letter-spacing: 2px; }
+  h1, .hlogo { font-size: 26px; letter-spacing: 2px; }
   .hbadge { font-size: 8px; padding: 2px 7px; }
   .hsub { font-size: 9px; }
   .back-btn { width: 32px; height: 32px; font-size: 15px; }
@@ -2042,4 +2052,126 @@ body.share-view .btn-add { display: none !important; }
 
 @media (max-width: 900px) {
   .mkt-grid { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   AUDITORIA 03/08/2026 — TOAST GLOBAL + AÇÕES DE COMPRA
+   ═══════════════════════════════════════════════════════ */
+
+/* Toast de feedback (sucesso/erro/info) — criado via toast() no app.js */
+#md-toast-wrap {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  pointer-events: none;
+}
+.md-toast {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 11px 20px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border2);
+  border-left: 4px solid var(--teal);
+  box-shadow: 0 8px 30px rgba(0,0,0,.35);
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity .3s ease, transform .3s ease;
+  max-width: min(92vw, 480px);
+}
+.md-toast.show { opacity: 1; transform: translateY(0); }
+.md-toast-error { border-left-color: var(--accent); }
+.md-toast-info  { border-left-color: var(--blue); }
+
+/* Botões editar/remover no card de compra (antes não existia NENHUMA forma
+   de corrigir ou excluir uma compra pela UI — auditoria bug B2) */
+.pcard-actions { display: flex; gap: 6px; }
+.pcard-act {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  cursor: pointer;
+  transition: border-color .15s, background .15s, transform .1s;
+}
+.pcard-act:hover { border-color: var(--border2); transform: translateY(-1px); }
+.pcard-act-del:hover { border-color: var(--accent); background: rgba(230,57,70,.12); }
+
+/* Skeleton loader genérico (auditoria 03/08/2026) — use <span class="skel">
+   ou <div class="skel"> com width/height no style pra placeholders de load. */
+.skel {
+  display: inline-block;
+  height: 1em;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%);
+  background-size: 200% 100%;
+  animation: skel-shimmer 1.4s ease infinite;
+}
+@keyframes skel-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* PERF 03/08/2026 (auditoria): o navegador pula layout/paint das cartas fora
+   da viewport — no Master Set Nacional (~2.000 slots) isso elimina o
+   congelamento ao abrir o fichário. contain-intrinsic-size reserva a altura
+   estimada pra barra de rolagem não pular durante o scroll. */
+.fic-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--cw, 112px) auto var(--ch, 157px);
+}
+
+/* ── Lista de compras compacta (auditoria 03/08/2026, EST4) ──────────
+   Antes cada compra ocupava ~230px de altura (banner de arte em cima do
+   texto) — 26 compras = ~6.000px de scroll. Agora o banner é um thumbnail
+   lateral e cada compra vira uma linha de ~90px, com os botões de
+   editar/remover sempre visíveis. */
+.pcard { display: flex; align-items: stretch; }
+.pcard-img-wrap {
+  width: 130px;
+  min-width: 130px;
+  height: auto;
+  min-height: 90px;
+}
+.pcard-img-label { font-size: 11px; letter-spacing: 1.5px; bottom: 8px; left: 10px; }
+.pcard-body { flex: 1; padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; }
+@media (max-width: 640px) {
+  .pcard-img-wrap { width: 84px; min-width: 84px; }
+  .pcard-img-label { display: none; }
+}
+
+/* ── Mobile: header compacto + toque 44px + fichário 3 colunas ──────
+   (auditoria 03/08/2026, EST5) */
+@media (max-width: 768px) {
+  /* Alvo de toque recomendado (WCAG/Apple HIG): 44px. As abas tinham ~32px. */
+  .tabs .tab { min-height: 44px; display: inline-flex; align-items: center; }
+
+  /* Header colapsa após o primeiro scroll (classe hdr-compact via app.js) —
+     antes o bloco logo+badge+busca comia ~270px de uma tela de 844px. */
+  #pg-app header.hdr-compact .hbadge,
+  #pg-app header.hdr-compact .hsub { display: none; }
+  #pg-app header.hdr-compact .hlogo { font-size: 18px; letter-spacing: 2px; }
+  #pg-app header.hdr-compact { padding: 8px 14px; }
+  #pg-app header.hdr-compact #gsearch-wrap { margin: 4px 0; }
+  #pg-app header { transition: padding .2s ease; }
+}
+
+@media (max-width: 480px) {
+  /* Fichário: 3 colunas legíveis em vez de 4-5 cards de 72px (ilegíveis).
+     3×106px + gaps cabem em 390px; quem preferir mais denso usa o controle
+     de tamanho 2×2/3×3/4×4 que já existe na aba. */
+  :root { --cw: 106px; --ch: 148px; --dotsize: 16px; }
 }

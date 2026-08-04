@@ -685,7 +685,7 @@ async function renderShowcaseSection() {
     if (t.featured) featuredCards.push(html); else normalCards.push(html);
   });
 
-  let html = '<div class="ml-price-warning">⚠️ Os preços aqui mostram sempre o <strong>menor valor encontrado entre todos os vendedores</strong> do produto no Mercado Livre — mesmo que esse vendedor tenha poucas vendas ou pouca reputação ainda. Antes de comprar, confira a avaliação e o histórico do vendedor na página do anúncio.</div>';
+  let html = '<div class="ml-price-warning">⚠️ Os preços aqui mostram sempre o <strong>menor valor encontrado entre todos os vendedores</strong> do produto no Mercado Livre — mesmo que esse vendedor tenha poucas vendas ou pouca reputação ainda. Antes de comprar, confira a avaliação e o histórico do vendedor na página do anúncio. Preços são atualizados a cada hora — mudanças recentes no ML podem levar até 1h pra aparecer aqui.</div>';
   html += renderCollectionFilterBar(terms);
   if (featuredCards.length) {
     html += '<div class="sec-title" style="margin-top:8px">🔥 Ofertas em Destaque</div>';

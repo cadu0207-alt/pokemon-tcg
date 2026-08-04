@@ -375,7 +375,7 @@ function fmMdexRender(binder,keepFilters){
       <div style="font-size:26px">${binder.emoji||'🌐'}</div>
       <div style="flex:1;min-width:100px">
         <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--text)">${binder.name}</div>
-        <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${cards.length}/${totalSlots} vagas preenchidas · ${colCount} coletadas</div>
+        <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${colCount}/${totalSlots} vagas preenchidas</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;min-width:120px">
         <div style="flex:1;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden">
@@ -452,7 +452,7 @@ function fmMdexOpenPicker(dex,binderId){
     return `<div onclick="fmMdexChooseCard(${dex},'${x.setId}','${x.card.n}','${binderId}')"
       style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:6px;cursor:pointer;
              background:${isCurrent?'var(--surface3)':'transparent'};border:1px solid ${isCurrent?'var(--accent)':'transparent'}">
-      <img src="${(typeof getBinderImg==='function')?getBinderImg(x.card,x.setId):''}" style="width:36px;height:50px;object-fit:cover;border-radius:4px;flex-shrink:0">
+      <img loading="lazy" decoding="async" alt="${x.card.name||''}" src="${(typeof imgThumb==='function'?imgThumb((typeof getBinderImg==='function')?getBinderImg(x.card,x.setId):''):'')}" style="width:36px;height:50px;object-fit:cover;border-radius:4px;flex-shrink:0">
       <div style="flex:1;min-width:0">
         <div style="font-size:11px;font-weight:700;color:var(--text)">${x.card.name} <span style="color:var(--muted);font-weight:400">#${x.card.n}</span></div>
         <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${x.setId.toUpperCase()} · ${x.card.rare||''} · ${price}${owned?' · ✅ você tem':''}</div>
@@ -550,7 +550,7 @@ function fmMdexHomeCardHtml(binder){
     <div onclick='openCustomBinderView(${safeJSON(binder)})' style="font-size:30px;cursor:pointer">${binder.emoji||'🌐'}</div>
     <div onclick='openCustomBinderView(${safeJSON(binder)})' style="flex:1;cursor:pointer">
       <div style="font-size:13px;font-weight:700;color:var(--text)">${binder.name}</div>
-      <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${pct}% das ${total} espécies coletadas · ${cards.length}/${total} vagas preenchidas — clique pra continuar</div>
+      <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${pct}% das ${total} espécies coletadas · ${col}/${total} vagas preenchidas — clique pra continuar</div>
     </div>
     <button onclick="deleteCustomBinder('${binder.id}')" title="Excluir Master Set"
       style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:4px;opacity:.6"

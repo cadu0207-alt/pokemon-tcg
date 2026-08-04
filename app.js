@@ -11,6 +11,28 @@ if(!window.supabase){
 const sbClient=window.supabase ? window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY) : null;
 let currentUser=null;
 
+// ── TOAST GLOBAL (sucesso/erro/info) ─────────────────────────────
+// Uso: toast('Compra salva!') · toast('Preço inválido','error') · toast('...','info')
+function toast(msg,type='success'){
+  let wrap=document.getElementById('md-toast-wrap');
+  if(!wrap){
+    wrap=document.createElement('div');
+    wrap.id='md-toast-wrap';
+    wrap.setAttribute('aria-live','polite');
+    document.body.appendChild(wrap);
+  }
+  const el=document.createElement('div');
+  el.className='md-toast md-toast-'+type;
+  el.setAttribute('role','status');
+  el.textContent=msg;
+  wrap.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{
+    el.classList.remove('show');
+    setTimeout(()=>el.remove(),350);
+  },3200);
+}
+
 // ── MODO COMPARTILHAMENTO (link público / QR code) ────────────────
 // Se a URL tiver ?share=<token>, o visitante entra direto no fichário
 // compartilhado, sem precisar de login — somente leitura.
@@ -201,6 +223,14 @@ function imgAltUrl(setId,n){
 }
 // Handler global reusado nos onerror de <img> do fichário — tenta o CDN alternativo
 // uma única vez (via data-img-try) e só então cai no placeholder "sem imagem".
+// PERF 03/08/2026 (auditoria): versão thumbnail de qualquer URL de carta.
+// Grids/listas usam /small do scrydex (~10x mais leve que /large); modal e zoom
+// continuam com /large. pokemontcg.io já serve o tamanho pequeno por padrão.
+function imgThumb(url){
+  if(typeof url!=='string')return url;
+  if(url.includes('images.scrydex.com'))return url.replace(/\/large$/,'/small');
+  return url;
+}
 function handleCardImgError(img,setId,n){
   if(img.dataset.imgTry!=='1'){
     const alt=imgAltUrl(setId,n);
@@ -625,7 +655,7 @@ function renderDash(){
     kpiHTML('orange',dico('box')+' Boosters',''+tb,'~'+(tb*6)+' cartas','gastos')+
     kpiHTML('gold',dico('coins')+' R$/Booster','R$'+apb.replace('.',','),'média ponderada','gastos')+
     kpiHTML('teal',dico('book')+' Valor Fichário','R$'+fmtR(fichVal),collected.size+' slots coletados','fichario')+
-    kpiHTML('blue',dico('trend')+' ROI Fichário',roi+'%','fichário ÷ investido em cartas','fichario');
+    kpiHTML('blue',dico('trend')+' Fichário ÷ Investido',roi+'%','valor do fichário ÷ investido em cartas','fichario');
 
   // Gráfico raridades com dot colorido
   // CORRIGIDO 02/08/2026: classificador antigo usava .includes() com códigos
@@ -957,7 +987,7 @@ function updateDashProgress(){
       return`<div class="panel panel-link" style="border-color:${color}44;overflow:hidden;position:relative;${meta.upcoming?'opacity:.8':''}" onclick="goToTab('fichario');switchSet('${id}',null)">
         ${upBadge}
         <div style="position:absolute;right:-8px;top:-8px;width:70px;height:100px;opacity:.1;pointer-events:none">
-          <img src="${meta.imgFn(meta.heroCard)}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
+          <img loading="lazy" decoding="async" alt="" src="${imgThumb(meta.imgFn(meta.heroCard))}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
           <div style="flex:1"><div style="font-weight:700;font-size:13px">${meta.label}</div>
@@ -1060,7 +1090,7 @@ function renderGastos(){
     ${kpiHTML('gold','📦 R$/Booster','R$'+apb.replace('.',','),'média ponderada')}
     ${kpiHTML('orange','🃏 R$/Carta','R$'+apc.replace('.',','),'~'+tc+' cartas')}
     ${kpiHTML('teal','💎 Valor Tirado','R$'+fmtR(pull),pulledCards.length+' cartas')}
-    ${kpiHTML('blue','📊 ROI Pulls',roi+'%',pull>=total?'✅ acima do gasto':'📉 abaixo do gasto')}
+    ${kpiHTML('blue','📊 Recuperado em Pulls',roi+'%',(pull>=total?'✅ acima do gasto':'📉 abaixo do gasto')+' · R$ tirado ÷ R$ gasto')}
   </div>`;
 
   document.getElementById('gastos-cards').innerHTML=purchases.map(p=>{
@@ -1095,6 +1125,10 @@ function renderGastos(){
               <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">PAGO</div></div>
             ${pb?`<div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold);line-height:1">R$${pb.replace('.',',')}</div>
               <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">POR BOOSTER</div></div>`:''}
+            <div class="pcard-actions">
+              <button class="pcard-act" aria-label="Editar compra" title="Editar" onclick="editPurchase('${p.id}')">✏️</button>
+              <button class="pcard-act pcard-act-del" aria-label="Remover compra" title="Remover" onclick="removePurchase('${p.id}')">🗑️</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1128,11 +1162,16 @@ const cvCondInfo=code=>CV_CONDITIONS.find(x=>x.code===code)||CV_CONDITIONS[0];
 function renderCartas(){
   const fichVal=calcCollectedValue();
   const invested=purchases.reduce((s,p)=>s+Number(p.price),0);
-  const roi=invested>0?(fichVal/invested*100).toFixed(0):0;
+  // UNIFICADO 03/08/2026 (auditoria): mesma conta e mesmo nome do KPI
+  // "Fichário ÷ Investido" do Dashboard — antes aqui era "% Investimento"
+  // sobre o total COM acessórios, enquanto o Dashboard dividia só pelo gasto
+  // em cartas. Três nomes diferentes pra métricas parecidas confundiam.
+  const tgCartas=purchases.filter(p=>!p.acessorio).reduce((s,p)=>s+Number(p.price),0);
+  const roi=tgCartas>0?(fichVal/tgCartas*100).toFixed(0):0;
   const vendaTotal=cardListings.reduce((s,l)=>s+Number(l.price||0)*Number(l.qty||1),0);
   document.getElementById('cards-hdr').innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:22px">
     ${kpiHTML('teal','📚 Valor Fichário','R$'+fmtR(fichVal),collected.size+' slots')}
-    ${kpiHTML('gold','📊 % Investimento',roi+'%','de R$'+fmtR(invested))}
+    ${kpiHTML('gold','📊 Fichário ÷ Investido',roi+'%','fichário vale '+roi+'% do investido em cartas')}
     ${kpiHTML('red','🛍️ Investido','R$'+fmtR(invested),purchases.length+' compras')}
     ${kpiHTML('teal','🏷️ À Venda','R$'+fmtR(vendaTotal),cardListings.length+' anúncios')}
   </div>`;
@@ -1296,7 +1335,7 @@ function openVendaModal(setId,n,ver){
   const s=slots.find(sl=>sl.ver===ver)||slots[0];
   const key=slotKey(setId+':',n,ver);
   const owned=collectedQty.get(key)?.qty||0;
-  if(!owned){alert('Você não tem essa carta marcada no fichário.');return;}
+  if(!owned){toast('Você não tem essa carta marcada no fichário.','error');return;}
   const ligaPrice=lprice(setId,n,s.price)||0;
   const existing=cardListings.find(l=>l.slot_key===key);
   _mvState={
@@ -1397,8 +1436,8 @@ function mvSetCondition(code){
 
 async function saveVenda(){
   const st=_mvState;if(!st||!uid())return;
-  if(st.qty<1||st.qty>st.owned){alert('Quantidade inválida.');return;}
-  if(!st.price||st.price<=0){alert('Informe um preço de venda válido.');return;}
+  if(st.qty<1||st.qty>st.owned){toast('Quantidade inválida.','error');return;}
+  if(!st.price||st.price<=0){toast('Informe um preço de venda válido.','error');return;}
   const payload={
     user_id:uid(),slot_key:st.key,set_id:st.setId,card_n:st.n,version:st.ver,
     card_name:st.card.name,qty:st.qty,price:st.price,discount_type:st.discountType,
@@ -2252,10 +2291,10 @@ async function saveBoosterOpening(){
   const sel=document.getElementById('open-purchase');
   const pid=sel.value;
   const purchase=purchases.find(p=>String(p.id)===String(pid));
-  if(!purchase){alert('Selecione uma compra');return;}
+  if(!purchase){toast('Selecione uma compra.','error');return;}
 
   const allItems=Object.values(_boosterSelected).flat();
-  if(!allItems.length){alert('Adicione pelo menos uma carta');return;}
+  if(!allItems.length){toast('Adicione pelo menos uma carta.','error');return;}
 
   const d=new Date(purchase.date+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
   const icons={Grama:'🌿',Fogo:'🔥',Aquático:'💧',Raio:'⚡',Psíquico:'🔮',Lutador:'🥊',Escuridão:'⚫',Metal:'⚙️',Dragão:'🐉',Incolor:'⬜'};
@@ -2306,13 +2345,18 @@ async function saveBoosterOpening(){
   _boosterSelected={};
   closeModal('mopen');
   renderAll();
-  alert(`✓ ${allItems.length} carta${allItems.length!==1?'s':''} registrada${allItems.length!==1?'s':''}! Fichário atualizado.`);
+  toast(`✓ ${allItems.length} carta${allItems.length!==1?'s':''} registrada${allItems.length!==1?'s':''}! Fichário atualizado.`);
 }
 
 // ── MODAIS BASE ──────────────────────────────────────────────────
 function openModal(id){
   document.getElementById(id).classList.add('open');
-  if(id==='mp') document.getElementById('m-data').value=new Date().toISOString().split('T')[0];
+  if(id==='mp'){
+    // Abrir sempre em modo "nova compra" — editPurchase() sobrescreve depois se for edição
+    _editPurchaseId=null;
+    const t=document.querySelector('#mp h3');if(t)t.textContent='Nova Compra';
+    document.getElementById('m-data').value=new Date().toISOString().split('T')[0];
+  }
   if(id==='mopen'){
     _boosterSelected={};
     // Preencher lista de compras (mais recente primeiro, já está order=date.desc)
@@ -2334,6 +2378,9 @@ const rIC={'Dupla Rara (RR)':'🔥','Ilustração Rara (IR)':'⭐','Ilustracao R
 const rBC={'Dupla Rara (RR)':'br','Ilustração Rara (IR)':'bi','Ilustracao Rara (IR)':'bi',
   'Ilustração Rara (SAR)':'bi','Ilustracao Rara (SAR)':'bi','Rara Ultra (UR)':'bi','Promocional':'bp'};
 
+// Compra em edição (null = criando nova). Setado por editPurchase().
+let _editPurchaseId=null;
+
 async function addPurchase(){
   if(!uid()) return;
   const prod=document.getElementById('m-prod').value.trim();
@@ -2342,10 +2389,52 @@ async function addPurchase(){
   const price=parseFloat(document.getElementById('m-preco').value);
   const boost=parseInt(document.getElementById('m-boost').value)||0;
   const acess=document.getElementById('m-acess').checked;
-  if(!prod||isNaN(price))return;
-  const{data:res}=await sbClient.from('purchases').insert({date,product:prod,tipo,boost,cards:boost*6,price,acessorio:acess,user_id:uid()}).select();
-  if(Array.isArray(res))purchases.unshift(...res);
+  // Validação — nada de gravar lixo no banco (auditoria 03/08/2026)
+  if(!prod){toast('Informe o nome do produto.','error');return;}
+  if(!date){toast('Informe a data da compra.','error');return;}
+  if(isNaN(price)||price<=0){toast('Preço inválido — informe um valor maior que zero.','error');return;}
+  if(price>100000){toast('Preço muito alto — confira o valor digitado.','error');return;}
+  if(boost<0||boost>2000){toast('Nº de boosters inválido.','error');return;}
+  const row={date,product:prod,tipo,boost,cards:boost*6,price,acessorio:acess};
+  if(_editPurchaseId!==null){
+    const{data:res,error}=await sbClient.from('purchases').update(row).eq('id',_editPurchaseId).select();
+    if(error||!Array.isArray(res)||!res.length){toast('Erro ao atualizar a compra. Tente de novo.','error');console.error('updatePurchase',error);return;}
+    const i=purchases.findIndex(p=>String(p.id)===String(_editPurchaseId));
+    if(i>=0)purchases[i]=res[0];
+    _editPurchaseId=null;
+    toast('Compra atualizada!');
+  }else{
+    const{data:res,error}=await sbClient.from('purchases').insert({...row,user_id:uid()}).select();
+    if(error||!Array.isArray(res)){toast('Erro ao salvar a compra. Tente de novo.','error');console.error('addPurchase',error);return;}
+    purchases.unshift(...res);
+    toast('Compra registrada!');
+  }
   closeModal('mp');renderGastos();renderDash();
+}
+
+function editPurchase(id){
+  const p=purchases.find(x=>String(x.id)===String(id));
+  if(!p){toast('Compra não encontrada.','error');return;}
+  openModal('mp');
+  _editPurchaseId=p.id;
+  document.getElementById('m-prod').value=p.product||'';
+  document.getElementById('m-tipo').value=p.tipo||'Outro';
+  document.getElementById('m-data').value=p.date||'';
+  document.getElementById('m-preco').value=p.price;
+  document.getElementById('m-boost').value=p.boost||0;
+  document.getElementById('m-acess').checked=!!p.acessorio;
+  const t=document.querySelector('#mp h3');if(t)t.textContent='Editar Compra';
+}
+
+async function removePurchase(id){
+  const p=purchases.find(x=>String(x.id)===String(id));
+  if(!p)return;
+  if(!confirm(`Remover a compra "${p.product}" (R$${fmtR(p.price)})?\nAs cartas tiradas vinculadas NÃO serão apagadas.`))return;
+  const{error}=await sbClient.from('purchases').delete().eq('id',p.id);
+  if(error){toast('Erro ao remover a compra.','error');console.error('removePurchase',error);return;}
+  purchases=purchases.filter(x=>String(x.id)!==String(p.id));
+  toast('Compra removida.');
+  renderGastos();renderDash();
 }
 async function addCard(){
   if(!uid()) return;
@@ -3155,7 +3244,7 @@ function cbToggleManual(setId,n){
 
 async function cbConfirmSave(editId){
   const name=((document.getElementById('cb-name-inp')&&document.getElementById('cb-name-inp').value)||_cbDraft.name||'').trim();
-  if(!name){alert('Dê um nome ao fichário!');return;}
+  if(!name){toast('Dê um nome ao fichário!','error');return;}
   const isManual=_cbDraft.filter_config&&_cbDraft.filter_config.type==='manual';
   const payload={
     ...(editId?{id:editId}:{}),
@@ -3201,6 +3290,11 @@ async function cbConfirmSave(editId){
   }
 
   function setupRotation(el){
+    // Guard de re-execução (auditoria 03/08/2026): setupRotation agora roda de
+    // novo depois do lazy load dos sets (evento lazy-sets-loaded) — sem isso,
+    // cada re-render criaria um segundo interval no mesmo card.
+    if(el._rotWired) return;
+    el._rotWired=true;
     let raw;
     try{ raw=JSON.parse(el.dataset.cards); }catch(e){ return; }
     if(!raw||raw.length<2) return;
@@ -3216,16 +3310,31 @@ async function cbConfirmSave(editId){
 
     function showCard(i, animate){
       const c = raw[i];
-      const url = homeImg(setId, c.n); // suporta ME (scrydex) e SV (pokemontcg.io)
+      // thumb (/small) — carrossel da home renderiza ~150px, /large era desperdício
+      const url = imgThumb(homeImg(setId, c.n)); // suporta ME (scrydex) e SV (pokemontcg.io)
 
       if(animate && imgEl){
-        imgEl.classList.add('fading');
-        setTimeout(()=>{
-          imgEl.src = url;
-          imgEl.classList.remove('fading');
-        }, 480);
+        // PRELOAD (auditoria 03/08/2026): antes o src trocava no meio do fade e a
+        // moldura ficava vazia por segundos até a imagem nova baixar. Agora só
+        // troca depois que a próxima imagem já está no cache.
+        const pre=new Image();
+        let _swapped=false;
+        const doSwap=()=>{
+          if(_swapped)return;_swapped=true;
+          imgEl.classList.add('fading');
+          setTimeout(()=>{
+            imgEl.src = url;
+            imgEl.alt = c.name||'';
+            imgEl.classList.remove('fading');
+          }, 480);
+        };
+        pre.onload=doSwap;
+        pre.onerror=doSwap; // mesmo se falhar, mantém o carrossel girando
+        pre.src=url;
+        if(pre.complete)doSwap();
       } else if(imgEl){
         imgEl.src = url;
+        imgEl.alt = c.name||'';
       }
 
       if(badgeEl) badgeEl.textContent = fmtPriceBR(c.price);
@@ -3246,7 +3355,10 @@ async function cbConfirmSave(editId){
       });
     });
 
-    setInterval(()=>{
+    const rotTimer=setInterval(()=>{
+      // Se o card saiu do DOM (re-render da home), mata o interval — senão
+      // ele ficaria pra sempre baixando imagens num nó morto.
+      if(!el.isConnected){clearInterval(rotTimer);return;}
       idx = (idx+1) % raw.length;
       showCard(idx, true);
     }, INTERVAL + Math.random()*600); // offset aleatório para não sincroni­zar
@@ -3266,6 +3378,15 @@ async function cbConfirmSave(editId){
     initGlobalSearch();
     updateHsub();
   }
+
+  // Quando os sets SV/legados chegam (lazy load — fim do app.js), a home é
+  // re-renderizada com os sets novos e os carrosséis/tilt são religados.
+  // setupRotation tem guard (_rotWired), então não duplica interval.
+  document.addEventListener('lazy-sets-loaded',()=>{
+    renderHomeSets();
+    document.querySelectorAll('.hset[data-cards]').forEach(setupRotation);
+    if(typeof init3DCards==='function')init3DCards();
+  });
 
   // Aguarda DOM pronto
   if(document.readyState==='loading'){
@@ -3327,7 +3448,7 @@ function renderHomeSets(){
         const hero=meta?meta.imgFn(meta.heroCard):(top3[0]?homeImg(id,top3[0].n):'');
         return`<div class="hset-wrap" data-tilt><div class="hset" style="border-color:${cat.color}88">
           <div class="hset-glow" style="background:radial-gradient(circle at 50% 50%,${cat.color},transparent 70%)"></div>
-          <div class="hset-img-wrap">${hero?`<img loading="lazy" src="${hero}" alt="${code}" onerror="this.style.opacity='.25'">`:''}</div>
+          <div class="hset-img-wrap">${hero?`<img loading="lazy" decoding="async" src="${imgThumb(hero)}" alt="${code}" onerror="this.style.opacity='.25'">`:''}</div>
           <div style="position:absolute;top:10px;right:10px;background:#f0932b;color:#fff;font-size:8px;padding:2px 8px;border-radius:4px;font-family:'Space Mono',monospace;z-index:4">EM BREVE</div>
           <div class="hset-info"><div class="hset-name">${name}</div>
           <div class="hset-code">${code}${meta&&meta.releaseDate?' · '+meta.releaseDate:''}</div></div>
@@ -3337,7 +3458,7 @@ function renderHomeSets(){
       return`<div class="hset-wrap" data-tilt>
         <div class="hset" id="hset-${id}" data-setid="${id}" data-cards="${safeJSON(top3)}" style="border-color:${cat.color}88">
           <div class="hset-glow" style="background:radial-gradient(circle at 50% 50%,${cat.color},transparent 70%)"></div>
-          <div class="hset-img-wrap"><img loading="lazy" src="${homeImg(id,c0.n)}" alt="${code}" onerror="this.style.opacity='.25'"></div>
+          <div class="hset-img-wrap"><img loading="lazy" decoding="async" src="${imgThumb(homeImg(id,c0.n))}" alt="${code}" onerror="this.style.opacity='.25'"></div>
           <div class="hset-price-badge">${_fmtBadge(c0.price)}</div>
           <div class="hset-rank-badge">1</div>
           <div class="hset-dots">${top3.map((_,i)=>`<span class="hset-dot${i===0?' active':''}"></span>`).join('')}</div>
@@ -3400,7 +3521,7 @@ function initGlobalSearch(){
     if(!out.length){dd.innerHTML='<div class="gs-empty">Nenhuma carta encontrada</div>';dd.style.display='block';return;}
     dd.innerHTML=out.map(({set,c})=>`
       <div class="gs-item" onclick="gsGo('${set.id}','${String(c.n)}')">
-        <img loading="lazy" src="${homeImg(set.id,c.n)}" onerror="this.style.visibility='hidden'">
+        <img loading="lazy" decoding="async" alt="${c.name} #${c.n}" src="${imgThumb(homeImg(set.id,c.n))}" onerror="this.style.visibility='hidden'">
         <div class="gs-txt"><div class="gs-name">${c.name}</div>
         <div class="gs-set">${set.emoji} ${set.label.split('—')[0].trim()} · #${c.n}</div></div>
         <div class="gs-price">${c.price?_fmtBadge(c.price):''}</div>
@@ -3678,3 +3799,97 @@ function copyShareUrl(){
   const btn=document.getElementById('share-copy-btn');
   if(btn){ const old=btn.textContent; btn.textContent='Copiado ✓'; setTimeout(()=>btn.textContent=old,1500); }
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// LAZY LOAD DOS SETS PESADOS — auditoria 03/08/2026
+// ═══════════════════════════════════════════════════════════════════
+// Os 23 arquivos abaixo (~2,2 MB, sets SV + legados) NÃO carregam mais no
+// boot (ver comentário no index.html). São injetados aqui depois do
+// window.load, em paralelo, e quando TODOS chegam:
+//   1. registra os sets legados em SET_CARDS_MAP/SET_CATALOG (mesmo código
+//      que antes rodava no parse do app.js);
+//   2. re-renderiza home/dashboard/fichário pra incluir os dados novos.
+// Enquanto isso o site funciona 100% com os sets ME (uso diário) — os
+// consumidores de SET_CARDS_MAP são todos guarded (typeof/?.()||[]).
+const LAZY_SET_SCRIPTS=[
+  'cards_sv1.js','cards_sv2.js','cards_sv3.js','cards_sv3pt5.js',
+  'cards_sv4.js','cards_sv4pt5.js','cards_sv5.js','cards_sv6.js',
+  'cards_sv6pt5.js','cards_sv7.js','cards_sv8.js','cards_sv8pt5.js',
+  'cards_sv9.js','cards_sv10.js','cards_svp.js',
+  'legacy_swsh.js','legacy_sm.js','legacy_xy.js','legacy_bw.js',
+  'legacy_hgss.js','legacy_dp.js','legacy_ex.js','legacy_classic.js',
+];
+let _lazySetsLoaded=false,_lazySetsLoading=false;
+
+function _registerLazySets(){
+  // Idêntico ao registro que roda no parse (linhas ~828/873) — mas agora os
+  // LEGACY_SETS só existem depois do lazy load, então registra de novo aqui.
+  (window.LEGACY_SETS||[]).forEach(ls=>{
+    if(!SET_CARDS_MAP[ls.id])SET_CARDS_MAP[ls.id]=()=>ls.data;
+  });
+  (window.LEGACY_SETS||[]).forEach(ls=>{
+    if(SET_CATALOG.some(s=>s.id===ls.id))return;
+    SET_CATALOG.push({id:ls.id,label:ls.label,emoji:ls.emoji,cards:ls.cards,color:ls.color,series:ls.series});
+  });
+}
+
+function loadLazySets(){
+  if(_lazySetsLoaded||_lazySetsLoading)return;
+  _lazySetsLoading=true;
+  let pending=LAZY_SET_SCRIPTS.length;
+  const done=()=>{
+    if(--pending>0)return;
+    _lazySetsLoaded=true;_lazySetsLoading=false;
+    _registerLazySets();
+    // Re-renderiza o que depende dos dados novos (tudo guarded). A home
+    // (renderHomeSets + carrosséis) é religada pelo listener de
+    // 'lazy-sets-loaded' dentro do IIFE initHomeRotation — não chamar aqui
+    // pra não renderizar duas vezes.
+    try{
+      if(currentUser){
+        if(typeof renderDash==='function')renderDash();
+        if(typeof updateDashProgress==='function')updateDashProgress();
+        // Se o usuário já estava com o fichário aberto num set SV/legado
+        // (renderizado vazio), redesenha agora com os dados na mão.
+        const fic=document.getElementById('fichario');
+        if(fic&&fic.classList.contains('active')){
+          if(currentSet==='__custom__'&&typeof renderCustomBindersHome==='function')renderCustomBindersHome();
+          else if(typeof renderBinder==='function')renderBinder();
+        }
+      }
+    }catch(e){console.error('lazy rerender',e);}
+    document.dispatchEvent(new CustomEvent('lazy-sets-loaded'));
+  };
+  LAZY_SET_SCRIPTS.forEach(src=>{
+    const s=document.createElement('script');
+    s.src=src;s.async=true;
+    s.onload=done;
+    s.onerror=()=>{console.error('lazy set falhou:',src);done();};
+    document.body.appendChild(s);
+  });
+}
+
+// Dispara depois do load + folga, sem atrapalhar o primeiro paint.
+if(document.readyState==='complete'){
+  setTimeout(loadLazySets,600);
+}else{
+  window.addEventListener('load',()=>setTimeout(loadLazySets,600));
+}
+
+// ── Header compacto no scroll (mobile) — auditoria 03/08/2026 ──────
+// Em telas pequenas o header (logo + badge + busca) ocupava ~1/3 da tela.
+// Depois de 60px de scroll ele colapsa (CSS .hdr-compact, só <=768px).
+(function(){
+  let _hdrTick=false;
+  function _updHdr(){
+    _hdrTick=false;
+    const hdr=document.querySelector('#pg-app header');
+    if(!hdr)return;
+    hdr.classList.toggle('hdr-compact',window.scrollY>60);
+  }
+  window.addEventListener('scroll',()=>{
+    if(_hdrTick)return;
+    _hdrTick=true;
+    requestAnimationFrame(_updHdr);
+  },{passive:true});
+})();

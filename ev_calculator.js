@@ -158,7 +158,10 @@ function evSelectProduct(id) {
 
 function evSetPrice(v) {
   var n = parseFloat(v);
-  evState.pixPrice = isNaN(n) ? null : n;
+  // Clamp >= 0 (auditoria 03/08/2026): preço negativo gerava nota "S — compra
+  // imediata" com lucro absurdo. Negativo agora vira null (= "informe o preço").
+  if (isNaN(n) || n < 0) n = null;
+  evState.pixPrice = n;
   clearTimeout(evDebounceTimer);
   evDebounceTimer = setTimeout(function(){ renderEVResults(); }, 350);
 }
@@ -269,6 +272,9 @@ function renderEVResults() {
   var prod = CATALOG.find(function(p){return p.id===evState.productId;}) || CATALOG[0];
   var inp = document.getElementById('ev-pix-price');
   var pixPrice = inp ? parseFloat(inp.value)||prod.varejo : (evState.pixPrice!==null?evState.pixPrice:prod.varejo);
+  // Clamp >= 0 (auditoria 03/08/2026): valor negativo no input caía direto aqui
+  // e saía "ABAIXO DO EV — compra imediata" com lucro fictício.
+  if (!(pixPrice > 0)) pixPrice = prod.varejo;
   var ev = calcEVForProduct(prod);
 
   if (ev.noData) {

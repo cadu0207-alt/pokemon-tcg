@@ -94,8 +94,10 @@ function renderProductCard(term, history, featured, coupon, rules, dealScore) {
       '<div class="product-info">' +
         '<div class="product-name">' + label + '</div>' +
         priceHtml +
-        '<div class="product-note">' + (updatedStr ? 'atualizado ' + updatedStr : 'preço atual') + '</div>' +
-        '<div class="product-note-warn">💡 Raspagem de preço roda a cada hora — se acabou de mudar no Mercado Livre, pode levar até 1h pra atualizar aqui.</div>' +
+        // AUDITORIA 03/08/2026: o aviso de raspagem repetia em TODOS os cards
+        // (ruído visual) — a informação já está no aviso amarelo global no topo
+        // da aba. Aqui fica só o "atualizado em", com tooltip pra quem quiser.
+        '<div class="product-note" title="Raspagem de preço roda a cada hora — pode levar até 1h pra refletir mudanças do Mercado Livre.">' + (updatedStr ? 'atualizado ' + updatedStr : 'preço atual') + '</div>' +
         statsHtml +
       '</div>' +
     '</a>'

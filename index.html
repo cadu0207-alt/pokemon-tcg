@@ -134,7 +134,7 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </button>
       </div>
-      <div class="home-stats" id="home-stats">Carregando...</div>
+      <div class="home-stats" id="home-stats"><span class="skel" style="width:260px"></span></div>
       <div class="home-sets" id="home-sets" style="margin-top:56px"><!-- preenchido por renderHomeSets() em app.js --></div>
       <div style="margin-top:64px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);opacity:.7;letter-spacing:.5px">
         <a href="politica-privacidade.html" style="color:inherit;text-decoration:underline">Política de Privacidade</a>
@@ -152,7 +152,7 @@
       <button class="back-btn" onclick="goPage('home')" title="Início">⌂</button>
       <div>
         <div class="hbadge">MyDeck • Pokémon TCG</div>
-        <h1>MyDeck</h1>
+        <div class="hlogo">MyDeck</div>
         <div class="hsub" id="hsub-dyn">MASTER SET TRACKER</div>
       </div>
     </div>
@@ -174,17 +174,19 @@
   <!-- ids nav-tab-* adicionados 02/08/2026 — permitem goToTab(id) (app.js) navegar
        pra aba certa a partir de qualquer clique fora do <nav> (cards do Dashboard
        etc.), marcando a aba como ativa igual um clique nela mesma. -->
-  <nav class="tabs">
-    <div class="tab active" id="nav-tab-dash" onclick="go('dash',this)">📊 Dashboard</div>
-    <div class="tab" id="nav-tab-fichario" onclick="go('fichario',this)">📚 Fichário</div>
-    <div class="tab" id="nav-tab-gastos" onclick="go('gastos',this)">💸 Gastos</div>
-    <div class="tab" id="nav-tab-cartas" onclick="go('cartas',this)">🃏 Cartas Tiradas</div>
-    <div class="tab" id="nav-tab-preco" onclick="go('preco',this)">💰 Preço Justo</div>
-    <div class="tab" id="nav-tab-lojas" onclick="go('lojas',this)">🛍️ Lojas & Ofertas</div>
-    <div class="tab" id="nav-tab-mercado" onclick="go('mercado',this)">🏪 Lojas Confiáveis</div>
-    <div class="tab" id="nav-tab-positivo" onclick="go('positivo',this)">✅ Cadastro Positivo</div>
-    <div class="tab" id="nav-tab-iniciantes" onclick="go('iniciantes',this)">🔰 Iniciantes</div>
-    <div class="tab" onclick="window.open('simulador.html','_blank')" style="background:linear-gradient(90deg,#7b2ff744,#f107a322);color:#c084fc">🎰 Simulador</div>
+  <!-- ACESSIBILIDADE 03/08/2026 (auditoria): abas eram <div> — invisíveis pra
+       teclado (Tab) e leitores de tela. Viraram <button>, mantendo classes/ids. -->
+  <nav class="tabs" aria-label="Seções do site">
+    <button type="button" class="tab active" id="nav-tab-dash" onclick="go('dash',this)">📊 Dashboard</button>
+    <button type="button" class="tab" id="nav-tab-fichario" onclick="go('fichario',this)">📚 Fichário</button>
+    <button type="button" class="tab" id="nav-tab-gastos" onclick="go('gastos',this)">💸 Gastos</button>
+    <button type="button" class="tab" id="nav-tab-cartas" onclick="go('cartas',this)">🃏 Cartas Tiradas</button>
+    <button type="button" class="tab" id="nav-tab-preco" onclick="go('preco',this)">💰 Preço Justo</button>
+    <button type="button" class="tab" id="nav-tab-lojas" onclick="go('lojas',this)">🛍️ Lojas & Ofertas</button>
+    <button type="button" class="tab" id="nav-tab-mercado" onclick="go('mercado',this)">🏪 Lojas Confiáveis</button>
+    <button type="button" class="tab" id="nav-tab-positivo" onclick="go('positivo',this)">✅ Cadastro Positivo</button>
+    <button type="button" class="tab" id="nav-tab-iniciantes" onclick="go('iniciantes',this)">🔰 Iniciantes</button>
+    <button type="button" class="tab" onclick="window.open('simulador.html','_blank')" style="background:linear-gradient(90deg,#7b2ff744,#f107a322);color:#c084fc">🎰 Simulador</button>
   </nav>
 
   <div id="dash" class="pane active">
@@ -446,8 +448,8 @@
       <option>Combo de Boosters</option><option>Coleção Parceiros Iniciais</option><option>Outro</option>
     </select></div>
     <div class="ff"><label>Data</label><input type="date" id="m-data"></div>
-    <div class="ff"><label>Preço (R$)</label><input type="number" id="m-preco" step="0.01" placeholder="0,00"></div>
-    <div class="ff"><label>Nº Boosters</label><input type="number" id="m-boost" value="3"></div>
+    <div class="ff"><label>Preço (R$)</label><input type="number" id="m-preco" step="0.01" min="0.01" placeholder="0,00"></div>
+    <div class="ff"><label>Nº Boosters</label><input type="number" id="m-boost" value="3" min="0"></div>
     <div class="ff"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="m-acess"> É acessório (não conta no R$/booster)</label></div>
     <div class="mact"><button class="btn-cx" onclick="closeModal('mp')">Cancelar</button><button class="btn-add" onclick="addPurchase()">Salvar</button></div>
   </div>
@@ -700,31 +702,15 @@
 <script defer src="cards_me02.js"></script>
 <script defer src="cards_meg.js"></script>
 <script defer src="cards_mep.js"></script>
-<!-- Escarlate e Violeta (2023-2025) -->
-<script defer src="cards_sv1.js"></script>
-<script defer src="cards_sv2.js"></script>
-<script defer src="cards_sv3.js"></script>
-<script defer src="cards_sv3pt5.js"></script>
-<script defer src="cards_sv4.js"></script>
-<script defer src="cards_sv4pt5.js"></script>
-<script defer src="cards_sv5.js"></script>
-<script defer src="cards_sv6.js"></script>
-<script defer src="cards_sv6pt5.js"></script>
-<script defer src="cards_sv7.js"></script>
-<script defer src="cards_sv8.js"></script>
-<script defer src="cards_sv8pt5.js"></script>
-<script defer src="cards_sv9.js"></script>
-<script defer src="cards_sv10.js"></script>
-<script defer src="cards_svp.js"></script>
-<!-- Sets legados (SWSH ate Base Set) — gerados por batch automatico -->
-<script defer src="legacy_swsh.js"></script>
-<script defer src="legacy_sm.js"></script>
-<script defer src="legacy_xy.js"></script>
-<script defer src="legacy_bw.js"></script>
-<script defer src="legacy_hgss.js"></script>
-<script defer src="legacy_dp.js"></script>
-<script defer src="legacy_ex.js"></script>
-<script defer src="legacy_classic.js"></script>
+<!-- PERF 03/08/2026 (auditoria): os sets SV (2023-2025) e legados (SWSH até
+     Base Set) — ~2,2 MB de JS em 23 arquivos — saíram do boot. Eram avaliados
+     em TODA visita mesmo pra quem só usa os sets ME, e eram a principal causa
+     do load de ~15s e dos congelamentos ao trocar de aba. Agora são injetados
+     por loadLazySets() (fim do app.js) depois do window.load, e as telas
+     re-renderizam quando os dados chegam. Pra adicionar um set ME novo (uso
+     diário), continue criando <script defer> aqui em cima; pra sets SV/legados,
+     adicione o arquivo em LAZY_SET_SCRIPTS no app.js. -->
+
 <script defer src="pull_rates.js"></script>
 <script defer src="price_updated_at.js"></script>
 <script defer src="app.js"></script>

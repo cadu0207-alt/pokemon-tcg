@@ -307,10 +307,21 @@ function renderBinder() {
     wrap.innerHTML = renderBinderView(filtered);
   }
 
-  // Click handlers para abrir modal de slot
-  wrap.querySelectorAll('.fic-card').forEach(el => {
-    el.addEventListener('click', () => openSlotModal(el.dataset.n, el.dataset.ver, el.dataset.setid));
-  });
+  // PERF 03/08/2026 (auditoria): delegação de evento no wrapper em vez de um
+  // addEventListener POR CARTA (eram ~2.000 listeners no Master Set Nacional a
+  // cada render). Comportamento idêntico: os dots de versão continuam usando
+  // stopPropagation, então clique em dot não abre o modal — igual a antes.
+  if (!wrap._ficDelegated) {
+    wrap.addEventListener('click', e => {
+      const el = e.target.closest('.fic-card');
+      if (!el || !wrap.contains(el)) return;
+      // Fichário personalizado (#cb-view-grid, renderizado dentro de #bwrap)
+      // tem wiring próprio com cardObj/onSaved — não duplicar o modal aqui.
+      if (el.closest('#cb-view-grid')) return;
+      openSlotModal(el.dataset.n, el.dataset.ver, el.dataset.setid);
+    });
+    wrap._ficDelegated = true;
+  }
 }
 
 /* ─────────────────────────────────────────────
@@ -365,7 +376,7 @@ function ficCardHtml(c, setId) {
        onmouseout="this.style.transform=''">
     <div style="width:var(--cw,90px);height:var(--ch,126px);border-radius:7px;border:${border};
          box-shadow:${glow};position:relative;overflow:hidden;background:#0a0b10">
-      <img src="${imgUrl(c.n, setId)}" alt="${c.name}" loading="lazy"
+      <img src="${(typeof imgThumb==='function')?imgThumb(imgUrl(c.n, setId)):imgUrl(c.n, setId)}" alt="${c.name}" loading="lazy" decoding="async"
            style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:${imgFilter}"
            onerror="handleCardImgError(this,'${setId}','${c.n}')">
       <div style="display:none;flex-direction:column;align-items:center;justify-content:center;
@@ -466,7 +477,7 @@ function renderBinderView(cards, setIdOf) {
          onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform=''">
       <div style="width:${cellSize}px;height:${Math.round(cellSize*1.4)}px;border-radius:6px;
            border:2px solid ${borderColor};box-shadow:${glow};background:#0a0b10;overflow:hidden;position:relative">
-        <img src="${imgUrl(c.n, setId)}" alt="${c.name}" loading="lazy"
+        <img src="${(typeof imgThumb==='function')?imgThumb(imgUrl(c.n, setId)):imgUrl(c.n, setId)}" alt="${c.name}" loading="lazy" decoding="async"
              style="width:100%;height:100%;object-fit:cover;filter:${imgFilter}"
              onerror="handleCardImgError(this,'${setId}','${c.n}')">
         <div style="display:none;flex-direction:column;align-items:center;justify-content:center;
