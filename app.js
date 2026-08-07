@@ -113,6 +113,9 @@ function imgMe03(n){return`https://images.scrydex.com/pokemon/me3-${parseInt(n)}
 function imgMe02(n){return`https://images.scrydex.com/pokemon/me2-${parseInt(n)}/large`;}
 function imgMe05(n){return`https://images.scrydex.com/pokemon/me5-${parseInt(n)}/large`;}
 function imgMe06(n){return`https://images.scrydex.com/pokemon/me6-${parseInt(n)}/large`;}
+// me2pt5: slug confirmado direto na resposta da api.pokemontcg.io (campo images.large
+// de cada carta), diferente do padrão "me5-N" dos outros ME — aqui é "me2pt5-N" mesmo.
+function imgMe2pt5(n){return`https://images.scrydex.com/pokemon/me2pt5-${parseInt(n)}/large`;}
 function imgMeg(n) {return`https://images.scrydex.com/pokemon/me1-${parseInt(n)}/large`;}
 // Overrides pra cartas MEP que o pkmncards.com (URL genérica abaixo) não tem —
 // achadas individualmente em 16/07/2026 checando site por site (pkmncards não
@@ -211,6 +214,8 @@ function getCardImg(card){
 function imgAltUrl(setId,n){
   const num=parseInt(n,10);const safe=isNaN(num)?n:num;
   const map={
+    // não confirmado se tcgdex já cataloga este set sob este slug — best-effort
+    me2pt5:`https://assets.tcgdex.net/en/me/me2pt5/${safe}/high.png`,
     me05:`https://assets.tcgdex.net/en/me/me05/${safe}/high.png`,
     me06:`https://assets.tcgdex.net/en/me/me06/${safe}/high.png`,
     me04:`https://assets.tcgdex.net/en/me/me04/${safe}/high.png`,
@@ -241,6 +246,7 @@ function handleCardImgError(img,setId,n){
 }
 function getBinderImg(c,setId){
   const n=parseInt(c.n);
+  if(setId==='me2pt5') return imgMe2pt5(n);
   if(setId==='me06') return imgMe06(n);
   if(setId==='me05') return imgMe05(n);
   if(setId==='me03') return imgMe03(n);
@@ -793,6 +799,7 @@ const GEN1=[
 // ── PROGRESS ────────────────────────────────────────────────────
 const SET_META={
   me06:{label:'💎 ME06 — Esmeralda Tempestuosa',color:'#00c853',chase:'Mega Rayquaza ex Gold — R$1.500 (est.)',heroCard:1,imgFn:imgMe06,upcoming:true,releaseDate:'out/2026'},
+  me2pt5:{label:'🦸 ME2.5(ASC) — Heróis Excelsos',color:'#5C6BC0',chase:'Mega Charizard Y ex Hiper Rara Mega — preço a confirmar',heroCard:294,imgFn:imgMe2pt5,releaseDate:'30/jan/2026'},
   me05:{label:'🌑 ME05(PBL) — Escuridão Absoluta',color:'#424242',chase:'Gladion\'s Showdown SAR — US$1.090',heroCard:118,imgFn:imgMe05,releaseDate:'17/jul/2026'},
   me04:{label:'🔥 ME04(CRI) — Caos Ascendente',color:'var(--accent)',chase:'Mega Greninja ex Gold — R$1.482',heroCard:22,imgFn:imgMe04},
   me03:{label:'🔵 ME03(POR) — Ordem Perfeita',color:'#1565C0',chase:'Meowth ex SAR — R$870 · Mega Zygarde ex Gold — R$775',heroCard:62,imgFn:imgMe03},
@@ -802,6 +809,7 @@ const SET_META={
 };
 const SET_CARDS_MAP={
   me06:()=>typeof CARDS_ME06!=='undefined'?CARDS_ME06:[],
+  me2pt5:()=>typeof CARDS_ME2PT5!=='undefined'?CARDS_ME2PT5:[],
   me05:()=>typeof CARDS_ME05!=='undefined'?CARDS_ME05:[],
   me04:()=>CARDS,
   me03:()=>typeof CARDS_ME03!=='undefined'?CARDS_ME03:[],
@@ -830,6 +838,7 @@ const SET_CARDS_MAP={
 // ── CATÁLOGO DE COLEÇÕES ─────────────────────────────────────────
 const SET_CATALOG=[
   {id:'me06',label:'ME06 — Esmeralda Tempestuosa',emoji:'💎',cards:0,  color:'#00c853',series:'ME',upcoming:true},
+  {id:'me2pt5',label:'ME2.5(ASC) — Heróis Excelsos', emoji:'🦸',cards:typeof CARDS_ME2PT5!=='undefined'?CARDS_ME2PT5.length:295,color:'#5C6BC0',series:'ME'},
   {id:'me05',label:'ME05(PBL) — Escuridão Absoluta', emoji:'🌑',cards:typeof CARDS_ME05!=='undefined'?CARDS_ME05.length:120,color:'#757575',series:'ME'},
   {id:'me04',label:'ME04(CRI) — Caos Ascendente',  emoji:'🔥',cards:122,color:'#FF5722',series:'ME'},
   {id:'me03',label:'ME03(POR) — Ordem Perfeita',   emoji:'🔵',cards:typeof CARDS_ME03!=='undefined'?CARDS_ME03.length:120,color:'#1565C0',series:'ME'},
@@ -877,8 +886,8 @@ const SERIES_META={
 
 function _loadMyCollections(){
   try{const v=JSON.parse(localStorage.getItem('myCollections'));
-    return Array.isArray(v)&&v.length?v:['me06','me05','me04','me03','me02','meg','mep'];}
-  catch(e){return['me06','me05','me04','me03','me02','meg','mep'];}
+    return Array.isArray(v)&&v.length?v:['me06','me2pt5','me05','me04','me03','me02','meg','mep'];}
+  catch(e){return['me06','me2pt5','me05','me04','me03','me02','meg','mep'];}
 }
 let myCollections=_loadMyCollections();
 function saveMyCollections(){try{localStorage.setItem('myCollections',JSON.stringify(myCollections));}catch(e){}}
@@ -1821,9 +1830,12 @@ function getSetData(){
   const me03c=typeof CARDS_ME03!=='undefined'?CARDS_ME03:[];
   const me05c=typeof CARDS_ME05!=='undefined'?CARDS_ME05:[];
   const me06c=typeof CARDS_ME06!=='undefined'?CARDS_ME06:[];
+  const me2pt5c=typeof CARDS_ME2PT5!=='undefined'?CARDS_ME2PT5:[];
   const map={
     me06:{cards:me06c,imgFn:imgMe06,label:'ME06 — Esmeralda Tempestuosa',upcoming:true,
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Secretas',filter:c=>!c.base}]},
+    me2pt5:{cards:me2pt5c,imgFn:imgMe2pt5,label:'ME2.5(ASC) — Heróis Excelsos', // lançou 30/jan/2026
+      sections:[{lbl:'📄 Base — 001 a 217',filter:c=>c.base},{lbl:'✨ Secretas — 218 a 295',filter:c=>!c.base}]},
     me05:{cards:me05c,imgFn:imgMe05,label:'ME05(PBL) — Escuridão Absoluta', // lançou 17/jul/2026 — já ativo, consistente com SET_CATALOG
       sections:[{lbl:'📄 Base — 001 a 081',filter:c=>c.base},{lbl:'✨ Secretas — 082 a 118',filter:c=>!c.base}]},
     me04:{cards:CARDS,imgFn:imgMe04,label:'ME04(CRI) — Caos Ascendente',
@@ -2494,7 +2506,7 @@ const BINDER_PRESETS=[
   {key:'tipo_metal',      name:'Aço Inabalável',      emoji:'🤖',desc:'Cartas de tipo Metal',               filter:c=>c.type==='Metal',                          color:'#8d96b5'},
 ];
 
-const IMG_FNS={me04:imgMe04,me03:imgMe03,me02:imgMe02,meg:imgMeg,mep:imgMep,me05:imgMe05,me06:imgMe06};
+const IMG_FNS={me04:imgMe04,me03:imgMe03,me02:imgMe02,meg:imgMeg,mep:imgMep,me05:imgMe05,me06:imgMe06,me2pt5:imgMe2pt5};
 const CB_SET_LABELS={
   me04:'🔥 ME04(CRI) — Caos Ascendente',
   me03:'🔵 ME03(POR) — Ordem Perfeita',
@@ -2503,6 +2515,7 @@ const CB_SET_LABELS={
   mep: '⭐ MEP(MEP) — Promos',
   me05:'🌑 ME05(PBL) — Escuridão Absoluta',
   me06:'💎 ME06 — Esmeralda Tempestuosa',
+  me2pt5:'🦸 ME2.5(ASC) — Heróis Excelsos',
 };
 
 function getAllCardsWithSet(){
