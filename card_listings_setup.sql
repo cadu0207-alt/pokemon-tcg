@@ -29,6 +29,7 @@ create table if not exists card_listings (
   discount_type text not null default 'liga_10',
   liga_price numeric,
   condition text not null default 'M' check (condition in ('M','NM','MP','D')),
+  language text not null default 'pt-BR' check (language in ('pt-BR','en','ja')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (user_id, slot_key)

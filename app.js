@@ -1168,6 +1168,14 @@ const CV_CONDITIONS=[
 ];
 const cvCondInfo=code=>CV_CONDITIONS.find(x=>x.code===code)||CV_CONDITIONS[0];
 
+// Idioma da edição da carta anunciada
+const CV_LANGUAGES=[
+  {code:'pt-BR',flag:'🇧🇷',label:'Português'},
+  {code:'en',   flag:'🇺🇸',label:'Inglês'},
+  {code:'ja',   flag:'🇯🇵',label:'Japonês'},
+];
+const cvLangInfo=code=>CV_LANGUAGES.find(x=>x.code===code)||CV_LANGUAGES[0];
+
 function renderCartas(){
   const fichVal=calcCollectedValue();
   const invested=purchases.reduce((s,p)=>s+Number(p.price),0);
@@ -1289,7 +1297,7 @@ function renderCardsVenda(){
         `<div class="cv-item-icon">🏷️</div>`}
       <div class="cv-item-info">
         <div class="cv-item-name">${l.card_name}</div>
-        <div class="cv-item-meta">${l.card_n} · ${cvSetLbl(l.set_id)} · <span style="color:${col}">${VER_SHORT[l.version]||l.version}</span> · <span class="cv-cond-chip" style="color:${cvCondInfo(l.condition).color};border-color:${cvCondInfo(l.condition).color}55">${l.condition||'M'}</span></div>
+        <div class="cv-item-meta">${l.card_n} · ${cvSetLbl(l.set_id)} · <span style="color:${col}">${VER_SHORT[l.version]||l.version}</span> · <span class="cv-cond-chip" style="color:${cvCondInfo(l.condition).color};border-color:${cvCondInfo(l.condition).color}55">${l.condition||'M'}</span> ${cvLangInfo(l.language).flag}</div>
       </div>
       <div class="cv-item-right">
         <span class="cv-item-qty">×${l.qty}</span>
@@ -1301,9 +1309,11 @@ function renderCardsVenda(){
   updateVendaSelectUI();
 }
 
-// ── SELEÇÃO DE COMBO PARA GERAR IMAGEM (máx. 9 cartas) ────────────
+// ── SELEÇÃO DE CARTAS PARA GERAR IMAGEM/PDF (sem limite) ──────────
+// Cada carta selecionada vira uma página no modelo "cartão de produto"
+// (ver openVendaPrintView) — sem cap de 9, dá pra imprimir/exportar
+// um catálogo inteiro em PDF via window.print().
 let _vendaSelectMode=false,_vendaSelected=[];
-const VIMG_MAX=9;
 
 function toggleVendaSelectMode(){
   _vendaSelectMode=!_vendaSelectMode;
@@ -1314,10 +1324,7 @@ function toggleVendaSelectMode(){
 function toggleVendaSelect(key){
   const i=_vendaSelected.indexOf(key);
   if(i>-1){_vendaSelected.splice(i,1);}
-  else{
-    if(_vendaSelected.length>=VIMG_MAX){setStatus(`Máximo de ${VIMG_MAX} cartas por imagem`,'warning');return;}
-    _vendaSelected.push(key);
-  }
+  else{_vendaSelected.push(key);}
   renderCardsVenda();
 }
 
@@ -1330,7 +1337,7 @@ function updateVendaSelectUI(){
   if(btn)btn.classList.toggle('active',_vendaSelectMode);
   if(btn)btn.textContent=_vendaSelectMode?'✕ Cancelar seleção':'☑️ Selecionar';
   if(bar)bar.style.display=_vendaSelectMode?'flex':'none';
-  if(cnt)cnt.textContent=`${_vendaSelected.length}/${VIMG_MAX} selecionadas`;
+  if(cnt)cnt.textContent=`${_vendaSelected.length} selecionada${_vendaSelected.length!==1?'s':''}`;
   if(genBtn)genBtn.disabled=_vendaSelected.length===0;
   if(msgBtn)msgBtn.disabled=_vendaSelected.length===0;
 }
@@ -1352,7 +1359,8 @@ function openVendaModal(setId,n,ver){
     qty: existing?Math.min(existing.qty,owned):1,
     discountType: existing?existing.discount_type:'liga_10',
     price: existing?Number(existing.price):+(ligaPrice*0.9).toFixed(2),
-    condition: existing?.condition||'M'
+    condition: existing?.condition||'M',
+    language: existing?.language||'pt-BR'
   };
   renderVendaModal();
   openModal('mvenda');
@@ -1384,6 +1392,13 @@ function renderVendaModal(){
           <div class="mv-cond-code" style="color:${cd.color}">${cd.code}</div>
           <div class="mv-cond-label">${cd.label}</div>
           <div class="mv-cond-sub">${cd.sub}</div>
+        </div>`).join('')}
+      </div>
+
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">IDIOMA</div>
+      <div class="mv-lang-grid">
+        ${CV_LANGUAGES.map(lg=>`<div class="mv-lang-opt${st.language===lg.code?' active':''}" onclick="mvSetLanguage('${lg.code}')">
+          <span>${lg.flag}</span><span>${lg.label}</span>
         </div>`).join('')}
       </div>
 
@@ -1443,6 +1458,12 @@ function mvSetCondition(code){
   renderVendaModal();
 }
 
+function mvSetLanguage(code){
+  const st=_mvState;if(!st)return;
+  st.language=code;
+  renderVendaModal();
+}
+
 async function saveVenda(){
   const st=_mvState;if(!st||!uid())return;
   if(st.qty<1||st.qty>st.owned){toast('Quantidade inválida.','error');return;}
@@ -1450,7 +1471,7 @@ async function saveVenda(){
   const payload={
     user_id:uid(),slot_key:st.key,set_id:st.setId,card_n:st.n,version:st.ver,
     card_name:st.card.name,qty:st.qty,price:st.price,discount_type:st.discountType,
-    liga_price:st.ligaPrice||null,condition:st.condition||'M',updated_at:new Date().toISOString()
+    liga_price:st.ligaPrice||null,condition:st.condition||'M',language:st.language||'pt-BR',updated_at:new Date().toISOString()
   };
   const{data:res,error}=await sbClient.from('card_listings').upsert(payload,{onConflict:'user_id,slot_key'}).select();
   if(error){
@@ -1473,17 +1494,16 @@ async function removeVenda(key){
   renderCardsAll();renderCardsVenda();
 }
 
-// ── GERAR IMAGEM DO COMBO (até 9 cartas selecionadas) ─────────────
-// Monta uma prévia em HTML (sempre funciona) e tenta gerar um PNG via
-// canvas para download (depende do servidor de imagens permitir CORS —
-// se ele bloquear, o usuário ainda tem a prévia pra printar a tela).
-const VIMG_BANNER_L1='🔥 QUER VENDER RÁPIDO E FÁCIL?';
-// função (não const) porque MYDECK_SITE_URL só é declarado mais abaixo no arquivo —
-// como const não é hoisted, resolver isso em tempo de execução da função evita
-// "Cannot access before initialization" no carregamento do script.
-function vimgBannerL2(){return`ACESSE ${MYDECK_SITE_URL.replace(/^https?:\/\//,'').toUpperCase()}`;}
-
+// ── GERAR IMAGEM/PDF (modelo "cartão de produto", 1 carta por página) ──
+// Sem limite de cartas: cada carta selecionada vira uma página inteira
+// no popup de impressão, no modelo de divulgação (imagem grande + painel
+// de detalhes). O usuário aperta "Imprimir/Salvar PDF" e usa o diálogo
+// nativo do navegador — dá pra baixar 1 carta ou um catálogo com várias.
+// Por ser HTML normal (não canvas), o navegador renderiza as imagens das
+// cartas do jeito que sempre renderizou — sem risco de bloqueio de CORS
+// que existia na exportação em PNG via canvas.
 let _vimgItems=[];
+
 function openVendaImageModal(){
   if(!_vendaSelected.length)return;
   const allCards=getAllCardsWithSet();
@@ -1497,172 +1517,160 @@ function openVendaImageModal(){
   if(!_vimgItems.length)return;
 
   const total=_vimgItems.reduce((s,{l})=>s+Number(l.price||0),0);
-  const cols=Math.min(3,_vimgItems.length);
-  // banner entra logo após a 1ª fileira (ou abaixo, se só houver 1 fileira)
-  const bannerAt=Math.min(cols,_vimgItems.length);
-  const before=_vimgItems.slice(0,bannerAt);
-  const after=_vimgItems.slice(bannerAt);
-
-  const cellHTML=({l,imgSrc})=>`
-    <div class="vimg-cell">
-      <div class="vimg-name">${l.card_name} · ${l.card_n}</div>
-      <div class="vimg-cond" style="color:${cvCondInfo(l.condition).color};border-color:${cvCondInfo(l.condition).color}">${l.condition||'M'}</div>
-      ${imgSrc?`<img src="${imgSrc}" alt="${l.card_name}" loading="lazy">`:`<div style="aspect-ratio:245/342;display:flex;align-items:center;justify-content:center;font-size:32px">🃏</div>`}
-      <div class="vimg-price">R$${fmtR(l.price)}</div>
-    </div>`;
-  const bannerHTML=`<div class="vimg-banner-html"><div class="vb-l1">${VIMG_BANNER_L1}</div><div class="vb-l2">${vimgBannerL2()}</div></div>`;
-
-  let rowsHTML=`<div class="vimg-row">${before.map(cellHTML).join('')}</div>${bannerHTML}`;
-  for(let i=0;i<after.length;i+=cols){
-    rowsHTML+=`<div class="vimg-row">${after.slice(i,i+cols).map(cellHTML).join('')}</div>`;
-  }
-
   document.getElementById('mvimg-content').innerHTML=`
     <div class="vimg-wrap">
-      <div class="vimg-title">🖼️ Imagem do Combo</div>
-      <div class="vimg-sub">${_vimgItems.length} carta(s) selecionada(s) — prévia abaixo. Se o download automático não funcionar, tire um print desta prévia.</div>
-      <div class="vimg-canvas-shell">
-        <div class="vimg-grid" id="vimg-grid">${rowsHTML}</div>
+      <div class="vimg-title">🖨️ Gerar Imagem/PDF</div>
+      <div class="vimg-sub">${_vimgItems.length} carta(s) selecionada(s). Cada carta vira uma página no modelo de divulgação — sem limite de quantidade, ótimo pra imprimir um catálogo.</div>
+      <div class="vimg-list-preview">
+        ${_vimgItems.map(({l})=>`<div class="vimg-preview-row">
+          <span>${l.card_name} · #${l.card_n} · ${cvCondInfo(l.condition).code} · ${cvLangInfo(l.language).flag}</span>
+          <b>R$${fmtR(l.price)}</b>
+        </div>`).join('')}
       </div>
       <div class="vimg-actions">
-        <div class="vimg-total">Total do combo: <b>R$${fmtR(total)}</b></div>
+        <div class="vimg-total">Total: <b>R$${fmtR(total)}</b></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn-cx" onclick="closeModal('mvimg')">Fechar</button>
           <button class="cv-msg-btn" onclick="copyVendaMessage(_vimgItems)">📋 Copiar Mensagem</button>
-          <button class="btn-add" onclick="downloadVendaImage()">⬇️ Baixar PNG</button>
+          <button class="btn-add" onclick="openVendaPrintView()">🖨️ Gerar Imagem/PDF</button>
         </div>
       </div>
-      <div class="vimg-fallback-note" id="vimg-fallback-note">⚠️ Não foi possível gerar o PNG automaticamente (o servidor de imagens das cartas bloqueia exportação). Tire um print da prévia acima.</div>
     </div>`;
   openModal('mvimg');
 }
 
-async function downloadVendaImage(){
-  if(!_vimgItems.length)return;
-  const note=document.getElementById('vimg-fallback-note');
-  if(note)note.style.display='none';
-  try{
-    if(document.fonts&&document.fonts.ready)await document.fonts.ready;
-    const cols=Math.min(3,_vimgItems.length);
-    const cellW=320,cellH=Math.round(cellW*342/245),gap=14,pad=24,headerH=54,bannerH=88;
-
-    // Monta a lista de "fileiras": cartas da 1ª leva, banner, depois o resto em fileiras de `cols`.
-    const bannerAt=Math.min(cols,_vimgItems.length);
-    const before=_vimgItems.slice(0,bannerAt);
-    const after=_vimgItems.slice(bannerAt);
-    const rowDefs=[{type:'cards',items:before},{type:'banner'}];
-    for(let i=0;i<after.length;i+=cols)rowDefs.push({type:'cards',items:after.slice(i,i+cols)});
-
-    const cw=pad*2+cols*cellW+(cols-1)*gap;
-    const rowHeights=rowDefs.map(r=>r.type==='banner'?bannerH:cellH);
-    const ch=headerH+pad+rowHeights.reduce((a,b)=>a+b,0)+gap*(rowHeights.length-1)+pad;
-
-    const canvas=document.createElement('canvas');
-    canvas.width=cw;canvas.height=ch;
-    const ctx=canvas.getContext('2d');
-    ctx.fillStyle='#0d0f18';ctx.fillRect(0,0,cw,ch);
-    ctx.fillStyle='#ffd166';
-    ctx.font="700 26px 'Bebas Neue', sans-serif";
-    ctx.textBaseline='top';
-    ctx.fillText('MYDECK — CARTAS À VENDA',pad,18);
-
-    // carrega todas as imagens em paralelo (com fallback null em caso de erro/CORS)
-    const imgs=await Promise.all(_vimgItems.map(({imgSrc})=>new Promise(res=>{
-      if(!imgSrc){res(null);return;}
-      const im=new Image();
-      im.crossOrigin='anonymous';
-      im.onload=()=>res(im);
-      im.onerror=()=>res(null);
-      im.src=imgSrc;
-    })));
-
-    let cursorY=headerH+pad,itemIdx=0;
-    rowDefs.forEach(row=>{
-      if(row.type==='banner'){
-        const bw=cols*cellW+(cols-1)*gap;
-        ctx.save();
-        roundRectPath(ctx,pad,cursorY,bw,bannerH,10);
-        const grad=ctx.createLinearGradient(pad,0,pad+bw,0);
-        grad.addColorStop(0,'#e63946');grad.addColorStop(1,'#c1121f');
-        ctx.fillStyle=grad;ctx.fill();
-        ctx.fillStyle='#fff';ctx.font="700 22px 'Bebas Neue', sans-serif";ctx.textAlign='center';
-        ctx.fillText(VIMG_BANNER_L1,pad+bw/2,cursorY+22);
-        ctx.fillStyle='#ffd166';ctx.font="700 15px 'Space Mono', monospace";
-        ctx.fillText(vimgBannerL2(),pad+bw/2,cursorY+54);
-        ctx.textAlign='left';
-        ctx.restore();
-        cursorY+=bannerH+gap;
-        return;
-      }
-      row.items.forEach(({l},c)=>{
-        const x=pad+c*(cellW+gap),y=cursorY;
-        const im=imgs[itemIdx];itemIdx++;
-
-        // fundo do card + moldura arredondada
-        ctx.save();
-        roundRectPath(ctx,x,y,cellW,cellH,10);
-        ctx.clip();
-        ctx.fillStyle='#181c2e';ctx.fillRect(x,y,cellW,cellH);
-        if(im)ctx.drawImage(im,x,y,cellW,cellH);
-        else{
-          ctx.fillStyle='#52597a';ctx.font='40px sans-serif';ctx.textAlign='center';
-          ctx.fillText('🃏',x+cellW/2,y+cellH/2-20);ctx.textAlign='left';
-        }
-        // faixa do nome (topo)
-        const nameGrad=ctx.createLinearGradient(0,y,0,y+40);
-        nameGrad.addColorStop(0,'rgba(0,0,0,.8)');nameGrad.addColorStop(1,'rgba(0,0,0,0)');
-        ctx.fillStyle=nameGrad;ctx.fillRect(x,y,cellW,40);
-        ctx.fillStyle='#fff';ctx.font="700 13px 'Space Mono', monospace";
-        ctx.fillText(`${l.card_name} · ${l.card_n}`.slice(0,34),x+8,y+8);
-        // selo de condição (canto superior direito)
-        const cond=cvCondInfo(l.condition);
-        ctx.font="700 12px 'Space Mono', monospace";
-        const condW=ctx.measureText(cond.code).width+16;
-        ctx.fillStyle='rgba(13,15,24,.85)';
-        roundRectPath(ctx,x+cellW-condW-8,y+8,condW,20,5);ctx.fill();
-        ctx.strokeStyle=cond.color;ctx.lineWidth=1.5;
-        roundRectPath(ctx,x+cellW-condW-8,y+8,condW,20,5);ctx.stroke();
-        ctx.fillStyle=cond.color;ctx.textAlign='center';
-        ctx.fillText(cond.code,x+cellW-condW/2-8,y+13);
-        ctx.textAlign='left';
-        // faixa do preço (base)
-        const priceGrad=ctx.createLinearGradient(0,y+cellH-46,0,y+cellH);
-        priceGrad.addColorStop(0,'rgba(0,0,0,0)');priceGrad.addColorStop(1,'rgba(0,0,0,.88)');
-        ctx.fillStyle=priceGrad;ctx.fillRect(x,y+cellH-46,cellW,46);
-        ctx.fillStyle='#ffd166';ctx.font="700 24px 'Bebas Neue', sans-serif";ctx.textAlign='center';
-        ctx.fillText('R$'+fmtR(l.price),x+cellW/2,y+cellH-34);
-        ctx.textAlign='left';
-        ctx.restore();
-      });
-      cursorY+=cellH+gap;
-    });
-
-    const total=_vimgItems.reduce((s,{l})=>s+Number(l.price||0),0);
-    ctx.fillStyle='#06d6a0';ctx.font="700 15px 'Space Mono', monospace";ctx.textAlign='right';
-    ctx.fillText('Total: R$'+fmtR(total),cw-pad,18);
-    ctx.textAlign='left';
-
-    const blob=await new Promise(res=>canvas.toBlob(res,'image/png'));
-    if(!blob)throw new Error('toBlob retornou vazio');
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;a.download=`mydeck-combo-${Date.now()}.png`;
-    document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),4000);
-  }catch(e){
-    console.error('[downloadVendaImage] falha ao exportar PNG (provável bloqueio de CORS nas imagens):',e);
-    if(note)note.style.display='block';
-  }
+// Uma página completa no modelo "cartão de produto" pra uma carta
+function mktProductPageHTML({l,c,imgSrc}){
+  const cond=cvCondInfo(l.condition);
+  const lang=cvLangInfo(l.language);
+  const rarity=c?.rare||'';
+  return`<div class="page">
+    <div class="mkc-header">
+      <div class="mkc-logo">MYDECK</div>
+      <div class="mkc-tagline">CARTAS À VENDA</div>
+    </div>
+    <div class="mkc-main">
+      <div class="mkc-imgwrap">
+        ${imgSrc?`<img src="${imgSrc}" alt="${l.card_name}">`:`<div class="mkc-noimg">🃏</div>`}
+      </div>
+      <div class="mkc-info">
+        <div class="mkc-name">${l.card_name}</div>
+        <div class="mkc-pill">${rarity?rarity+' · ':''}#${l.card_n}${l.qty>1?' · '+l.qty+'x':''}</div>
+        <div class="mkc-box">
+          <div class="mkc-box-label">VALOR</div>
+          <div class="mkc-box-value">R$ ${fmtR(l.price)}</div>
+        </div>
+        <div class="mkc-row">
+          <div class="mkc-row-label">QUALIDADE</div>
+          <div class="mkc-row-content">
+            <div class="mkc-badge" style="border-color:${cond.color};color:${cond.color}">${cond.code}</div>
+            <div><b>${cond.label}</b><br><span>(${cond.sub})</span></div>
+          </div>
+        </div>
+        <div class="mkc-row">
+          <div class="mkc-row-label">IDIOMA</div>
+          <div class="mkc-row-content">
+            <div class="mkc-lang-pill">${lang.flag} ${lang.label.toUpperCase()}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mkc-trust">
+      <div class="mkc-trust-item"><span>🛡️</span><div>COMPRA 100%<br>SEGURA</div></div>
+      <div class="mkc-trust-item"><span>🚚</span><div>ENVIO<br>RÁPIDO</div></div>
+      <div class="mkc-trust-item"><span>✅</span><div>CARTAS ORIGINAIS<br>E AUTÊNTICAS</div></div>
+    </div>
+    <div class="mkc-cta">
+      <div class="mkc-cta-icon">🛒</div>
+      <div class="mkc-cta-text"><b>QUER VENDER RÁPIDO E FÁCIL?</b><br>ANUNCIE SUAS CARTAS AGORA MESMO!</div>
+      <div class="mkc-cta-btn">ACESSE AGORA →</div>
+    </div>
+    <div class="mkc-footer">🌐 ${MYDECK_SITE_URL.replace(/^https?:\/\//,'')}</div>
+  </div>`;
 }
 
-function roundRectPath(ctx,x,y,w,h,r){
-  ctx.beginPath();
-  ctx.moveTo(x+r,y);
-  ctx.arcTo(x+w,y,x+w,y+h,r);
-  ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r);
-  ctx.arcTo(x,y,x+w,y,r);
-  ctx.closePath();
+function openVendaPrintView(){
+  if(!_vimgItems.length)return;
+  const popup=window.open('','_blank');
+  if(!popup){alert('Permita pop-ups pra gerar a imagem/PDF.');return;}
+
+  popup.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>MyDeck — Cartas à Venda</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:#0d0f18; font-family:'DM Sans',sans-serif; color:#eef0f8; }
+    .page {
+      width:210mm; min-height:297mm; padding:14mm; position:relative;
+      background:radial-gradient(ellipse at top,#141827,#0a0c14 65%);
+      page-break-after:always; break-after:page;
+      display:flex; flex-direction:column;
+    }
+    .mkc-header { text-align:center; padding-bottom:8mm; border-bottom:1px solid #2a2e42; margin-bottom:10mm; }
+    .mkc-logo { font-family:'Bebas Neue',sans-serif; font-size:30pt; letter-spacing:3px; color:#fff; }
+    .mkc-tagline { font-family:'Space Mono',monospace; font-size:10pt; letter-spacing:5px; color:#ffd166; margin-top:2mm; }
+    .mkc-main { display:flex; gap:10mm; flex:1; }
+    .mkc-imgwrap {
+      width:85mm; flex-shrink:0; border:2px solid #2a2e42; border-radius:6mm; padding:5mm;
+      background:#111422; display:flex; align-items:center; justify-content:center;
+      box-shadow:0 0 0 1px rgba(255,209,102,.15) inset;
+    }
+    .mkc-imgwrap img { width:100%; border-radius:3mm; display:block; }
+    .mkc-noimg { font-size:48pt; opacity:.3; }
+    .mkc-info { flex:1; padding-top:4mm; }
+    .mkc-name { font-family:'Bebas Neue',sans-serif; font-size:24pt; letter-spacing:1px; color:#fff; margin-bottom:6mm; }
+    .mkc-pill {
+      display:inline-block; border:1px solid #2a2e42; border-radius:8mm; padding:2mm 6mm;
+      font-family:'Space Mono',monospace; font-size:10pt; color:#c8cfe8; margin-bottom:8mm;
+    }
+    .mkc-box { border:1px solid #ffd16655; border-radius:4mm; padding:5mm 6mm; margin-bottom:8mm; background:#111422; }
+    .mkc-box-label { font-family:'Space Mono',monospace; font-size:8pt; letter-spacing:2px; color:#52597a; margin-bottom:2mm; }
+    .mkc-box-value { font-family:'Bebas Neue',sans-serif; font-size:30pt; color:#ffd166; }
+    .mkc-row { margin-bottom:7mm; }
+    .mkc-row-label { font-family:'Space Mono',monospace; font-size:8pt; letter-spacing:2px; color:#52597a; margin-bottom:3mm; }
+    .mkc-row-content { display:flex; align-items:center; gap:5mm; }
+    .mkc-badge {
+      border:2px solid; border-radius:3mm; padding:2mm 4mm; font-family:'Bebas Neue',sans-serif;
+      font-size:16pt; text-align:center; min-width:16mm;
+    }
+    .mkc-row-content > div:last-child { font-size:10pt; line-height:1.5; }
+    .mkc-row-content > div:last-child span { color:#52597a; font-size:9pt; }
+    .mkc-lang-pill {
+      border:1px solid #2a2e42; border-radius:8mm; padding:2mm 6mm; font-family:'Space Mono',monospace;
+      font-size:10pt; letter-spacing:1px; background:#111422;
+    }
+    .mkc-trust {
+      display:flex; justify-content:space-around; padding:6mm 0; margin-top:8mm;
+      border-top:1px solid #2a2e42; border-bottom:1px solid #2a2e42;
+    }
+    .mkc-trust-item { text-align:center; font-family:'Space Mono',monospace; font-size:8pt; letter-spacing:.5px; color:#c8cfe8; }
+    .mkc-trust-item span { display:block; font-size:16pt; margin-bottom:2mm; }
+    .mkc-cta {
+      display:flex; align-items:center; gap:6mm; margin-top:8mm; padding:6mm 8mm; border-radius:4mm;
+      background:linear-gradient(120deg,#e63946,#7a0c14);
+    }
+    .mkc-cta-icon { font-size:20pt; }
+    .mkc-cta-text { flex:1; font-size:10pt; line-height:1.5; color:#fff; }
+    .mkc-cta-btn {
+      background:#ffd166; color:#1c1f2e; font-family:'Space Mono',monospace; font-weight:700;
+      font-size:9pt; padding:3mm 6mm; border-radius:2mm; white-space:nowrap;
+    }
+    .mkc-footer { text-align:center; font-family:'Space Mono',monospace; font-size:9pt; color:#52597a; margin-top:8mm; }
+    @media print {
+      html,body{width:210mm;}
+      .page{page-break-after:always; break-after:page;}
+      .no-print{display:none!important;}
+    }
+  </style></head><body>`);
+
+  popup.document.write(`<div class="no-print" style="position:fixed;top:10px;right:10px;z-index:999;display:flex;gap:8px">
+    <span style="font-size:12px;color:#ccc;align-self:center;font-family:sans-serif">${_vimgItems.length} página${_vimgItems.length!==1?'s':''}</span>
+    <button onclick="window.print()" style="background:#06d6a0;color:#000;border:none;padding:8px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">🖨️ Imprimir / Salvar PDF</button>
+    <button onclick="window.close()" style="background:#1e2436;color:#aaa;border:none;padding:8px 12px;border-radius:6px;cursor:pointer">✕</button>
+  </div>`);
+
+  _vimgItems.forEach(item=>popup.document.write(mktProductPageHTML(item)));
+  popup.document.write(`</body></html>`);
+  popup.document.close();
 }
 
 // ── MENSAGEM DE VENDA (texto pronto pra colar no WhatsApp/ML) ─────

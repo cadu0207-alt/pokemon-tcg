@@ -1895,6 +1895,13 @@ body.share-view .btn-add { display: none !important; }
 .vimg-total { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
 .vimg-total b { color: var(--teal); font-size: 14px; }
 .vimg-fallback-note { font-size: 10px; color: var(--gold); font-family: 'Space Mono', monospace; margin-top: 10px; display: none; }
+.vimg-list-preview { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; margin-bottom: 6px; }
+.vimg-preview-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  background: #0d0f18; border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 12px; font-size: 11px;
+}
+.vimg-preview-row b { color: var(--gold); font-family: 'Bebas Neue', sans-serif; font-size: 15px; }
 .cv-msg-btn {
   background: var(--surface2); border: 1px solid var(--border); color: var(--teal);
   border-radius: 6px; padding: 6px 10px; font-family: 'Space Mono', monospace;
@@ -1912,6 +1919,13 @@ body.share-view .btn-add { display: none !important; }
 .mv-cond-code { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 1px; }
 .mv-cond-label { font-family: 'Space Mono', monospace; font-size: 9px; font-weight: 700; margin-top: 2px; }
 .mv-cond-sub { font-family: 'Space Mono', monospace; font-size: 8.5px; color: var(--muted); margin-top: 1px; }
+.mv-lang-grid { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.mv-lang-opt {
+  display: flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 7px;
+  padding: 7px 12px; cursor: pointer; background: var(--surface2); font-size: 11.5px; transition: all .15s ease;
+}
+.mv-lang-opt:hover { border-color: var(--border2); }
+.mv-lang-opt.active { border-color: var(--gold); background: rgba(255,209,102,.1); }
 .cv-cond-chip {
   border: 1px solid; border-radius: 4px; padding: 0 4px; font-size: 9px; font-weight: 700;
   font-family: 'Space Mono', monospace; display: inline-block;
