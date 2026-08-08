@@ -168,19 +168,29 @@ def fetch_liga_prices(url: str, debug_key: str = "") -> dict:
 
 
 # ── Extração via Playwright — MYP Cards (mypcards.com) ───────────────────────
-# Estrutura confirmada em 07/08/2026 inspecionando o DOM no Chrome (não via
+# Estrutura confirmada em 07-08/08/2026 inspecionando o DOM no Chrome (não via
 # execução do Playwright — validar com --dry-run antes de confiar de olhos
 # fechados). Cada carta na grade de resultados é um <li> contendo:
-#   • um elemento folha com texto "Nome da Carta (NNN/DDD)" — NNN é o número
-#     real da carta, DDD é uma constante de exibição do set (não é o total
-#     real de cartas do set — ignorar);
+#   • um elemento folha com o nome da carta e o número entre parênteses —
+#     "Nome (NNN/DDD)" nos sets numerados (DDD é uma constante de exibição
+#     do set, não o total real — ignorar) ou só "Nome (NNN)" nos sets de
+#     promo/kit sem denominador (ex.: MEP — confirmado que NÃO tem "/DDD");
 #   • um <a href=".../pokemon/produto/{id}/{slug}"> pra página do produto;
 #   • um elemento com texto "R$ X.XXX,XX" que já é o MENOR preço entre
 #     vendedores pra aquela carta — não precisa abrir a página de cada carta.
-# A URL usa parâmetros GET normais (edição + idioma opcional), então dá pra
-# montar direto sem precisar clicar em nada:
+# A URL usa parâmetros GET normais (edição + idioma opcional):
 #   https://mypcards.com/pokemon?ProdutoSearch[edicoesSelecionadas][]={edicaoId}&ProdutoSearch[idiomasSelecionados][]={idiomaId}
 # idiomaId é global (não muda por edição) — ver scripts/mypcards_sets.json.
+#
+# PAGINAÇÃO (confirmado manualmente 08/08/2026): a página carrega 30 cartas
+# de cada vez. O botão "Carregar mais produtos" busca a próxima leva via
+# AJAX e ANEXA ao DOM (a URL muda pra .../?page=2 via pushState, mas isso é
+# só cosmético — navegar direto pra ?page=2 NÃO pagina server-side, volta a
+# mostrar a página 1. Só o clique de verdade no botão funciona). A 1ª versão
+# desse fetcher (07/08) ficava travada em exatamente 30 cartas em todo set —
+# bug era o critério de parada (contava TODOS os <li> com "R$" da página,
+# inclusive filtros da sidebar que nunca mudam) mascarando o crescimento
+# real. Reescrito pra contar só os leafs que batem o próprio regex de card.
 
 def build_myp_url(edicao_id, idioma_id=None) -> str:
     url = f"https://mypcards.com/pokemon?ProdutoSearch%5BedicoesSelecionadas%5D%5B%5D={edicao_id}"
@@ -189,12 +199,41 @@ def build_myp_url(edicao_id, idioma_id=None) -> str:
     return url
 
 
+_MYP_COUNT_JS = r"""
+    () => Array.from(document.querySelectorAll("*"))
+        .filter(el => el.children.length === 0 && /\(\d{1,4}(\/\d+)?\)\s*$/.test((el.textContent||"").trim()))
+        .length
+"""
+
+_MYP_EXTRACT_JS = r"""
+    () => {
+        const out = {};
+        document.querySelectorAll("li").forEach(li => {
+            const leaves = Array.from(li.querySelectorAll("*")).filter(el => el.children.length === 0);
+            const nameEl = leaves.find(el => /\(\d{1,4}(\/\d+)?\)\s*$/.test((el.textContent||"").trim()));
+            if (!nameEl) return;
+            const nm = nameEl.textContent.trim().match(/\((\d{1,4})(?:\/\d+)?\)\s*$/);
+            if (!nm) return;
+            const n = nm[1].padStart(3, "0");
+
+            const priceEl = leaves.find(el => /R\$\s?[\d.]+,\d{2}/.test(el.textContent || ""));
+            if (!priceEl) return;
+            const pm = priceEl.textContent.match(/R\$\s?([\d.]+,\d{2})/);
+            if (!pm) return;
+            const val = parseFloat(pm[1].replace(/\./g, "").replace(",", "."));
+            if (val > 0 && (!(n in out) || val < out[n])) out[n] = val;
+        });
+        return out;
+    }
+"""
+
+
 def fetch_myp_prices(edicao_id, idioma_id=None, debug_key: str = "") -> dict:
     """
     Abre a página de busca do MYP Cards pra uma edição (+ idioma opcional) e
-    extrai {numero_3dig: menor_preco}. Mesma ideia do fetch_liga_prices, mas
-    a paginação do MYP é via botão "Carregar mais produtos" em vez de
-    lazy-load puro por scroll — clica o botão em loop até não sobrar mais.
+    extrai {numero_3dig: menor_preco}. Paginação: clica "Carregar mais
+    produtos" em loop, usando a CONTAGEM DE CARTAS DE VERDADE (não de <li>
+    genéricos) como critério de crescimento/parada — ver nota acima.
     """
     from playwright.sync_api import sync_playwright
 
@@ -209,9 +248,85 @@ def fetch_myp_prices(edicao_id, idioma_id=None, debug_key: str = "") -> dict:
                 "Chrome/124.0.0.0 Safari/537.36"
             ),
             viewport={"width": 1600, "height": 1000},
+            locale="pt-BR",
         )
-        page.goto(url, wait_until="domcontentloaded", timeout=45000)
-        page.wait_for_timeout(3500)
+        # Disfarce básico contra detecção de automação (navigator.webdriver
+        # é o sinal mais óbvio que sites checam). Não custa nada ter.
+        page.add_init_script(
+            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
+        )
+
+        # 08/08/2026 (3ª rodada): duas tentativas anteriores (critério de
+        # contagem, depois wait_until=networkidle) não resolveram — no
+        # ambiente do Eduardo o clique 1 "funciona" (sem exception) mas não
+        # cresce, e o clique 2 trava com TimeoutError. Como isso NUNCA
+        # reproduziu no Chrome real que uso pra inspecionar, paro de tentar
+        # adivinhar um 4º fix às cegas e coleto evidência de dentro do
+        # próprio ambiente que falha: console do navegador (erros JS podem
+        # revelar que hidratação quebrou por algum script bloqueado) +
+        # estado real do botão (disabled? aria-busy? classe de loading
+        # travada?) + screenshot/HTML no exato momento da falha.
+        console_logs = []
+        page.on("console", lambda msg: console_logs.append(f"[{msg.type}] {msg.text}"))
+        page.on("pageerror", lambda exc: console_logs.append(f"[pageerror] {exc}"))
+
+        def _dump_debug(tag: str):
+            if not debug_key:
+                return
+            os.makedirs("debug_screenshots", exist_ok=True)
+            base = f"debug_screenshots/myp_{debug_key}_{tag}"
+            try:
+                page.screenshot(path=f"{base}.png", full_page=True)
+                with open(f"{base}.html", "w", encoding="utf-8") as f:
+                    f.write(page.content())
+                with open(f"{base}_console.txt", "w", encoding="utf-8") as f:
+                    f.write("\n".join(console_logs) or "(nenhuma mensagem de console capturada)")
+                print(f"     🩺 [{debug_key}] debug salvo em {base}.(png|html|_console.txt)")
+            except Exception as e:
+                print(f"     🩺 [{debug_key}] falha ao salvar debug '{tag}': {e}")
+
+            # Estado real do botão "Carregar mais produtos" agora, direto no
+            # terminal (não precisa abrir arquivo pra ver isso).
+            try:
+                btn_state = page.evaluate(r"""
+                    () => {
+                        const b = Array.from(document.querySelectorAll('button'))
+                            .find(el => (el.textContent||'').includes('Carregar mais'));
+                        if (!b) return null;
+                        const r = b.getBoundingClientRect();
+                        return {
+                            text: b.textContent.trim().slice(0,60),
+                            disabled: b.disabled,
+                            ariaBusy: b.getAttribute('aria-busy'),
+                            className: b.className,
+                            visible: r.width > 0 && r.height > 0,
+                            rect: {x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height)}
+                        };
+                    }
+                """)
+                print(f"     🔍 [{debug_key}] estado do botão: {btn_state}")
+            except Exception as e:
+                print(f"     🔍 [{debug_key}] não deu pra ler estado do botão: {e}")
+
+            if console_logs:
+                print(f"     📋 [{debug_key}] últimas mensagens de console:")
+                for line in console_logs[-15:]:
+                    print(f"        {line}")
+
+        # 08/08/2026: inspecionei a rede ao clicar "Carregar mais produtos" no
+        # Chrome de verdade e NÃO existe nenhuma chamada de API própria pra
+        # buscar as próximas cartas — só pixels de tracking (Google Ads/GTM).
+        # Ou seja, a "paginação" é 100% client-side (dado já carregado / SPA
+        # hidratando), sem round-trip de rede. Isso explica por que a v2
+        # ainda travava em 30: com wait_until="domcontentloaded" + 3.5s fixo,
+        # a página estava com o HTML pronto mas o JS (pesado — tem uma
+        # dúzia de scripts de ads/GTM na frente) ainda não tinha terminado
+        # de hidratar e ligar o onClick do botão quando o script clicava —
+        # clique "no vazio", sem exception, sem efeito. Trocado pra esperar
+        # a rede ficar ociosa (todo aquele JS de tracking termina de
+        # carregar) antes de tentar qualquer interação.
+        page.goto(url, wait_until="networkidle", timeout=60000)
+        page.wait_for_timeout(2000)
 
         # Fecha banner de cookies/consentimento se existir.
         for txt in ("Aceitar", "Aceitar todos", "Concordo", "OK", "Entendi"):
@@ -223,60 +338,78 @@ def fetch_myp_prices(edicao_id, idioma_id=None, debug_key: str = "") -> dict:
             except Exception:
                 pass
 
-        # DEBUG: se não achar nenhuma carta de cara, salva screenshot + HTML.
-        early_count = page.locator("li:has-text('R$')").count()
-        if early_count == 0 and debug_key:
-            os.makedirs("debug_screenshots", exist_ok=True)
-            try:
-                page.screenshot(path=f"debug_screenshots/myp_{debug_key}.png", full_page=True)
-                with open(f"debug_screenshots/myp_{debug_key}.html", "w", encoding="utf-8") as f:
-                    f.write(page.content())
-                print(f"     🩺 Debug salvo: debug_screenshots/myp_{debug_key}.png (título: '{page.title()}')")
-            except Exception as e:
-                print(f"     🩺 Falha ao salvar debug: {e}")
+        count = page.evaluate(_MYP_COUNT_JS)
+        print(f"     🔎 [{debug_key}] carga inicial: {count} cartas")
 
-        # Clica "Carregar mais produtos" em loop até parar de crescer, e rola
-        # também (fallback, caso o botão suma antes de tudo carregar).
-        prev = -1
-        for _ in range(40):
-            for txt in ("Carregar mais produtos", "Carregar mais", "Mostrar mais", "Ver mais"):
-                btn = page.locator(f"button:has-text('{txt}'), a:has-text('{txt}')")
-                if btn.count() > 0:
-                    try:
-                        btn.first.scroll_into_view_if_needed(timeout=1500)
-                        btn.first.click(timeout=1500)
-                        page.wait_for_timeout(1000)
-                    except Exception:
-                        pass
-            page.mouse.wheel(0, 2500)
-            page.wait_for_timeout(600)
-            count = page.locator("li:has-text('R$')").count()
-            if count == prev:
+        if count == 0:
+            _dump_debug("initial_zero")
+
+        # Clica "Carregar mais produtos" em loop até parar de crescer.
+        # Confere o crescimento pela contagem real de cartas (regex de
+        # número), não por <li> genérico — a sidebar tem ~380 <li> de
+        # filtro de edição que nunca mudam e mascaravam o critério antigo.
+        # Cada clique tenta até 3x com espera crescente antes de desistir —
+        # como não há rede pra esperar (é tudo client-side), uma falha real
+        # de clique costuma ser timing de hidratação, não rate-limit.
+        stall = 0
+        for i in range(60):
+            btn = page.get_by_role("button", name="Carregar mais produtos")
+            if btn.count() == 0:
+                btn = page.locator(
+                    "button:has-text('Carregar mais'), a:has-text('Carregar mais'), "
+                    "button:has-text('Mostrar mais'), button:has-text('Ver mais')"
+                )
+            if btn.count() == 0:
+                print(f"     ⏹️  [{debug_key}] botão 'Carregar mais' sumiu após {count} cartas — fim da lista")
                 break
-            prev = count
+
+            clicked = False
+            for tentativa in range(3):
+                try:
+                    btn.first.scroll_into_view_if_needed(timeout=3000)
+                    page.wait_for_timeout(300)
+                    btn.first.click(timeout=3000)
+                    clicked = True
+                    break
+                except Exception as e:
+                    print(f"     ⚠️  [{debug_key}] clique {i+1} tentativa {tentativa+1} falhou "
+                          f"({type(e).__name__})")
+                    page.wait_for_timeout(800)
+            if not clicked:
+                print(f"     ❌ [{debug_key}] desisti do clique {i+1} após 3 tentativas — parando em {count} cartas")
+                _dump_debug(f"click{i+1}_timeout")
+                break
+
+            # espera a contagem de cartas crescer de verdade (até 8s), em
+            # vez de confiar num sleep fixo.
+            try:
+                page.wait_for_function(
+                    f"({_MYP_COUNT_JS})() > {count}", timeout=8000
+                )
+            except Exception:
+                pass  # pode já ter sido a última leva — confere abaixo mesmo assim
+
+            new_count = page.evaluate(_MYP_COUNT_JS)
+            print(f"     🔎 [{debug_key}] após clique {i+1}: {new_count} cartas")
+            if new_count <= count:
+                stall += 1
+                if stall == 1:
+                    # primeira vez que um clique não cresce nada — captura
+                    # evidência aqui (console + estado do botão), é o
+                    # momento mais informativo pra diagnosticar.
+                    _dump_debug(f"click{i+1}_nogrowth")
+                if stall >= 2:
+                    # 2 cliques seguidos sem crescer = realmente acabou (dá
+                    # 1 chance extra pro caso de ter sido só hidratação lenta
+                    # numa única rodada, não desiste no primeiro stall).
+                    break
+                page.wait_for_timeout(1500)
+                continue
+            stall = 0
+            count = new_count
 
         # Extrai número + menor preço de cada tile.
-        prices = page.evaluate(r"""
-            () => {
-                const out = {};
-                document.querySelectorAll("li").forEach(li => {
-                    const leaves = Array.from(li.querySelectorAll("*")).filter(el => el.children.length === 0);
-                    const nameEl = leaves.find(el => /\(\d+\/\d+\)/.test(el.textContent || ""));
-                    if (!nameEl) return;
-                    const nm = nameEl.textContent.match(/\((\d+)\/\d+\)/);
-                    if (!nm) return;
-                    const n = nm[1].padStart(3, "0");
-
-                    const priceEl = leaves.find(el => /R\$\s?[\d.]+,\d{2}/.test(el.textContent || ""));
-                    if (!priceEl) return;
-                    const pm = priceEl.textContent.match(/R\$\s?([\d.]+,\d{2})/);
-                    if (!pm) return;
-                    const val = parseFloat(pm[1].replace(/\./g, "").replace(",", "."));
-                    if (val > 0 && (!(n in out) || val < out[n])) out[n] = val;
-                });
-                return out;
-            }
-        """)
+        prices = page.evaluate(_MYP_EXTRACT_JS)
 
         browser.close()
         return {k: float(v) for k, v in prices.items()}
