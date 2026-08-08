@@ -6,6 +6,7 @@
     { "key": "me02", "file": "cards_me02.js", "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=738%20ed=PFL" },
     { "key": "meg",  "file": "cards_meg.js",  "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=730%20ed=MEG" },
     { "key": "me05", "file": "cards_me05.js", "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=792%20ed=PBL" },
+    { "key": "me2pt5", "file": "cards_me2pt5.js", "url": "https://www.ligapokemon.com.br/?view=cards/search&card=ed=ASC" },
     { "key": "me06", "file": "cards_me06.js", "url": "" },
     { "key": "mep",  "file": "cards_mep.js",  "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=733%20ed=MEP" },
 

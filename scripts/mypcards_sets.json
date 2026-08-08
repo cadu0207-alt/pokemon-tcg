@@ -1,0 +1,29 @@
+{
+  "_instrucoes": "IDs de edição do MYP Cards (mypcards.com) por set, pra montar a URL de busca: https://mypcards.com/pokemon?ProdutoSearch[edicoesSelecionadas][]={edicaoId}&ProdutoSearch[idiomasSelecionados][]={idiomaId}. edicaoId achado clicando o checkbox 'Edição' correspondente na sidebar de qualquer /pokemon?... e lendo o valor do input (ou inspecionando o DOM: input[name='ProdutoSearch[edicoesSelecionadas][]']). idiomaId é uma tabela GLOBAL (mesma em qualquer edição), confirmada em 07/08/2026 — ver bloco 'idiomas' abaixo. Sem idiomaId = mostra todos os idiomas misturados (comportamento hoje usado pro preço PT-BR default).",
+  "verificado_em": "2026-08-07",
+  "idiomas": {
+    "pt": 1,
+    "en": 2,
+    "es": 3,
+    "fr": 4,
+    "de": 5,
+    "it": 6,
+    "jp": 7,
+    "kr": 8,
+    "ru": 9,
+    "cn": 10,
+    "pt-en": 11,
+    "th": 12
+  },
+  "estrutura_dom_scraping": "Cada carta na grade de resultados é um <li> contendo: (1) um elemento folha com texto 'Nome da Carta (NNN/DDD)' — NNN é o número que interessa, DDD é uma constante do set (denominador de display, não é o total real do set); (2) um <a href='https://mypcards.com/pokemon/produto/{id}/{slug}'> pra página do produto agregando todos os vendedores; (3) um elemento com texto 'R$ X.XXX,XX' — já é o MENOR preço entre vendedores pra aquela carta, igual ao comportamento da grade da Liga hoje. Não precisa abrir a página de cada carta individualmente pra pegar o menor preço.",
+  "sets": [
+    { "key": "meg",    "file": "cards_meg.js",    "edicaoId": 2357, "nome_myp": "Megaevolução (MEG)",                       "itens_myp_sem_filtro_idioma": 189 },
+    { "key": "me02",   "file": "cards_me02.js",   "edicaoId": 2390, "nome_myp": "Mega Evolução — Fogo Fantasmagórico (PFL)", "itens_myp_sem_filtro_idioma": 130 },
+    { "key": "me03",   "file": "cards_me03.js",   "edicaoId": 2448, "nome_myp": "Mega Evolução — Equilíbrio Perfeito (POR) / ME03: Perfect Order", "itens_myp_sem_filtro_idioma": 124 },
+    { "key": "me04",   "file": "cards_me04.js",   "edicaoId": 2510, "nome_myp": "Megaevolução: Caos Ascendente (CRI) / ME04: Chaos Rising", "itens_myp_sem_filtro_idioma": 122 },
+    { "key": "me05",   "file": "cards_me05.js",   "edicaoId": 2631, "nome_myp": "Megaevolução: Escuridão Absoluta (PBL) / ME05: Pitch Black", "itens_myp_sem_filtro_idioma": 120 },
+    { "key": "me2pt5", "file": "cards_me2pt5.js", "edicaoId": 2422, "nome_myp": "ME: Ascended Heroes (ASC)",               "itens_myp_sem_filtro_idioma": 295 },
+    { "key": "me06",   "file": "cards_me06.js",   "edicaoId": null, "nome_myp": "não encontrado no MYP ainda (set não lançado/sem URL na Liga também)" },
+    { "key": "mep",    "file": "cards_mep.js",    "edicaoId": 2369, "nome_myp": "Mega Evolution: Series Black Star Promo Cards (MEP)", "itens_myp_sem_filtro_idioma": 90 }
+  ]
+}

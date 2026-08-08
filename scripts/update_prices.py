@@ -10,9 +10,25 @@ Agora o campo `price` dos cards_*.js representa o menor preço listado na Liga.
 Configuração: scripts/liga_sets.json — cole a URL da busca da Liga por set.
 Sets sem URL são pulados (preço atual permanece intacto — nunca regride para USD).
 
+FONTE ALTERNATIVA (ago/2026): scripts/mypcards_sets.json (mypcards.com/MYP Cards).
+A Liga só filtra idioma carta-a-carta (sem URL), o que impedia pegar preço em
+inglês em lote. O MYP filtra por EDIÇÃO + IDIOMA via parâmetro de URL
+(ProdutoSearch[edicoesSelecionadas][] + ProdutoSearch[idiomasSelecionados][]),
+então dá pra rodar com --source myp (PT-BR, mesmo campo `price` de sempre) ou
+--source myp --idioma en (preço em inglês — hoje só imprime no dry-run, ainda
+não existe onde gravar preço por idioma nos cards_*.js). Ver mypcards_sets.json
+pros edicaoId já mapeados (hoje só a família Mega Evolução).
+ATENÇÃO: fetch_myp_prices() foi escrito a partir da estrutura DOM confirmada
+via inspeção manual no Chrome (não via execução real do Playwright — o sandbox
+onde isso foi escrito não tinha Playwright instalado). Rode com --dry-run
+primeiro pra confirmar que a extração está pegando os cards certos antes de
+usar pra valer.
+
 Roda via GitHub Actions todo domingo 10h UTC, ou manualmente:
-    python scripts/update_prices.py            # atualiza os arquivos
-    python scripts/update_prices.py --dry-run  # só mostra o que faria
+    python scripts/update_prices.py                      # Liga, atualiza os arquivos
+    python scripts/update_prices.py --dry-run             # só mostra o que faria
+    python scripts/update_prices.py --source myp          # MYP Cards, PT-BR
+    python scripts/update_prices.py --source myp --idioma en --dry-run   # preço em inglês (só teste)
 """
 
 import json
@@ -151,6 +167,121 @@ def fetch_liga_prices(url: str, debug_key: str = "") -> dict:
         return {k: float(v) for k, v in prices.items()}
 
 
+# ── Extração via Playwright — MYP Cards (mypcards.com) ───────────────────────
+# Estrutura confirmada em 07/08/2026 inspecionando o DOM no Chrome (não via
+# execução do Playwright — validar com --dry-run antes de confiar de olhos
+# fechados). Cada carta na grade de resultados é um <li> contendo:
+#   • um elemento folha com texto "Nome da Carta (NNN/DDD)" — NNN é o número
+#     real da carta, DDD é uma constante de exibição do set (não é o total
+#     real de cartas do set — ignorar);
+#   • um <a href=".../pokemon/produto/{id}/{slug}"> pra página do produto;
+#   • um elemento com texto "R$ X.XXX,XX" que já é o MENOR preço entre
+#     vendedores pra aquela carta — não precisa abrir a página de cada carta.
+# A URL usa parâmetros GET normais (edição + idioma opcional), então dá pra
+# montar direto sem precisar clicar em nada:
+#   https://mypcards.com/pokemon?ProdutoSearch[edicoesSelecionadas][]={edicaoId}&ProdutoSearch[idiomasSelecionados][]={idiomaId}
+# idiomaId é global (não muda por edição) — ver scripts/mypcards_sets.json.
+
+def build_myp_url(edicao_id, idioma_id=None) -> str:
+    url = f"https://mypcards.com/pokemon?ProdutoSearch%5BedicoesSelecionadas%5D%5B%5D={edicao_id}"
+    if idioma_id:
+        url += f"&ProdutoSearch%5BidiomasSelecionados%5D%5B%5D={idioma_id}"
+    return url
+
+
+def fetch_myp_prices(edicao_id, idioma_id=None, debug_key: str = "") -> dict:
+    """
+    Abre a página de busca do MYP Cards pra uma edição (+ idioma opcional) e
+    extrai {numero_3dig: menor_preco}. Mesma ideia do fetch_liga_prices, mas
+    a paginação do MYP é via botão "Carregar mais produtos" em vez de
+    lazy-load puro por scroll — clica o botão em loop até não sobrar mais.
+    """
+    from playwright.sync_api import sync_playwright
+
+    url = build_myp_url(edicao_id, idioma_id)
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page(
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            ),
+            viewport={"width": 1600, "height": 1000},
+        )
+        page.goto(url, wait_until="domcontentloaded", timeout=45000)
+        page.wait_for_timeout(3500)
+
+        # Fecha banner de cookies/consentimento se existir.
+        for txt in ("Aceitar", "Aceitar todos", "Concordo", "OK", "Entendi"):
+            try:
+                btn = page.locator(f"button:has-text('{txt}')")
+                if btn.count() > 0:
+                    btn.first.click(timeout=1500)
+                    page.wait_for_timeout(500)
+            except Exception:
+                pass
+
+        # DEBUG: se não achar nenhuma carta de cara, salva screenshot + HTML.
+        early_count = page.locator("li:has-text('R$')").count()
+        if early_count == 0 and debug_key:
+            os.makedirs("debug_screenshots", exist_ok=True)
+            try:
+                page.screenshot(path=f"debug_screenshots/myp_{debug_key}.png", full_page=True)
+                with open(f"debug_screenshots/myp_{debug_key}.html", "w", encoding="utf-8") as f:
+                    f.write(page.content())
+                print(f"     🩺 Debug salvo: debug_screenshots/myp_{debug_key}.png (título: '{page.title()}')")
+            except Exception as e:
+                print(f"     🩺 Falha ao salvar debug: {e}")
+
+        # Clica "Carregar mais produtos" em loop até parar de crescer, e rola
+        # também (fallback, caso o botão suma antes de tudo carregar).
+        prev = -1
+        for _ in range(40):
+            for txt in ("Carregar mais produtos", "Carregar mais", "Mostrar mais", "Ver mais"):
+                btn = page.locator(f"button:has-text('{txt}'), a:has-text('{txt}')")
+                if btn.count() > 0:
+                    try:
+                        btn.first.scroll_into_view_if_needed(timeout=1500)
+                        btn.first.click(timeout=1500)
+                        page.wait_for_timeout(1000)
+                    except Exception:
+                        pass
+            page.mouse.wheel(0, 2500)
+            page.wait_for_timeout(600)
+            count = page.locator("li:has-text('R$')").count()
+            if count == prev:
+                break
+            prev = count
+
+        # Extrai número + menor preço de cada tile.
+        prices = page.evaluate(r"""
+            () => {
+                const out = {};
+                document.querySelectorAll("li").forEach(li => {
+                    const leaves = Array.from(li.querySelectorAll("*")).filter(el => el.children.length === 0);
+                    const nameEl = leaves.find(el => /\(\d+\/\d+\)/.test(el.textContent || ""));
+                    if (!nameEl) return;
+                    const nm = nameEl.textContent.match(/\((\d+)\/\d+\)/);
+                    if (!nm) return;
+                    const n = nm[1].padStart(3, "0");
+
+                    const priceEl = leaves.find(el => /R\$\s?[\d.]+,\d{2}/.test(el.textContent || ""));
+                    if (!priceEl) return;
+                    const pm = priceEl.textContent.match(/R\$\s?([\d.]+,\d{2})/);
+                    if (!pm) return;
+                    const val = parseFloat(pm[1].replace(/\./g, "").replace(",", "."));
+                    if (val > 0 && (!(n in out) || val < out[n])) out[n] = val;
+                });
+                return out;
+            }
+        """)
+
+        browser.close()
+        return {k: float(v) for k, v in prices.items()}
+
+
 # ── Atualização dos arquivos JS ──────────────────────────────────────────────
 # ATUALIZADO 24/jul/2026: agora que expand_card_database.py populou os sets
 # legados (legacy_*.js), este arquivo passou a ter dois "sotaques" diferentes
@@ -255,19 +386,21 @@ def update_js_file(filepath: str, prices: dict, dry: bool) -> tuple:
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
-def main():
-    dry = "--dry-run" in sys.argv
-    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    cfg_path = os.path.join(repo_root, "scripts", "liga_sets.json")
+def _arg_value(flag: str, default: str) -> str:
+    """Pega o valor de um argumento tipo --flag valor na linha de comando."""
+    if flag in sys.argv:
+        i = sys.argv.index(flag)
+        if i + 1 < len(sys.argv):
+            return sys.argv[i + 1]
+    return default
 
+
+def _run_liga(repo_root: str, dry: bool) -> tuple:
+    cfg_path = os.path.join(repo_root, "scripts", "liga_sets.json")
     with open(cfg_path, encoding="utf-8") as f:
         cfg = json.load(f)
 
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    print(f"[{now}] Atualizando preços — fonte: Liga Pokémon (menor preço, BRL)")
-    if dry:
-        print("MODO DRY-RUN — nada será gravado\n")
-
+    print(f"Atualizando preços — fonte: Liga Pokémon (menor preço, BRL)")
     total, all_ok = 0, True
 
     for s in cfg["sets"]:
@@ -305,6 +438,91 @@ def main():
             all_ok = False
 
         time.sleep(2)
+
+    return total, all_ok
+
+
+def _run_myp(repo_root: str, dry: bool, idioma: str) -> tuple:
+    cfg_path = os.path.join(repo_root, "scripts", "mypcards_sets.json")
+    with open(cfg_path, encoding="utf-8") as f:
+        cfg = json.load(f)
+
+    idioma_id = cfg["idiomas"].get(idioma)
+    if idioma_id is None:
+        print(f"  ❌ idioma '{idioma}' não existe em mypcards_sets.json (opções: {list(cfg['idiomas'])})")
+        return 0, False
+
+    grava_no_price_field = (idioma == "pt")
+    print(f"Atualizando preços — fonte: MYP Cards (menor preço, idioma={idioma})")
+    if not grava_no_price_field:
+        print("  ℹ️  idioma != pt: rodando em modo leitura — ainda não existe onde gravar preço por "
+              "idioma nos cards_*.js (feature de variantes de idioma não implementada). "
+              "Nada será escrito nos arquivos independente de --dry-run.\n")
+
+    total, all_ok = 0, True
+
+    for s in cfg["sets"]:
+        filepath = os.path.join(repo_root, s["file"])
+        edicao_id = s.get("edicaoId")
+        if not edicao_id:
+            print(f"  ⏭️  [{s['key'].upper()}] sem edicaoId em mypcards_sets.json — pulado")
+            continue
+        if not os.path.exists(filepath):
+            print(f"  ⚠️  {s['file']} não encontrado — pulando")
+            continue
+
+        url = build_myp_url(edicao_id, idioma_id)
+        print(f"  📡 [{s['key'].upper()}] {url}")
+        try:
+            prices = fetch_myp_prices(edicao_id, idioma_id, debug_key=s["key"])
+            print(f"     → {len(prices)} preços extraídos")
+
+            if len(prices) < MIN_CARDS_PARA_GRAVAR:
+                print(f"     ⚠️  Menos de {MIN_CARDS_PARA_GRAVAR} cards — layout do MYP pode ter mudado ou "
+                      f"não há oferta nesse idioma. NÃO gravando.")
+                all_ok = False
+                continue
+
+            if not grava_no_price_field:
+                print(f"     ℹ️  (modo leitura, idioma={idioma}) preços não gravados — exemplo: "
+                      f"{dict(list(prices.items())[:5])}")
+                continue
+
+            updates, skipped, alertas = update_js_file(filepath, prices, dry)
+            total += updates
+            print(f"     ✅ {updates} preços {'simulados' if dry else 'atualizados'} em {s['file']}")
+            if updates > 0 and not dry:
+                update_price_timestamp(repo_root, s["key"])
+                print(f"     🗓️  price_updated_at.js atualizado para '{s['key']}'")
+            if alertas:
+                print(f"     🔔 Variações >4x (conferir): {alertas[:8]}")
+            if skipped:
+                print(f"     ℹ️  {len(skipped)} cards sem preço no MYP: {skipped[:6]}")
+
+        except Exception as e:
+            print(f"     ❌ Erro em {s['key']}: {type(e).__name__}: {e}")
+            all_ok = False
+
+        time.sleep(2)
+
+    return total, all_ok
+
+
+def main():
+    dry = "--dry-run" in sys.argv
+    source = _arg_value("--source", "liga")
+    idioma = _arg_value("--idioma", "pt")
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    print(f"[{now}] update_prices.py — source={source}" + (f" idioma={idioma}" if source == "myp" else ""))
+    if dry:
+        print("MODO DRY-RUN — nada será gravado\n")
+
+    if source == "myp":
+        total, all_ok = _run_myp(repo_root, dry, idioma)
+    else:
+        total, all_ok = _run_liga(repo_root, dry)
 
     print(f"\n{'✅' if all_ok else '⚠️ '} Concluído: {total} preços.")
     return 0
