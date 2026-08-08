@@ -1,0 +1,29 @@
+{
+  "_instrucoes": "groupId do TCGCSV (mirror gratuito do catálogo/preço TCGPlayer, tcgcsv.com) por set. categoryId=3=Pokémon é fixo (não repetido aqui). Achado via https://tcgcsv.com/tcgplayer/3/groups e casado pela sigla/abreviação oficial (mesma usada em liga_sets.json) — não só pelo nome. Sets sem groupId ainda não existem no catálogo do TCGPlayer (ex.: me06, não lançado).",
+  "verificado_em": "2026-08-08",
+  "sets": [
+    { "key": "meg",    "file": "cards_meg.js",    "groupId": 24380, "abbreviation": "MEG" },
+    { "key": "me02",   "file": "cards_me02.js",   "groupId": 24448, "abbreviation": "PFL" },
+    { "key": "me03",   "file": "cards_me03.js",   "groupId": 24587, "abbreviation": "POR" },
+    { "key": "me04",   "file": "cards_me04.js",   "groupId": 24655, "abbreviation": "CRI" },
+    { "key": "me05",   "file": "cards_me05.js",   "groupId": 24688, "abbreviation": "PBL" },
+    { "key": "me2pt5", "file": "cards_me2pt5.js", "groupId": 24541, "abbreviation": "ASC" },
+    { "key": "me06",   "file": "cards_me06.js",   "groupId": null,  "abbreviation": null, "obs": "não lançado ainda — sem Liga também. 'ME: 30th Celebration' (groupId 24722) pode vir a ser este, mas não confirmado — conferir nome oficial quando anunciado." },
+    { "key": "mep",    "file": "cards_mep.js",    "groupId": 24451, "abbreviation": "MEP" },
+
+    { "key": "sv1",    "file": "cards_sv1.js",    "groupId": 22873, "abbreviation": "SVI" },
+    { "key": "sv2",    "file": "cards_sv2.js",    "groupId": 23120, "abbreviation": "PAL" },
+    { "key": "sv3",    "file": "cards_sv3.js",    "groupId": 23228, "abbreviation": "OBF" },
+    { "key": "sv3pt5", "file": "cards_sv3pt5.js", "groupId": 23237, "abbreviation": "MEW" },
+    { "key": "sv4",    "file": "cards_sv4.js",    "groupId": 23286, "abbreviation": "PAR" },
+    { "key": "sv4pt5", "file": "cards_sv4pt5.js", "groupId": 23353, "abbreviation": "PAF" },
+    { "key": "sv5",    "file": "cards_sv5.js",    "groupId": 23381, "abbreviation": "TEF" },
+    { "key": "sv6",    "file": "cards_sv6.js",    "groupId": 23473, "abbreviation": "TWM" },
+    { "key": "sv6pt5", "file": "cards_sv6pt5.js", "groupId": 23529, "abbreviation": "SFA" },
+    { "key": "sv7",    "file": "cards_sv7.js",    "groupId": 23537, "abbreviation": "SCR" },
+    { "key": "sv8",    "file": "cards_sv8.js",    "groupId": 23651, "abbreviation": "SSP" },
+    { "key": "sv8pt5", "file": "cards_sv8pt5.js", "groupId": 23821, "abbreviation": "PRE" },
+    { "key": "sv9",    "file": "cards_sv9.js",    "groupId": 24073, "abbreviation": "JTG" },
+    { "key": "sv10",   "file": "cards_sv10.js",   "groupId": 24269, "abbreviation": "DRI" }
+  ]
+}

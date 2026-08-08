@@ -1204,7 +1204,7 @@ function renderCartas(){
 // Lista achatada de todos os slots coletados (qty>0), 1 item por versão/carta
 function getOwnedSlotsFlat(){
   const out=[];
-  getAllCardsWithSet().forEach(c=>{
+  getAllCatalogCards().forEach(c=>{
     const sid=c._setId;
     getSlots(c,sid).forEach(s=>{
       const key=slotKey(sid+':',c.n,s.ver);
@@ -1287,7 +1287,7 @@ function renderCardsVenda(){
     updateVendaSelectUI();
     return;
   }
-  const allCards=getAllCardsWithSet();
+  const allCards=getAllCatalogCards();
   wrap.innerHTML=list.map(l=>{
     const col=VER_COLOR[l.version]||'#888';
     const c=allCards.find(cc=>cc._setId===l.set_id&&cc.n===l.card_n);
@@ -1358,7 +1358,7 @@ function renderCardsBuySearch(){
     wrap.innerHTML=`<div class="cv-item-empty">Digite o nome de uma carta pra registrar uma ordem de compra — não precisa ser uma carta que você já tem.</div>`;
     return;
   }
-  const results=getAllCardsWithSet().filter(c=>c.name.toLowerCase().includes(q)||c.n.includes(q)).slice(0,40);
+  const results=getAllCatalogCards().filter(c=>c.name.toLowerCase().includes(q)||c.n.includes(q)).slice(0,40);
   if(!results.length){
     wrap.innerHTML=`<div class="cv-item-empty">Nenhuma carta encontrada.</div>`;
     return;
@@ -1388,7 +1388,7 @@ function renderMyBuyOrders(){
     wrap.innerHTML=`<div class="cv-item-empty">Nenhuma ordem de compra registrada ainda.<br>Busque uma carta à esquerda pra começar.</div>`;
     return;
   }
-  const allCards=getAllCardsWithSet();
+  const allCards=getAllCatalogCards();
   wrap.innerHTML=list.map(o=>{
     const col=VER_COLOR[o.version]||'#888';
     const c=allCards.find(cc=>cc._setId===o.set_id&&cc.n===o.card_n);
@@ -1412,7 +1412,7 @@ function renderMyBuyOrders(){
 // ── MODAL REGISTRAR ORDEM DE COMPRA ────────────────────────────────
 let _mbState=null;
 function openBuyOrderModal(setId,n){
-  const c=getAllCardsWithSet().find(cc=>cc._setId===setId&&cc.n===n);
+  const c=getAllCatalogCards().find(cc=>cc._setId===setId&&cc.n===n);
   if(!c)return;
   const slots=getSlots(c,setId);
   const existing=buyOrders.find(o=>o.set_id===setId&&o.card_n===n);
@@ -1524,7 +1524,7 @@ async function removeBuyOrder(key){
 // ── MODAL COLOCAR À VENDA ─────────────────────────────────────────
 let _mvState=null;
 function openVendaModal(setId,n,ver){
-  const c=getAllCardsWithSet().find(cc=>cc._setId===setId&&cc.n===n);
+  const c=getAllCatalogCards().find(cc=>cc._setId===setId&&cc.n===n);
   if(!c)return;
   const slots=getSlots(c,setId);
   const s=slots.find(sl=>sl.ver===ver)||slots[0];
@@ -1685,7 +1685,7 @@ let _vimgItems=[];
 
 function openVendaImageModal(){
   if(!_vendaSelected.length)return;
-  const allCards=getAllCardsWithSet();
+  const allCards=getAllCatalogCards();
   _vimgItems=_vendaSelected.map(key=>{
     const l=cardListings.find(x=>x.slot_key===key);
     if(!l)return null;
@@ -2706,9 +2706,30 @@ const CB_SET_LABELS={
 };
 
 function getAllCardsWithSet(){
-  // usa myCollections para incluir todos os sets ativos (ME + SV)
+  // usa myCollections para incluir todos os sets ATIVOS (ME + SV) — é o que
+  // o Fichário e os fichários personalizados devem respeitar (o usuário
+  // escolheu quais coleções acompanhar). Para o sistema de Compra/Venda,
+  // que precisa abranger TODO o catálogo (a carta pode ser de uma coleção
+  // que o usuário não deixou "ativa" pra exibição), use getAllCatalogCards().
   const result=[];
   myCollections.forEach(id=>{
+    const cards=SET_CARDS_MAP[id]?.()??[];
+    cards.forEach(c=>result.push({...c,_setId:id}));
+  });
+  return result;
+}
+
+// Igual getAllCardsWithSet(), mas ignora o filtro de "coleções ativas"
+// (myCollections) — varre TODO SET_CARDS_MAP. Usado pelo sistema de
+// Compra/Venda (busca de cartas pra vender/comprar), que precisa achar
+// qualquer carta do jogo, não só das coleções que o usuário deixou
+// marcadas pra exibir no Fichário. Bug relatado 08/08/2026: a busca de
+// "Todas as Cartas" só trazia Mega Evolução porque myCollections do
+// usuário só tinha 'meg' ativo — a venda/compra não deveria depender
+// dessa preferência de exibição.
+function getAllCatalogCards(){
+  const result=[];
+  Object.keys(SET_CARDS_MAP).forEach(id=>{
     const cards=SET_CARDS_MAP[id]?.()??[];
     cards.forEach(c=>result.push({...c,_setId:id}));
   });

@@ -10,7 +10,17 @@ Agora o campo `price` dos cards_*.js representa o menor preço listado na Liga.
 Configuração: scripts/liga_sets.json — cole a URL da busca da Liga por set.
 Sets sem URL são pulados (preço atual permanece intacto — nunca regride para USD).
 
-FONTE ALTERNATIVA (ago/2026): scripts/mypcards_sets.json (mypcards.com/MYP Cards).
+FONTE DE PREÇO EM INGLÊS (ago/2026): scripts/tcgcsv_sets.json (tcgcsv.com).
+TCGCSV é um mirror gratuito e sem chave do catálogo/preço do TCGPlayer,
+atualizado 1x/dia. Cobre TODOS os nossos sets (SV inteiro + família Mega
+Evolução completa, inclusive me2pt5 que a api.pokemontcg.io não tem preço).
+É uma API JSON simples via requests — sem Playwright, sem scraping, sem
+bot-detection. Grava em campo NOVO `price_en` (USD, market price), nunca
+mexe no `price` (BRL/Liga) — os dois convivem lado a lado no mesmo card.
+    python scripts/update_prices.py --source tcgcsv               # grava price_en (USD)
+    python scripts/update_prices.py --source tcgcsv --dry-run     # só mostra o que faria
+
+FONTE ALTERNATIVA (ago/2026, PT-BR): scripts/mypcards_sets.json (mypcards.com/MYP Cards).
 A Liga só filtra idioma carta-a-carta (sem URL), o que impedia pegar preço em
 inglês em lote. O MYP filtra por EDIÇÃO + IDIOMA via parâmetro de URL
 (ProdutoSearch[edicoesSelecionadas][] + ProdutoSearch[idiomasSelecionados][]),
@@ -28,7 +38,8 @@ Roda via GitHub Actions todo domingo 10h UTC, ou manualmente:
     python scripts/update_prices.py                      # Liga, atualiza os arquivos
     python scripts/update_prices.py --dry-run             # só mostra o que faria
     python scripts/update_prices.py --source myp          # MYP Cards, PT-BR
-    python scripts/update_prices.py --source myp --idioma en --dry-run   # preço em inglês (só teste)
+    python scripts/update_prices.py --source myp --idioma en --dry-run   # preço em inglês (só teste, MYP)
+    python scripts/update_prices.py --source tcgcsv                       # preço em inglês (USD), TODOS os sets
 """
 
 import json
@@ -36,6 +47,8 @@ import os
 import re
 import sys
 import time
+import urllib.error
+import urllib.request
 from datetime import datetime
 
 MIN_CARDS_PARA_GRAVAR = 20   # segurança: menos que isso = extração falhou, não grava
@@ -415,6 +428,70 @@ def fetch_myp_prices(edicao_id, idioma_id=None, debug_key: str = "") -> dict:
         return {k: float(v) for k, v in prices.items()}
 
 
+# ── Extração via HTTP simples — TCGCSV (mirror do TCGPlayer) ─────────────────
+# Confirmado ao vivo em 08/08/2026 (Chrome, navegação manual + fetch()): API
+# JSON pública e gratuita, sem chave, atualizada 1x/dia. Estrutura documentada
+# em tcgcsv.com/docs — categoryId=3 é Pokémon (fixo). Por set (groupId, ver
+# scripts/tcgcsv_sets.json): /products dá numero+nome+raridade de cada carta,
+# /prices dá o valor (marketPrice em USD) por productId — junta os dois pelo
+# productId. Diferente da Liga/MYP, NÃO usa Playwright (não precisa — é só
+# JSON público), então roda em qualquer ambiente sem instalar navegador.
+# Regras de uso da TCGCSV (documentadas): User-Agent customizado obrigatório,
+# 1x/dia é suficiente (o dado só atualiza 1x/dia mesmo do lado deles).
+
+TCGCSV_USER_AGENT = "MyDeckTCG-PriceSync/1.0 (contato: cadu0207@gmail.com)"
+
+
+def _tcgcsv_get(path: str) -> dict:
+    url = f"https://tcgcsv.com{path}"
+    req = urllib.request.Request(url, headers={"User-Agent": TCGCSV_USER_AGENT})
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def fetch_tcgcsv_prices(group_id: int) -> dict:
+    """
+    Busca preço de mercado em USD (TCGPlayer, via mirror TCGCSV) pra um set
+    inteiro. Retorna {numero_3dig: preco_usd}.
+    Quando uma carta tem mais de uma variante de impressão (Normal/Holofoil/
+    Reverse Holofoil — cada uma é uma linha separada em /prices, mas o MESMO
+    productId), prioriza a variante 'Normal' se existir; senão usa a primeira
+    disponível. Usa marketPrice; cai pra lowPrice se marketPrice vier nulo
+    (acontece em cartas de baixíssimo volume de venda, ver docs da TCGCSV).
+    """
+    products = _tcgcsv_get(f"/tcgplayer/3/{group_id}/products")
+    prices = _tcgcsv_get(f"/tcgplayer/3/{group_id}/prices")
+
+    # productId -> numero_3dig — só produtos que são carta de verdade (têm
+    # "Number" no extendedData; sealed/coleções/etc não têm e são ignorados).
+    num_by_pid = {}
+    for p in products.get("results", []):
+        ext = {e.get("name"): e.get("value") for e in (p.get("extendedData") or [])}
+        num_raw = ext.get("Number")
+        if not num_raw:
+            continue
+        m = re.match(r"(\d+)", num_raw)
+        if not m:
+            continue
+        num_by_pid[p["productId"]] = m.group(1).zfill(3)
+
+    rows_by_pid = {}
+    for row in prices.get("results", []):
+        rows_by_pid.setdefault(row["productId"], []).append(row)
+
+    out = {}
+    for pid, num in num_by_pid.items():
+        rows = rows_by_pid.get(pid)
+        if not rows:
+            continue
+        chosen = next((r for r in rows if r.get("subTypeName") == "Normal"), rows[0])
+        val = chosen.get("marketPrice") or chosen.get("lowPrice")
+        if val:
+            out[num] = float(val)
+
+    return out
+
+
 # ── Atualização dos arquivos JS ──────────────────────────────────────────────
 # ATUALIZADO 24/jul/2026: agora que expand_card_database.py populou os sets
 # legados (legacy_*.js), este arquivo passou a ter dois "sotaques" diferentes
@@ -515,6 +592,120 @@ def update_js_file(filepath: str, prices: dict, dry: bool) -> tuple:
             f.write(new_content)
 
     return updates, skipped, alertas
+
+
+# ── Gravação do campo price_en (USD, TCGCSV) ─────────────────────────────────
+# Campo NOVO, separado de `price` (BRL/Liga) — os dois convivem no mesmo
+# objeto de carta. Mesma lógica de detecção de estilo (aspas simples vs JSON
+# legado) do update_js_file(), mas insere o campo se ele ainda não existir em
+# vez de exigir que já esteja lá (a maioria dos cards_*.js ainda não tem
+# price_en na primeira rodada).
+
+def _update_price_en_singlequote(content: str, norm_prices: dict) -> tuple:
+    updates, skipped = 0, []
+    lines = content.splitlines(keepends=True)
+    new_lines = []
+    for line in lines:
+        m = re.search(r"n:'(\d+)'", line)
+        if m and "price:" in line:
+            num = normalize_num(m.group(1))
+            if num in norm_prices:
+                new_val = norm_prices[num]
+                if "price_en:" in line:
+                    new_lines.append(re.sub(r"price_en:[\d.]+", f"price_en:{new_val:.2f}", line))
+                else:
+                    new_lines.append(re.sub(r"(price:[\d.]+)", rf"\1,price_en:{new_val:.2f}", line, count=1))
+                updates += 1
+                continue
+            else:
+                skipped.append(m.group(1))
+        new_lines.append(line)
+    return "".join(new_lines), updates, skipped
+
+
+def _update_price_en_json(content: str, norm_prices: dict) -> tuple:
+    updates, skipped = 0, []
+
+    def repl(m):
+        nonlocal updates
+        obj = m.group(0)
+        num = normalize_num(m.group(1))
+        if num not in norm_prices:
+            skipped.append(m.group(1))
+            return obj
+        new_val = norm_prices[num]
+        updates += 1
+        if '"price_en":' in obj:
+            return re.sub(r'"price_en":[\d.]+', f'"price_en":{new_val:.2f}', obj, count=1)
+        return re.sub(r'("price":[\d.]+)', rf'\1,"price_en":{new_val:.2f}', obj, count=1)
+
+    new_content = CARD_OBJ_RE.sub(repl, content)
+    return new_content, updates, skipped
+
+
+def update_price_en_file(filepath: str, prices_usd: dict, dry: bool) -> tuple:
+    with open(filepath, "r", encoding="utf-8", newline="") as f:
+        content = f.read()
+
+    norm_prices = {normalize_num(k): v for k, v in prices_usd.items()}
+    is_legacy_json = '"n":"' in content
+
+    if is_legacy_json:
+        new_content, updates, skipped = _update_price_en_json(content, norm_prices)
+    else:
+        new_content, updates, skipped = _update_price_en_singlequote(content, norm_prices)
+
+    if not dry:
+        with open(filepath, "w", encoding="utf-8", newline="") as f:
+            f.write(new_content)
+
+    return updates, skipped
+
+
+def _run_tcgcsv(repo_root: str, dry: bool) -> tuple:
+    cfg_path = os.path.join(repo_root, "scripts", "tcgcsv_sets.json")
+    with open(cfg_path, encoding="utf-8") as f:
+        cfg = json.load(f)
+
+    print("Atualizando preços — fonte: TCGCSV (market price TCGPlayer, USD) -> campo price_en")
+    total, all_ok = 0, True
+
+    for s in cfg["sets"]:
+        filepath = os.path.join(repo_root, s["file"])
+        group_id = s.get("groupId")
+        if not group_id:
+            print(f"  ⏭️  [{s['key'].upper()}] sem groupId em tcgcsv_sets.json — pulado")
+            continue
+        if not os.path.exists(filepath):
+            print(f"  ⚠️  {s['file']} não encontrado — pulando")
+            continue
+
+        print(f"  📡 [{s['key'].upper()}] groupId={group_id}")
+        try:
+            prices = fetch_tcgcsv_prices(group_id)
+            print(f"     → {len(prices)} preços extraídos")
+
+            if len(prices) < MIN_CARDS_PARA_GRAVAR:
+                print(f"     ⚠️  Menos de {MIN_CARDS_PARA_GRAVAR} cards — conferir groupId/set. NÃO gravando.")
+                all_ok = False
+                continue
+
+            updates, skipped = update_price_en_file(filepath, prices, dry)
+            total += updates
+            print(f"     ✅ {updates} price_en {'simulados' if dry else 'atualizados'} em {s['file']}")
+            if skipped:
+                print(f"     ℹ️  {len(skipped)} cards sem preço no TCGCSV: {skipped[:6]}")
+
+        except urllib.error.HTTPError as e:
+            print(f"     ❌ HTTP {e.code} em {s['key']}: {e}")
+            all_ok = False
+        except Exception as e:
+            print(f"     ❌ Erro em {s['key']}: {type(e).__name__}: {e}")
+            all_ok = False
+
+        time.sleep(0.3)  # TCGCSV pede um pequeno intervalo entre requests (docs)
+
+    return total, all_ok
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
@@ -654,6 +845,8 @@ def main():
 
     if source == "myp":
         total, all_ok = _run_myp(repo_root, dry, idioma)
+    elif source == "tcgcsv":
+        total, all_ok = _run_tcgcsv(repo_root, dry)
     else:
         total, all_ok = _run_liga(repo_root, dry)
 
