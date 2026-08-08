@@ -176,21 +176,39 @@ async function injectOffersSection(card,setId){
   if(!wrap||!uid())return;
   const mact=wrap.querySelector('.mact');
   const holderId='mkt-offers-'+Date.now();
+  const holderId2='mkt-buyorders-'+Date.now();
   const block=`<div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin:14px 0 8px">💰 OFERTAS RECEBIDAS</div>
-    <div id="${holderId}" style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">carregando…</div>`;
+    <div id="${holderId}" style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">carregando…</div>
+    <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin:14px 0 8px">🎯 QUEM QUER COMPRAR ESSA CARTA</div>
+    <div id="${holderId2}" style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">carregando…</div>`;
   if(mact)mact.insertAdjacentHTML('beforebegin',block);
   else wrap.insertAdjacentHTML('beforeend',block);
 
   const slots=getSlots(card,setId).map(s=>slotKey(setId+':',card.n,s.ver));
+
   const{data,error}=await sbClient.from('card_offers').select('*')
     .eq('seller_id',uid()).eq('status','pendente').in('slot_key',slots);
   const holder=document.getElementById(holderId);
-  if(!holder)return; // modal já fechado
-  if(error){holder.textContent='Erro ao carregar ofertas.';return;}
-  const offers=(data||[]).sort((a,b)=>b.offer_price-a.offer_price);
-  if(!offers.length){holder.textContent='Nenhuma oferta recebida ainda nesta carta.';return;}
-  holder.outerHTML=offers.map(o=>`<div class="mkt-offer-row">
-      <span>${VER_SHORT[o.version]||o.version} · ${o.buyer_cidade}/${o.buyer_uf}</span>
-      <b>R$${fmtR(o.offer_price)}</b>
+  if(holder){
+    if(error){holder.textContent='Erro ao carregar ofertas.';}
+    else{
+      const offers=(data||[]).sort((a,b)=>b.offer_price-a.offer_price);
+      holder.outerHTML=offers.length
+        ?offers.map(o=>`<div class="mkt-offer-row"><span>${VER_SHORT[o.version]||o.version} · ${o.buyer_cidade}/${o.buyer_uf}</span><b>R$${fmtR(o.offer_price)}</b></div>`).join('')
+        :`<div id="${holderId}" style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">Nenhuma oferta recebida ainda nesta carta.</div>`;
+    }
+  }
+
+  // Ordens de compra ativas de OUTRAS pessoas nessa mesma carta (livro de ofertas — lado bid)
+  const{data:bo,error:boErr}=await sbClient.from('buy_orders').select('*')
+    .eq('status','ativa').in('slot_key',slots).neq('buyer_id',uid());
+  const holder2=document.getElementById(holderId2);
+  if(!holder2)return; // modal já fechado
+  if(boErr){holder2.textContent='Erro ao carregar ordens de compra.';return;}
+  const orders=(bo||[]).sort((a,b)=>b.max_price-a.max_price);
+  if(!orders.length){holder2.textContent='Ninguém registrou interesse de compra nessa carta ainda.';return;}
+  holder2.outerHTML=orders.map(o=>`<div class="mkt-offer-row">
+      <span>${VER_SHORT[o.version]||o.version} · quer ${o.qty>1?o.qty+'x':'1x'}</span>
+      <b>R$${fmtR(o.max_price)}</b>
     </div>`).join('');
 }

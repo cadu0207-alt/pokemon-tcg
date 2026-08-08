@@ -344,7 +344,7 @@ function lprice(setId,n,fallback){
 }
 
 // ── ESTADO ──────────────────────────────────────────────────────
-let purchases=[],pulledCards=[],collected=new Set(),collectedQty=new Map(),valueHistory=[],cardListings=[];
+let purchases=[],pulledCards=[],collected=new Set(),collectedQty=new Map(),valueHistory=[],cardListings=[],buyOrders=[];
 
 // ── VERSÕES ──────────────────────────────────────────────────────
 const VER_COLOR={N:'#c8cfe8',F:'#118ab2',RH:'#06d6a0',SP:'#ff6b35'};
@@ -427,12 +427,13 @@ async function loadAll(){
   if(!uid()){setStatus('Faça login','warning');return;}
   try{
     const myUid=uid();
-    const[{data:p},{data:c},{data:col},{data:vh},{data:lst}]=await Promise.all([
+    const[{data:p},{data:c},{data:col},{data:vh},{data:lst},{data:bo}]=await Promise.all([
       sbClient.from('purchases').select('*').eq('user_id',myUid).order('date',{ascending:false}),
       sbClient.from('pulled_cards').select('*').eq('user_id',myUid).order('id',{ascending:true}),
       sbClient.from('collection').select('slot_key,quantity,origins').eq('user_id',myUid),
       sbClient.from('value_history').select('date,total_value').eq('user_id',myUid).order('date',{ascending:true}),
-      sbClient.from('card_listings').select('*').eq('user_id',myUid).order('created_at',{ascending:false})
+      sbClient.from('card_listings').select('*').eq('user_id',myUid).order('created_at',{ascending:false}),
+      sbClient.from('buy_orders').select('*').eq('buyer_id',myUid).order('created_at',{ascending:false})
     ]);
     purchases=Array.isArray(p)?p:[];
     pulledCards=Array.isArray(c)?c:[];
@@ -440,6 +441,7 @@ async function loadAll(){
     collectedQty=new Map((Array.isArray(col)?col:[]).map(r=>[r.slot_key,{qty:r.quantity||1,origins:r.origins||[]}]));
     valueHistory=Array.isArray(vh)?vh:[];
     cardListings=Array.isArray(lst)?lst:[];
+    buyOrders=Array.isArray(bo)?bo:[];
     setStatus('Online ✓','ok');
     fetchCambio();  // atualiza USD_BRL e EUR_BRL para conversão de preços
     renderAll();updateHomeStats();
@@ -1195,6 +1197,8 @@ function renderCartas(){
   populateCvSetFilter();
   renderCardsAll();
   renderCardsVenda();
+  renderCardsBuySearch();
+  renderMyBuyOrders();
 }
 
 // Lista achatada de todos os slots coletados (qty>0), 1 item por versão/carta
@@ -1340,6 +1344,181 @@ function updateVendaSelectUI(){
   if(cnt)cnt.textContent=`${_vendaSelected.length} selecionada${_vendaSelected.length!==1?'s':''}`;
   if(genBtn)genBtn.disabled=_vendaSelected.length===0;
   if(msgBtn)msgBtn.disabled=_vendaSelected.length===0;
+}
+
+// ── SISTEMA DE COMPRA — buscar carta e registrar ordem de compra ──
+// Lado "bid" do livro de ofertas: não exige que o usuário já tenha a
+// carta (busca em getAllCardsWithSet(), catálogo inteiro, não só o
+// fichário). Guarda em buy_orders com o mesmo formato de slot_key
+// usado em card_listings, pra facilitar o cruzamento (match) no futuro.
+function renderCardsBuySearch(){
+  const q=(document.getElementById('cv-search-buy')?.value||'').trim().toLowerCase();
+  const wrap=document.getElementById('cards-list-buy-search');if(!wrap)return;
+  if(!q){
+    wrap.innerHTML=`<div class="cv-item-empty">Digite o nome de uma carta pra registrar uma ordem de compra — não precisa ser uma carta que você já tem.</div>`;
+    return;
+  }
+  const results=getAllCardsWithSet().filter(c=>c.name.toLowerCase().includes(q)||c.n.includes(q)).slice(0,40);
+  if(!results.length){
+    wrap.innerHTML=`<div class="cv-item-empty">Nenhuma carta encontrada.</div>`;
+    return;
+  }
+  wrap.innerHTML=results.map(c=>{
+    const sid=c._setId;
+    const imgSrc=getBinderImg(c,sid);
+    return`<div class="cv-item" onclick="openBuyOrderModal('${sid}','${c.n}')" title="Registrar ordem de compra">
+      ${imgSrc?`<img class="cv-item-img" src="${imgSrc}" alt="${c.name}" onerror="this.style.display='none'">`:
+        `<div class="cv-item-icon">🃏</div>`}
+      <div class="cv-item-info">
+        <div class="cv-item-name">${c.name}</div>
+        <div class="cv-item-meta">${c.n} · ${cvSetLbl(sid)}</div>
+      </div>
+      <div class="cv-item-right"><span class="cv-item-qty">+</span></div>
+    </div>`;
+  }).join('');
+}
+
+function renderMyBuyOrders(){
+  const q=(document.getElementById('cv-search-buyorders')?.value||'').trim().toLowerCase();
+  let list=buyOrders.filter(o=>!q||o.card_name.toLowerCase().includes(q)||o.card_n.includes(q)||cvSetLbl(o.set_id).toLowerCase().includes(q));
+  list=[...list].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  const cEl=document.getElementById('cv-count-buyorders');if(cEl)cEl.textContent=`(${list.length})`;
+  const wrap=document.getElementById('cards-list-buyorders');if(!wrap)return;
+  if(!list.length){
+    wrap.innerHTML=`<div class="cv-item-empty">Nenhuma ordem de compra registrada ainda.<br>Busque uma carta à esquerda pra começar.</div>`;
+    return;
+  }
+  const allCards=getAllCardsWithSet();
+  wrap.innerHTML=list.map(o=>{
+    const col=VER_COLOR[o.version]||'#888';
+    const c=allCards.find(cc=>cc._setId===o.set_id&&cc.n===o.card_n);
+    const imgSrc=c?getBinderImg(c,o.set_id):null;
+    return`<div class="cv-item" onclick="openBuyOrderModal('${o.set_id}','${o.card_n}')" title="Editar ordem">
+      ${imgSrc?`<img class="cv-item-img" src="${imgSrc}" alt="${o.card_name}" onerror="this.style.display='none'">`:
+        `<div class="cv-item-icon">🎯</div>`}
+      <div class="cv-item-info">
+        <div class="cv-item-name">${o.card_name}</div>
+        <div class="cv-item-meta">${o.card_n} · ${cvSetLbl(o.set_id)} · <span style="color:${col}">${VER_SHORT[o.version]||o.version}</span></div>
+      </div>
+      <div class="cv-item-right">
+        <span class="cv-item-qty">×${o.qty}</span>
+        <div class="cv-item-price">R$${fmtR(o.max_price)}</div>
+        <button class="cv-item-remove" onclick="event.stopPropagation();removeBuyOrder('${o.slot_key}')">remover</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── MODAL REGISTRAR ORDEM DE COMPRA ────────────────────────────────
+let _mbState=null;
+function openBuyOrderModal(setId,n){
+  const c=getAllCardsWithSet().find(cc=>cc._setId===setId&&cc.n===n);
+  if(!c)return;
+  const slots=getSlots(c,setId);
+  const existing=buyOrders.find(o=>o.set_id===setId&&o.card_n===n);
+  const ver=existing?.version||slots[0].ver;
+  _mbState={
+    setId,n,card:c,slots,ver,
+    qty:existing?.qty||1,
+    maxPrice:existing?Number(existing.max_price):(lprice(setId,n,slots.find(s=>s.ver===ver)?.price)||0)
+  };
+  renderBuyOrderModal();
+  openModal('mbuy');
+}
+
+function renderBuyOrderModal(){
+  const st=_mbState;if(!st)return;
+  const c=st.card;
+  const imgSrc=getBinderImg(c,st.setId);
+  const key=slotKey(st.setId+':',st.n,st.ver);
+  const existing=buyOrders.find(o=>o.slot_key===key);
+  document.getElementById('mbuy-content').innerHTML=`
+    ${imgSrc?`<img class="mbinder-img" src="${imgSrc}" alt="${c.name}" onerror="this.style.display='none'">`:''}
+    <div class="mbinder-body">
+      <div class="mbinder-title">${c.name}</div>
+      <div class="mbinder-sub">#${c.n} · ${cvSetLbl(st.setId)}</div>
+
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">VERSÃO DESEJADA</div>
+      <div class="ver-select-grid">
+        ${st.slots.map(s=>{
+          const col=VER_COLOR[s.ver];
+          const active=st.ver===s.ver;
+          return`<div class="ver-card${active?' active':''}" onclick="mbSetVersion('${s.ver}')" style="${active?`border-color:${col};background:${col}18`:''}">
+            <div class="ver-card-dot" style="background:${active?col:'transparent'};border-color:${col}"></div>
+            <div class="ver-card-label" style="color:${active?col:'var(--text)'}">${VER_LABEL[s.ver]}</div>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px">QUANTIDADE DESEJADA</div>
+      <div class="mv-qty-row">
+        <button class="mv-qty-btn" onclick="mbChangeQty(-1)">−</button>
+        <div class="mv-qty-val" id="mb-qty-val">${st.qty}</div>
+        <button class="mv-qty-btn" onclick="mbChangeQty(1)">+</button>
+      </div>
+
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">VALOR QUE VOCÊ TOPA PAGAR (por unidade)</div>
+      <div class="mv-final-price">
+        <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">R$</span>
+        <input type="number" id="mb-price" step="0.01" value="${st.maxPrice}" oninput="mbSetPrice(this.value)">
+      </div>
+
+      <div class="mact">
+        <button class="btn-cx" onclick="closeModal('mbuy')">Cancelar</button>
+        ${existing?`<button class="btn-cx" style="color:var(--accent)" onclick="removeBuyOrder('${key}')">Remover ordem</button>`:''}
+        <button class="btn-add" onclick="saveBuyOrder()">✓ Registrar Interesse</button>
+      </div>
+    </div>`;
+}
+
+function mbSetVersion(ver){
+  const st=_mbState;if(!st)return;
+  st.ver=ver;
+  const s=st.slots.find(sl=>sl.ver===ver);
+  st.maxPrice=lprice(st.setId,st.n,s?.price)||st.maxPrice;
+  renderBuyOrderModal();
+}
+
+function mbChangeQty(d){
+  const st=_mbState;if(!st)return;
+  st.qty=Math.max(1,st.qty+d);
+  const el=document.getElementById('mb-qty-val');if(el)el.textContent=st.qty;
+}
+
+function mbSetPrice(v){
+  const st=_mbState;if(!st)return;
+  st.maxPrice=parseFloat(v)||0;
+}
+
+async function saveBuyOrder(){
+  const st=_mbState;if(!st||!uid())return;
+  if(!st.maxPrice||st.maxPrice<=0){alert('Informe um valor válido.');return;}
+  const key=slotKey(st.setId+':',st.n,st.ver);
+  const payload={
+    buyer_id:uid(),slot_key:key,set_id:st.setId,card_n:st.n,version:st.ver,
+    card_name:st.card.name,qty:st.qty,max_price:st.maxPrice,status:'ativa',
+    updated_at:new Date().toISOString()
+  };
+  const{data:res,error}=await sbClient.from('buy_orders').upsert(payload,{onConflict:'buyer_id,slot_key'}).select();
+  if(error){
+    console.error('[buy_orders upsert]',error);
+    alert('Não foi possível salvar a ordem de compra. Verifique se a tabela buy_orders já foi criada no Supabase (rode buy_orders_setup.sql).');
+    return;
+  }
+  buyOrders=buyOrders.filter(o=>o.slot_key!==key);
+  if(Array.isArray(res))buyOrders.unshift(...res);
+  closeModal('mbuy');_mbState=null;
+  renderMyBuyOrders();
+  setStatus('Ordem de compra registrada','ok');
+}
+
+async function removeBuyOrder(key){
+  if(!uid())return;
+  const{error}=await sbClient.from('buy_orders').delete().eq('slot_key',key).eq('buyer_id',uid());
+  if(error){console.error('[buy_orders delete]',error);alert('Não foi possível remover a ordem.');return;}
+  buyOrders=buyOrders.filter(o=>o.slot_key!==key);
+  closeModal('mbuy');_mbState=null;
+  renderMyBuyOrders();
 }
 
 // ── MODAL COLOCAR À VENDA ─────────────────────────────────────────

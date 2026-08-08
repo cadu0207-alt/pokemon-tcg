@@ -180,7 +180,7 @@
     <button type="button" class="tab active" id="nav-tab-dash" onclick="go('dash',this)">📊 Dashboard</button>
     <button type="button" class="tab" id="nav-tab-fichario" onclick="go('fichario',this)">📚 Fichário</button>
     <button type="button" class="tab" id="nav-tab-gastos" onclick="go('gastos',this)">💸 Gastos</button>
-    <button type="button" class="tab" id="nav-tab-cartas" onclick="go('cartas',this)">🃏 Cartas Tiradas</button>
+    <button type="button" class="tab" id="nav-tab-cartas" onclick="go('cartas',this)">📈 Compra/Venda</button>
     <button type="button" class="tab" id="nav-tab-preco" onclick="go('preco',this)">💰 Preço Justo</button>
     <button type="button" class="tab" id="nav-tab-lojas" onclick="go('lojas',this)">🛍️ Lojas & Ofertas</button>
     <button type="button" class="tab" id="nav-tab-mercado" onclick="go('mercado',this)">🏪 Lojas Confiáveis</button>
@@ -225,11 +225,18 @@
   </div>
 
   <div id="cartas" class="pane">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
-      <div class="sec-title" style="margin:0">🃏 Cartas Tiradas &amp; À Venda</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:10px">
+      <div class="sec-title" style="margin:0">📈 Sistema de Compra/Venda</div>
       <button class="btn-add" onclick="openModal('mc')">+ ADICIONAR TIRADA</button>
     </div>
+    <div class="mkt-note" style="margin-bottom:18px">
+      Livro de ofertas em duas pontas: o que você tem à venda (ask) e o que você quer comprar e por quanto (bid).
+      <b>Ainda não faz o cruzamento automático</b> — quando um valor pedido bater com um valor ofertado, isso vai virar
+      um match com sistema de mensagem entre as partes. Por enquanto é só registro.
+    </div>
     <div id="cards-hdr"></div>
+
+    <div class="cv-section-t">📤 VENDER — o que você tem</div>
     <div class="cv-cols">
       <div class="cv-col">
         <div class="cv-col-t">📚 Todas as Cartas <span class="cv-count" id="cv-count-all"></span></div>
@@ -267,6 +274,20 @@
           </div>
         </div>
         <div id="cards-list-venda" class="cv-list"></div>
+      </div>
+    </div>
+
+    <div class="cv-section-t" style="margin-top:28px">📥 COMPRAR — o que você quer</div>
+    <div class="cv-cols">
+      <div class="cv-col">
+        <div class="cv-col-t">🔍 Buscar Carta (todas as coleções)</div>
+        <input class="bsrch" id="cv-search-buy" placeholder="Buscar carta pra registrar interesse..." oninput="renderCardsBuySearch()">
+        <div id="cards-list-buy-search" class="cv-list"></div>
+      </div>
+      <div class="cv-col">
+        <div class="cv-col-t">🎯 Minhas Ordens de Compra <span class="cv-count" id="cv-count-buyorders"></span></div>
+        <input class="bsrch" id="cv-search-buyorders" placeholder="Buscar nas minhas ordens..." oninput="renderMyBuyOrders()">
+        <div id="cards-list-buyorders" class="cv-list"></div>
       </div>
     </div>
   </div>
@@ -529,6 +550,14 @@
   <div class="modal modal-wide">
     <button class="mc-btn" onclick="closeModal('mvimg')">✕</button>
     <div id="mvimg-content"></div>
+  </div>
+</div>
+
+<!-- MODAL REGISTRAR ORDEM DE COMPRA (quero comprar essa carta) -->
+<div class="ov" id="mbuy" onclick="if(event.target===this)closeModal('mbuy')">
+  <div class="modal modal-wide">
+    <button class="mc-btn" onclick="closeModal('mbuy')">✕</button>
+    <div id="mbuy-content"></div>
   </div>
 </div>
 

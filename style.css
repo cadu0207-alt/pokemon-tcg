@@ -1730,6 +1730,10 @@ body.share-view .btn-add { display: none !important; }
 .products-grid-hidden { display: none !important; }
 
 /* ─── CARTAS TIRADAS & À VENDA — busca em 2 colunas ──────────── */
+.cv-section-t {
+  font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 2px;
+  color: var(--muted); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 14px;
+}
 .cv-cols {
   display: grid;
   grid-template-columns: 1fr 1fr;
