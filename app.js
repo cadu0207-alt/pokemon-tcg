@@ -11,6 +11,14 @@ if(!window.supabase){
 const sbClient=window.supabase ? window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY) : null;
 let currentUser=null;
 
+// Escapa texto livre digitado pelo usuário (ex: nome de produto em compras)
+// antes de injetar em innerHTML — evita XSS caso o campo contenha <script>,
+// onerror=, etc. Usar sempre que um campo de texto livre for renderizado.
+function esc(str){
+  if(str===null||str===undefined)return'';
+  return String(str).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 // ── TOAST GLOBAL (sucesso/erro/info) ─────────────────────────────
 // Uso: toast('Compra salva!') · toast('Preço inválido','error') · toast('...','info')
 function toast(msg,type='success'){
@@ -1115,19 +1123,19 @@ function renderGastos(){
     const profit=linked.length?linkedVal-Number(p.price):null;
     return`<div class="pcard">
       <div class="pcard-img-wrap">
-        <img src="${imgSrc}" alt="${p.product}" onerror="this.style.display='none'">
+        <img src="${imgSrc}" alt="${esc(p.product)}" onerror="this.style.display='none'">
         <div class="pcard-img-overlay"></div>
-        <div class="pcard-img-label">${p.tipo}</div>
+        <div class="pcard-img-label">${esc(p.tipo)}</div>
       </div>
       <div class="pcard-body">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
           <div style="flex:1;min-width:200px">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-              <span class="pill pt">${p.tipo}</span>
+              <span class="pill pt">${esc(p.tipo)}</span>
               <span style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace">${d}</span>
               ${p.acessorio?'<span style="font-family:\'Space Mono\',monospace;font-size:9px;color:var(--muted);background:rgba(107,117,153,.15);padding:2px 7px;border-radius:10px">ACESSÓRIO</span>':''}
             </div>
-            <div style="font-weight:700;font-size:14px;margin-bottom:4px">${p.product}</div>
+            <div style="font-weight:700;font-size:14px;margin-bottom:4px">${esc(p.product)}</div>
             ${p.boost>0?`<div style="font-size:11px;color:var(--muted)">${p.boost} boosters · ~${p.cards} cartas</div>`:''}
             ${profit!==null?`<div style="font-size:11px;margin-top:4px;color:${profit>=0?'var(--teal)':'var(--accent)'}">${profit>=0?'▲':'▼'} R$${fmtR(Math.abs(profit))} ${profit>=0?'de lucro':'abaixo do gasto'} · ${linked.length} carta${linked.length!==1?'s':''} vinculada${linked.length!==1?'s':''}</div>`:''}
           </div>
@@ -1149,7 +1157,7 @@ function renderGastos(){
   document.getElementById('tlwrap').innerHTML=[...purchases].reverse().map(p=>{
     const d=new Date(p.date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
     const pb=p.boost>0?(Number(p.price)/p.boost).toFixed(2):null;
-    return`<div class="tli"><div class="tl-date">${d}</div><div class="tl-desc">${p.product}</div>
+    return`<div class="tli"><div class="tl-date">${d}</div><div class="tl-desc">${esc(p.product)}</div>
       <div class="tl-amt">R$${fmtR(p.price)}${pb?` · <span style="color:var(--gold)">R$${pb.replace('.',',')}/booster</span>`:''}</div></div>`;
   }).join('');
 }
@@ -2277,7 +2285,7 @@ function openBinderModal(card, setId){
   }).join('');
 
   // Lista de compras (mais recente primeiro)
-  const purchaseOpts=purchases.map(p=>`<option value="${p.id}">${new Date(p.date+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})} — ${p.product.substring(0,45)}</option>`).join('');
+  const purchaseOpts=purchases.map(p=>`<option value="${p.id}">${new Date(p.date+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})} — ${esc(p.product.substring(0,45))}</option>`).join('');
 
   document.getElementById('mbinder-content').innerHTML=`
     ${imgSrc?`<img class="mbinder-img" src="${imgSrc}" alt="${card.name}" onerror="this.style.display='none'">`:
@@ -2563,7 +2571,7 @@ function openModal(id){
     sel.innerHTML='<option value="">— Selecione a compra —</option>'+
       purchases.filter(p=>!p.acessorio).map(p=>{
         const d=new Date(p.date+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
-        return`<option value="${p.id}">${d} — ${p.product.substring(0,50)}</option>`;
+        return`<option value="${p.id}">${d} — ${esc(p.product.substring(0,50))}</option>`;
       }).join('');
     document.getElementById('open-slots').innerHTML='';
   }
