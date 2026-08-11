@@ -145,11 +145,8 @@ async function sendFeedbackReply(id) {
         if (holder) holder.innerHTML = '';
       }
     };
-    const originalGo = window.go;
-    window.go = function (id, el) {
-      originalGo(id, el);
-      if (id === 'dash' && typeof renderAdminFeedback === 'function') renderAdminFeedback();
-    };
+    // ADMIN 11/08/2026: renderAdminFeedback() não roda mais ao abrir o
+    // Dashboard — agora só roda quando a aba Admin abre (admin_panel.js).
   };
   tryHook();
 })();

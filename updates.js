@@ -10,8 +10,6 @@ async function renderUpdatesLog() {
   const holder = document.getElementById('updates-log-wrap');
   if (!holder || !sbClient || !currentUser) return;
 
-  const admin = typeof isAdmin === 'function' && isAdmin();
-
   holder.innerHTML =
     '<div class="updates-log-card">' +
       '<div class="updates-log-hdr">' +
@@ -24,13 +22,10 @@ async function renderUpdatesLog() {
           '<button class="update-minimize-btn" title="Minimizar" onclick="toggleUpdatesLogCollapse()">−</button>' +
         '</div>' +
       '</div>' +
-      (admin ?
-        '<div class="update-admin-form">' +
-          '<input id="update-title-input" placeholder="Título (ex: Nova feature)" maxlength="80">' +
-          '<textarea id="update-msg-input" placeholder="O que mudou..." maxlength="400"></textarea>' +
-          '<button class="btn-mini" id="update-publish-btn" onclick="publishUpdate()">📨 Publicar</button>' +
-        '</div>'
-        : '') +
+      // ADMIN 11/08/2026: o formulário de publicar (só admin via) saiu daqui
+      // e virou renderUpdatesAdminForm(), na aba Admin (#admin-updates-wrap).
+      // O log em si (com botão de apagar por item, pra quem é admin) continua
+      // público no Dashboard — é conteúdo que todo usuário vê mesmo.
       '<div class="updates-log-list" id="updates-log-list">Carregando...</div>' +
     '</div>' +
     '<div class="updates-log-collapsed-btn" onclick="toggleUpdatesLogCollapse()" title="Ver atualizações">✉️ Mensagens e Atualizações</div>';
@@ -42,6 +37,21 @@ async function renderUpdatesLog() {
 
   await loadUpdatesList();
   positionUpdatesLogPanel();
+}
+
+// ── PAINEL ADMIN — publicar atualização (aba Admin) ────────────────
+function renderUpdatesAdminForm() {
+  const holder = document.getElementById('admin-updates-wrap');
+  if (!holder) return;
+  if (typeof isAdmin !== 'function' || !isAdmin()) { holder.innerHTML = ''; return; }
+
+  holder.innerHTML =
+    '<div class="sec-title" style="margin-top:28px">📢 Admin · Publicar Atualização</div>' +
+    '<div class="update-admin-form">' +
+      '<input id="update-title-input" placeholder="Título (ex: Nova feature)" maxlength="80">' +
+      '<textarea id="update-msg-input" placeholder="O que mudou..." maxlength="400"></textarea>' +
+      '<button class="btn-mini" id="update-publish-btn" onclick="publishUpdate()">📨 Publicar</button>' +
+    '</div>';
 }
 
 // CORRIGIDO 02/08/2026: o painel ficava sobrepondo a barra de abas em telas

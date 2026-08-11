@@ -869,11 +869,13 @@ async function renderLojas() {
     '<div class="affiliate-disclosure">🔗 Esta aba contém links de afiliado do Mercado Livre — ao comprar por eles, o MyDeck pode receber uma pequena comissão, sem custo adicional para você.</div>' +
     '<div class="stores-grid">' + storesHtml + '</div>' +
     '<div id="lojas-showcase"></div>' +
-    '<div id="lojas-admin"></div>' +
     renderCouponsBlock(coupons);
 
   await renderShowcaseSection();
-  await renderAdminPanel();
+  // ADMIN 11/08/2026: o painel de cadastro de produtos/cupons (#lojas-admin)
+  // saiu da aba pública Lojas & Ofertas e virou parte da aba Admin —
+  // renderAdminPanel() agora é chamado só de lá (admin_panel.js), não mais
+  // toda vez que essa aba pública abre.
 }
 
 // Auto-render se a aba já estiver ativa no load (ex: refresh na URL)

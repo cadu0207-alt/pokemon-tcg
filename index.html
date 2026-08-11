@@ -187,13 +187,15 @@
     <button type="button" class="tab" id="nav-tab-positivo" onclick="go('positivo',this)">✅ Cadastro Positivo</button>
     <button type="button" class="tab" id="nav-tab-iniciantes" onclick="go('iniciantes',this)">🔰 Iniciantes</button>
     <button type="button" class="tab" id="nav-tab-centralizacao" onclick="go('centralizacao',this)">🎯 Avaliação de Centralização</button>
+    <!-- ADMIN 11/08/2026: aba própria, só visível pro Eduardo (isAdmin(), lojas.js)
+         — display:none aqui é o estado padrão/seguro; admin_panel.js mostra via JS
+         só depois de confirmar o e-mail logado (cadu0207@gmail.com). -->
+    <button type="button" class="tab" id="nav-tab-admin" style="display:none" onclick="go('admin',this)">🔐 Admin</button>
     <button type="button" class="tab" onclick="window.open('simulador.html','_blank')" style="background:linear-gradient(90deg,#7b2ff744,#f107a322);color:#c084fc">🎰 Simulador</button>
   </nav>
 
   <div id="dash" class="pane active">
     <div id="updates-log-wrap" class="updates-log-panel"></div>
-    <div id="admin-stats-wrap"></div>
-    <div id="admin-feedback-wrap"></div>
     <div class="kpi-grid" id="kpi-dash"></div>
     <div class="sec-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 5a2 2 0 0 1 2-2h11a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2Z"/><path d="M4 5v14a2 2 0 0 0 2 2h11"/></svg> Progresso Master Set</div>
     <div id="progress-sets" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:28px"></div>
@@ -362,10 +364,9 @@
       </div>
     </div>
 
-    <div id="mkt-pending-wrap" style="display:none;margin-top:24px">
-      <div class="sec-title">🔎 Aprovações Pendentes (admin)</div>
-      <div id="mkt-pending-list" class="mkt-store-list"></div>
-    </div>
+    <!-- ADMIN 11/08/2026: painel de aprovação saiu daqui e virou parte da aba
+         Admin (mkt-pending-wrap/mkt-pending-list ficam lá agora) — marketplace.js
+         continua achando os elementos por id, então nenhuma função mudou. -->
 
     <div class="sec-title" style="margin-top:24px">✅ Lojas Ativas</div>
     <div id="mkt-active-list" class="mkt-store-list"></div>
@@ -459,6 +460,35 @@
   <!-- ===== ABA AVALIAÇÃO DE CENTRALIZAÇÃO (ferramenta pré-graduação) ===== -->
   <div id="centralizacao" class="pane">
     <div id="centralizacao-wrap"></div>
+  </div>
+
+  <!-- ===== ABA ADMIN (11/08/2026) =====
+       Painel único pro Eduardo — reúne tudo que antes ficava misturado nas
+       abas públicas (estatísticas do site e mensagens de usuários viviam no
+       Dashboard; aprovações de Lojas Confiáveis viviam em Lojas Confiáveis;
+       aprovações de Cadastro Positivo viviam em Cadastro Positivo; cadastro
+       de produtos/cupons do ML vivia em Lojas & Ofertas). A aba em si só
+       fica visível (nav-tab-admin) pra quem loga como cadu0207@gmail.com —
+       ver admin_panel.js. Cada bloco é preenchido pela função que já existia
+       no arquivo original (admin_stats.js, feedback.js, updates.js,
+       marketplace.js, positivo.js, lojas.js/lojas_admin_collapse.js). -->
+  <div id="admin" class="pane">
+    <div class="sec-title" style="margin-top:0">🔐 Painel Admin</div>
+    <div id="admin-stats-wrap"></div>
+    <div id="admin-feedback-wrap"></div>
+    <div id="admin-updates-wrap"></div>
+
+    <div class="sec-title" style="margin-top:28px">🏪 Lojas Confiáveis — Aprovações Pendentes</div>
+    <div id="mkt-pending-wrap" style="display:none;margin-top:8px">
+      <div id="mkt-pending-list" class="mkt-store-list"></div>
+    </div>
+
+    <div class="sec-title" style="margin-top:28px">✅ Cadastro Positivo — Indicações Pendentes</div>
+    <div id="pc-pending-wrap" style="display:none;margin-top:8px">
+      <div id="pc-pending-list" class="mkt-store-list"></div>
+    </div>
+
+    <div id="lojas-admin"></div>
   </div>
 
 </div><!-- /pg-app -->
@@ -771,6 +801,7 @@
 <script defer src="admin_stats.js"></script>
 <script defer src="feedback.js"></script>
 <script defer src="updates.js"></script>
+<script defer src="admin_panel.js"></script>
 <script defer src="xp_system.js"></script>
 <script>
 // Renderizar EV ao abrir a aba Preco Justo (após scripts deferidos)

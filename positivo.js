@@ -62,10 +62,9 @@ function renderPositivo() {
     <div class="sec-title" style="margin-top:4px">🏪 Lojas Verificadas</div>
     <div id="pc-active-list" class="mkt-store-list"></div>
 
-    <div id="pc-pending-wrap" style="display:none;margin-top:24px">
-      <div class="sec-title">🔎 Indicações Pendentes (admin)</div>
-      <div id="pc-pending-list" class="mkt-store-list"></div>
-    </div>
+    <!-- ADMIN 11/08/2026: aprovações pendentes saíram daqui e viraram parte
+         da aba Admin (pc-pending-wrap/pc-pending-list ficam lá agora) —
+         renderPositiveLists() continua achando os elementos por id. -->
 
     <div class="sec-title" style="margin-top:28px">📋 Indicar uma Loja</div>
     <div class="mkt-grid" style="grid-template-columns:1fr;max-width:520px">

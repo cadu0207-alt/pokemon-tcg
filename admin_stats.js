@@ -141,11 +141,10 @@ async function logSiteVisit() {
       setTimeout(tryHook, 50);
       return;
     }
-    const originalGo = window.go;
-    window.go = function (id, el) {
-      originalGo(id, el);
-      if (id === 'dash' && typeof renderAdminStats === 'function') renderAdminStats();
-    };
+    // ADMIN 11/08/2026: renderAdminStats() não é mais disparado ao abrir o
+    // Dashboard — agora só roda quando a aba Admin abre (admin_panel.js /
+    // renderAdminTab()), pra não misturar consulta de admin com a tela que
+    // todo usuário vê.
     const originalUpdateChip = window._updateUserChip;
     window._updateUserChip = function (user) {
       originalUpdateChip(user);
@@ -155,11 +154,6 @@ async function logSiteVisit() {
   tryHook();
 })();
 
-document.addEventListener('DOMContentLoaded', function() {
-  const pane = document.getElementById('dash');
-  if (pane && pane.classList.contains('active')) {
-    setTimeout(function() {
-      if (typeof isAdmin === 'function' && isAdmin()) renderAdminStats();
-    }, 800);
-  }
-});
+// ADMIN 11/08/2026: o disparo automático no load (quando o Dashboard já
+// abre ativo) saiu daqui — quem decide quando renderAdminStats() roda agora
+// é só a aba Admin (admin_panel.js/renderAdminTab()).
