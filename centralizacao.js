@@ -21,6 +21,8 @@ const CENT = {
   dataUrl: null,
   edges: null,       // {outer:{l,r,t,b}, inner:{l,r,t,b}} — frações 0..1
   dragging: null,    // {rect:'outer'|'inner', side:'l'|'r'|'t'|'b'}
+  rotation: 0,        // graus, corrige foto tirada torta antes de marcar os pontos
+  guidesOn: true,      // linhas-guia horizontal/vertical fixas de referência
   listenersBound: false
 };
 
@@ -110,6 +112,8 @@ function centHandleFile(file) {
   reader.onload = (e) => {
     CENT.dataUrl = e.target.result;
     CENT.edges = centDefaultEdges();
+    CENT.rotation = 0;
+    CENT.guidesOn = true;
     renderCentralizacao();
   };
   reader.readAsDataURL(file);
@@ -135,15 +139,36 @@ function centRenderTool(holder) {
       interna (moldura/arte impressa) — um em cada lado. O resultado atualiza sozinho.
     </div>
 
+    <div class="cent-warn" id="cent-warn">
+      ⚠️ <b>Se a carta na foto não estiver alinhada com as linhas guia</b> (uma reta vertical e uma horizontal
+      no centro da imagem), use o controle de <b>rotação</b> abaixo pra alinhar antes de marcar os 8 pontos —
+      foto torta distorce a medição de centralização.
+    </div>
+
     <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
       <div class="cent-stage-wrap">
         <div class="cent-stage" id="cent-stage">
-          <img src="${CENT.dataUrl}" id="cent-img" draggable="false">
+          <img src="${CENT.dataUrl}" id="cent-img" draggable="false" style="transform:rotate(${CENT.rotation}deg)">
+          <div class="cent-guide-v" id="cent-guide-v"></div>
+          <div class="cent-guide-h" id="cent-guide-h"></div>
           <div class="cent-rect cent-rect-outer" id="cent-rect-outer"></div>
           <div class="cent-rect cent-rect-inner" id="cent-rect-inner"></div>
           ${centHandlesHTML()}
         </div>
-        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+
+        <div class="cent-rotate-row">
+          <span class="cent-rotate-lbl">🔄 Alinhar rotação</span>
+          <input type="range" id="cent-rotate-slider" min="-15" max="15" step="0.1" value="${CENT.rotation}"
+                 oninput="centSetRotation(this.value)">
+          <span class="cent-rotate-val" id="cent-rotate-val">${CENT.rotation.toFixed(1)}°</span>
+          <button class="fic-btn" onclick="centResetRotation()">↺ 0°</button>
+          <label class="cent-guide-toggle">
+            <input type="checkbox" id="cent-guide-toggle" ${CENT.guidesOn ? 'checked' : ''} onchange="centToggleGuides(this.checked)">
+            Linhas-guia
+          </label>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
           <button class="fic-btn" onclick="centResetPoints()">↺ Resetar pontos</button>
           <button class="fic-btn" onclick="centReset()">🗑️ Trocar foto</button>
         </div>
@@ -155,6 +180,45 @@ function centRenderTool(holder) {
 
   centBindDrag();
   centUpdateVisual();
+  centUpdateRotateBadge();
+}
+
+function centSetRotation(val) {
+  CENT.rotation = parseFloat(val) || 0;
+  const img = document.getElementById('cent-img');
+  const valEl = document.getElementById('cent-rotate-val');
+  if (img) img.style.transform = `rotate(${CENT.rotation}deg)`;
+  if (valEl) valEl.textContent = CENT.rotation.toFixed(1) + '°';
+  centUpdateRotateBadge();
+}
+
+function centResetRotation() {
+  CENT.rotation = 0;
+  const slider = document.getElementById('cent-rotate-slider');
+  if (slider) slider.value = 0;
+  centSetRotation(0);
+}
+
+function centToggleGuides(checked) {
+  CENT.guidesOn = checked;
+  const v = document.getElementById('cent-guide-v');
+  const h = document.getElementById('cent-guide-h');
+  if (v) v.style.display = checked ? '' : 'none';
+  if (h) h.style.display = checked ? '' : 'none';
+}
+
+function centUpdateRotateBadge() {
+  const warn = document.getElementById('cent-warn');
+  if (!warn) return;
+  const abs = Math.abs(CENT.rotation);
+  warn.classList.remove('cent-warn-ok', 'cent-warn-mid', 'cent-warn-high');
+  if (abs === 0) {
+    warn.classList.add('cent-warn-mid');
+  } else if (abs <= 5) {
+    warn.classList.add('cent-warn-ok');
+  } else {
+    warn.classList.add('cent-warn-high');
+  }
 }
 
 function centHandlesHTML() {

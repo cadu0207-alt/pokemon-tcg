@@ -2223,11 +2223,11 @@ body.share-view .btn-add { display: none !important; }
 .cent-rect {
   position: absolute; pointer-events: none; box-sizing: border-box;
 }
-.cent-rect-outer { border: 2px solid var(--accent); box-shadow: 0 0 0 9999px rgba(0,0,0,.25); }
-.cent-rect-inner { border: 2px dashed var(--gold); }
+.cent-rect-outer { border: 2px solid var(--accent); box-shadow: 0 0 0 9999px rgba(0,0,0,.25); z-index: 4; }
+.cent-rect-inner { border: 2px dashed var(--gold); z-index: 4; }
 
 .cent-handle {
-  position: absolute; width: 16px; height: 16px; border-radius: 50%;
+  position: absolute; width: 16px; height: 16px; border-radius: 50%; z-index: 6;
   transform: translate(-50%, -50%); border: 2px solid #0d0f18;
   box-shadow: 0 0 0 1px rgba(255,255,255,.5); cursor: grab; touch-action: none;
 }
@@ -2247,3 +2247,34 @@ body.share-view .btn-add { display: none !important; }
 }
 .cent-grade-co { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .5px; }
 .cent-grade-badge { font-size: 13px; font-weight: 700; color: var(--teal); }
+
+/* Rotação / linhas-guia / aviso — adicionado 11/08/2026 a pedido do
+   Eduardo, pra corrigir foto tirada torta antes de marcar os 8 pontos. */
+.cent-warn {
+  max-width: 640px; margin-bottom: 16px; padding: 10px 14px; border-radius: 8px;
+  font-size: 11px; line-height: 1.6; font-family: 'Space Mono', monospace;
+  border: 1px solid var(--border); background: var(--surface2); color: var(--text);
+  transition: border-color .15s, background .15s;
+}
+.cent-warn b { color: var(--gold); }
+.cent-warn-mid { border-color: var(--gold); background: rgba(255,209,102,.08); }
+.cent-warn-ok { border-color: var(--teal); background: rgba(6,163,127,.08); }
+.cent-warn-ok b { color: var(--teal); }
+.cent-warn-high { border-color: var(--accent); background: rgba(230,57,70,.1); }
+.cent-warn-high b { color: var(--accent); }
+
+.cent-guide-v, .cent-guide-h {
+  position: absolute; pointer-events: none; z-index: 5;
+  background: repeating-linear-gradient(to bottom, rgba(6,214,160,.85) 0 6px, transparent 6px 12px);
+}
+.cent-guide-v { left: 50%; top: 0; width: 0; height: 100%; border-left: 1px dashed rgba(6,214,160,.85); background: none; }
+.cent-guide-h { top: 50%; left: 0; height: 0; width: 100%; border-top: 1px dashed rgba(6,214,160,.85); background: none; }
+
+.cent-rotate-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px;
+  font-family: 'Space Mono', monospace; font-size: 10.5px; color: var(--muted);
+}
+.cent-rotate-lbl { white-space: nowrap; }
+.cent-rotate-row input[type="range"] { width: 160px; accent-color: var(--accent); }
+.cent-rotate-val { min-width: 42px; color: var(--text); font-weight: 700; }
+.cent-guide-toggle { display: flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap; }
