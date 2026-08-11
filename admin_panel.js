@@ -45,12 +45,18 @@ async function renderAdminTab() {
   if (typeof isAdmin !== 'function' || !isAdmin()) {
     // Segurança extra: mesmo que alguém force go('admin', ...) via console,
     // os containers ficam vazios pra quem não é o Eduardo.
-    ['admin-stats-wrap', 'admin-feedback-wrap', 'admin-updates-wrap', 'lojas-admin', 'mkt-pending-list', 'pc-pending-list']
+    ['admin-stats-wrap', 'admin-tab-analytics-wrap', 'admin-product-clicks-wrap',
+     'admin-set-distribution-wrap', 'admin-userlist-wrap', 'admin-feedback-wrap',
+     'admin-updates-wrap', 'lojas-admin', 'mkt-pending-list', 'pc-pending-list']
       .forEach(function (id) { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
     return;
   }
 
   if (typeof renderAdminStats === 'function') renderAdminStats();
+  if (typeof renderAdminTabStats === 'function') renderAdminTabStats();
+  if (typeof renderAdminProductClicks === 'function') renderAdminProductClicks();
+  if (typeof renderAdminSetDistribution === 'function') renderAdminSetDistribution();
+  if (typeof renderAdminUserList === 'function') renderAdminUserList();
   if (typeof renderAdminFeedback === 'function') renderAdminFeedback();
   if (typeof renderUpdatesAdminForm === 'function') renderUpdatesAdminForm();
 
