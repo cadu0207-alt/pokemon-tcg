@@ -2197,7 +2197,10 @@ body.share-view .btn-add { display: none !important; }
 /* ================================================================
    ABA AVALIAÇÃO DE CENTRALIZAÇÃO (centralizacao.js) — ferramenta
    pré-graduação: upload de foto + 2 retângulos arrastáveis (8
-   pontos) + resultado com nota-teto estimada em PSA/BGS/CGC.
+   pontos) + zoom/rotação/réguas cm + autoavaliação de cantos/bordas/
+   superfície + resultado com nota-teto e nota geral estimada em
+   PSA/BGS/CGC. Reescrito 11/08/2026: carta centralizada, textos à
+   esquerda, zoom, réguas com marcação em cm e pan da foto.
    ================================================================ */
 .cent-steps { margin: 0; padding-left: 20px; font-size: 11.5px; color: var(--text); line-height: 1.7; }
 .cent-steps li { margin-bottom: 4px; }
@@ -2212,17 +2215,70 @@ body.share-view .btn-add { display: none !important; }
 }
 .cent-upload-zone:hover { border-color: var(--accent); background: rgba(230,57,70,.06); }
 
-.cent-stage-wrap { flex: 0 0 auto; }
-.cent-stage {
-  position: relative; display: inline-block; line-height: 0;
-  max-width: 100%; user-select: none; touch-action: none;
-  border-radius: 6px; overflow: hidden; background: #000;
+.cent-warn {
+  max-width: 900px; margin-bottom: 16px; padding: 10px 14px; border-radius: 8px;
+  font-size: 11px; line-height: 1.6; font-family: 'Space Mono', monospace;
+  border: 1px solid var(--border); background: var(--surface2); color: var(--text);
+  transition: border-color .15s, background .15s;
 }
-.cent-stage img { display: block; max-width: 100%; max-height: 68vh; pointer-events: none; }
+.cent-warn b { color: var(--gold); }
+.cent-warn-mid { border-color: var(--gold); background: rgba(255,209,102,.08); }
+.cent-warn-ok { border-color: var(--teal); background: rgba(6,163,127,.08); }
+.cent-warn-ok b { color: var(--teal); }
+.cent-warn-high { border-color: var(--accent); background: rgba(230,57,70,.1); }
+.cent-warn-high b { color: var(--accent); }
 
-.cent-rect {
-  position: absolute; pointer-events: none; box-sizing: border-box;
+/* Layout: textos/resultado à esquerda (largura fixa), foto centralizada
+   no espaço restante — pedido do Eduardo 11/08/2026. */
+.cent-layout { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
+.cent-sidebar { flex: 0 0 300px; max-width: 300px; }
+.cent-main { flex: 1 1 420px; display: flex; flex-direction: column; align-items: center; min-width: 300px; }
+
+.cent-toolbar {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 12px;
+  width: 100%; max-width: 480px; justify-content: center;
 }
+.cent-tool-group { display: flex; align-items: center; gap: 6px; }
+.cent-tool-lbl { font-size: 10.5px; color: var(--muted); font-family: 'Space Mono', monospace; white-space: nowrap; }
+.cent-tool-val { min-width: 40px; color: var(--text); font-weight: 700; font-family: 'Space Mono', monospace; font-size: 10.5px; }
+.cent-toolbar input[type="range"] { width: 110px; accent-color: var(--accent); }
+.cent-guide-toggle {
+  display: flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap;
+  font-size: 10.5px; color: var(--muted); font-family: 'Space Mono', monospace;
+}
+
+/* Grid com réguas (estilo Photoshop): canto vazio + régua horizontal
+   em cima + régua vertical à esquerda + viewport da foto. */
+.cent-grid {
+  display: grid; grid-template-columns: 22px 1fr; grid-template-rows: 22px 1fr;
+  width: 100%; max-width: 480px; border-radius: 6px; overflow: hidden;
+  transition: grid-template-columns .15s, grid-template-rows .15s;
+}
+.cent-grid.cent-rulers-off { grid-template-columns: 0 1fr; grid-template-rows: 0 1fr; }
+.cent-grid.cent-rulers-off .cent-ruler-corner,
+.cent-grid.cent-rulers-off .cent-ruler-h,
+.cent-grid.cent-rulers-off .cent-ruler-v { display: none; }
+
+.cent-ruler-corner { grid-column: 1; grid-row: 1; background: var(--surface2); }
+.cent-ruler-h { grid-column: 2; grid-row: 1; position: relative; overflow: hidden; background: var(--surface2); }
+.cent-ruler-v { grid-column: 1; grid-row: 2; position: relative; overflow: hidden; background: var(--surface2); }
+
+.cent-tick { position: absolute; pointer-events: none; }
+.cent-tick-h { top: 0; bottom: 0; width: 1px; background: var(--muted); }
+.cent-tick-h span { position: absolute; top: 2px; left: 2px; font-size: 8px; color: var(--muted); font-family: 'Space Mono', monospace; }
+.cent-tick-v { left: 0; right: 0; height: 1px; background: var(--muted); }
+.cent-tick-v span { position: absolute; top: 1px; left: 2px; font-size: 8px; color: var(--muted); font-family: 'Space Mono', monospace; }
+
+.cent-stage {
+  grid-column: 2; grid-row: 2; position: relative; height: 420px;
+  user-select: none; touch-action: none; overflow: hidden; background: #000; cursor: grab;
+}
+.cent-stage:active { cursor: grabbing; }
+
+.cent-photo-layer { position: absolute; left: 0; top: 0; transform-origin: 50% 50%; }
+.cent-photo-layer img { display: block; pointer-events: none; }
+
+.cent-rect { position: absolute; pointer-events: none; box-sizing: border-box; }
 .cent-rect-outer { border: 2px solid var(--accent); box-shadow: 0 0 0 9999px rgba(0,0,0,.25); z-index: 4; }
 .cent-rect-inner { border: 2px dashed var(--gold); z-index: 4; }
 
@@ -2237,44 +2293,47 @@ body.share-view .btn-add { display: none !important; }
 .cent-handle.axis-h { cursor: ew-resize; }
 .cent-handle.axis-v { cursor: ns-resize; }
 
-.cent-result { font-family: 'Space Mono', monospace; }
-.cent-axis-line { font-size: 12.5px; color: var(--text); margin-bottom: 8px; }
-.cent-axis-note { font-size: 10px; color: var(--muted); display: block; margin-top: 1px; }
+.cent-guide-v, .cent-guide-h { position: absolute; pointer-events: none; z-index: 5; }
+.cent-guide-v { left: 50%; top: 0; width: 0; height: 100%; border-left: 1px dashed rgba(6,214,160,.85); }
+.cent-guide-h { top: 50%; left: 0; height: 0; width: 100%; border-top: 1px dashed rgba(6,214,160,.85); }
 
-.cent-grade-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 8px 10px; background: var(--surface2); border-radius: 6px; margin-bottom: 6px;
+/* Mover foto (pan) — botões + arraste direto */
+.cent-pan-row {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px;
+  font-family: 'Space Mono', monospace; font-size: 10.5px; color: var(--muted); justify-content: center;
 }
-.cent-grade-co { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .5px; }
-.cent-grade-badge { font-size: 13px; font-weight: 700; color: var(--teal); }
+.cent-pan-pad {
+  display: grid; grid-template-areas: ". up ." "left center right" ". down .";
+  grid-template-columns: 30px 30px 30px; grid-template-rows: 26px 26px 26px; gap: 2px;
+}
+.cent-pan-btn { padding: 0 !important; font-size: 12px !important; }
+.cent-pan-hint { font-size: 9.5px; opacity: .8; }
 
-/* Rotação / linhas-guia / aviso — adicionado 11/08/2026 a pedido do
-   Eduardo, pra corrigir foto tirada torta antes de marcar os 8 pontos. */
-.cent-warn {
-  max-width: 640px; margin-bottom: 16px; padding: 10px 14px; border-radius: 8px;
-  font-size: 11px; line-height: 1.6; font-family: 'Space Mono', monospace;
-  border: 1px solid var(--border); background: var(--surface2); color: var(--text);
-  transition: border-color .15s, background .15s;
-}
-.cent-warn b { color: var(--gold); }
-.cent-warn-mid { border-color: var(--gold); background: rgba(255,209,102,.08); }
-.cent-warn-ok { border-color: var(--teal); background: rgba(6,163,127,.08); }
-.cent-warn-ok b { color: var(--teal); }
-.cent-warn-high { border-color: var(--accent); background: rgba(230,57,70,.1); }
-.cent-warn-high b { color: var(--accent); }
-
-.cent-guide-v, .cent-guide-h {
-  position: absolute; pointer-events: none; z-index: 5;
-  background: repeating-linear-gradient(to bottom, rgba(6,214,160,.85) 0 6px, transparent 6px 12px);
-}
-.cent-guide-v { left: 50%; top: 0; width: 0; height: 100%; border-left: 1px dashed rgba(6,214,160,.85); background: none; }
-.cent-guide-h { top: 50%; left: 0; height: 0; width: 100%; border-top: 1px dashed rgba(6,214,160,.85); background: none; }
+.cent-corner-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; justify-content: center; }
 
 .cent-rotate-row {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; justify-content: center;
   font-family: 'Space Mono', monospace; font-size: 10.5px; color: var(--muted);
 }
 .cent-rotate-lbl { white-space: nowrap; }
 .cent-rotate-row input[type="range"] { width: 160px; accent-color: var(--accent); }
 .cent-rotate-val { min-width: 42px; color: var(--text); font-weight: 700; }
-.cent-guide-toggle { display: flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap; }
+
+/* Resultado + autoavaliação (sidebar) */
+.cent-result { font-family: 'Space Mono', monospace; }
+.cent-axis-line { font-size: 12.5px; color: var(--text); margin-bottom: 8px; }
+.cent-axis-note { font-size: 10px; color: var(--muted); display: block; margin-top: 1px; }
+
+.cent-grade-row {
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px;
+  padding: 8px 10px; background: var(--surface2); border-radius: 6px; margin-bottom: 6px;
+}
+.cent-grade-co { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .5px; }
+.cent-grade-badge { font-size: 11.5px; font-weight: 700; color: var(--teal); }
+.cent-grade-overall { font-size: 11.5px; font-weight: 700; color: var(--gold); }
+.cent-grade-overall b { font-size: 13px; }
+
+.cent-subgrade-block { margin-bottom: 16px; }
+.cent-subgrade-block:last-child { margin-bottom: 0; }
+.cent-subgrade-lbl { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.cent-subgrade-hint { font-size: 9.5px; color: var(--muted); line-height: 1.5; margin-bottom: 6px; }
