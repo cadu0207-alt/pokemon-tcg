@@ -186,6 +186,7 @@
     <button type="button" class="tab" id="nav-tab-mercado" onclick="go('mercado',this)">🏪 Lojas Confiáveis</button>
     <button type="button" class="tab" id="nav-tab-positivo" onclick="go('positivo',this)">✅ Cadastro Positivo</button>
     <button type="button" class="tab" id="nav-tab-iniciantes" onclick="go('iniciantes',this)">🔰 Iniciantes</button>
+    <button type="button" class="tab" id="nav-tab-centralizacao" onclick="go('centralizacao',this)">🎯 Avaliação de Centralização</button>
     <button type="button" class="tab" onclick="window.open('simulador.html','_blank')" style="background:linear-gradient(90deg,#7b2ff744,#f107a322);color:#c084fc">🎰 Simulador</button>
   </nav>
 
@@ -453,6 +454,11 @@
 
   <div id="iniciantes" class="pane">
     <div id="iniciantes-wrap"></div>
+  </div>
+
+  <!-- ===== ABA AVALIAÇÃO DE CENTRALIZAÇÃO (ferramenta pré-graduação) ===== -->
+  <div id="centralizacao" class="pane">
+    <div id="centralizacao-wrap"></div>
   </div>
 
 </div><!-- /pg-app -->
@@ -761,6 +767,7 @@
 <script defer src="lojas_destaques.js"></script>
 <script defer src="lojas_admin_collapse.js"></script>
 <script defer src="iniciantes.js"></script>
+<script defer src="centralizacao.js"></script>
 <script defer src="admin_stats.js"></script>
 <script defer src="feedback.js"></script>
 <script defer src="updates.js"></script>

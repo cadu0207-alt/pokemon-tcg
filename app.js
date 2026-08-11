@@ -538,6 +538,7 @@ function go(id,el){
   if(id==='mercado'){if(typeof renderMercado==='function')renderMercado();}
   if(id==='positivo'){if(typeof renderPositivo==='function')renderPositivo();}
   if(id==='iniciantes'){if(typeof renderIniciantes==='function')renderIniciantes();}
+  if(id==='centralizacao'){if(typeof renderCentralizacao==='function')renderCentralizacao();}
 }
 // NOVO 02/08/2026: navega pra uma aba a partir de QUALQUER lugar do site
 // (não só clicando na .tab em si) — ex: cards do Dashboard que referenciam

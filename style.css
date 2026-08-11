@@ -2193,3 +2193,57 @@ body.share-view .btn-add { display: none !important; }
      de tamanho 2×2/3×3/4×4 que já existe na aba. */
   :root { --cw: 106px; --ch: 148px; --dotsize: 16px; }
 }
+
+/* ================================================================
+   ABA AVALIAÇÃO DE CENTRALIZAÇÃO (centralizacao.js) — ferramenta
+   pré-graduação: upload de foto + 2 retângulos arrastáveis (8
+   pontos) + resultado com nota-teto estimada em PSA/BGS/CGC.
+   ================================================================ */
+.cent-steps { margin: 0; padding-left: 20px; font-size: 11.5px; color: var(--text); line-height: 1.7; }
+.cent-steps li { margin-bottom: 4px; }
+.cent-steps b { color: var(--gold); }
+
+.cent-upload-zone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  max-width: 640px; padding: 40px 20px; border: 2px dashed var(--border);
+  border-radius: 10px; background: var(--surface2); cursor: pointer;
+  color: var(--text); font-family: 'Space Mono', monospace; font-size: 12.5px;
+  transition: border-color .15s, background .15s;
+}
+.cent-upload-zone:hover { border-color: var(--accent); background: rgba(230,57,70,.06); }
+
+.cent-stage-wrap { flex: 0 0 auto; }
+.cent-stage {
+  position: relative; display: inline-block; line-height: 0;
+  max-width: 100%; user-select: none; touch-action: none;
+  border-radius: 6px; overflow: hidden; background: #000;
+}
+.cent-stage img { display: block; max-width: 100%; max-height: 68vh; pointer-events: none; }
+
+.cent-rect {
+  position: absolute; pointer-events: none; box-sizing: border-box;
+}
+.cent-rect-outer { border: 2px solid var(--accent); box-shadow: 0 0 0 9999px rgba(0,0,0,.25); }
+.cent-rect-inner { border: 2px dashed var(--gold); }
+
+.cent-handle {
+  position: absolute; width: 16px; height: 16px; border-radius: 50%;
+  transform: translate(-50%, -50%); border: 2px solid #0d0f18;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.5); cursor: grab; touch-action: none;
+}
+.cent-handle:active { cursor: grabbing; transform: translate(-50%, -50%) scale(1.15); }
+.cent-handle-outer { background: var(--accent); }
+.cent-handle-inner { background: var(--gold); }
+.cent-handle.axis-h { cursor: ew-resize; }
+.cent-handle.axis-v { cursor: ns-resize; }
+
+.cent-result { font-family: 'Space Mono', monospace; }
+.cent-axis-line { font-size: 12.5px; color: var(--text); margin-bottom: 8px; }
+.cent-axis-note { font-size: 10px; color: var(--muted); display: block; margin-top: 1px; }
+
+.cent-grade-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 10px; background: var(--surface2); border-radius: 6px; margin-bottom: 6px;
+}
+.cent-grade-co { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .5px; }
+.cent-grade-badge { font-size: 13px; font-weight: 700; color: var(--teal); }

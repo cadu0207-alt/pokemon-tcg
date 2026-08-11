@@ -27,7 +27,7 @@ const CARDS_MEP = [
   {n:'001',name:'Meganium',type:'Grama',color:'#4CAF50',rare:'Promo (Staff)',price:34.99,base:false,series:'Promos MEP 001–036'},
   {n:'002',name:'Inteleon',type:'Aquático',color:'#2196F3',rare:'Promo (Staff)',price:5.61,base:false,series:'Promos MEP 001–036'},
   {n:'003',name:'Alakazam',type:'Psíquico',color:'#9C27B0',rare:'Promo (Staff)',price:42.00,base:false,series:'Promos MEP 001–036'},
-  {n:'004',name:'Lunatone',type:'Lutador',color:'#795548',rare:'Promo (Staff)',price:34.19,base:false,series:'Promos MEP 001–036'},
+  {n:'004',name:'Lunatone',type:'Lutador',color:'#795548',rare:'Promo (Staff)',price:40.00,base:false,series:'Promos MEP 001–036'},
   {n:'005',name:'Drifloon',type:'Psíquico',color:'#9C27B0',rare:'Promo',price:0.45,base:false,series:'Promos MEP 001–036'},
   {n:'006',name:'Drifblim',type:'Psíquico',color:'#9C27B0',rare:'Promo',price:0.34,base:false,series:'Promos MEP 001–036'},
   {n:'007',name:'Psyduck',type:'Aquático',color:'#2196F3',rare:'Promo',price:1.45,base:false,series:'Promos MEP 001–036'},
@@ -43,7 +43,7 @@ const CARDS_MEP = [
   {n:'017',name:'Toxtricity',type:'Escuridão',color:'#212121',rare:'Promo (Staff)',price:19.00,base:false,series:'Promos MEP 001–036'},
   {n:'018',name:'Cottonee',type:'Psíquico',color:'#9C27B0',rare:'Promo',price:0.40,base:false,series:'Promos MEP 001–036'},
   {n:'019',name:'Whimsicott',type:'Psíquico',color:'#9C27B0',rare:'Promo',price:0.50,base:false,series:'Promos MEP 001–036'},
-  {n:'020',name:'Sneasel',type:'Escuridão',color:'#212121',rare:'Promo',price:0.35,base:false,series:'Promos MEP 001–036'},
+  {n:'020',name:'Sneasel',type:'Escuridão',color:'#212121',rare:'Promo',price:0.30,base:false,series:'Promos MEP 001–036'},
   {n:'021',name:'Weavile',type:'Escuridão',color:'#212121',rare:'Promo',price:0.39,base:false,series:'Promos MEP 001–036'},
   {n:'022',name:'Charcadet',type:'Fogo',color:'#F44336',rare:'Promo (Pokémon Center)',price:20.99,base:false,series:'Promos MEP 001–036'},
   {n:'023',name:'Mega Charizard X ex',type:'Fogo',color:'#F44336',rare:'Promo (UPC)',price:99.90,base:false,important:true,series:'Promos MEP 001–036'},
@@ -56,25 +56,25 @@ const CARDS_MEP = [
   {n:'030',name:'Mega Charizard Y ex',type:'Fogo',color:'#F44336',rare:'Promo (Tin)',price:19.90,base:false,important:true,series:'Promos MEP 001–036'},
   {n:'031',name:"N's Zekrom",type:'Raio',color:'#FFC107',rare:'Promo (Pokémon Center)',price:64.35,base:false,series:'Promos MEP 001–036'},
   {n:'032',name:'Mega Gardevoir ex',type:'Psíquico',color:'#9C27B0',rare:'Promo (Poster)',price:44.90,base:false,important:true,series:'Promos MEP 001–036'},
-  {n:'033',name:'Mega Lucario ex',type:'Lutador',color:'#795548',rare:'Promo (Poster)',price:68.00,base:false,important:true,series:'Promos MEP 001–036'},
-  {n:'034',name:'Mega Meganium ex',type:'Grama',color:'#4CAF50',rare:'Promo (Jumbo)',price:4.99,base:false,important:true,series:'Promos MEP 001–036'},
+  {n:'033',name:'Mega Lucario ex',type:'Lutador',color:'#795548',rare:'Promo (Poster)',price:69.90,base:false,important:true,series:'Promos MEP 001–036'},
+  {n:'034',name:'Mega Meganium ex',type:'Grama',color:'#4CAF50',rare:'Promo (Jumbo)',price:4.90,base:false,important:true,series:'Promos MEP 001–036'},
   {n:'035',name:'Mega Emboar ex',type:'Fogo',color:'#F44336',rare:'Promo (Jumbo)',price:4.95,base:false,important:true,series:'Promos MEP 001–036'},
   {n:'036',name:'Mega Feraligatr ex',type:'Aquático',color:'#2196F3',rare:'Promo (Jumbo)',price:7.00,base:false,important:true,series:'Promos MEP 001–036'},
   // SÉRIE 1 — Kanto (MEP037–039)
   // Charmander > Bulbasaur > Squirtle em popularidade; referência USD: ~$44/$37/$34
-  {n:'037',name:'Bulbasaur',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:78.99,base:true,important:true,series:'Série 1 — Kanto'},
-  {n:'038',name:'Charmander',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:103.00,base:true,important:true,series:'Série 1 — Kanto'},
+  {n:'037',name:'Bulbasaur',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:80.00,base:true,important:true,series:'Série 1 — Kanto'},
+  {n:'038',name:'Charmander',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:109.90,base:true,important:true,series:'Série 1 — Kanto'},
   {n:'039',name:'Squirtle',type:'Aquático',color:'#2196F3',rare:'Ilustração Rara (IR)',price:69.90,base:true,important:true,series:'Série 1 — Kanto'},
   // SÉRIE 1 — Sinnoh (MEP040–042)
   // Piplup > Chimchar > Turtwig; Piplup tem maior fanbase
-  {n:'040',name:'Turtwig',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:28.50,base:true,series:'Série 1 — Sinnoh'},
+  {n:'040',name:'Turtwig',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:19.90,base:true,series:'Série 1 — Sinnoh'},
   {n:'041',name:'Chimchar',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:31.90,base:true,series:'Série 1 — Sinnoh'},
-  {n:'042',name:'Piplup',type:'Aquático',color:'#2196F3',rare:'Ilustração Rara (IR)',price:37.90,base:true,important:true,series:'Série 1 — Sinnoh'},
+  {n:'042',name:'Piplup',type:'Aquático',color:'#2196F3',rare:'Ilustração Rara (IR)',price:29.90,base:true,important:true,series:'Série 1 — Sinnoh'},
   // SÉRIE 1 — Alola (MEP043–045)
   // Os três têm demanda similar; Rowlet levemente à frente
   {n:'043',name:'Rowlet',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:28.00,base:true,series:'Série 1 — Alola'},
   {n:'044',name:'Litten',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:19.89,base:true,series:'Série 1 — Alola'},
-  {n:'045',name:'Popplio',type:'Aquático',color:'#2196F3',rare:'Ilustração Rara (IR)',price:26.90,base:true,series:'Série 1 — Alola'},
+  {n:'045',name:'Popplio',type:'Aquático',color:'#2196F3',rare:'Ilustração Rara (IR)',price:24.00,base:true,series:'Série 1 — Alola'},
   // SÉRIE 2 — Johto (MEP046–048) — lançamento 19/06/2026, 1 semana no mercado
   // Johto = mais procurado da S2; Cyndaquil/Totodile lideram; preços ainda voláteis
   {n:'046',name:'Chikorita',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:53.69,base:true,series:'Série 2 — Johto'},
@@ -96,9 +96,9 @@ const CARDS_MEP = [
   {n:'056',name:'Torchic',type:'Incolor',color:'#9E9E9E',rare:'Ilustração Rara (IR)',price:43.85,base:true,series:'Série 3 — Hoenn'},
   {n:'057',name:'Mudkip',type:'Aquático',color:'#2196F3',rare:'Ilustração Rara (IR)',price:43.90,base:true,important:true,series:'Série 3 — Hoenn'},
   {n:'058',name:'Chespin',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:41.80,base:true,series:'Série 3 — Kalos'},
-  {n:'059',name:'Fennekin',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:40.00,base:true,important:true,series:'Série 3 — Kalos'},
+  {n:'059',name:'Fennekin',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:38.00,base:true,important:true,series:'Série 3 — Kalos'},
   {n:'060',name:'Froakie',type:'Incolor',color:'#9E9E9E',rare:'Ilustração Rara (IR)',price:41.50,base:true,series:'Série 3 — Kalos'},
-  {n:'061',name:'Sprigatito',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:40.00,base:true,important:true,series:'Série 3 — Paldea'},
+  {n:'061',name:'Sprigatito',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:41.00,base:true,important:true,series:'Série 3 — Paldea'},
   {n:'062',name:'Fuecoco',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:40.00,base:true,series:'Série 3 — Paldea'},
   {n:'063',name:'Quaxly',type:'Aquático',color:'#2196F3',rare:'Ilustração Rara (IR)',price:40.00,base:true,series:'Série 3 — Paldea'},
   // ── PROMOS MEP064–081 (produtos de Ordem Perfeita/ME03 e Caos Ascendente/ME04) ──
@@ -121,7 +121,7 @@ const CARDS_MEP = [
   {n:'074',name:'Delphox',type:'Fogo',color:'#F44336',rare:'Promo (B&B)',price:14.99,base:false,series:'Promos MEP 064–081'},
   {n:'075',name:'Ampharos',type:'Raio',color:'#FFC107',rare:'Promo (B&B)',price:12.60,base:false,series:'Promos MEP 064–081'},
   {n:'076',name:'Crobat',type:'Escuridão',color:'#212121',rare:'Promo (B&B)',price:15.99,base:false,series:'Promos MEP 064–081'},
-  {n:'077',name:'Goodra',type:'Dragão',color:'#7C4DFF',rare:'Promo (B&B)',price:14.16,base:false,series:'Promos MEP 064–081'},
+  {n:'077',name:'Goodra',type:'Dragão',color:'#7C4DFF',rare:'Promo (B&B)',price:13.50,base:false,series:'Promos MEP 064–081'},
   {n:'078',name:'Toxel',type:'Escuridão',color:'#212121',rare:'Promo',price:0.50,base:false,series:'Promos MEP 064–081'},
   {n:'079',name:'Charmeleon',type:'Fogo',color:'#F44336',rare:'Promo',price:0.45,base:false,series:'Promos MEP 064–081'},
   {n:'080',name:'Fennekin',type:'Fogo',color:'#F44336',rare:'Promo',price:29.99,base:false,series:'Promos MEP 064–081'},
@@ -142,7 +142,7 @@ const CARDS_MEP = [
   // Pokellector. Só #89-91 continuam sem arte revelada de fato.
   {n:'086',name:'Slowpoke',type:'Psíquico',color:'#9C27B0',rare:'Promo (Blister)',price:0.90,base:false,series:'Promos MEP 082–110'},
   {n:'087',name:'Binacle',type:'Lutador',color:'#795548',rare:'Promo (Blister)',price:0.80,base:false,series:'Promos MEP 082–110'},
-  {n:'088',name:'Zarude',type:'Escuridão',color:'#212121',rare:'Promo (Pokémon Center)',price:23.90,base:false,series:'Promos MEP 082–110'},
+  {n:'088',name:'Zarude',type:'Escuridão',color:'#212121',rare:'Promo (Pokémon Center)',price:20.00,base:false,series:'Promos MEP 082–110'},
   {n:'092',name:'Paradise Resort',type:'Treinador',color:'#607D8B',rare:'Promo (Estádio)',price:5.00,base:false,series:'Promos MEP 082–110'},
   {n:'093',name:'Pikachu',type:'Raio',color:'#FFC107',rare:'Promo',price:0.45,base:false,series:'Promos MEP 082–110'},
   {n:'094',name:'Alolan Exeggutor',type:'Grama',color:'#4CAF50',rare:'Promo (B&B)',price:12.00,base:false,series:'Promos MEP 082–110'},
