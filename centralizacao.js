@@ -18,15 +18,30 @@
 // mais próxima da realidade — PSA pega o pior dos 4 critérios, BGS/
 // CGC fazem uma média dos 4 (com subgrades).
 //
+// CORREÇÃO DE PERSPECTIVA (11/08/2026): foto de celular quase nunca
+// sai 100% de frente — fica meio em ângulo (perspectiva/keystone),
+// o que é diferente de "torta" (rotação no plano, já corrigida pelo
+// slider de rotação). Antes de entrar na ferramenta de medição, o
+// usuário marca os 4 cantos EXTREMOS da carta na foto original;
+// presumimos que a carta é um retângulo perfeito e distorcemos a
+// foto (canvas, warp por triangulação afim — 2 triângulos por
+// retângulo, técnica clássica de "texture mapping") pra encaixar
+// esses 4 pontos num retângulo reto. Só depois disso entram a
+// rotação fina, zoom/pan e os 8 pontos de centralização.
+//
 // IMPORTANTE: a imagem é processada 100% no navegador (FileReader +
-// posicionamento via CSS). Nada é enviado nem salvo no Supabase —
-// é só uma ferramenta local de apoio, como pedido pelo Eduardo.
+// canvas). Nada é enviado nem salvo no Supabase — é só uma
+// ferramenta local de apoio, como pedido pelo Eduardo.
 // ================================================================
 
 const CENT_PX_PER_CM = 28; // escala visual da régua — referência aproximada, não calibrada ao monitor do usuário
 
 const CENT = {
-  dataUrl: null,
+  rawDataUrl: null,      // foto original, como veio do upload (pode estar em ângulo)
+  dataUrl: null,          // foto usada na ferramenta — igual à raw, ou já corrigida de perspectiva
+  corners: null,            // {tl,tr,br,bl}:{x,y} frações 0..1 — os 4 cantos marcados na foto original
+  calibDragging: null,        // 'tl'|'tr'|'br'|'bl' — canto sendo arrastado na tela de calibração
+  calibListenersBound: false,
   edges: null,          // {outer:{l,r,t,b}, inner:{l,r,t,b}} — frações 0..1 (relativas ao viewport/stage)
   dragging: null,        // {rect:'outer'|'inner', side:'l'|'r'|'t'|'b'}
   panning: null,          // {startX,startY,startPanX,startPanY} — pan da FOTO (não confundir com os pontos)
@@ -41,6 +56,13 @@ const CENT = {
   subgrades: { corners: '', edges: '', surface: '' }, // autoavaliação manual 1-10
   listenersBound: false
 };
+
+function centDefaultCorners() {
+  return {
+    tl: { x: 0.05, y: 0.05 }, tr: { x: 0.95, y: 0.05 },
+    br: { x: 0.95, y: 0.95 }, bl: { x: 0.05, y: 0.95 }
+  };
+}
 
 function centDefaultEdges() {
   return {
@@ -133,8 +155,12 @@ function renderCentralizacao() {
   const holder = document.getElementById('centralizacao-wrap');
   if (!holder) return;
 
-  if (!CENT.dataUrl) {
+  if (!CENT.rawDataUrl) {
     holder.innerHTML = centUploadScreenHTML();
+    return;
+  }
+  if (!CENT.dataUrl) {
+    centRenderCalib(holder);
     return;
   }
   centRenderTool(holder);
@@ -156,6 +182,8 @@ function centUploadScreenHTML() {
         <li>Coloque a carta sobre um <b>fundo branco</b>, bem iluminada, sem sombra forte.</li>
         <li>Fotografe <b>de cima, o mais reto possível</b>.</li>
         <li>Carregue a foto abaixo.</li>
+        <li>Se a foto ficou meio em ângulo, marque os <b>4 cantos da carta</b> na tela seguinte — a ferramenta
+            corrige a perspectiva pra deixar a carta reta.</li>
         <li>Use a <b>rotação</b> pra alinhar a carta nas linhas-guia, e o <b>zoom/mover foto</b> pra encaixar
             nas réguas de cm.</li>
         <li>Ajuste os <b>8 pontos</b> (4 na borda externa, 4 na interna) pra medir a centralização.</li>
@@ -178,21 +206,16 @@ function centHandleFile(file) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = (e) => {
-    CENT.dataUrl = e.target.result;
-    CENT.edges = centDefaultEdges();
-    CENT.rotation = 0;
-    CENT.zoom = 1;
-    CENT.panOffsetX = 0;
-    CENT.panOffsetY = 0;
-    CENT.guidesOn = true;
-    CENT.rulersOn = true;
-    CENT.subgrades = { corners: '', edges: '', surface: '' };
+    CENT.rawDataUrl = e.target.result;
+    CENT.dataUrl = null;
+    CENT.corners = centDefaultCorners();
     renderCentralizacao();
   };
   reader.readAsDataURL(file);
 }
 
 function centReset() {
+  CENT.rawDataUrl = null;
   CENT.dataUrl = null;
   CENT.edges = null;
   renderCentralizacao();
@@ -201,6 +224,186 @@ function centReset() {
 function centResetPoints() {
   CENT.edges = centDefaultEdges();
   centUpdateVisual();
+}
+
+function centStartTool() {
+  CENT.edges = centDefaultEdges();
+  CENT.rotation = 0;
+  CENT.zoom = 1;
+  CENT.panOffsetX = 0;
+  CENT.panOffsetY = 0;
+  CENT.guidesOn = true;
+  CENT.rulersOn = true;
+  CENT.subgrades = { corners: '', edges: '', surface: '' };
+  renderCentralizacao();
+}
+
+// ── CALIBRAÇÃO DE PERSPECTIVA (4 cantos) ──────────────────────────
+function centRenderCalib(holder) {
+  holder.innerHTML = `
+    <div class="sec-title" style="margin:0 0 6px">📐 Corrigir perspectiva (opcional)</div>
+    <div class="mkt-note" style="margin-bottom:16px">
+      Se a foto foi tirada com a carta meio de lado (perspectiva/ângulo, diferente de foto só torta), arraste
+      os <b>4 pontos numerados</b> pros <b>cantos exatos da carta</b> — não do fundo branco. A ferramenta
+      presume que a carta é um retângulo perfeito e distorce a foto pra encaixar nesses 4 pontos, deixando a
+      medição de centralização bem mais confiável. Se a foto já saiu bem de frente, pode pular.
+    </div>
+
+    <div class="cent-calib-wrap">
+      <div class="cent-calib-stage" id="cent-calib-stage">
+        <img src="${CENT.rawDataUrl}" id="cent-calib-img" draggable="false">
+        <svg class="cent-calib-quad" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <polygon id="cent-calib-poly" points="" fill="rgba(6,214,160,.14)" stroke="var(--teal)" stroke-width="0.4" vector-effect="non-scaling-stroke"></polygon>
+        </svg>
+        ${centCornerHandlesHTML()}
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button class="fic-btn fic-btn-primary" onclick="centApplyCalib()">✅ Aplicar correção e continuar</button>
+      <button class="fic-btn" onclick="centSkipCalib()">⏭️ Pular (foto já está reta)</button>
+      <button class="fic-btn" onclick="centReset()">🗑️ Trocar foto</button>
+    </div>
+  `;
+  centBindCornerDrag();
+}
+
+function centCornerHandlesHTML() {
+  const order = [['tl', '1'], ['tr', '2'], ['br', '3'], ['bl', '4']];
+  return order.map(([key, num]) => {
+    const c = CENT.corners[key];
+    return `<div class="cent-corner-handle" data-corner="${key}" style="left:${c.x * 100}%;top:${c.y * 100}%"><span>${num}</span></div>`;
+  }).join('');
+}
+
+function centBindCornerDrag() {
+  const stage = document.getElementById('cent-calib-stage');
+  if (!stage) return;
+
+  stage.querySelectorAll('.cent-corner-handle').forEach(h => {
+    h.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      CENT.calibDragging = h.dataset.corner;
+      try { h.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+  });
+
+  if (!CENT.calibListenersBound) {
+    CENT.calibListenersBound = true;
+    window.addEventListener('pointermove', (e) => {
+      if (!CENT.calibDragging) return;
+      const stageEl = document.getElementById('cent-calib-stage');
+      if (!stageEl) { CENT.calibDragging = null; return; }
+      const b = stageEl.getBoundingClientRect();
+      let x = (e.clientX - b.left) / b.width;
+      let y = (e.clientY - b.top) / b.height;
+      x = Math.min(1, Math.max(0, x));
+      y = Math.min(1, Math.max(0, y));
+      CENT.corners[CENT.calibDragging] = { x, y };
+      centUpdateCalibVisual();
+    });
+    window.addEventListener('pointerup', () => { CENT.calibDragging = null; });
+    window.addEventListener('pointercancel', () => { CENT.calibDragging = null; });
+  }
+
+  centUpdateCalibVisual();
+}
+
+function centUpdateCalibVisual() {
+  const stage = document.getElementById('cent-calib-stage');
+  if (!stage) return;
+  stage.querySelectorAll('.cent-corner-handle').forEach(h => {
+    const c = CENT.corners[h.dataset.corner];
+    h.style.left = (c.x * 100) + '%';
+    h.style.top = (c.y * 100) + '%';
+  });
+  const poly = document.getElementById('cent-calib-poly');
+  if (poly) {
+    const o = CENT.corners;
+    const pts = [o.tl, o.tr, o.br, o.bl].map(p => `${(p.x * 100).toFixed(2)},${(p.y * 100).toFixed(2)}`).join(' ');
+    poly.setAttribute('points', pts);
+  }
+}
+
+function centSkipCalib() {
+  CENT.dataUrl = CENT.rawDataUrl;
+  centStartTool();
+}
+
+function centApplyCalib() {
+  const img = document.getElementById('cent-calib-img');
+  if (!img || !img.naturalWidth) return;
+  const nw = img.naturalWidth, nh = img.naturalHeight;
+  const toPx = (f) => ({ x: f.x * nw, y: f.y * nh });
+  const quad = {
+    tl: toPx(CENT.corners.tl), tr: toPx(CENT.corners.tr),
+    br: toPx(CENT.corners.br), bl: toPx(CENT.corners.bl)
+  };
+  try {
+    CENT.dataUrl = centWarpPerspective(img, quad);
+  } catch (err) {
+    alert('Não deu pra aplicar a correção de perspectiva — tenta ajustar os 4 pontos de novo.');
+    return;
+  }
+  centStartTool();
+}
+
+function centOpenCalib() {
+  CENT.dataUrl = null;
+  renderCentralizacao();
+}
+
+// Distorce a foto original pra que o quadrilátero marcado pelo usuário
+// (4 cantos da carta) vire um retângulo perfeito. Técnica: divide o
+// quadrilátero em 2 triângulos e usa uma transformação afim (canvas
+// 2D só suporta afim, não perspectiva "de verdade") pra mapear cada
+// triângulo da foto original pro triângulo correspondente no
+// retângulo de destino. É uma aproximação — não é uma homografia
+// matemática exata — mas funciona bem pro caso de uso (foto de carta
+// com inclinação leve/moderada de celular).
+function centWarpPerspective(imgEl, quad) {
+  const wTop = centDist(quad.tl, quad.tr);
+  const wBot = centDist(quad.bl, quad.br);
+  const hLeft = centDist(quad.tl, quad.bl);
+  const hRight = centDist(quad.tr, quad.br);
+  const W = Math.max(80, Math.round((wTop + wBot) / 2));
+  const H = Math.max(80, Math.round((hLeft + hRight) / 2));
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const d = { tl: { x: 0, y: 0 }, tr: { x: W, y: 0 }, br: { x: W, y: H }, bl: { x: 0, y: H } };
+
+  centDrawWarpedTriangle(ctx, imgEl, quad.tl, quad.tr, quad.br, d.tl, d.tr, d.br);
+  centDrawWarpedTriangle(ctx, imgEl, quad.tl, quad.br, quad.bl, d.tl, d.br, d.bl);
+
+  return canvas.toDataURL('image/jpeg', 0.95);
+}
+
+function centDist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+
+function centDrawWarpedTriangle(ctx, img, s0, s1, s2, d0, d1, d2) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(d0.x, d0.y);
+  ctx.lineTo(d1.x, d1.y);
+  ctx.lineTo(d2.x, d2.y);
+  ctx.closePath();
+  ctx.clip();
+
+  const denom = s0.x * (s1.y - s2.y) + s1.x * (s2.y - s0.y) + s2.x * (s0.y - s1.y);
+  const a = (d0.x * (s1.y - s2.y) + d1.x * (s2.y - s0.y) + d2.x * (s0.y - s1.y)) / denom;
+  const c = (d0.x * (s2.x - s1.x) + d1.x * (s0.x - s2.x) + d2.x * (s1.x - s0.x)) / denom;
+  const e = (d0.x * (s1.x * s2.y - s2.x * s1.y) + d1.x * (s2.x * s0.y - s0.x * s2.y) + d2.x * (s0.x * s1.y - s1.x * s0.y)) / denom;
+  const b = (d0.y * (s1.y - s2.y) + d1.y * (s2.y - s0.y) + d2.y * (s0.y - s1.y)) / denom;
+  const dd = (d0.y * (s2.x - s1.x) + d1.y * (s0.x - s2.x) + d2.y * (s1.x - s0.x)) / denom;
+  const f = (d0.y * (s1.x * s2.y - s2.x * s1.y) + d1.y * (s2.x * s0.y - s0.x * s2.y) + d2.y * (s0.x * s1.y - s1.x * s0.y)) / denom;
+
+  ctx.transform(a, b, c, dd, e, f);
+  ctx.drawImage(img, 0, 0);
+  ctx.restore();
 }
 
 // ── FERRAMENTA (imagem + retângulos + resultado) ─────────────────
@@ -290,6 +493,7 @@ function centRenderTool(holder) {
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
           <button class="fic-btn" onclick="centResetPoints()">↺ Resetar pontos</button>
           <button class="fic-btn" onclick="centResetZoomPan()">↺ Resetar zoom/posição</button>
+          <button class="fic-btn" onclick="centOpenCalib()">📐 Recalibrar perspectiva</button>
           <button class="fic-btn" onclick="centReset()">🗑️ Trocar foto</button>
         </div>
       </div>
