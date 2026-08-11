@@ -76,6 +76,21 @@ function centDefaultEdges() {
 // (55/45 pro 10 desde a mudança de padrão em 2025, 60/40 pro 9), BGS
 // (Black Label/Pristine exige 50/50 literal), CGC (50/50 pro
 // Pristine 10). Estimativas educadas a partir dos padrões públicos.
+//
+// TAG (Technical Authentication & Grading) — adicionada 11/08/2026 a
+// pedido do Eduardo: é bem conhecida fora do Brasil e está chegando
+// aqui. É a mais rígida das 4 em centralização: pede ~51/49 pro 10
+// (Pristine), contra 55/45 do PSA. Diferente das outras, a TAG não
+// usa um humano com régua — usa "Photometric Stereoscopic Imaging"
+// (câmeras + luz calculando a carta em 3D) e visão computacional
+// (machine learning), com pontuação interna numa escala de 1000
+// pontos (10 = 950-989, Pristine = 990+) que é convertida pra escala
+// 1-10. Ela também avalia um 5º critério que as outras não têm:
+// Dimensões (mede o tamanho físico real da carta). Os números abaixo
+// são a tabela pública de tolerância de centralização (front) pra
+// TCG — acima de 8.5 a fonte não detalha publicamente, os degraus
+// abaixo disso são extrapolação nossa seguindo o mesmo padrão de
+// queda das outras 3 empresas.
 const CENT_BREAKS = {
   PSA: [
     [50, 10], [55, 10], [60, 9], [65, 8.5],
@@ -88,12 +103,17 @@ const CENT_BREAKS = {
   CGC: [
     [50, 10], [55, 9.5], [65, 9], [70, 8.5],
     [75, 8], [80, 7.5], [85, 7], [90, 6], [100, 5]
+  ],
+  TAG: [
+    [51, 10], [55, 9], [62.5, 8.5], [65, 8],
+    [70, 7.5], [75, 7], [80, 6.5], [85, 6], [90, 5], [100, 4]
   ]
 };
 const CENT_BREAKS_LABEL_EXTRA = {
   PSA: { 10: (pct) => pct <= 50 ? ' (perfeita)' : '' },
   BGS: { 10: () => ' · Pristine/Black Label*' },
-  CGC: { 10: () => ' · Pristine' }
+  CGC: { 10: () => ' · Pristine' },
+  TAG: { 10: () => ' · Pristine (~990+/1000)*' }
 };
 
 function centGradeFromBreaks(company, pctBig) {
@@ -831,7 +851,7 @@ function centRenderResult() {
   const subs = CENT.subgrades;
   const allSubsSet = subs.corners !== '' && subs.edges !== '' && subs.surface !== '';
 
-  const rows = ['PSA', 'BGS', 'CGC'].map(co => {
+  const rows = ['PSA', 'BGS', 'CGC', 'TAG'].map(co => {
     const centGrade = centGradeFromBreaks(co, worstPct);
     const centLabel = centGradeLabel(co, centGrade, worstPct);
 
@@ -870,8 +890,10 @@ function centRenderResult() {
     </div>` : ''}
     <div style="font-size:9.5px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:12px;line-height:1.5">
       * Estimativa com base nos padrões públicos de cada empresa (front). PSA usa o pior dos 4 critérios; BGS e
-      CGC fazem uma média. Pode variar por versão/época de submissão — use como referência, não como garantia.
-      Verso não entra nesse cálculo.
+      CGC fazem uma média. A <b style="color:var(--text)">TAG</b> é a mais rígida em centralização (~51/49 pro
+      10) — ela mede com câmeras e visão computacional numa escala própria de 1000 pontos, então a "nota geral"
+      dela aqui é só uma aproximação nossa pra escala 1-10, não o método oficial deles. Pode variar por versão/
+      época de submissão — use como referência, não como garantia. Verso não entra nesse cálculo.
     </div>
   `;
 }
