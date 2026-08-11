@@ -2337,3 +2337,25 @@ body.share-view .btn-add { display: none !important; }
 .cent-subgrade-block:last-child { margin-bottom: 0; }
 .cent-subgrade-lbl { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
 .cent-subgrade-hint { font-size: 9.5px; color: var(--muted); line-height: 1.5; margin-bottom: 6px; }
+
+/* Telas grandes (desktop) — o mobile fica do jeito que está acima
+   (compacto, cabe na tela sem rolar/zoom horizontal); em telas largas
+   isso sobrava muito espaço em branco do lado, então a partir de
+   901px a ferramenta cresce bastante: régua/foto quase o dobro do
+   tamanho, sidebar mais larga. Pedido do Eduardo 11/08/2026. */
+@media (min-width: 901px) {
+  .cent-layout { gap: 32px; }
+  .cent-sidebar { flex: 0 0 360px; max-width: 360px; }
+  .cent-main { flex: 1 1 700px; }
+  .cent-toolbar { max-width: 820px; }
+  .cent-grid { max-width: 820px; }
+  .cent-stage { height: 680px; }
+  .cent-pan-pad { grid-template-columns: 38px 38px 38px; grid-template-rows: 32px 32px 32px; }
+  .cent-handle { width: 20px; height: 20px; }
+}
+@media (min-width: 1300px) {
+  .cent-sidebar { flex: 0 0 400px; max-width: 400px; }
+  .cent-toolbar { max-width: 960px; }
+  .cent-grid { max-width: 960px; }
+  .cent-stage { height: 760px; }
+}
