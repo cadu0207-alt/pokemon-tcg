@@ -368,6 +368,60 @@ drop policy if exists "auction_rules_acceptance_update" on auction_rules_accepta
 create policy "auction_rules_acceptance_update" on auction_rules_acceptance
   for update using (user_id = auth.uid());
 
+-- ── 5d. LOG DE LANCES COM INICIAIS (transparência sem expor identidade) ─
+-- auction_bids só é legível pelo próprio autor do lance ou pelo leiloeiro
+-- (seção 3) — de propósito, pra não expor quem é cada bidder pros outros
+-- participantes. Mas dá pra mostrar um histórico público tipo "E.C.A em
+-- 12/08/2026, R$1,50" sem vazar identidade: essa função roda com
+-- privilégio elevado (security definer), busca o nome em auth.users,
+-- reduz pra iniciais, e só devolve isso — nunca o uid, e-mail ou nome
+-- completo. Qualquer usuário logado pode chamar, pra qualquer leilão.
+create or replace function auction_bidder_initials(p_uid uuid)
+returns text
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+declare
+  v_meta  jsonb;
+  v_email text;
+  v_name  text;
+  v_parts text[];
+begin
+  select raw_user_meta_data, email into v_meta, v_email from auth.users where id = p_uid;
+  v_name := nullif(trim(coalesce(v_meta->>'full_name', v_meta->>'name', '')), '');
+  if v_name is not null then
+    select array_agg(upper(left(p,1))) into v_parts
+      from unnest((regexp_split_to_array(v_name, '\s+'))[1:4]) p
+      where length(p) > 0;
+    if v_parts is not null and array_length(v_parts,1) > 0 then
+      return array_to_string(v_parts, '.');
+    end if;
+  end if;
+  if v_email is not null then
+    return upper(left(split_part(v_email, '@', 1), 3));
+  end if;
+  return '???';
+end;
+$$;
+grant execute on function auction_bidder_initials(uuid) to authenticated;
+
+create or replace function auction_bid_log(p_auction_id bigint)
+returns table(amount numeric, created_at timestamptz, initials text)
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select b.amount, b.created_at, auction_bidder_initials(b.bidder_id) as initials
+  from auction_bids b
+  where b.auction_id = p_auction_id
+  order by b.created_at desc
+  limit 50;
+$$;
+grant execute on function auction_bid_log(bigint) to authenticated;
+
 -- ── 6. RPC place_bid — valida e registra o lance de forma atômica ──
 create or replace function place_bid(p_auction_id bigint, p_amount numeric)
 returns auctions

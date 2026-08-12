@@ -323,7 +323,8 @@ function aucInfoBlockHtml(a,idSuffix){
       <div id="auc-bid-status-${a.id}${idSuffix}" style="font-size:10px;color:var(--accent);margin-top:4px;font-family:'Space Mono',monospace"></div>`:''}
     ${a.status==='agendado'?`<div style="font-size:10.5px;color:var(--muted);margin-top:6px">Começa em ${new Date(a.start_at).toLocaleString('pt-BR')}</div>`:''}
     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal)" onclick="shareAuction(${a.id})">📲 Compartilhar</button>
+      <button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal)" onclick="shareAuctionPdf(${a.id})">📄 PDF (foto + texto)</button>
+      <button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal)" onclick="shareAuctionText(${a.id})">💬 Só texto</button>
     </div>`;
 }
 
@@ -361,8 +362,41 @@ function renderAuctionZoomContent(a){
     </div>
     <div style="flex:1;min-width:260px;padding:24px">
       ${aucInfoBlockHtml(a,'-zoom')}
+      <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:12px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:8px">📜 HISTÓRICO DE LANCES</div>
+        <div id="leilao-zoom-bidlog" style="max-height:180px;overflow-y:auto"></div>
+      </div>
     </div>
   </div>`;
+  renderAuctionBidLog(a.id,'leilao-zoom-bidlog');
+}
+
+// Log público de lances, só com iniciais (ex: "E.C.A em 12/08/2026, R$1,50")
+// — nunca o nome completo, e-mail ou uid de quem deu o lance. Calculado no
+// banco (auction_bid_log/auction_bidder_initials, leilao_setup.sql), não
+// dá pra pedir a identidade completa nem mexendo no client.
+async function renderAuctionBidLog(auctionId,containerId){
+  const box=document.getElementById(containerId);
+  if(!box)return;
+  box.innerHTML=`<div style="font-size:10.5px;color:var(--muted)">Carregando…</div>`;
+  const{data,error}=await sbClient.rpc('auction_bid_log',{p_auction_id:auctionId});
+  if(error){
+    console.error('[leilao] auction_bid_log',error);
+    box.innerHTML=`<div style="font-size:10.5px;color:var(--muted)">Não deu pra carregar o histórico.</div>`;
+    return;
+  }
+  const bids=Array.isArray(data)?data:[];
+  if(!bids.length){
+    box.innerHTML=`<div style="font-size:10.5px;color:var(--muted)">Nenhum lance ainda — seja o primeiro.</div>`;
+    return;
+  }
+  box.innerHTML=bids.map(b=>{
+    const d=new Date(b.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    return`<div style="display:flex;justify-content:space-between;gap:10px;font-size:11px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span><b>${esc(b.initials)}</b> em ${d}</span>
+      <span style="color:var(--teal);font-weight:700;white-space:nowrap">R$ ${fmtR(b.amount)}</span>
+    </div>`;
+  }).join('');
 }
 
 // Se o zoom estiver aberto quando a lista atualizar (ex: alguém deu lance,
@@ -418,56 +452,118 @@ function aucBlobToPng(blob){
   });
 }
 
-async function shareAuction(auctionId){
+// Nome de exibição da coleção a partir do CB_SET_LABELS (app.js) — ex:
+// "me04" → "Caos Ascendente". Cai pro código do set se não achar.
+function aucColecaoNome(setId){
+  if(!setId)return'';
+  const full=typeof CB_SET_LABELS==='object'&&CB_SET_LABELS?CB_SET_LABELS[setId]:null;
+  if(full){
+    const dashIdx=full.indexOf('—');
+    if(dashIdx>-1)return full.slice(dashIdx+1).trim();
+  }
+  return typeof cvSetLbl==='function'?cvSetLbl(setId):setId.toUpperCase();
+}
+
+function aucFmtDate(d){
+  return new Date(d).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+// Mensagem padrão de divulgação — mesmo texto nos dois botões de
+// compartilhar (PDF e só-texto), pra manter a mesma "cara" sempre.
+function aucShareMessage(a){
+  const url=aucShareUrl(a.id);
+  const colecao=aucColecaoNome(a.set_id);
+  const inicio=aucFmtDate(a.start_at);
+  const fim=aucFmtDate(a.end_at);
+  const inicial=fmtR(a.starting_price);
+  const atual=fmtR(a.current_bid||a.starting_price);
+  return`Ei, vem ver só esse leilão no site mydecktcg.com.br!\n\n`+
+    `É a carta *${a.card_name}*${colecao?` da coleção *${colecao}*`:''}. `+
+    `Leilão começando dia ${inicio} e terminando dia ${fim}.\n`+
+    `Valor inicial de R$ ${inicial}, no momento em R$ ${atual}.\n\n`+
+    `Vem ver no link:\n${url}`;
+}
+
+// ── BOTÃO 1: só texto (mensagem padrão + link) ────────────────────
+function shareAuctionText(auctionId){
   const a=aucAuctions.find(x=>x.id===auctionId);
   if(!a)return;
-  const round=aucRoundById(a.round_id);
-  const url=aucShareUrl(auctionId);
-  const precoAtual=fmtR(a.current_bid||a.starting_price);
-  const prazo=new Date(a.end_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-  const msg=`🔨 *LEILÃO ${esc(a.card_name)}*\n`+
-    `${AUC_COND_LBL[a.condition]||a.condition} · ${AUC_LANG_LBL[a.language]||a.language}\n\n`+
-    `💰 Lance atual: R$ ${precoAtual}\n`+
-    `⏰ Encerra em: ${prazo}${round?` (${esc(round.title)})`:''}\n\n`+
-    `Dá seu lance aqui:\n${url}`;
+  const msg=aucShareMessage(a);
+  if(navigator.share){
+    navigator.share({title:`Leilão — ${a.card_name}`,text:msg}).catch(()=>{});
+    return;
+  }
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
+  if(navigator.clipboard)navigator.clipboard.writeText(msg).catch(()=>{});
+  setStatus('Mensagem pronta pro WhatsApp (também copiada)','ok');
+}
 
+// ── BOTÃO 2: PDF com a foto da carta + a mesma mensagem padrão ────
+async function shareAuctionPdf(auctionId){
+  const a=aucAuctions.find(x=>x.id===auctionId);
+  if(!a)return;
+  if(typeof window.jspdf==='undefined'){
+    setStatus('Gerador de PDF ainda carregando, tenta de novo em 1 segundo','err');
+    return;
+  }
+  setStatus('Gerando PDF...','ok');
+  const msg=aucShareMessage(a);
   const imgBlob=await aucFetchImageBlob(aucImgFor(a));
 
-  // 1) Celular: Web Share API manda foto + texto juntos direto pro WhatsApp,
-  // quando o navegador suporta compartilhar arquivos.
-  if(navigator.share){
-    const shareData={title:`Leilão — ${a.card_name}`,text:msg};
-    if(imgBlob&&navigator.canShare){
-      const file=new File([imgBlob],'carta.jpg',{type:imgBlob.type||'image/jpeg'});
-      if(navigator.canShare({files:[file]})){
-        shareData.files=[file];
-      }else{
-        shareData.url=url;
-      }
-    }else{
-      shareData.url=url;
-    }
-    try{await navigator.share(shareData);return;}
-    catch(e){ if(e?.name==='AbortError')return; /* senão cai pro fallback abaixo */ }
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'pt',format:'a4'});
+  const pageW=doc.internal.pageSize.getWidth();
+  let y=48;
+
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(18);
+  doc.text('Leilão MyDeck — mydecktcg.com.br',pageW/2,y,{align:'center'});
+  y+=32;
+
+  if(imgBlob){
+    try{
+      const pngBlob=await aucBlobToPng(imgBlob);
+      const dataUrl=await new Promise((resolve,reject)=>{
+        const reader=new FileReader();
+        reader.onload=()=>resolve(reader.result);
+        reader.onerror=reject;
+        reader.readAsDataURL(pngBlob);
+      });
+      const props=doc.getImageProperties(dataUrl);
+      const maxW=260,maxH=340;
+      let w=props.width,h=props.height;
+      const scale=Math.min(maxW/w,maxH/h,1);
+      w*=scale;h*=scale;
+      doc.addImage(dataUrl,'PNG',(pageW-w)/2,y,w,h);
+      y+=h+28;
+    }catch(e){console.warn('[leilao] não deu pra colocar a imagem no PDF',e);}
   }
 
-  // 2) Desktop: copia a imagem pro clipboard (se conseguiu baixar) e abre o
-  // WhatsApp Web já com o texto preenchido — só falta colar (Ctrl+V) a
-  // imagem na conversa antes de mandar.
-  let imgCopied=false;
-  if(imgBlob&&navigator.clipboard&&window.ClipboardItem){
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(12);
+  const lines=doc.splitTextToSize(msg.replace(/\*/g,''),pageW-96);
+  doc.text(lines,48,y,{lineHeightFactor:1.5});
+
+  const fileName=`leilao-${(a.card_name||'carta').toLowerCase().replace(/[^a-z0-9]+/g,'-')}.pdf`;
+
+  // Celular com suporte a compartilhar arquivo: manda o PDF direto pro
+  // WhatsApp (ou outro app). Senão, baixa o PDF e abre o WhatsApp Web com
+  // o texto pronto — só falta anexar o arquivo baixado na conversa.
+  if(navigator.share&&navigator.canShare){
     try{
-      await navigator.clipboard.write([new ClipboardItem({'image/png':await aucBlobToPng(imgBlob)})]);
-      imgCopied=true;
-    }catch(e){console.warn('[leilao] não deu pra copiar a imagem pro clipboard',e);}
+      const pdfBlob=doc.output('blob');
+      const file=new File([pdfBlob],fileName,{type:'application/pdf'});
+      if(navigator.canShare({files:[file]})){
+        await navigator.share({title:`Leilão — ${a.card_name}`,text:msg,files:[file]});
+        setStatus('','ok');
+        return;
+      }
+    }catch(e){ if(e?.name==='AbortError'){setStatus('','ok');return;} /* cai pro fallback */ }
   }
-  const waUrl=`https://wa.me/?text=${encodeURIComponent(msg)}`;
-  window.open(waUrl,'_blank');
-  if(!imgCopied&&navigator.clipboard)navigator.clipboard.writeText(msg).catch(()=>{});
-  setStatus(imgCopied
-    ? 'Imagem copiada — cole com Ctrl+V na conversa do WhatsApp'
-    : (imgBlob===null?'Mensagem pronta pro WhatsApp (não deu pra copiar a imagem automaticamente — baixe e anexe à mão)':'Mensagem pronta pro WhatsApp (também copiada)'),
-    'ok');
+
+  doc.save(fileName);
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
+  setStatus('PDF baixado — anexe o arquivo na conversa do WhatsApp que já abriu com o texto','ok');
 }
 
 // Se a página abriu com ?leilao=<id> (link compartilhado), abre a carta
