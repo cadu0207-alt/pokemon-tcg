@@ -59,27 +59,6 @@ function renderUpdatesAdminForm() {
     '</div>';
 }
 
-// CORRIGIDO 02/08/2026: o painel ficava sobrepondo a barra de abas em telas
-// largas (top:130px fixo no CSS não batia com a altura real do header —
-// varia com o conteúdo do lado direito, ex. badge de XP/tema). Em vez de
-// chutar um pixel novo, mede a posição real do fim da .tabs (que já é
-// sticky, então getBoundingClientRect().bottom reflete onde ela realmente
-// "gruda" na tela) e escreve isso numa CSS var que o .updates-log-panel usa.
-function positionUpdatesLogPanel() {
-  const tabs = document.querySelector('.tabs');
-  if (!tabs) return;
-  const top = Math.ceil(tabs.getBoundingClientRect().bottom) + 14;
-  document.documentElement.style.setProperty('--updates-log-top', top + 'px');
-}
-(function watchUpdatesLogPosition() {
-  window.addEventListener('resize', () => positionUpdatesLogPanel());
-  window.addEventListener('load', () => setTimeout(positionUpdatesLogPanel, 300));
-  // Recalcula de novo um pouco depois do primeiro render — cobre o caso do
-  // badge de XP/status do usuário carregar de forma assíncrona e mudar a
-  // altura do header depois do primeiro cálculo.
-  setTimeout(positionUpdatesLogPanel, 1200);
-})();
-
 function toggleUpdatesLogCollapse(forceState) {
   const holder = document.getElementById('updates-log-wrap');
   if (!holder) return;
