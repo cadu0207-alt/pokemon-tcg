@@ -16,7 +16,9 @@ const FAQ_INICIANTES = [
     icon: '🛡️',
     pergunta: 'Sleeve ou toploader — preciso dos dois?',
     resposta:
-      'São coisas diferentes e se complementam: o <strong>sleeve</strong> (mangapote plástico fino) protege a superfície da carta contra risco, poeira e gordura da mão. O <strong>toploader</strong> (case rígido) protege contra dobra e impacto. Pra cartas do dia a dia, só o sleeve já resolve. Pra cartas caras ou raras que você quer guardar por muito tempo (ou vender), o ideal é <strong>sleeve + toploader juntos</strong> — o sleeve por dentro, o toploader por fora.'
+      'São coisas diferentes e se complementam: o <strong>sleeve</strong> (mangapote plástico fino) protege a superfície da carta contra risco, poeira e gordura da mão. O <strong>toploader</strong> (case rígido) protege contra dobra e impacto. Pra cartas do dia a dia, só o sleeve já resolve. Pra cartas caras ou raras que você quer guardar por muito tempo (ou vender), o ideal é <strong>sleeve + toploader juntos</strong> — o sleeve por dentro, o toploader por fora.' +
+      '<div class="faq-img-cap">3 níveis de proteção, do básico ao cofre:</div>' +
+      '<img class="faq-img" src="img/iniciantes/protecao-niveis.jpg" alt="Níveis de proteção: sleeve fosco + pasta D-ring, sleeve + toploader rígido, perfect fit sleeve + one-touch magnético" loading="lazy">'
   },
   {
     icon: '🏆',
@@ -28,7 +30,9 @@ const FAQ_INICIANTES = [
     icon: '⭐',
     pergunta: 'O que significam os símbolos de raridade no canto da carta?',
     resposta:
-      '<strong>Círculo</strong> = Comum. <strong>Losango</strong> = Incomum. <strong>Estrela preta</strong> = Rara. <strong>Estrela preta com "PROMO"</strong> = carta promocional (distribuída em eventos/produtos especiais, não em booster normal). <strong>Estrela branca ou dourada</strong> = Ultra Rara (as mais valiosas da coleção, tipo os "ex", "Special Illustration Rare" etc).'
+      '<strong>Círculo</strong> = Comum. <strong>Losango</strong> = Incomum. <strong>Estrela preta</strong> = Rara. <strong>Estrela preta com "PROMO"</strong> = carta promocional (distribuída em eventos/produtos especiais, não em booster normal). <strong>Estrela branca ou dourada</strong> = Ultra Rara (as mais valiosas da coleção, tipo os "ex", "Special Illustration Rare" etc).' +
+      '<div class="faq-img-cap">Isso é o símbolo oficial impresso na carta. Só que entre colecionadores existe também uma hierarquia informal de "quanto vale", que mistura raridade com demanda de mercado:</div>' +
+      '<img class="faq-img" src="img/iniciantes/raridade-piramide.jpg" alt="Pirâmide de raridade informal: Bulk & Staples na base, depois Radiant, Mega ex, Gold e SIR (Special Illustration Rare) no topo" loading="lazy">'
   },
   {
     icon: '🔥',
@@ -40,7 +44,8 @@ const FAQ_INICIANTES = [
     icon: '🌡️',
     pergunta: 'Como devo guardar minhas cartas pra não estragar?',
     resposta:
-      'Longe de <strong>luz solar direta</strong> (desbota a arte), <strong>umidade</strong> (empena e mancha) e <strong>calor extremo</strong> (deforma o plástico do sleeve/toploader). Lugar fresco, seco e ao abrigo de luz é o ideal — dentro de casa, numa estante ou gaveta, já resolve na prática.'
+      'Longe de <strong>luz solar direta</strong> (desbota a arte), <strong>umidade</strong> (empena e mancha) e <strong>calor extremo</strong> (deforma o plástico do sleeve/toploader). Lugar fresco, seco e ao abrigo de luz é o ideal — dentro de casa, numa estante ou gaveta, já resolve na prática.' +
+      '<img class="faq-img" src="img/iniciantes/ameacas-ambientais.jpg" alt="Três ameaças ambientais: umidade causa empenamento e mofo (use sílica gel), calor causa curvatura, luz solar causa desbotamento (use case com proteção UV)" loading="lazy">'
   },
   {
     icon: '💰',
@@ -52,7 +57,9 @@ const FAQ_INICIANTES = [
     icon: '🔍',
     pergunta: 'Como sei se uma carta ou produto lacrado é falsificado?',
     resposta:
-      'Sinais de alerta: <strong>preço muito abaixo do mercado</strong>, textura do verso da carta diferente do padrão (deveria ser um pontilhado uniforme, sem manchas), cores muito saturadas ou baças, fonte de texto errada, e lacre de produto genérico ou mal aplicado. Na dúvida, compre de <strong>lojas com reputação</strong> — é por isso que recomendamos parceiros específicos na aba Lojas & Ofertas, em vez de qualquer anúncio aleatório.'
+      'Sinais de alerta: <strong>preço muito abaixo do mercado</strong>, textura do verso da carta diferente do padrão (deveria ser um pontilhado uniforme, sem manchas), cores muito saturadas ou baças, fonte de texto errada, e lacre de produto genérico ou mal aplicado. Na dúvida, compre de <strong>lojas com reputação</strong> — é por isso que recomendamos parceiros específicos na aba Lojas & Ofertas, em vez de qualquer anúncio aleatório.' +
+      '<div class="faq-img-cap">3 testes rápidos pra checar uma carta suspeita:</div>' +
+      '<img class="faq-img" src="img/iniciantes/triagem-falsificacao.jpg" alt="Triagem sensorial: teste da luz (papel falso é translúcido), textura de impressão em relevo (falsificações são lisas e brilhantes), peso padrão de 1.7g por carta" loading="lazy">'
   },
   {
     icon: '🃏',

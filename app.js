@@ -753,6 +753,7 @@ function renderDash(){
     'Rara Ilustrada':['Ilustr. Rara','SP'],'Ilustr. Rara':['Ilustr. Rara','SP'],
     'Ilustração Rara (IR)':['Ilustr. Rara','SP'],
     'Rara Ilustrada Especial':['Ilustr. Esp. Rara','SP'],'Ilustr. Esp. Rara':['Ilustr. Esp. Rara','SP'],
+    'Ilustracao Rara (SAR)':['Ilustr. Esp. Rara','SP'],'Ilustração Rara (SAR)':['Ilustr. Esp. Rara','SP'],
     'Ultra Rara':['Rara Ultra','SP'],'Rara Ultra':['Rara Ultra','SP'],
     'Ultra Rara Brilhante':['Rara Ultra Brilhante','SP'],
     'Hiper Rara':['Hiper Rara','SP'],'ACE SPEC':['ACE SPEC','SP'],
@@ -765,6 +766,7 @@ function renderDash(){
     const raw=c.rar||'';let k,ver;
     if(RAR_BUCKET[raw]){[k,ver]=RAR_BUCKET[raw];}
     else if(raw.startsWith('Promo')){k='Promo';ver='SP';}
+    else if(raw.includes('Ilustr')&&(raw.includes('SAR')||raw.includes('Espec')||raw.includes('Esp.'))){k='Ilustr. Esp. Rara';ver='SP';}
     else if(raw.includes('Ilustr')){k='Ilustr. Rara';ver='SP';}
     else if(raw.includes('Ultra')){k='Rara Ultra';ver='SP';}
     else if(raw.includes('Dupla')){k='Dupla Rara';ver='F';}
