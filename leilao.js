@@ -336,6 +336,9 @@ function aucMinIncrement(base){
   return Math.round(base*0.02*100)/100;
 }
 function aucMinNext(a){return a.current_bid?(+a.current_bid+aucMinIncrement(+a.current_bid)):+a.starting_price;}
+// "Lance com folga" — um passo de incremento ACIMA do mínimo, pra quem
+// quer dar um lance de segurança sem precisar digitar/calcular nada.
+function aucMinPlus(a){const min=aucMinNext(a);return Math.round((min+aucMinIncrement(min))*100)/100;}
 
 function aucImgFor(a){
   if(a.image_url)return a.image_url;
@@ -406,8 +409,12 @@ function aucInfoBlockHtml(a,idSuffix){
     ${iAmWinning&&isActive?`<div style="font-size:10.5px;color:var(--teal);margin-top:6px">✓ Você está na frente</div>`:''}
     ${isActive&&!isOwnAuction&&!aucBlocked?`
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
-        <input type="number" id="auc-bid-${a.id}${idSuffix}" placeholder="Mín. R$ ${fmtR(aucMinNext(a))}" step="0.01" style="width:150px" class="cv-select">
-        <button class="btn-add" onclick="submitBid(${a.id},'${idSuffix}')">🔨 Dar Lance</button>
+        <button class="btn-add" onclick="quickBid(${a.id},'${idSuffix}','min')">⚡ R$ ${fmtR(aucMinNext(a))} <span style="opacity:.75;font-weight:400">(mínimo)</span></button>
+        <button class="btn-add" onclick="quickBid(${a.id},'${idSuffix}','plus')">⚡ R$ ${fmtR(aucMinPlus(a))} <span style="opacity:.75;font-weight:400">(com folga)</span></button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;align-items:center">
+        <input type="number" id="auc-bid-${a.id}${idSuffix}" placeholder="Outro valor" step="0.01" style="width:150px" class="cv-select">
+        <button class="cv-item-remove" onclick="submitBid(${a.id},'${idSuffix}')">Dar esse lance</button>
       </div>
       <div style="font-size:9.5px;color:var(--muted);margin-top:4px">Lance é compromisso — não dá pra retirar depois de enviado.</div>
       <div id="auc-bid-status-${a.id}${idSuffix}" style="font-size:10px;color:var(--accent);margin-top:4px;font-family:'Space Mono',monospace"></div>`:''}
@@ -683,6 +690,20 @@ function scrollToSharedAuction(){
   openAuctionZoom(id);
 }
 
+// Atalho de 1 clique: preenche o valor certo (mínimo ou mínimo+folga) no
+// campo de lance e já dispara submitBid — reaproveita toda a validação
+// normal (regras aceitas, endereço cadastrado, RPC place_bid etc), só
+// poupa a pessoa de digitar/calcular o valor na correria do leilão.
+function quickBid(auctionId,idSuffix,kind){
+  idSuffix=idSuffix||'';
+  const a=aucAuctions.find(x=>x.id===auctionId);
+  if(!a)return;
+  const amount=kind==='plus'?aucMinPlus(a):aucMinNext(a);
+  const input=document.getElementById(`auc-bid-${auctionId}${idSuffix}`);
+  if(input)input.value=amount;
+  submitBid(auctionId,idSuffix);
+}
+
 async function submitBid(auctionId,idSuffix){
   idSuffix=idSuffix||'';
   if(!uid()){setStatus('Faça login para dar lance','err');return;}
@@ -749,6 +770,44 @@ async function saveLeilaoAddress(){
   setStatus('Endereço de entrega salvo','ok');
 }
 
+// ── PAGAMENTO ONLINE (Mercado Pago Checkout Pro) ──────────────────
+// Chama a Edge Function mp-create-payment (supabase/functions/) que
+// cria a cobrança (PIX/cartão/boleto) e devolve o link do checkout —
+// o Access Token do Mercado Pago nunca fica no client, só na function.
+// A confirmação de pagamento é automática via mp-webhook, não precisa
+// mais o leiloeiro marcar "Pago" na mão (esse botão continua existindo
+// no painel dele só como exceção, ver renderAdminOrders).
+async function payAuctionOrder(orderId){
+  if(!uid())return;
+  const btn=document.getElementById(`auc-pay-btn-${orderId}`);
+  const statusEl=document.getElementById(`auc-pay-status-${orderId}`);
+  const resetBtn=()=>{if(btn){btn.disabled=false;btn.textContent='💳 Pagar agora (PIX / Cartão / Boleto)';}};
+  if(btn){btn.disabled=true;btn.textContent='Gerando pagamento...';}
+  if(statusEl)statusEl.textContent='';
+  try{
+    const{data:sessionData}=await sbClient.auth.getSession();
+    const token=sessionData?.session?.access_token;
+    if(!token){if(statusEl)statusEl.textContent='Sessão expirada — faça login de novo.';resetBtn();return;}
+
+    const resp=await fetch(SUPABASE_URL+'/functions/v1/mp-create-payment',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},
+      body:JSON.stringify({order_id:orderId})
+    });
+    const data=await resp.json().catch(()=>({}));
+    if(!resp.ok||!data.ok){
+      if(statusEl)statusEl.textContent=data.error||'Erro ao gerar pagamento.';
+      resetBtn();
+      return;
+    }
+    window.location.href=data.init_point;
+  }catch(e){
+    console.error('[leilao] payAuctionOrder',e);
+    if(statusEl)statusEl.textContent='Erro ao gerar pagamento. Tente de novo em instantes.';
+    resetBtn();
+  }
+}
+
 // ── MEUS PEDIDOS (carrinho consolidado por rodada) ────────────────
 function renderMyBidsAndOrders(){
   fillLeilaoAddressForm();
@@ -775,8 +834,10 @@ function renderMyBidsAndOrders(){
       </div>
       <div style="font-size:12px;font-weight:700;border-top:1px solid var(--border);padding-top:6px">Total: <span style="color:var(--teal)">R$ ${fmtR(o.amount)}</span></div>
       ${o.payment_due_at?`<div style="font-size:10.5px;color:${overdue?'var(--accent)':'var(--muted)'};margin-top:4px">Prazo de pagamento: ${new Date(o.payment_due_at).toLocaleString('pt-BR')}</div>`:''}
-      ${o.status==='aguardando_pagamento'?`<div class="mkt-note" style="margin-top:8px">
-        Pague via <b>PIX diretamente ao leiloeiro</b> (combine a chave por fora do site) — um PIX só cobre tudo que você arrematou nesta rodada. Envio por conta do comprador.
+      ${o.status==='aguardando_pagamento'?`<div style="margin-top:8px">
+        <button id="auc-pay-btn-${o.id}" class="btn-add" onclick="payAuctionOrder(${o.id})">💳 Pagar agora (PIX / Cartão / Boleto)</button>
+        <div id="auc-pay-status-${o.id}" style="font-size:10.5px;color:var(--accent);margin-top:4px;font-family:'Space Mono',monospace"></div>
+        <div class="mkt-note" style="margin-top:6px">Pagamento processado pelo Mercado Pago — um pagamento só cobre tudo que você arrematou nesta rodada. Envio por conta do comprador.</div>
       </div>`:''}
       ${o.tracking_code?`<div style="font-size:11px;margin-top:6px">📦 Rastreio: <b>${esc(o.tracking_code)}</b></div>`:''}
     </div>`;
@@ -1027,7 +1088,7 @@ function renderAdminOrders(){
         📍 ${esc(addr.logradouro||'—')}, ${esc(addr.numero||'—')} ${addr.bairro?'— '+esc(addr.bairro):''} · ${esc(addr.cidade||'—')}/${esc(addr.uf||'—')} ${addr.cep?'· CEP '+esc(addr.cep):''}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        ${o.status==='aguardando_pagamento'?`<button class="btn-add" onclick="markOrderPaid(${o.id})">✓ Marcar como Pago (PIX recebido)</button>`:''}
+        ${o.status==='aguardando_pagamento'?`<button class="cv-item-remove" onclick="markOrderPaid(${o.id})" title="O normal é o pagamento confirmar sozinho pelo Mercado Pago — use isso só em exceção (ex: comprador pagou por fora e o webhook não recebeu a confirmação)">✓ Marcar como Pago manualmente (exceção)</button>`:''}
         ${o.status==='pago'?`<input id="auc-track-${o.id}" placeholder="Código de rastreio" class="cv-select" style="width:180px">
           <button class="btn-add" onclick="markOrderShipped(${o.id})">📦 Marcar como Enviado</button>`:''}
         ${o.status==='enviado'?`<button class="btn-add" onclick="markOrderDone(${o.id})">✓ Marcar como Concluído</button>`:''}

@@ -670,3 +670,27 @@ begin
 end;
 $$;
 grant execute on function delete_auction_round(bigint) to authenticated;
+
+-- ================================================================
+-- PAGAMENTO ONLINE (Mercado Pago Checkout Pro) — 12/08/2026
+-- Substitui o fluxo manual de PIX + "Marcar como Pago" pros pedidos de
+-- leilão: o comprador paga (PIX/cartão/boleto) direto pelo Checkout Pro
+-- do Mercado Pago, e a Edge Function mp-webhook confirma o pagamento e
+-- marca o pedido como pago automaticamente — sem o leiloeiro precisar
+-- conferir manualmente. Ver supabase/functions/mp-create-payment e
+-- supabase/functions/mp-webhook.
+--
+-- O dinheiro cai numa conta só (Mercado Pago do Eduardo,
+-- cadu0207@gmail.com) — os leilões cadastrados pelo Juan (segundo
+-- leiloeiro) também são pagos nessa mesma conta; o repasse da comissão
+-- dele é combinado por fora, o site não faz split automático.
+--
+-- Só a Edge Function (com a service_role key) grava mp_preference_id/
+-- mp_payment_id/status='pago' — não existe policy de UPDATE liberando
+-- isso pro client, então nem comprador nem leiloeiro conseguem forjar
+-- "paguei" direto no banco.
+-- ================================================================
+
+alter table auction_orders add column if not exists mp_preference_id text;
+alter table auction_orders add column if not exists mp_payment_id text;
+alter table auction_orders add column if not exists payment_method text;
