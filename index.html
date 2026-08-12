@@ -539,10 +539,21 @@
   <div id="leilao" class="pane">
     <div class="sec-title" style="margin-top:0">🔨 Leilão</div>
 
-    <div id="leilao-admin-wrap" style="display:none">
+    <!-- SUB-MENU 12/08/2026: só leiloeiros/admin veem (aucIsLeilaoAdmin,
+         leilao.js). "Leilões" é o que qualquer participante já via antes;
+         "Cadastro" e "Análises" eram tudo misturado num painel só
+         (leilao-admin-wrap) e viraram abas internas separadas. -->
+    <div id="leilao-subnav" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+      <button type="button" class="btn-add leilao-subtab-btn" data-sub="leiloes" onclick="switchLeilaoSubtab('leiloes')">🃏 Leilões</button>
+      <button type="button" class="btn-add leilao-subtab-btn" data-sub="cadastro" onclick="switchLeilaoSubtab('cadastro')">➕ Cadastro</button>
+      <button type="button" class="btn-add leilao-subtab-btn" data-sub="analises" onclick="switchLeilaoSubtab('analises')">📊 Análises</button>
+    </div>
+
+    <!-- ── CADASTRO (leiloeiro/admin) ──────────────────────────────── -->
+    <div id="leilao-sub-cadastro" style="display:none">
       <div class="mkt-note">
-        Painel do leiloeiro. Fluxo: 1) crie uma <b>rodada</b> (define o prazo dos lances e o prazo
-        de pagamento — todas as cartas dela fecham juntas e viram UM pedido/PIX por comprador);
+        Fluxo: 1) crie uma <b>rodada</b> (define o prazo dos lances e o prazo de pagamento —
+        todas as cartas dela fecham juntas e viram UM pedido/PIX por comprador);
         2) cadastre as cartas dentro da rodada (a busca já puxa foto/número do catálogo).
       </div>
       <div class="mkt-grid">
@@ -600,9 +611,6 @@
         </div>
       </div>
 
-      <div class="sec-title">📦 Pedidos / Carrinhos do Leilão</div>
-      <div id="leilao-admin-orders"></div>
-
       <div id="leilao-super-admin-wrap" style="display:none">
         <div class="sec-title">👥 Leiloeiros Autorizados</div>
         <div class="mkt-note">
@@ -619,45 +627,55 @@
       </div>
     </div>
 
-    <div class="sec-title" style="margin-top:0">🔥 Leilões Vigentes</div>
-    <div id="leilao-list"></div>
+    <!-- ── ANÁLISES (leiloeiro/admin) ──────────────────────────────── -->
+    <div id="leilao-sub-analises" style="display:none">
+      <div class="kpi-grid" id="leilao-analises-kpis" style="margin-bottom:24px"></div>
+      <div class="sec-title" style="margin-top:0">📦 Pedidos / Carrinhos do Leilão</div>
+      <div id="leilao-admin-orders"></div>
+    </div>
 
-    <div class="mkt-grid" style="margin-top:24px">
-      <div class="panel">
-        <div class="panel-t">📍 Meu Endereço de Entrega</div>
-        <div style="font-size:10.5px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:12px">
-          Obrigatório antes de dar o primeiro lance — é pra onde a carta vai se você arrematar.
-          Envio por conta do comprador.
-        </div>
-        <div class="ff"><label>CEP</label><input id="auc-addr-cep" placeholder="00000-000"></div>
-        <div class="ff"><label>Rua/Logradouro *</label><input id="auc-addr-logradouro"></div>
-        <div class="ff"><label>Número *</label><input id="auc-addr-numero"></div>
-        <div class="ff"><label>Bairro</label><input id="auc-addr-bairro"></div>
-        <div class="ff"><label>Cidade *</label><input id="auc-addr-cidade"></div>
-        <div class="ff"><label>UF *</label>
-          <select id="auc-addr-uf">
-            <option value="">—</option>
-            <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option>
-            <option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option>
-            <option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
-            <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option>
-            <option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option>
-            <option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option>
-            <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
-          </select>
-        </div>
-        <button class="btn-add" onclick="saveLeilaoAddress()">✓ Salvar Endereço</button>
-        <div id="auc-addr-status" style="font-size:10px;color:var(--teal);font-family:'Space Mono',monospace;margin-top:8px"></div>
-      </div>
+    <!-- ── LEILÕES (todo mundo) ────────────────────────────────────── -->
+    <div id="leilao-sub-leiloes">
+      <div class="sec-title" style="margin-top:0">🔥 Leilões Vigentes</div>
+      <div id="leilao-list"></div>
 
-      <div class="panel">
-        <div class="panel-t">🧾 Meus Arremates / Pedidos</div>
-        <div class="mkt-term-box" style="margin-bottom:12px">
-          <b>Regras do leilão:</b> pagamento via PIX direto ao leiloeiro (combinado fora do site);
-          envio por conta do comprador; o pedido muda de status conforme o leiloeiro confirma o
-          recebimento e o envio.
+      <div class="mkt-grid" style="margin-top:24px">
+        <div class="panel">
+          <div class="panel-t">📍 Meu Endereço de Entrega</div>
+          <div style="font-size:10.5px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:12px">
+            Obrigatório antes de dar o primeiro lance — é pra onde a carta vai se você arrematar.
+            Envio por conta do comprador.
+          </div>
+          <div class="ff"><label>CEP</label><input id="auc-addr-cep" placeholder="00000-000"></div>
+          <div class="ff"><label>Rua/Logradouro *</label><input id="auc-addr-logradouro"></div>
+          <div class="ff"><label>Número *</label><input id="auc-addr-numero"></div>
+          <div class="ff"><label>Bairro</label><input id="auc-addr-bairro"></div>
+          <div class="ff"><label>Cidade *</label><input id="auc-addr-cidade"></div>
+          <div class="ff"><label>UF *</label>
+            <select id="auc-addr-uf">
+              <option value="">—</option>
+              <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option>
+              <option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option>
+              <option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
+              <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option>
+              <option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option>
+              <option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option>
+              <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
+            </select>
+          </div>
+          <button class="btn-add" onclick="saveLeilaoAddress()">✓ Salvar Endereço</button>
+          <div id="auc-addr-status" style="font-size:10px;color:var(--teal);font-family:'Space Mono',monospace;margin-top:8px"></div>
         </div>
-        <div id="leilao-my-orders"></div>
+
+        <div class="panel">
+          <div class="panel-t">🧾 Meus Arremates / Pedidos</div>
+          <div class="mkt-term-box" style="margin-bottom:12px">
+            <b>Regras do leilão:</b> pagamento via PIX direto ao leiloeiro (combinado fora do site);
+            envio por conta do comprador; o pedido muda de status conforme o leiloeiro confirma o
+            recebimento e o envio.
+          </div>
+          <div id="leilao-my-orders"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -672,6 +690,71 @@
     <div class="modal modal-wide" style="padding:0;overflow:hidden">
       <button class="mc-btn" onclick="closeModal('leilao-zoom-ov')">✕</button>
       <div id="leilao-zoom-content"></div>
+    </div>
+  </div>
+
+  <!-- REGRAS DO LEILÃO (12/08/2026): aparece só na primeira vez que a pessoa
+       tenta dar um lance — leilao.js (submitBid) intercepta e chama
+       openLeilaoRulesModal() antes de deixar o lance passar. O aceite fica
+       salvo em auction_rules_acceptance (banco), então não pergunta de novo
+       depois — nem em outro aparelho. -->
+  <div class="ov" id="leilao-rules-ov" onclick="if(event.target===this)closeModal('leilao-rules-ov')">
+    <div class="modal modal-wide">
+      <button class="mc-btn" onclick="closeModal('leilao-rules-ov')">✕</button>
+      <div class="panel-t" style="margin-bottom:4px">📜 Regras do Leilão MyDeck</div>
+      <div style="font-size:10.5px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:16px">
+        Leia com atenção antes do seu primeiro lance — dar um lance é um compromisso de compra.
+      </div>
+
+      <div class="mkt-term-box" style="max-height:48vh;overflow-y:auto">
+        <b>1. Como funciona o lance</b><br>
+        Cada carta em leilão tem um preço inicial e um prazo. O maior lance no fechamento do prazo
+        vence. O incremento mínimo entre lances é automático: até R$10 → R$0,50 · até R$50 → R$1 ·
+        acima de R$50 → 2% do valor atual. Se algum lance acontecer nos últimos minutos do prazo,
+        o leilão pode estender automaticamente por alguns minutos (regra anti-sniping), dando
+        chance de resposta a quem estava acompanhando.<br><br>
+
+        <b>2. O lance é um compromisso</b><br>
+        Ao dar um lance, você está se comprometendo a comprar a carta por aquele valor caso seja
+        o maior lance no fechamento. Lances não podem ser retirados ou cancelados depois de
+        enviados. Só dê um lance por um valor que você realmente pretende pagar.<br><br>
+
+        <b>3. Pagamento</b><br>
+        O pagamento é feito via <b>PIX diretamente ao leiloeiro</b>, combinado fora do site, dentro
+        do prazo definido pela rodada (o prazo de pagamento é sempre igual ou posterior ao
+        fechamento dos lances). Se você arrematar mais de uma carta na mesma rodada, elas entram
+        num pedido só — um PIX cobre tudo.<br><br>
+
+        <b>4. Envio</b><br>
+        O envio da carta é por conta e responsabilidade do comprador (frete, embalagem e
+        eventuais taxas). Condições especiais de frete, quando houver, ficam descritas na
+        própria rodada.<br><br>
+
+        <b>5. Boa conduta</b><br>
+        Não são permitidos: dar lances sem intenção real de pagar; usar mais de uma conta para
+        inflar o valor da própria carta ou de terceiros (shill bidding); combinar com outros
+        participantes para manipular o preço; ofender, ameaçar ou desrespeitar o leiloeiro ou
+        outros participantes; tentar contornar as regras acima usando o site fora do previsto.<br><br>
+
+        <b>6. Penalidades</b><br>
+        • <b>Atraso no pagamento:</b> o sistema bloqueia automaticamente novos lances até a
+        pendência ser resolvida com o leiloeiro — sem exposição pública.<br>
+        • <b>Reincidência ou lance não honrado:</b> suspensão do acesso ao leilão, a critério do
+        leiloeiro, podendo se estender por tempo indeterminado.<br>
+        • <b>Casos graves</b> (fraude, shill bidding comprovado, assédio): banimento definitivo do
+        sistema de leilão.<br><br>
+
+        <b>7. O papel do MyDeck</b><br>
+        O site é só uma ferramenta de cadastro de leilões, lances e acompanhamento de pedidos.
+        O pagamento e o envio acontecem fora do site, diretamente entre comprador e leiloeiro —
+        o MyDeck não processa, retém ou garante nenhum valor financeiro.
+      </div>
+
+      <label style="display:flex;align-items:flex-start;gap:8px;margin:16px 0;font-size:12px;cursor:pointer">
+        <input type="checkbox" id="leilao-rules-check" onchange="toggleLeilaoRulesAccept()" style="margin-top:2px">
+        <span>Li e aceito as regras do leilão acima, incluindo as penalidades por não cumprimento.</span>
+      </label>
+      <button class="btn-add" id="leilao-rules-accept-btn" disabled onclick="acceptLeilaoRules()">✓ Li e aceito as regras</button>
     </div>
   </div>
 

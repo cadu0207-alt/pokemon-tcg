@@ -344,6 +344,30 @@ as $$
   end;
 $$;
 
+-- ── 5c. ACEITE DAS REGRAS (uma vez por usuário) ────────────────────
+-- Guarda que o participante já leu e aceitou as regras de conduta do
+-- leilão — o popup (front, leilao.js) só aparece de novo se a versão
+-- do texto mudar (rules_version). Sem isso não dá pra dar lance.
+create table if not exists auction_rules_acceptance (
+  user_id        uuid primary key references auth.users(id),
+  rules_version  text not null default 'v1',
+  accepted_at    timestamptz not null default now()
+);
+
+alter table auction_rules_acceptance enable row level security;
+
+drop policy if exists "auction_rules_acceptance_select" on auction_rules_acceptance;
+create policy "auction_rules_acceptance_select" on auction_rules_acceptance
+  for select using (user_id = auth.uid() or is_auction_admin());
+
+drop policy if exists "auction_rules_acceptance_insert" on auction_rules_acceptance;
+create policy "auction_rules_acceptance_insert" on auction_rules_acceptance
+  for insert with check (user_id = auth.uid());
+
+drop policy if exists "auction_rules_acceptance_update" on auction_rules_acceptance;
+create policy "auction_rules_acceptance_update" on auction_rules_acceptance
+  for update using (user_id = auth.uid());
+
 -- ── 6. RPC place_bid — valida e registra o lance de forma atômica ──
 create or replace function place_bid(p_auction_id bigint, p_amount numeric)
 returns auctions
@@ -364,6 +388,13 @@ begin
   select blocked into v_blocked from auction_bidder_flags where user_id = auth.uid();
   if v_blocked then
     raise exception 'Você está temporariamente bloqueado de dar lances por pagamento pendente de uma rodada anterior. Fale com o leiloeiro pra liberar.';
+  end if;
+
+  -- precisa ter aceitado as regras de conduta (versão atual: v1) antes do
+  -- primeiro lance — checado aqui também, não só no popup do front, pra
+  -- não dar pra pular a etapa mexendo direto no client.
+  if not exists(select 1 from auction_rules_acceptance where user_id = auth.uid() and rules_version = 'v1') then
+    raise exception 'Você precisa aceitar as regras do leilão antes de dar o primeiro lance.';
   end if;
 
   select * into v_auction from auctions where id = p_auction_id for update;

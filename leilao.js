@@ -41,6 +41,9 @@ let aucBlockedReason='';
 let aucSelectedCard=null;
 let aucLeiloeiros=[];
 let aucAutoNavigated=false; // evita reabrir a aba toda vez que o hook de login roda
+let aucRulesAccepted=null;  // null=ainda não checou · true/false depois de loadRulesAcceptance()
+let aucPendingBid=null;     // {auctionId,idSuffix} — lance que ficou esperando o aceite das regras
+const AUC_RULES_VERSION='v1'; // precisa bater com a checada em place_bid() no banco (leilao_setup.sql)
 
 // ── SOU LEILOEIRO? (admin principal OU autorizado em auction_admins) ─
 async function resolveLeilaoAdminStatus(){
@@ -91,10 +94,13 @@ async function updateLeilaoTabVisibility(){
 // ── CARREGAR TUDO ───────────────────────────────────────────────
 async function renderLeilaoTab(){
   await resolveLeilaoAdminStatus();
-  const adminWrap=document.getElementById('leilao-admin-wrap');
-  if(adminWrap)adminWrap.style.display=aucIsLeilaoAdmin?'':'none';
+  const subnav=document.getElementById('leilao-subnav');
+  if(subnav)subnav.style.display=aucIsLeilaoAdmin?'flex':'none';
   const superWrap=document.getElementById('leilao-super-admin-wrap');
   if(superWrap)superWrap.style.display=(typeof isAdmin==='function'&&isAdmin())?'':'none';
+  // Quem não é leiloeiro sempre fica na sub-aba "Leilões" (as outras nem
+  // aparecem no menu pra ele); leiloeiro mantém a última sub-aba escolhida.
+  switchLeilaoSubtab(aucIsLeilaoAdmin?(aucActiveSubtab||'leiloes'):'leiloes');
 
   await loadRoundsAndAuctions();
   await loadMyAuctionOrders();
@@ -107,11 +113,49 @@ async function renderLeilaoTab(){
     renderRoundsAdminList();
     await loadAdminAuctionOrders();
     renderAdminOrders();
+    renderLeilaoAnalises();
   }
   if(typeof isAdmin==='function'&&isAdmin()){
     await loadLeiloeiros();
     renderLeiloeirosList();
   }
+}
+
+// ── SUB-MENU (Leilões / Cadastro / Análises — as duas últimas só leiloeiro) ─
+let aucActiveSubtab='leiloes';
+function switchLeilaoSubtab(name){
+  aucActiveSubtab=name;
+  ['leiloes','cadastro','analises'].forEach(n=>{
+    const pane=document.getElementById('leilao-sub-'+n);
+    if(pane)pane.style.display=(n===name)?'':'none';
+    const btn=document.querySelector(`.leilao-subtab-btn[data-sub="${n}"]`);
+    if(btn){
+      if(n===name){btn.style.background='';btn.style.color='';btn.style.border='';}
+      else{btn.style.background='transparent';btn.style.color='var(--text)';btn.style.border='1px solid var(--border)';}
+    }
+  });
+}
+
+// ── ANÁLISES (KPIs simples pro leiloeiro) ─────────────────────────
+function renderLeilaoAnalises(){
+  const wrap=document.getElementById('leilao-analises-kpis');
+  if(!wrap)return;
+  const ativos=aucAuctions.filter(a=>a.status==='ativo').length;
+  const arrematados=aucAuctions.filter(a=>a.status==='encerrado'&&a.winner_id);
+  const totalArrecadado=arrematados.reduce((s,a)=>s+ +a.winning_bid,0);
+  const pendentes=aucAdminOrders.filter(o=>o.status==='aguardando_pagamento');
+  const vencidos=pendentes.filter(o=>aucIsOverdue(o));
+  const totalPendente=pendentes.reduce((s,o)=>s+ +o.amount,0);
+  const kpi=(label,value,color)=>`<div class="panel" style="padding:16px">
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${label}</div>
+    <div style="font-size:22px;font-weight:700;color:${color||'var(--text)'}">${value}</div>
+  </div>`;
+  wrap.innerHTML=
+    kpi('LEILÕES ATIVOS',ativos)+
+    kpi('CARTAS ARREMATADAS',arrematados.length)+
+    kpi('TOTAL ARRECADADO',`R$ ${fmtR(totalArrecadado)}`,'var(--teal)')+
+    kpi('PAGAMENTOS PENDENTES',`${pendentes.length} · R$ ${fmtR(totalPendente)}`,'var(--gold)')+
+    kpi('PAGAMENTOS VENCIDOS',vencidos.length,vencidos.length?'var(--accent)':'var(--text)');
 }
 
 async function loadRoundsAndAuctions(){
@@ -134,15 +178,17 @@ async function loadRoundsAndAuctions(){
 
 async function loadMyAuctionOrders(){
   if(!uid())return;
-  const[{data:orders},{data:addr},{data:flag}]=await Promise.all([
+  const[{data:orders},{data:addr},{data:flag},{data:rules}]=await Promise.all([
     sbClient.from('auction_orders').select('*').eq('buyer_id',uid()).order('created_at',{ascending:false}),
     sbClient.from('user_addresses').select('*').eq('user_id',uid()).maybeSingle(),
-    sbClient.from('auction_bidder_flags').select('*').eq('user_id',uid()).maybeSingle()
+    sbClient.from('auction_bidder_flags').select('*').eq('user_id',uid()).maybeSingle(),
+    sbClient.from('auction_rules_acceptance').select('*').eq('user_id',uid()).maybeSingle()
   ]);
   aucMyOrders=Array.isArray(orders)?orders:[];
   aucAddress=addr||null;
   aucBlocked=!!flag?.blocked;
   aucBlockedReason=flag?.reason||'';
+  aucRulesAccepted=rules?.rules_version===AUC_RULES_VERSION;
   if(aucMyOrders.length){
     const{data:items}=await sbClient.from('auction_order_items').select('*, auctions(card_name,image_url)').in('order_id',aucMyOrders.map(o=>o.id));
     aucMyOrderItems=Array.isArray(items)?items:[];
@@ -441,6 +487,16 @@ function scrollToSharedAuction(){
 async function submitBid(auctionId,idSuffix){
   idSuffix=idSuffix||'';
   if(!uid()){setStatus('Faça login para dar lance','err');return;}
+
+  // Primeiro lance de sempre: precisa aceitar as regras antes. O valor
+  // digitado fica no campo (não é limpo) e o lance é retomado sozinho
+  // assim que a pessoa aceitar — ver acceptLeilaoRules().
+  if(!aucRulesAccepted){
+    aucPendingBid={auctionId,idSuffix};
+    openLeilaoRulesModal();
+    return;
+  }
+
   const input=document.getElementById(`auc-bid-${auctionId}${idSuffix}`);
   const statusEl=document.getElementById(`auc-bid-status-${auctionId}${idSuffix}`);
   const amount=parseFloat(input?.value);
@@ -823,4 +879,56 @@ async function removeLeiloeiro(email){
   setStatus('Leiloeiro removido','ok');
   await loadLeiloeiros();
   renderLeiloeirosList();
+}
+
+// ================================================================
+// REGRAS DO LEILÃO — popup de aceite (12/08/2026)
+// Aparece só na primeira vez que a pessoa tenta dar um lance (não a
+// cada visita à aba). Depois de aceitar, fica salvo em
+// auction_rules_acceptance (banco) — não pergunta de novo, mesmo em
+// outro navegador/dispositivo, a não ser que AUC_RULES_VERSION mude.
+// place_bid() também checa isso no banco (leilao_setup.sql), então não
+// dá pra pular essa etapa mexendo direto no client.
+// ================================================================
+function openLeilaoRulesModal(){
+  const check=document.getElementById('leilao-rules-check');
+  if(check)check.checked=false;
+  const btn=document.getElementById('leilao-rules-accept-btn');
+  if(btn)btn.disabled=true;
+  if(typeof openModal==='function')openModal('leilao-rules-ov');
+}
+
+function toggleLeilaoRulesAccept(){
+  const check=document.getElementById('leilao-rules-check');
+  const btn=document.getElementById('leilao-rules-accept-btn');
+  if(btn)btn.disabled=!check?.checked;
+}
+
+async function acceptLeilaoRules(){
+  if(!uid())return;
+  const check=document.getElementById('leilao-rules-check');
+  if(!check?.checked)return;
+  const btn=document.getElementById('leilao-rules-accept-btn');
+  if(btn){btn.disabled=true;btn.textContent='Salvando...';}
+
+  const{error}=await sbClient.from('auction_rules_acceptance')
+    .upsert({user_id:uid(),rules_version:AUC_RULES_VERSION,accepted_at:new Date().toISOString()},{onConflict:'user_id'});
+
+  if(error){
+    console.error('[leilao] acceptLeilaoRules',error);
+    if(btn){btn.disabled=false;btn.textContent='✓ Li e aceito as regras';}
+    setStatus('Erro ao registrar aceite. Verifique se rodou leilao_setup.sql no Supabase.','err');
+    return;
+  }
+
+  aucRulesAccepted=true;
+  if(typeof closeModal==='function')closeModal('leilao-rules-ov');
+  if(btn){btn.disabled=false;btn.textContent='✓ Li e aceito as regras';}
+
+  // Retoma o lance que ficou esperando o aceite, se houver.
+  if(aucPendingBid){
+    const{auctionId,idSuffix}=aucPendingBid;
+    aucPendingBid=null;
+    submitBid(auctionId,idSuffix);
+  }
 }
