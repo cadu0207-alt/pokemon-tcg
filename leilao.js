@@ -156,6 +156,96 @@ function renderLeilaoAnalises(){
     kpi('TOTAL ARRECADADO',`R$ ${fmtR(totalArrecadado)}`,'var(--teal)')+
     kpi('PAGAMENTOS PENDENTES',`${pendentes.length} · R$ ${fmtR(totalPendente)}`,'var(--gold)')+
     kpi('PAGAMENTOS VENCIDOS',vencidos.length,vencidos.length?'var(--accent)':'var(--text)');
+  renderLeilaoComissao();
+}
+
+// ── COMISSÃO MYDECK (mesmos termos combinados com o leiloeiro, baseados
+// na tabela de comissão decrescente da MYP Cards): 7% padrão em cima da
+// soma de pedidos PAGOS no mês, caindo por faixa conforme essa soma
+// mensal sobe — 6% a partir de R$10k, 5% a partir de R$20k, 4% a partir
+// de R$30k, 3% a partir de R$40k, 2,5% a partir de R$50k, 2% a partir de
+// R$60k, 1,5% a partir de R$70k, 1% a partir de R$80k. Aplicado por
+// FAIXA (progressivo, como imposto por tramo) sobre o total pago no mês
+// — não retroage sobre pedidos já pagos em meses anteriores.
+const AUC_COMMISSION_TIERS=[
+  {upTo:10000, rate:0.07},
+  {upTo:20000, rate:0.06},
+  {upTo:30000, rate:0.05},
+  {upTo:40000, rate:0.04},
+  {upTo:50000, rate:0.03},
+  {upTo:60000, rate:0.025},
+  {upTo:70000, rate:0.02},
+  {upTo:80000, rate:0.015},
+  {upTo:Infinity, rate:0.01}
+];
+
+function aucCommissionBreakdown(total){
+  let remaining=total, prevLimit=0, commission=0;
+  const rows=[];
+  for(const tier of AUC_COMMISSION_TIERS){
+    if(remaining<=0)break;
+    const tierSize=tier.upTo-prevLimit;
+    const amountInTier=Math.min(remaining,tierSize);
+    if(amountInTier>0){
+      const tierCommission=amountInTier*tier.rate;
+      commission+=tierCommission;
+      rows.push({from:prevLimit,to:tier.upTo,rate:tier.rate,amount:amountInTier,commission:tierCommission});
+    }
+    remaining-=amountInTier;
+    prevLimit=tier.upTo;
+  }
+  return{commission,rows,effectiveRate:total>0?commission/total:AUC_COMMISSION_TIERS[0].rate};
+}
+
+function renderLeilaoComissao(){
+  const wrap=document.getElementById('leilao-analises-comissao');
+  if(!wrap)return;
+  const now=new Date();
+  const inicioMes=new Date(now.getFullYear(),now.getMonth(),1);
+  // "Pagos" = todo pedido que já teve o PIX confirmado (pago/enviado/concluído),
+  // no mês corrente, com base em paid_at — mesma lógica de "soma de pedidos
+  // pagos" que a MYP usa pra escalonar a comissão.
+  const pagosMes=aucAdminOrders.filter(o=>
+    ['pago','enviado','concluido'].includes(o.status)&&o.paid_at&&new Date(o.paid_at)>=inicioMes
+  );
+  const totalMes=pagosMes.reduce((s,o)=>s+ +o.amount,0);
+  const{commission,rows,effectiveRate}=aucCommissionBreakdown(totalMes);
+  const liquido=totalMes-commission;
+  const mesLabel=now.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+
+  const kpi=(label,value,color)=>`<div class="panel" style="padding:16px">
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${label}</div>
+    <div style="font-size:22px;font-weight:700;color:${color||'var(--text)'}">${value}</div>
+  </div>`;
+
+  const tabelaFaixas=rows.length?`<table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:11px">
+    <thead><tr style="text-align:left;color:var(--muted);font-family:'Space Mono',monospace;font-size:9px">
+      <th style="padding:4px 6px">FAIXA</th><th style="padding:4px 6px">TAXA</th>
+      <th style="padding:4px 6px;text-align:right">VALOR NA FAIXA</th><th style="padding:4px 6px;text-align:right">COMISSÃO</th>
+    </tr></thead>
+    <tbody>
+      ${rows.map(r=>`<tr style="border-top:1px solid var(--border)">
+        <td style="padding:4px 6px">R$ ${fmtR(r.from)} – ${r.to===Infinity?'∞':'R$ '+fmtR(r.to)}</td>
+        <td style="padding:4px 6px">${(r.rate*100).toFixed(1).replace('.0','')}%</td>
+        <td style="padding:4px 6px;text-align:right">R$ ${fmtR(r.amount)}</td>
+        <td style="padding:4px 6px;text-align:right;color:var(--accent)">R$ ${fmtR(r.commission)}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`:`<div class="cv-item-empty">Nenhum pedido pago ainda em ${esc(mesLabel)}.</div>`;
+
+  wrap.innerHTML=`<div class="kpi-grid" style="margin-bottom:10px">
+      ${kpi('PAGO NO MÊS ('+mesLabel.toUpperCase()+')',`R$ ${fmtR(totalMes)}`,'var(--teal)')}
+      ${kpi('TAXA EFETIVA VIGENTE',`${(effectiveRate*100).toFixed(2)}%`)}
+      ${kpi('COMISSÃO MYDECK',`R$ ${fmtR(commission)}`,'var(--accent)')}
+      ${kpi('LÍQUIDO P/ LEILOEIRO',`R$ ${fmtR(liquido)}`,'var(--gold)')}
+    </div>
+    <div class="panel" style="padding:14px">
+      <div style="font-size:10.5px;color:var(--muted);margin-bottom:4px">
+        Comissão decrescente por faixa de soma de pedidos pagos no mês (mesmos termos combinados com o leiloeiro):
+        7% até R$10k · 6% até R$20k · 5% até R$30k · 4% até R$40k · 3% até R$50k · 2,5% até R$60k · 2% até R$70k · 1,5% até R$80k · 1% acima de R$80k.
+      </div>
+      ${tabelaFaixas}
+    </div>`;
 }
 
 async function loadRoundsAndAuctions(){
