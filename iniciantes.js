@@ -72,6 +72,27 @@ const FAQ_INICIANTES = [
     pergunta: 'Qual a diferença entre Booster, Blister, ETB e Booster Box?',
     resposta:
       '<strong>Booster</strong> = 1 pacotinho individual de cartas (a unidade básica). <strong>Blister</strong> = 2 a 4 boosters embalados juntos, geralmente com 1 carta promocional exclusiva. <strong>ETB (Coleção Treinador Avançado)</strong> = caixa maior com vários boosters + acessórios (sleeves, dados, energia) + 1 promo — ótimo custo-benefício pra quem está montando o kit completo. <strong>Booster Box (Box Display)</strong> = a caixa fechada com todos os boosters de uma tiragem (normalmente 36) — o jeito mais barato por booster, mas exige o maior investimento de uma vez.'
+  },
+  {
+    icon: '🏅',
+    pergunta: 'Vale a pena gradar (PSA, BGS, CGC) minhas cartas?',
+    resposta:
+      'Gradar é mandar a carta pra uma empresa avaliar o estado de conservação e lacrar num case (slab) com uma nota — quanto mais alta, mais valoriza. Existem duas rotas: a <strong>internacional</strong> (PSA, BGS) é o padrão-ouro de reputação e liquidez pra revenda no mercado global, mas custa mais caro (cotado em dólar + frete internacional) e demora meses de fila de triagem. A <strong>nacional</strong> (empresas como MGS, Capy, GBA) é bem mais barata (em torno de R$ 85 por carta), fica pronta em semanas e não tem risco de extravio na alfândega — ótima pra proteger e valorizar os destaques da coleção dentro do Brasil. Na prática, o equilíbrio costuma ser: use a rota internacional pra ativos acima de uns R$ 500 (onde a liquidez global compensa o custo), e a nacional pro resto da coleção que você quer proteger e exibir.' +
+      '<img class="faq-img" src="img/iniciantes/gradacao.jpg" alt="Comparação PSA/BGS (padrão internacional, mais caro, meses de espera, máxima liquidez global) vs gradação nacional MGS/Capy/GBA (mais barata, semanas, sem risco alfandegário)" loading="lazy">'
+  },
+  {
+    icon: '🛒',
+    pergunta: 'Onde comprar Pokémon TCG com segurança no Brasil?',
+    resposta:
+      'Pra produtos lacrados (booster, ETB, booster box), a fonte mais segura é a <strong>Copag</strong>, distribuidora oficial no Brasil — garante lançamento e produto 100% original, sem risco de adulteração. Pra cartas avulsas (singles), o <strong>marketplace da Liga Pokémon</strong> é o maior e mais curado do país — mas ainda assim, sempre confira a reputação do vendedor (procure lojistas com bastante avaliação, idealmente mais de 500) antes de comprar. E pra quem quer atendimento mais próximo e embalagem cuidadosa, lojas especializadas de renome (como Epic Game, Capitão Hunter, Freitas TCG e outras com histórico consolidado) costumam fornecer descrições detalhadas do estado da carta e um pós-venda mais confiável. Evite anúncio aleatório com preço muito abaixo do mercado — é o principal sinal de alerta de golpe ou falsificação.' +
+      '<img class="faq-img" src="img/iniciantes/rotas-compra.jpg" alt="Rotas comerciais seguras no Brasil: Copag como distribuidora oficial, marketplace da Liga Pokémon pra singles, e lojas especializadas de renome" loading="lazy">'
+  },
+  {
+    icon: '📚',
+    pergunta: 'O que fazer com as cartas comuns e repetidas (bulk)?',
+    resposta:
+      'Antes de descartar ou empilhar sem critério, vale separar o bulk em três grupos. Primeiro, veja se a carta <strong>é útil competitivamente</strong> (jogável no meta atual) — se for, separe como "staple" e venda ou ofereça no marketplace da Liga Pokémon, tem demanda de quem joga torneio. Segundo, veja se a <strong>ilustração chama atenção</strong> ou é de um artista específico que você goste — nesse caso, vale montar um fichário temático só com aquelas artes, em vez de misturar tudo. O que sobrar, que é volume puro sem valor aparente, é só armazenamento denso: guarde em caixas de papelão técnicas (tipo BCW, com capacidade de 800 ou 5.000 cartas) e mantenha longe de umidade com uns sachês de sílica gel — assim não ocupa espaço no fichário principal, mas também não se perde nem estraga.' +
+      '<img class="faq-img" src="img/iniciantes/bulk-fluxograma.jpg" alt="Fluxograma de decisão pro bulk: é útil pro meta? venda como staple. A ilustração é boa? crie um binder temático. É só volume? guarde em caixa técnica com sílica" loading="lazy">'
   }
 ];
 
