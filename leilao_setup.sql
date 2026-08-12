@@ -627,3 +627,46 @@ grant execute on function flag_overdue_bidders() to authenticated;
 -- select * from auction_orders order by created_at desc;
 -- select * from auction_order_items;
 -- select * from auction_bidder_flags where blocked;
+
+-- ================================================================
+-- EXCLUSÃO (diferente de cancelar) — 12/08/2026
+-- Cancelar só muda o status (mantém histórico). Excluir apaga de vez:
+-- carta + lances dela, ou a rodada inteira + tudo dentro. Só o leiloeiro
+-- (is_auction_admin) pode chamar — checado no servidor, não só no client.
+-- ================================================================
+
+create or replace function delete_auction(p_auction_id bigint)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_auction_admin() then
+    raise exception 'Apenas leiloeiros podem excluir leilões.';
+  end if;
+  delete from auction_order_items where auction_id = p_auction_id;
+  delete from auction_bids where auction_id = p_auction_id;
+  delete from auctions where id = p_auction_id;
+end;
+$$;
+grant execute on function delete_auction(bigint) to authenticated;
+
+create or replace function delete_auction_round(p_round_id bigint)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_auction_admin() then
+    raise exception 'Apenas leiloeiros podem excluir rodadas.';
+  end if;
+  delete from auction_order_items where auction_id in (select id from auctions where round_id = p_round_id);
+  delete from auction_bids where auction_id in (select id from auctions where round_id = p_round_id);
+  delete from auctions where round_id = p_round_id;
+  delete from auction_orders where round_id = p_round_id;
+  delete from auction_rounds where id = p_round_id;
+end;
+$$;
+grant execute on function delete_auction_round(bigint) to authenticated;

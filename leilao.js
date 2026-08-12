@@ -415,14 +415,26 @@ function aucInfoBlockHtml(a,idSuffix){
     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal)" onclick="shareAuctionPdf(${a.id})">📄 PDF (foto + texto)</button>
       <button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal)" onclick="shareAuctionText(${a.id})">💬 Só texto</button>
+      ${aucIsLeilaoAdmin?`<button class="cv-item-remove" onclick="deleteAuction(${a.id})">🗑️ Excluir leilão</button>`:''}
     </div>`;
+}
+
+// Selo "EM TESTE" sobreposto na foto — mesmo aviso do banner grande do
+// topo, só que direto em cada carta (inclusive quando a foto é
+// compartilhada/print separado, sem o resto da tela).
+function aucTestStampHtml(size){
+  const cfg={sm:{fs:8,w:130,top:6,left:-26},lg:{fs:14,w:200,top:18,left:-42}}[size]||{fs:10,w:150,top:10,left:-30};
+  return`<div style="position:absolute;top:${cfg.top}px;left:${cfg.left}px;width:${cfg.w}px;transform:rotate(-32deg);background:#c0392b;color:#fff;text-align:center;font-size:${cfg.fs}px;font-weight:700;font-family:'Space Mono',monospace;padding:3px 0;box-shadow:0 1px 4px rgba(0,0,0,.4);pointer-events:none;letter-spacing:.5px">EM TESTE</div>`;
 }
 
 function aucCardHtml(a){
   const img=aucImgFor(a);
   return`<div class="panel" style="margin-bottom:14px">
     <div style="display:flex;gap:14px;flex-wrap:wrap">
-      ${img?`<img src="${img}" alt="${esc(a.card_name)}" title="Clique pra ampliar" style="width:100px;border-radius:8px;object-fit:contain;background:var(--surface2);cursor:zoom-in" onclick="openAuctionZoom(${a.id})" onerror="this.style.display='none'">`:''}
+      ${img?`<div style="position:relative;overflow:hidden;border-radius:8px;width:100px">
+        <img src="${img}" alt="${esc(a.card_name)}" title="Clique pra ampliar" style="width:100px;border-radius:8px;object-fit:contain;background:var(--surface2);cursor:zoom-in;display:block" onclick="openAuctionZoom(${a.id})" onerror="this.parentElement.style.display='none'">
+        ${aucTestStampHtml('sm')}
+      </div>`:''}
       <div style="flex:1;min-width:220px">
         ${aucInfoBlockHtml(a,'')}
       </div>
@@ -446,9 +458,10 @@ function renderAuctionZoomContent(a){
   if(!box)return;
   const img=aucImgFor(a);
   box.innerHTML=`<div style="display:flex;flex-wrap:wrap">
-    <div style="flex:1;min-width:240px;background:var(--surface2);display:flex;align-items:center;justify-content:center;padding:24px">
+    <div style="flex:1;min-width:240px;background:var(--surface2);display:flex;align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden">
       ${img?`<img src="${img}" alt="${esc(a.card_name)}" style="max-width:100%;max-height:60vh;object-fit:contain;border-radius:10px" onerror="this.style.display='none'">`
         :`<div style="font-size:60px">🃏</div>`}
+      ${aucTestStampHtml('lg')}
     </div>
     <div style="flex:1;min-width:260px;padding:24px">
       ${aucInfoBlockHtml(a,'-zoom')}
@@ -831,6 +844,7 @@ function renderRoundsAdminList(){
         <div class="cv-item-meta">${cards.length} carta(s) · <span style="color:${st}">${r.status}</span></div>
       </div>
       ${r.status==='agendado'?`<button class="cv-item-remove" onclick="cancelAuctionRound(${r.id})">Cancelar</button>`:''}
+      <button class="cv-item-remove" onclick="deleteAuctionRound(${r.id})">🗑️ Excluir</button>
     </div>`;
   }).join('');
 }
@@ -955,6 +969,37 @@ async function cancelAuction(auctionId){
   await loadRoundsAndAuctions();
   renderAuctionsList();
   renderRoundsAdminList();
+}
+
+// Exclusão DE VERDADE (diferente de cancelar) — apaga a carta e o
+// histórico de lances dela do banco. Só via RPC (delete_auction, ver
+// leilao_setup.sql), que confere is_auction_admin() no servidor — não dá
+// pra excluir mexendo direto no client, mesmo pra outro leiloeiro.
+async function deleteAuction(auctionId){
+  if(!aucIsLeilaoAdmin)return;
+  const a=aucAuctions.find(x=>x.id===auctionId);
+  if(!confirm(`Excluir de vez o leilão "${a?a.card_name:'#'+auctionId}"? Isso apaga a carta e todos os lances dela — não dá pra desfazer.`))return;
+  const{error}=await sbClient.rpc('delete_auction',{p_auction_id:auctionId});
+  if(error){console.error('[leilao] deleteAuction',error);setStatus(error.message||'Erro ao excluir leilão. Verifique se rodou leilao_setup.sql no Supabase.','err');return;}
+  if(aucZoomAuctionId===auctionId){aucZoomAuctionId=null;if(typeof closeModal==='function')closeModal('leilao-zoom-ov');}
+  setStatus('Leilão excluído','ok');
+  await loadRoundsAndAuctions();
+  renderAuctionsList();
+  renderRoundsAdminList();
+}
+
+// Exclusão de uma rodada inteira e tudo dentro dela (cartas, lances,
+// pedidos/carrinhos gerados). Mesma lógica: só via RPC delete_auction_round.
+async function deleteAuctionRound(roundId){
+  if(!aucIsLeilaoAdmin)return;
+  const r=aucRoundById(roundId);
+  if(!confirm(`Excluir de vez a rodada "${r?r.title:'#'+roundId}"? Isso apaga TODAS as cartas, lances e pedidos dela — não dá pra desfazer.`))return;
+  const{error}=await sbClient.rpc('delete_auction_round',{p_round_id:roundId});
+  if(error){console.error('[leilao] deleteAuctionRound',error);setStatus(error.message||'Erro ao excluir rodada. Verifique se rodou leilao_setup.sql no Supabase.','err');return;}
+  setStatus('Rodada excluída','ok');
+  await loadRoundsAndAuctions();
+  await loadAdminAuctionOrders();
+  renderRoundSelect();renderAuctionsList();renderRoundsAdminList();renderAdminOrders();
 }
 
 // ── PAINEL DE PEDIDOS / CARRINHOS (admin) ─────────────────────
