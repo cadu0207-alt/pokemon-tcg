@@ -238,50 +238,96 @@ function renderAuctionsList(){
       ${r.shipping_note?`<div class="mkt-note" style="margin-bottom:14px">🚚 ${esc(r.shipping_note)}</div>`:''}
       ${cards.map(a=>aucCardHtml(a)).join('')}`;
   }).join('');
+  refreshOpenAuctionZoom();
 }
 
-function aucCardHtml(a){
+// idSuffix diferencia os ids de input/status quando a MESMA carta aparece
+// duas vezes na tela ao mesmo tempo (card na lista + zoom aberto) — sem
+// isso os dois formulários de lance colidiriam no mesmo id.
+function aucInfoBlockHtml(a,idSuffix){
+  idSuffix=idSuffix||'';
   const st=aucStatusLabel(a);
-  const img=aucImgFor(a);
   const isActive=a.status==='ativo'&&new Date(a.end_at)>new Date();
   const isOwnAuction=a.created_by===uid();
   const iAmWinning=a.current_bidder===uid();
+  return`<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
+      <b style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.5px">${esc(a.card_name)}</b>
+      <span style="font-size:10px;font-family:'Space Mono',monospace;color:${st.color};border:1px solid ${st.color};border-radius:20px;padding:2px 10px">${st.txt}</span>
+    </div>
+    <div style="font-size:10.5px;color:var(--muted);font-family:'Space Mono',monospace;margin:4px 0">
+      ${AUC_COND_LBL[a.condition]||a.condition} · ${AUC_LANG_LBL[a.language]||a.language}
+      ${a.set_id?` · ${esc(a.set_id.toUpperCase())} #${esc(a.card_n||'')}`:''}
+    </div>
+    ${a.description?`<div style="font-size:11px;color:var(--text);margin-bottom:6px">${esc(a.description)}</div>`:''}
+    <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:8px">
+      <div><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">LANCE ATUAL</div>
+        <div style="font-size:17px;font-weight:700;color:var(--teal)">R$ ${fmtR(a.current_bid||a.starting_price)}</div></div>
+      <div><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">LANCES</div>
+        <div style="font-size:17px;font-weight:700">${a.bid_count||0}</div></div>
+      ${isActive?`<div><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">PRAZO</div>
+        <div style="font-size:13px;font-weight:600;color:var(--gold)">${aucCountdown(a.end_at)}</div></div>`:''}
+    </div>
+    ${iAmWinning&&isActive?`<div style="font-size:10.5px;color:var(--teal);margin-top:6px">✓ Você está na frente</div>`:''}
+    ${isActive&&!isOwnAuction&&!aucBlocked?`
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+        <input type="number" id="auc-bid-${a.id}${idSuffix}" placeholder="Mín. R$ ${fmtR(aucMinNext(a))}" step="0.01" style="width:150px" class="cv-select">
+        <button class="btn-add" onclick="submitBid(${a.id},'${idSuffix}')">🔨 Dar Lance</button>
+      </div>
+      <div style="font-size:9.5px;color:var(--muted);margin-top:4px">Lance é compromisso — não dá pra retirar depois de enviado.</div>
+      <div id="auc-bid-status-${a.id}${idSuffix}" style="font-size:10px;color:var(--accent);margin-top:4px;font-family:'Space Mono',monospace"></div>`:''}
+    ${a.status==='agendado'?`<div style="font-size:10.5px;color:var(--muted);margin-top:6px">Começa em ${new Date(a.start_at).toLocaleString('pt-BR')}</div>`:''}
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal)" onclick="shareAuction(${a.id})">📲 Compartilhar</button>
+    </div>`;
+}
+
+function aucCardHtml(a){
+  const img=aucImgFor(a);
   return`<div class="panel" style="margin-bottom:14px">
     <div style="display:flex;gap:14px;flex-wrap:wrap">
-      ${img?`<img src="${img}" alt="${esc(a.card_name)}" style="width:100px;border-radius:8px;object-fit:contain;background:var(--surface2)" onerror="this.style.display='none'">`:''}
+      ${img?`<img src="${img}" alt="${esc(a.card_name)}" title="Clique pra ampliar" style="width:100px;border-radius:8px;object-fit:contain;background:var(--surface2);cursor:zoom-in" onclick="openAuctionZoom(${a.id})" onerror="this.style.display='none'">`:''}
       <div style="flex:1;min-width:220px">
-        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
-          <b style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.5px">${esc(a.card_name)}</b>
-          <span style="font-size:10px;font-family:'Space Mono',monospace;color:${st.color};border:1px solid ${st.color};border-radius:20px;padding:2px 10px">${st.txt}</span>
-        </div>
-        <div style="font-size:10.5px;color:var(--muted);font-family:'Space Mono',monospace;margin:4px 0">
-          ${AUC_COND_LBL[a.condition]||a.condition} · ${AUC_LANG_LBL[a.language]||a.language}
-          ${a.set_id?` · ${esc(a.set_id.toUpperCase())} #${esc(a.card_n||'')}`:''}
-        </div>
-        ${a.description?`<div style="font-size:11px;color:var(--text);margin-bottom:6px">${esc(a.description)}</div>`:''}
-        <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:8px">
-          <div><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">LANCE ATUAL</div>
-            <div style="font-size:17px;font-weight:700;color:var(--teal)">R$ ${fmtR(a.current_bid||a.starting_price)}</div></div>
-          <div><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">LANCES</div>
-            <div style="font-size:17px;font-weight:700">${a.bid_count||0}</div></div>
-          ${isActive?`<div><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">PRAZO</div>
-            <div style="font-size:13px;font-weight:600;color:var(--gold)">${aucCountdown(a.end_at)}</div></div>`:''}
-        </div>
-        ${iAmWinning&&isActive?`<div style="font-size:10.5px;color:var(--teal);margin-top:6px">✓ Você está na frente</div>`:''}
-        ${isActive&&!isOwnAuction&&!aucBlocked?`
-          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
-            <input type="number" id="auc-bid-${a.id}" placeholder="Mín. R$ ${fmtR(aucMinNext(a))}" step="0.01" style="width:150px" class="cv-select">
-            <button class="btn-add" onclick="submitBid(${a.id})">🔨 Dar Lance</button>
-          </div>
-          <div style="font-size:9.5px;color:var(--muted);margin-top:4px">Lance é compromisso — não dá pra retirar depois de enviado.</div>
-          <div id="auc-bid-status-${a.id}" style="font-size:10px;color:var(--accent);margin-top:4px;font-family:'Space Mono',monospace"></div>`:''}
-        ${a.status==='agendado'?`<div style="font-size:10.5px;color:var(--muted);margin-top:6px">Começa em ${new Date(a.start_at).toLocaleString('pt-BR')}</div>`:''}
-        <div style="margin-top:10px">
-          <button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal)" onclick="shareAuction(${a.id})">📲 Compartilhar</button>
-        </div>
+        ${aucInfoBlockHtml(a,'')}
       </div>
     </div>
   </div>`;
+}
+
+// ── ZOOM (clicar na foto abre a carta ampliada no meio da tela) ──
+let aucZoomAuctionId=null;
+
+function openAuctionZoom(auctionId){
+  const a=aucAuctions.find(x=>x.id===auctionId);
+  if(!a)return;
+  aucZoomAuctionId=auctionId;
+  renderAuctionZoomContent(a);
+  if(typeof openModal==='function')openModal('leilao-zoom-ov');
+}
+
+function renderAuctionZoomContent(a){
+  const box=document.getElementById('leilao-zoom-content');
+  if(!box)return;
+  const img=aucImgFor(a);
+  box.innerHTML=`<div style="display:flex;flex-wrap:wrap">
+    <div style="flex:1;min-width:240px;background:var(--surface2);display:flex;align-items:center;justify-content:center;padding:24px">
+      ${img?`<img src="${img}" alt="${esc(a.card_name)}" style="max-width:100%;max-height:60vh;object-fit:contain;border-radius:10px" onerror="this.style.display='none'">`
+        :`<div style="font-size:60px">🃏</div>`}
+    </div>
+    <div style="flex:1;min-width:260px;padding:24px">
+      ${aucInfoBlockHtml(a,'-zoom')}
+    </div>
+  </div>`;
+}
+
+// Se o zoom estiver aberto quando a lista atualizar (ex: alguém deu lance,
+// ou o próprio timer de fechamento passou), reflete o valor novo sem
+// precisar fechar e reabrir o modal.
+function refreshOpenAuctionZoom(){
+  if(aucZoomAuctionId==null)return;
+  const ov=document.getElementById('leilao-zoom-ov');
+  if(!ov||!ov.classList.contains('open')){aucZoomAuctionId=null;return;}
+  const a=aucAuctions.find(x=>x.id===aucZoomAuctionId);
+  if(a)renderAuctionZoomContent(a);
 }
 
 // ── COMPARTILHAR (link direto + mensagem pronta pro WhatsApp) ────
@@ -395,10 +441,11 @@ function scrollToSharedAuction(){
   },300);
 }
 
-async function submitBid(auctionId){
+async function submitBid(auctionId,idSuffix){
+  idSuffix=idSuffix||'';
   if(!uid()){setStatus('Faça login para dar lance','err');return;}
-  const input=document.getElementById(`auc-bid-${auctionId}`);
-  const statusEl=document.getElementById(`auc-bid-status-${auctionId}`);
+  const input=document.getElementById(`auc-bid-${auctionId}${idSuffix}`);
+  const statusEl=document.getElementById(`auc-bid-status-${auctionId}${idSuffix}`);
   const amount=parseFloat(input?.value);
   if(!amount||amount<=0){if(statusEl)statusEl.textContent='Informe um valor válido.';return;}
 
@@ -419,6 +466,7 @@ async function submitBid(auctionId){
   setStatus('Lance registrado!','ok');
   await loadRoundsAndAuctions();
   renderAuctionsList();
+  refreshOpenAuctionZoom();
 }
 
 // ── MEU ENDEREÇO DE ENTREGA (reaproveita tabela user_addresses) ──

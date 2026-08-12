@@ -644,6 +644,36 @@ h1, .hlogo {
   padding: 0 14px; cursor: pointer; appearance: none;
 }
 
+/* ─── MENU DESKTOP DO FICHÁRIO — 12/08/2026 ─────────────
+   Mesmo padrão visual do .tdesk (topo do site), reaproveitando .tdrop/
+   .tdrop-btn/.tdrop-menu/.tdrop-item/.tdrop-label — só o container muda
+   (não é sticky, vive dentro do conteúdo da aba Fichário). */
+.fic-tdesk { display: none; }
+@media (min-width: 901px) {
+  #binder-tabs { display: none; }
+  .fic-tdesk {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    padding: 8px 10px; margin-bottom: 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+}
+.fic-tdesk .tdrop-menu { min-width: 260px; }
+/* Contador "5/8"/"122" ao lado do nome do grupo ou da coleção */
+.tdrop-count {
+  font-family: 'Space Mono', monospace; font-size: 9px; font-weight: 700;
+  color: var(--muted); margin-left: 4px;
+}
+.tdrop-item.active .tdrop-count { color: inherit; opacity: .85; }
+/* Coleção sem nenhuma carta coletada ainda — apagada até ter a 1ª carta.
+   Ativa (aberta no momento) nunca fica apagada, mesmo com 0 cartas, pra não
+   sumir visualmente o que a pessoa está olhando. */
+.tdrop-item.fic-unowned { opacity: .4; }
+.tdrop-item.fic-unowned:hover { opacity: .8; }
+.tdrop-item.fic-empty-note { cursor: default; opacity: .5; font-style: italic; }
+.tdrop-item.fic-empty-note:hover { background: transparent; color: var(--text2); }
+
 .pane { display: none; padding: 32px 40px; }
 .pane.active { display: block; }
 

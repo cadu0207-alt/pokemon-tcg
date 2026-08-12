@@ -51,6 +51,32 @@ let shareMode=false, shareToken=null;
   if(t){shareMode=true;shareToken=t;}
 })();
 
+// ── ROTEAMENTO POR HASH (13/08/2026) ───────────────────────────────
+// Antes, toda navegação (go()/switchSet()) só trocava classes .active no
+// DOM — a URL nunca mudava. Resultado: impossível compartilhar link direto
+// pra uma aba (#preco, #cartas...) ou pra um fichário específico dentro de
+// Fichário (#fichario/me04, #fichario/__cb__<id>), e o botão voltar do
+// navegador não fazia nada. go() escreve o hash da aba (pushState — cada
+// troca de aba vira uma entrada no histórico); switchSet() escreve o hash
+// do fichário ativo (replaceState — trocar de fichário não empilha
+// histórico, senão o botão voltar vira uma lista de binders visitados).
+// _routingFromHash evita que routeFromHash() reescreva o hash que ela
+// mesma acabou de ler (senão pushState empilharia de novo em loop).
+let _routingFromHash=false;
+function routeFromHash(){
+  if(shareMode) return; // link público (?share=) tem seu próprio fluxo — ver loadSharedBinder()
+  const h=(location.hash||'').replace(/^#/,'');
+  if(!h) return;
+  const[tabId,setId]=h.split('/');
+  const el=document.getElementById('nav-tab-'+tabId);
+  if(!el) return; // hash inválido/antigo — fica no Dashboard (aba padrão)
+  _routingFromHash=true;
+  go(tabId,el);
+  if(tabId==='fichario' && setId) switchSet(decodeURIComponent(setId));
+  _routingFromHash=false;
+}
+window.addEventListener('popstate',routeFromHash);
+
 // ── AUTH ────────────────────────────────────────────────────────
 function uid(){return currentUser?.id||null;}
 
@@ -459,6 +485,10 @@ async function loadAll(){
     // Carrega preços ao vivo para o set inicial
     const{cards:_initCards}=getSetData();
     fetchLivePrices(currentSet,_initCards);
+    // Se a URL já chegou com #aba (link compartilhado, recarregou a página,
+    // favorito etc.), navega pra ela agora que os dados terminaram de
+    // carregar — antes disso o fichário renderizaria sem a coleção do usuário.
+    routeFromHash();
   }catch(e){setStatus('Erro de conexão','error');console.error(e);}
 }
 function setStatus(txt,state){
@@ -542,6 +572,10 @@ function go(id,el){
   if(id==='iniciantes'){if(typeof renderIniciantes==='function')renderIniciantes();}
   if(id==='centralizacao'){if(typeof renderCentralizacao==='function')renderCentralizacao();}
   if(id==='admin'){if(typeof renderAdminTab==='function')renderAdminTab();}
+  if(!shareMode && !_routingFromHash){
+    const h=id==='fichario'?('fichario/'+encodeURIComponent(currentSet||'me04')):id;
+    if(location.hash.replace(/^#/,'')!==h) history.pushState(null,'','#'+h);
+  }
 }
 // NOVO 02/08/2026: navega pra uma aba a partir de QUALQUER lugar do site
 // (não só clicando na .tab em si) — ex: cards do Dashboard que referenciam
@@ -2014,6 +2048,10 @@ function renderTabs(){
 
 function switchSet(id,el){
   currentSet=id;
+  if(!shareMode && !_routingFromHash){
+    const h='fichario/'+encodeURIComponent(id);
+    if(location.hash.replace(/^#/,'')!==h) history.replaceState(null,'','#'+h);
+  }
   renderTabs();
   if(id==='__custom__'){renderCustomBindersHome();return;}
   if(String(id).startsWith('__cb__')){
