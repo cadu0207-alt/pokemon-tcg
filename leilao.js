@@ -64,6 +64,10 @@ async function updateLeilaoTabVisibility(){
   // pagamento) continua restrito a aucIsLeilaoAdmin — ver renderLeilaoTab().
   const show=!!uid();
   btn.style.display=show?'':'none';
+  // ESPELHO 12/08/2026: mesmo toggle no item do menu desktop novo (dentro
+  // de "COMPRA E VENDA E LEILÃO"), senão ele nunca aparece lá.
+  const deskBtn=document.getElementById('desk-tab-leilao');
+  if(deskBtn)deskBtn.style.display=show?'':'none';
   if(!show){
     const pane=document.getElementById('leilao');
     if(pane&&pane.classList.contains('active')&&typeof goToTab==='function')goToTab('dash');
@@ -286,7 +290,43 @@ function aucShareUrl(auctionId){
   return`${base}?leilao=${auctionId}`;
 }
 
-function shareAuction(auctionId){
+// Baixa a imagem da carta como blob, pra poder ir junto no compartilhamento
+// nativo (celular) ou ser copiada pro clipboard (desktop). Pode falhar se o
+// CDN da imagem (scrydex/tcgdex) não liberar CORS pro fetch — nesse caso
+// cai de volta pro compartilhamento só com texto, sem travar nada.
+async function aucFetchImageBlob(url){
+  if(!url)return null;
+  try{
+    const resp=await fetch(url,{mode:'cors'});
+    if(!resp.ok)return null;
+    return await resp.blob();
+  }catch(e){
+    console.warn('[leilao] não deu pra baixar a imagem pra compartilhar (CORS do CDN?)',e);
+    return null;
+  }
+}
+
+// Clipboard.write() só aceita alguns tipos de imagem em navegadores mais
+// antigos/Firefox — reconverte pra PNG via canvas quando precisar. Como o
+// blob já foi baixado pelo fetch acima, o object URL é local (mesma
+// origem), então o canvas não fica "contaminado" mesmo se o CDN original
+// bloqueasse CORS pra <img> direto.
+function aucBlobToPng(blob){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
+      canvas.getContext('2d').drawImage(img,0,0);
+      canvas.toBlob(b=>b?resolve(b):reject(new Error('canvas.toBlob falhou')),'image/png');
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror=reject;
+    img.src=URL.createObjectURL(blob);
+  });
+}
+
+async function shareAuction(auctionId){
   const a=aucAuctions.find(x=>x.id===auctionId);
   if(!a)return;
   const round=aucRoundById(a.round_id);
@@ -298,14 +338,44 @@ function shareAuction(auctionId){
     `💰 Lance atual: R$ ${precoAtual}\n`+
     `⏰ Encerra em: ${prazo}${round?` (${esc(round.title)})`:''}\n\n`+
     `Dá seu lance aqui:\n${url}`;
+
+  const imgBlob=await aucFetchImageBlob(aucImgFor(a));
+
+  // 1) Celular: Web Share API manda foto + texto juntos direto pro WhatsApp,
+  // quando o navegador suporta compartilhar arquivos.
   if(navigator.share){
-    navigator.share({title:`Leilão — ${a.card_name}`,text:msg,url}).catch(()=>{});
-    return;
+    const shareData={title:`Leilão — ${a.card_name}`,text:msg};
+    if(imgBlob&&navigator.canShare){
+      const file=new File([imgBlob],'carta.jpg',{type:imgBlob.type||'image/jpeg'});
+      if(navigator.canShare({files:[file]})){
+        shareData.files=[file];
+      }else{
+        shareData.url=url;
+      }
+    }else{
+      shareData.url=url;
+    }
+    try{await navigator.share(shareData);return;}
+    catch(e){ if(e?.name==='AbortError')return; /* senão cai pro fallback abaixo */ }
+  }
+
+  // 2) Desktop: copia a imagem pro clipboard (se conseguiu baixar) e abre o
+  // WhatsApp Web já com o texto preenchido — só falta colar (Ctrl+V) a
+  // imagem na conversa antes de mandar.
+  let imgCopied=false;
+  if(imgBlob&&navigator.clipboard&&window.ClipboardItem){
+    try{
+      await navigator.clipboard.write([new ClipboardItem({'image/png':await aucBlobToPng(imgBlob)})]);
+      imgCopied=true;
+    }catch(e){console.warn('[leilao] não deu pra copiar a imagem pro clipboard',e);}
   }
   const waUrl=`https://wa.me/?text=${encodeURIComponent(msg)}`;
   window.open(waUrl,'_blank');
-  if(navigator.clipboard)navigator.clipboard.writeText(msg).catch(()=>{});
-  setStatus('Mensagem pronta pro WhatsApp (também copiada)','ok');
+  if(!imgCopied&&navigator.clipboard)navigator.clipboard.writeText(msg).catch(()=>{});
+  setStatus(imgCopied
+    ? 'Imagem copiada — cole com Ctrl+V na conversa do WhatsApp'
+    : (imgBlob===null?'Mensagem pronta pro WhatsApp (não deu pra copiar a imagem automaticamente — baixe e anexe à mão)':'Mensagem pronta pro WhatsApp (também copiada)'),
+    'ok');
 }
 
 // Se a página abriu com ?leilao=<id> (link compartilhado), rola até o card

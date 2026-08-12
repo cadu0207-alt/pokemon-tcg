@@ -519,6 +519,7 @@ function go(id,el){
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(id).classList.add('active');el.classList.add('active');
+  syncDesktopNav(id);
   if(id==='fichario'){
     // Restaura controles se estava em fichário personalizado
     const bctl=document.querySelector('.bctl');if(bctl)bctl.style.display='';
@@ -556,6 +557,21 @@ function go(id,el){
 function goToTab(id){
   const el=document.getElementById('nav-tab-'+id);
   if(el)go(id,el);
+}
+// NOVO 12/08/2026 (menu desktop): espelha o estado "active" na nav nova
+// (.tdrop-item/.tdesk-link + o botão do grupo pai) sempre que go() roda —
+// não importa se a navegação veio de um clique na .tdrop-menu, na .tabs
+// mobile (escondida no desktop) ou de goToTab() disparado por outro lugar
+// da página (cards do Dashboard etc.). Fonte única de verdade: o `id` da
+// aba que acabou de ficar ativa.
+function syncDesktopNav(id){
+  document.querySelectorAll('.tdrop-item.active,.tdesk-link.active,.tdrop-btn.active')
+    .forEach(el=>el.classList.remove('active'));
+  const item=document.querySelector('.tdrop-item[data-tab="'+id+'"],.tdesk-link[data-tab="'+id+'"]');
+  if(!item)return;
+  item.classList.add('active');
+  const group=item.closest('.tdrop');
+  if(group){const btn=group.querySelector('.tdrop-btn');if(btn)btn.classList.add('active');}
 }
 function renderAll(){renderDash();renderGastos();renderCartas();updateDashProgress();if(typeof renderEvolucao==='function')renderEvolucao();renderPatrimonio();}
 

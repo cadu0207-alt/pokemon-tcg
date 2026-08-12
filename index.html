@@ -171,11 +171,57 @@
   <div id="feedback-bar-wrap"></div>
   <div id="global-ctcg-banner-wrap"></div>
 
+  <!-- MENU DESKTOP 12/08/2026: agrupa as abas em 3 menus hover (MYDECK,
+       COMPRA E VENDA E LEILÃO, INICIANTES) pra telas largas — a barra .tabs
+       de baixo tinha ~13 botões e ficava apertada/pouco escaneável no PC.
+       No mobile (≤900px) fica tudo igual: essa nav some via CSS e a .tabs
+       de sempre volta a aparecer, sem mudar nada no comportamento mobile.
+       Cada item chama goToTab(id) — reaproveita o botão original em .tabs
+       (agora invisível no desktop) como fonte de verdade, então toda a lógica
+       de renderX()/active state já existente em go() continua funcionando
+       sem duplicar nada. syncDesktopNav() (app.js) espelha o estado 'active'
+       aqui a cada navegação, venha ela de onde vier. -->
+  <nav class="tdesk" aria-label="Seções do site (desktop)">
+    <div class="tdrop">
+      <button type="button" class="tdrop-btn" data-group="mydeck">MYDECK
+        <svg class="tdrop-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="tdrop-menu">
+        <button type="button" class="tdrop-item" data-tab="dash" onclick="goToTab('dash')">📊 Dashboard</button>
+        <button type="button" class="tdrop-item" data-tab="fichario" onclick="goToTab('fichario')">📚 Fichário</button>
+        <button type="button" class="tdrop-item" data-tab="gastos" onclick="goToTab('gastos')">💸 Gastos</button>
+        <div class="tdrop-label">Ferramentas</div>
+        <button type="button" class="tdrop-item" data-tab="preco" onclick="goToTab('preco')">💰 Preço Justo</button>
+        <button type="button" class="tdrop-item" data-tab="centralizacao" onclick="goToTab('centralizacao')">🎯 Avaliação de Centralização</button>
+      </div>
+    </div>
+    <div class="tdrop">
+      <button type="button" class="tdrop-btn" data-group="cv">COMPRA E VENDA E LEILÃO
+        <svg class="tdrop-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="tdrop-menu">
+        <button type="button" class="tdrop-item" data-tab="cartas" onclick="goToTab('cartas')">📈 Venda de Produtos</button>
+        <button type="button" class="tdrop-item" data-tab="lojas" onclick="goToTab('lojas')">🛍️ Lojas & Ofertas</button>
+        <button type="button" class="tdrop-item" data-tab="mercado" onclick="goToTab('mercado')">🏪 Lojas Confiáveis</button>
+        <button type="button" class="tdrop-item" data-tab="positivo" onclick="goToTab('positivo')">✅ Cadastro Positivo</button>
+        <!-- espelha nav-tab-leilao: só admin vê (updateLeilaoTabVisibility em leilao.js) -->
+        <button type="button" class="tdrop-item" id="desk-tab-leilao" style="display:none" data-tab="leilao" onclick="goToTab('leilao')">🔨 Leilão</button>
+      </div>
+    </div>
+    <button type="button" class="tdesk-link" data-tab="iniciantes" onclick="goToTab('iniciantes')">🔰 INICIANTES</button>
+    <button type="button" class="tdesk-cta" onclick="window.open('simulador.html','_blank')">🎰 Simulador</button>
+    <!-- espelha nav-tab-admin: só Eduardo vê (updateAdminTabVisibility em admin_panel.js) -->
+    <button type="button" class="tdesk-link tdesk-admin" id="desk-tab-admin" style="display:none" data-tab="admin" onclick="goToTab('admin')">🔐 Admin</button>
+  </nav>
+
   <!-- ids nav-tab-* adicionados 02/08/2026 — permitem goToTab(id) (app.js) navegar
        pra aba certa a partir de qualquer clique fora do <nav> (cards do Dashboard
        etc.), marcando a aba como ativa igual um clique nela mesma. -->
   <!-- ACESSIBILIDADE 03/08/2026 (auditoria): abas eram <div> — invisíveis pra
-       teclado (Tab) e leitores de tela. Viraram <button>, mantendo classes/ids. -->
+       teclado (Tab) e leitores de tela. Viraram <button>, mantendo classes/ids.
+       NAV MOBILE 12/08/2026: agora só aparece ≤900px (CSS .tdesk/.tabs) — no
+       desktop essa barra fica escondida mas ainda existe no DOM como fonte de
+       verdade pro goToTab()/go(), ver comentário acima. -->
   <nav class="tabs" aria-label="Seções do site">
     <button type="button" class="tab active" id="nav-tab-dash" onclick="go('dash',this)">📊 Dashboard</button>
     <button type="button" class="tab" id="nav-tab-fichario" onclick="go('fichario',this)">📚 Fichário</button>

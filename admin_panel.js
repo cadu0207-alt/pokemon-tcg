@@ -30,6 +30,9 @@ function updateAdminTabVisibility() {
   if (!btn) return;
   const show = typeof isAdmin === 'function' && isAdmin();
   btn.style.display = show ? '' : 'none';
+  // ESPELHO 12/08/2026: mesmo toggle no botão "🔐 Admin" do menu desktop novo.
+  const deskBtn = document.getElementById('desk-tab-admin');
+  if (deskBtn) deskBtn.style.display = show ? '' : 'none';
   if (!show) {
     // Se por algum motivo a aba Admin estava ativa (ex: sessão expirou/
     // trocou de conta) e o usuário deixou de ser admin, volta pro Dashboard

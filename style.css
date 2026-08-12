@@ -550,6 +550,100 @@ h1, .hlogo {
   box-shadow: 0 2px 12px rgba(230,57,70,.12), inset 0 1px 0 rgba(255,255,255,.06);
 }
 
+/* ─── MENU DESKTOP (dropdowns hover) — 12/08/2026 ───────
+   Some abaixo de 901px (mobile usa .tabs, sem mudanças). Acima disso,
+   substitui .tabs visualmente — .tabs continua no DOM (display:none) como
+   fonte de verdade pro go()/goToTab(), ver comentário no index.html. */
+.tdesk { display: none; }
+@media (min-width: 901px) {
+  .tabs { display: none; }
+  .tdesk {
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+    padding: 0 32px;
+    height: 46px;
+    background: rgba(255,255,255,.96);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 73px;
+    z-index: 150;
+  }
+}
+[data-theme="dark"] .tdesk { background: rgba(17,20,34,.96); }
+
+.tdrop { position: relative; display: flex; align-items: stretch; }
+/* ponte invisível entre o botão e o menu — sem ela, mover o mouse na
+   diagonal até o menu passa por "fora" de ambos e fecha o dropdown */
+.tdrop::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 10px; }
+
+.tdrop-btn {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'Space Mono', monospace;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--muted);
+  background: transparent; border: 1px solid transparent; border-radius: 6px;
+  padding: 0 14px; margin: 7px 0;
+  cursor: pointer; appearance: none;
+  transition: all .15s ease;
+}
+.tdrop:hover .tdrop-btn, .tdrop-btn:focus-visible { color: var(--text2); background: rgba(0,0,0,.04); }
+.tdrop-btn.active { color: var(--accent); background: rgba(230,57,70,.1); border-color: rgba(230,57,70,.25); }
+.tdrop-caret { transition: transform .2s ease; flex-shrink: 0; }
+.tdrop:hover .tdrop-caret { transform: rotate(180deg); }
+
+.tdrop-menu {
+  position: absolute; top: 100%; left: 0; margin-top: 8px; min-width: 250px;
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 14px 36px rgba(0,0,0,.22);
+  padding: 8px;
+  opacity: 0; visibility: hidden; transform: translateY(-6px);
+  transition: opacity .15s ease, transform .15s ease, visibility .15s;
+}
+.tdrop:hover .tdrop-menu, .tdrop:focus-within .tdrop-menu {
+  opacity: 1; visibility: visible; transform: translateY(0);
+}
+.tdrop-item {
+  text-align: left;
+  font-family: 'DM Sans', sans-serif; font-size: 12.5px; font-weight: 600;
+  color: var(--text2);
+  background: transparent; border: none; border-radius: 6px;
+  padding: 9px 12px; cursor: pointer; white-space: nowrap;
+  transition: all .12s ease;
+  appearance: none;
+}
+.tdrop-item:hover, .tdrop-item:focus-visible { background: rgba(230,57,70,.08); color: var(--accent); }
+.tdrop-item.active { background: rgba(230,57,70,.12); color: var(--accent); font-weight: 700; }
+.tdrop-label {
+  font-family: 'Space Mono', monospace; font-size: 9px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase; color: var(--muted);
+  padding: 10px 12px 2px; margin-top: 4px; border-top: 1px solid var(--border);
+}
+.tdrop-menu .tdrop-label:first-child { border-top: none; margin-top: 0; padding-top: 2px; }
+
+.tdesk-link {
+  display: flex; align-items: center;
+  font-family: 'Space Mono', monospace;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--muted);
+  background: transparent; border: 1px solid transparent; border-radius: 6px;
+  padding: 0 14px; margin: 7px 0; cursor: pointer; appearance: none;
+  transition: all .15s ease;
+}
+.tdesk-link:hover, .tdesk-link:focus-visible { color: var(--text2); background: rgba(0,0,0,.04); }
+.tdesk-link.active { color: var(--accent); background: rgba(230,57,70,.1); border-color: rgba(230,57,70,.25); }
+.tdesk-admin.active, .tdesk-admin:hover { color: var(--gold); background: rgba(255,209,102,.1); }
+
+.tdesk-cta {
+  display: flex; align-items: center; margin: 7px 0 7px auto;
+  font-family: 'Space Mono', monospace;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 1px;
+  color: #c084fc;
+  background: linear-gradient(90deg,#7b2ff744,#f107a322); border: none; border-radius: 6px;
+  padding: 0 14px; cursor: pointer; appearance: none;
+}
+
 .pane { display: none; padding: 32px 40px; }
 .pane.active { display: block; }
 
