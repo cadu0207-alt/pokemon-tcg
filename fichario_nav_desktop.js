@@ -105,11 +105,19 @@
       const isActive=cur===s.id;
       const owned=!s.upcoming&&fmSetHasAnyCard(s.id);
       const fade=(owned||isActive)?'':' fic-unowned';
-      const lbl=fmNiceSetLabel(s.id);
-      const niceName=(s.label.split('—')[1]||'').trim();
+      const niceName=(s.label.split('—')[1]||fmNiceSetLabel(s.id)).trim();
+      // ATUALIZADO 12/08/2026: mesmo tratamento do card em "Coleções Gerais" —
+      // logo oficial da coleção (imgSetLogo, app.js) em vez do emoji genérico,
+      // com fallback pro emoji se a Scrydex não tiver essa expansion ainda.
+      const logoUrl=typeof imgSetLogo==='function'?imgSetLogo(s.id):'';
       return`<button type="button" class="tdrop-item${isActive?' active':''}${fade}" data-tab="${s.id}"
-        onclick="switchSet('${s.id}',null)">
-        ${s.emoji} ${lbl}${niceName?` <span class="ctab-name">${niceName}</span>`:''}
+        onclick="switchSet('${s.id}',null)" style="display:flex;align-items:center;gap:7px">
+        <span style="width:18px;height:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
+          <img src="${logoUrl}" alt="" loading="lazy" style="max-width:18px;max-height:14px;object-fit:contain"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
+          <span style="display:none;font-size:12px;line-height:1">${s.emoji}</span>
+        </span>
+        <span style="flex:1">${niceName}</span>
         <span class="tdrop-count">${s.upcoming?'breve':s.cards}</span></button>`;
     }).join('');
     return`<div class="tdrop">

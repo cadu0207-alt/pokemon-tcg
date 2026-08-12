@@ -246,10 +246,15 @@ window.renderCustomBindersHome=function(){
     </div>`;
   }).join('');
 
+  // ATUALIZADO 12/08/2026: pedido do Eduardo — em vez do código (ME06/SV10),
+  // mostra a arte oficial da coleção (imgSetLogo, app.js) com o nome completo
+  // embaixo. onerror troca a imagem pelo emoji de sempre (sets sem logo
+  // publicada ainda na Scrydex, como o me06 upcoming, ou qualquer set legado
+  // que a Scrydex não tenha catalogado — nunca deixa buraco em branco).
   function setCard(s){
     const on=myCollections.includes(s.id);
-    const lbl=s.id.toUpperCase().replace('SV8PT5','SV8.5').replace('SV6PT5','SV6.5')
-                  .replace('SV4PT5','SV4.5').replace('SV3PT5','151');
+    const niceName=(s.label.split('—')[1]||s.id.toUpperCase()).trim();
+    const logoUrl=typeof imgSetLogo==='function'?imgSetLogo(s.id):'';
     return`<div onclick="toggleCollection('${s.id}')"
       style="padding:10px;border-radius:8px;cursor:pointer;transition:all .18s;
              border:1px solid ${on?s.color:'var(--border)'};
@@ -257,8 +262,13 @@ window.renderCustomBindersHome=function(){
              border-left:3px solid ${s.color};user-select:none"
       onmouseover="this.style.transform='translateY(-2px)'"
       onmouseout="this.style.transform=''">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px">
-        <span style="font-size:18px;line-height:1">${s.emoji}</span>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div style="height:32px;max-width:78%;display:flex;align-items:center">
+          <img src="${logoUrl}" alt="${esc(niceName)}" loading="lazy"
+               style="max-height:32px;max-width:100%;object-fit:contain;display:block;${s.upcoming?'opacity:.5;filter:grayscale(1);':''}"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
+          <span style="display:none;font-size:18px;line-height:1">${s.emoji}</span>
+        </div>
         <div style="width:15px;height:15px;border-radius:50%;flex-shrink:0;
                     border:2px solid ${on?s.color:'var(--muted)'};
                     background:${on?s.color:'transparent'};
@@ -267,7 +277,7 @@ window.renderCustomBindersHome=function(){
           ${on?'✓':''}</div>
       </div>
       <div style="font-size:10px;font-weight:700;color:${on?'var(--text)':'var(--muted)'};
-                  line-height:1.2;margin-bottom:2px">${lbl}</div>
+                  line-height:1.25;margin-bottom:2px">${esc(niceName)}</div>
       <div style="font-size:8px;font-family:'Space Mono',monospace;
                   color:${on?s.color:'var(--muted)'};line-height:1.3">
         ${s.upcoming?'breve':s.cards+' cartas'}</div>

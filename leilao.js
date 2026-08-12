@@ -424,21 +424,18 @@ async function shareAuction(auctionId){
     'ok');
 }
 
-// Se a página abriu com ?leilao=<id> (link compartilhado), rola até o card
-// assim que a lista renderizar.
+// Se a página abriu com ?leilao=<id> (link compartilhado), abre a carta
+// já ampliada (zoom) assim que a lista carregar — só uma vez por sessão de
+// página, senão reabriria toda vez que renderLeilaoTab() rodar de novo.
+let aucSharedZoomOpened=false;
 function scrollToSharedAuction(){
-  const params=new URLSearchParams(window.location.search);
-  const id=params.get('leilao');
+  if(aucSharedZoomOpened)return;
+  const id=parseInt(new URLSearchParams(window.location.search).get('leilao'));
   if(!id)return;
-  setTimeout(()=>{
-    const btn=Array.from(document.querySelectorAll(`[onclick="submitBid(${id})"]`))[0];
-    const card=btn?btn.closest('.panel'):null;
-    if(card){
-      card.scrollIntoView({behavior:'smooth',block:'center'});
-      card.style.outline='2px solid var(--teal)';
-      setTimeout(()=>{card.style.outline='';},2500);
-    }
-  },300);
+  const a=aucAuctions.find(x=>x.id===id);
+  if(!a)return;
+  aucSharedZoomOpened=true;
+  openAuctionZoom(id);
 }
 
 async function submitBid(auctionId,idSuffix){

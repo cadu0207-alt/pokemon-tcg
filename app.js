@@ -151,6 +151,18 @@ function imgMe06(n){return`https://images.scrydex.com/pokemon/me6-${parseInt(n)}
 // de cada carta), diferente do padrão "me5-N" dos outros ME — aqui é "me2pt5-N" mesmo.
 function imgMe2pt5(n){return`https://images.scrydex.com/pokemon/me2pt5-${parseInt(n)}/large`;}
 function imgMeg(n) {return`https://images.scrydex.com/pokemon/me1-${parseInt(n)}/large`;}
+// LOGO DA COLEÇÃO (12/08/2026) — pedido do Eduardo: mostrar a arte oficial de
+// cada set em vez do código (ME06/SV10/etc). Confirmado na doc pública da
+// Scrydex (scrydex.com/docs/pokemon/expansions) que o id interno que a gente
+// já usa pra imagem de carta (me4, sv10, swsh12pt5gg, sm115...) é o MESMO id
+// de expansion da API deles, e o logo sempre segue esse padrão fixo:
+//   https://images.scrydex.com/pokemon/{id}-logo/logo
+// Confirmado batendo a tabela pública scrydex.com/pokemon/expansions contra
+// TODOS os ids do nosso SET_CATALOG/LEGACY_SETS — bate 100%. Sets que ainda
+// não têm expansion na Scrydex (ex: me06, upcoming) simplesmente dão 404 —
+// quem usa isso precisa de <img onerror> com um fallback (emoji), nunca
+// assumir que a imagem existe.
+function imgSetLogo(id){return`https://images.scrydex.com/pokemon/${id}-logo/logo`;}
 // Overrides pra cartas MEP que o pkmncards.com (URL genérica abaixo) não tem —
 // achadas individualmente em 16/07/2026 checando site por site (pkmncards não
 // cataloga essas ainda, provavelmente por serem promos muito recentes/exclusivas).
