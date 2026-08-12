@@ -264,10 +264,16 @@ window.renderCustomBindersHome=function(){
       onmouseout="this.style.transform=''">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
         <div style="height:32px;max-width:78%;display:flex;align-items:center">
-          <img src="${logoUrl}" alt="${esc(niceName)}" loading="lazy"
-               style="max-height:32px;max-width:100%;object-fit:contain;display:block;${s.upcoming?'opacity:.5;filter:grayscale(1);':''}"
+          ${s.upcoming
+            // Set ainda não lançado = sem expansion na Scrydex ainda, e o CDN
+            // deles responde 200 com uma arte genérica em vez de 404 pra id
+            // inexistente (não dá pra confiar no onerror aqui) — nem tenta
+            // carregar, vai direto pro emoji.
+            ?`<span style="font-size:18px;line-height:1">${s.emoji}</span>`
+            :`<img src="${logoUrl}" alt="${esc(niceName)}" loading="lazy"
+               style="max-height:32px;max-width:100%;object-fit:contain;display:block"
                onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
-          <span style="display:none;font-size:18px;line-height:1">${s.emoji}</span>
+          <span style="display:none;font-size:18px;line-height:1">${s.emoji}</span>`}
         </div>
         <div style="width:15px;height:15px;border-radius:50%;flex-shrink:0;
                     border:2px solid ${on?s.color:'var(--muted)'};

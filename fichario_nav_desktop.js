@@ -110,12 +110,19 @@
       // logo oficial da coleção (imgSetLogo, app.js) em vez do emoji genérico,
       // com fallback pro emoji se a Scrydex não tiver essa expansion ainda.
       const logoUrl=typeof imgSetLogo==='function'?imgSetLogo(s.id):'';
+      // Set upcoming = sem expansion na Scrydex ainda; o CDN deles devolve 200
+      // com arte genérica pra id inexistente em vez de 404, então o onerror
+      // não pega — nem tenta carregar, vai direto pro emoji (mesma lógica do
+      // setCard em fichario_accordion.js).
+      const iconHtml=s.upcoming
+        ?`<span style="font-size:12px;line-height:1">${s.emoji}</span>`
+        :`<img src="${logoUrl}" alt="" loading="lazy" style="max-width:18px;max-height:14px;object-fit:contain"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
+          <span style="display:none;font-size:12px;line-height:1">${s.emoji}</span>`;
       return`<button type="button" class="tdrop-item${isActive?' active':''}${fade}" data-tab="${s.id}"
         onclick="switchSet('${s.id}',null)" style="display:flex;align-items:center;gap:7px">
         <span style="width:18px;height:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center">
-          <img src="${logoUrl}" alt="" loading="lazy" style="max-width:18px;max-height:14px;object-fit:contain"
-               onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
-          <span style="display:none;font-size:12px;line-height:1">${s.emoji}</span>
+          ${iconHtml}
         </span>
         <span style="flex:1">${niceName}</span>
         <span class="tdrop-count">${s.upcoming?'breve':s.cards}</span></button>`;

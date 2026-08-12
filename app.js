@@ -153,16 +153,25 @@ function imgMe2pt5(n){return`https://images.scrydex.com/pokemon/me2pt5-${parseIn
 function imgMeg(n) {return`https://images.scrydex.com/pokemon/me1-${parseInt(n)}/large`;}
 // LOGO DA COLEÇÃO (12/08/2026) — pedido do Eduardo: mostrar a arte oficial de
 // cada set em vez do código (ME06/SV10/etc). Confirmado na doc pública da
-// Scrydex (scrydex.com/docs/pokemon/expansions) que o id interno que a gente
-// já usa pra imagem de carta (me4, sv10, swsh12pt5gg, sm115...) é o MESMO id
-// de expansion da API deles, e o logo sempre segue esse padrão fixo:
-//   https://images.scrydex.com/pokemon/{id}-logo/logo
-// Confirmado batendo a tabela pública scrydex.com/pokemon/expansions contra
-// TODOS os ids do nosso SET_CATALOG/LEGACY_SETS — bate 100%. Sets que ainda
-// não têm expansion na Scrydex (ex: me06, upcoming) simplesmente dão 404 —
-// quem usa isso precisa de <img onerror> com um fallback (emoji), nunca
-// assumir que a imagem existe.
-function imgSetLogo(id){return`https://images.scrydex.com/pokemon/${id}-logo/logo`;}
+// Scrydex (scrydex.com/docs/pokemon/expansions) que o logo sempre segue esse
+// padrão fixo: https://images.scrydex.com/pokemon/{expansion-id}-logo/logo
+// Bate 100% com o id interno do SET_CATALOG/LEGACY_SETS PRA QUASE TUDO — SV,
+// SWSH, SM, XY, BW, HGSS, DP, EX, clássicos. EXCEÇÃO: os sets ME02–ME06/MEG
+// (esses SIM têm id de expansion diferente do id interno do site — o mesmo
+// motivo pelo qual imgMe04/imgMe03/imgMe02/imgMe05/imgMe06/imgMeg acima usam
+// "me4"/"me3"/"me2"/"me5"/"me6"/"me1" em vez de "me04"/"me03"/"me02"/"me05"/
+// "me06"/"meg"). CORRIGIDO 12/08/2026: a primeira versão desta função ignorou
+// essa exceção e usava o id interno puro — resultado: essas 6 coleções
+// carregavam um logo genérico "Pokémon TCG" (a Scrydex responde 200 com uma
+// arte placeholder pra id de expansion que não existe, em vez de 404, então
+// o <img onerror> nunca disparava pra pegar o emoji de fallback). ME2PT5 e
+// MEP não entram na exceção — o id interno já bate com o da Scrydex nesses
+// dois.
+const SET_LOGO_ID_OVERRIDES={me06:'me6',me05:'me5',me04:'me4',me03:'me3',me02:'me2',meg:'me1'};
+function imgSetLogo(id){
+  const sid=SET_LOGO_ID_OVERRIDES[id]||id;
+  return`https://images.scrydex.com/pokemon/${sid}-logo/logo`;
+}
 // Overrides pra cartas MEP que o pkmncards.com (URL genérica abaixo) não tem —
 // achadas individualmente em 16/07/2026 checando site por site (pkmncards não
 // cataloga essas ainda, provavelmente por serem promos muito recentes/exclusivas).
