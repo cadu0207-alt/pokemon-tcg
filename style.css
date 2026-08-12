@@ -657,7 +657,12 @@ h1, .hlogo {
    (não é sticky, vive dentro do conteúdo da aba Fichário). */
 .fic-tdesk { display: none; }
 @media (min-width: 901px) {
-  #binder-tabs { display: none; }
+  /* !important necessário: #binder-tabs tem style="display:flex" inline no
+     index.html (pro mobile funcionar sem depender de CSS carregar) — estilo
+     inline sempre vence regra externa, então sem isso essa regra nunca
+     escondia a barra antiga no desktop (12/08/2026, relatado pelo Eduardo:
+     os dois menus apareciam juntos). */
+  #binder-tabs { display: none !important; }
   .fic-tdesk {
     display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
     padding: 8px 10px; margin-bottom: 14px;
