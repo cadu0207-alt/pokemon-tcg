@@ -30,13 +30,18 @@ async function renderUpdatesLog() {
     '</div>' +
     '<div class="updates-log-collapsed-btn" onclick="toggleUpdatesLogCollapse()" title="Ver atualizações">✉️ Mensagens e Atualizações</div>';
 
-  // Restaura o estado (aberto/minimizado) salvo da última visita
-  let wasCollapsed = false;
-  try { wasCollapsed = localStorage.getItem('updatesLogCollapsed') === '1'; } catch (e) {}
+  // Restaura o estado (aberto/minimizado) salvo da última visita — padrão é
+  // minimizado (CORRIGIDO 12/08/2026: começar aberto cobria a tela toda de
+  // primeira; agora só o "envelope" no canto, igual era antes do card ficar
+  // maior por causa das novas seções).
+  let wasCollapsed = true;
+  try {
+    const saved = localStorage.getItem('updatesLogCollapsed');
+    if (saved !== null) wasCollapsed = saved === '1';
+  } catch (e) {}
   holder.classList.toggle('updates-log-collapsed', wasCollapsed);
 
   await loadUpdatesList();
-  positionUpdatesLogPanel();
 }
 
 // ── PAINEL ADMIN — publicar atualização (aba Admin) ────────────────
