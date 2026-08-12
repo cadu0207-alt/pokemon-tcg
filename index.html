@@ -187,6 +187,11 @@
     <button type="button" class="tab" id="nav-tab-positivo" onclick="go('positivo',this)">✅ Cadastro Positivo</button>
     <button type="button" class="tab" id="nav-tab-iniciantes" onclick="go('iniciantes',this)">🔰 Iniciantes</button>
     <button type="button" class="tab" id="nav-tab-centralizacao" onclick="go('centralizacao',this)">🎯 Avaliação de Centralização</button>
+    <!-- LEILÃO 12/08/2026: fase de testes — só visível pro Eduardo (isAdmin(),
+         lojas.js), igual o padrão da aba Admin abaixo. display:none aqui é o
+         estado padrão/seguro; leilao.js mostra via JS. Pra abrir pra todos os
+         usuários registrados, trocar a condição em updateLeilaoTabVisibility(). -->
+    <button type="button" class="tab" id="nav-tab-leilao" style="display:none" onclick="go('leilao',this)">🔨 Leilão</button>
     <!-- ADMIN 11/08/2026: aba própria, só visível pro Eduardo (isAdmin(), lojas.js)
          — display:none aqui é o estado padrão/seguro; admin_panel.js mostra via JS
          só depois de confirmar o e-mail logado (cadu0207@gmail.com). -->
@@ -460,6 +465,142 @@
   <!-- ===== ABA AVALIAÇÃO DE CENTRALIZAÇÃO (ferramenta pré-graduação) ===== -->
   <div id="centralizacao" class="pane">
     <div id="centralizacao-wrap"></div>
+  </div>
+
+  <!-- ===== ABA LEILÃO (12/08/2026) =====
+       Fase de testes: só visível pro Eduardo (nav-tab-leilao, ver leilao.js).
+       Leiloeiro cadastra a carta (busca no catálogo já puxa a foto), define
+       preço inicial, incremento mínimo, reserva opcional e prazo. Participantes
+       precisam de conta MyDeck + endereço de entrega cadastrado pra dar lance.
+       Pagamento é PIX direto ao leiloeiro fora do site; envio por conta do
+       comprador. Regras anti-fraude: incremento mínimo obrigatório entre
+       lances + extensão automática do prazo se alguém dá lance nos últimos
+       minutos (anti-sniping) — tudo validado no banco (leilao_setup.sql),
+       nunca só no client. -->
+  <div id="leilao" class="pane">
+    <div class="sec-title" style="margin-top:0">🔨 Leilão</div>
+
+    <div id="leilao-admin-wrap" style="display:none">
+      <div class="mkt-note">
+        Painel do leiloeiro. Fluxo: 1) crie uma <b>rodada</b> (define o prazo dos lances e o prazo
+        de pagamento — todas as cartas dela fecham juntas e viram UM pedido/PIX por comprador);
+        2) cadastre as cartas dentro da rodada (a busca já puxa foto/número do catálogo).
+      </div>
+      <div class="mkt-grid">
+        <div class="panel">
+          <div class="panel-t">🗓️ Nova Rodada</div>
+          <div class="ff"><label>Nome da rodada *</label><input id="leilao-round-title" placeholder="Ex: Rodada 7"></div>
+          <div class="ff"><label>Início dos lances *</label><input type="datetime-local" id="leilao-round-inicio"></div>
+          <div class="ff"><label>Término dos lances *</label><input type="datetime-local" id="leilao-round-fim"></div>
+          <div class="ff"><label>Prazo de pagamento *</label><input type="datetime-local" id="leilao-round-pagamento"></div>
+          <div class="ff"><label>Condições de envio (texto livre, opcional)</label><textarea id="leilao-round-frete" rows="2" placeholder="Ex: Frete grátis acima de R$300 (transportadora). Envio por conta do comprador."></textarea></div>
+          <button class="btn-add" onclick="createAuctionRound()">✓ Criar Rodada</button>
+          <div id="leilao-round-status" style="font-size:10px;color:var(--teal);font-family:'Space Mono',monospace;margin-top:8px"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-t">📋 Rodadas</div>
+          <div id="leilao-admin-rounds" class="cv-list"></div>
+        </div>
+      </div>
+
+      <div class="mkt-grid" style="margin-top:18px">
+        <div class="panel">
+          <div class="panel-t">🃏 Cadastrar Carta em Leilão</div>
+          <div class="ff"><label>Rodada *</label><select id="leilao-admin-round"></select></div>
+          <div class="ff"><label>Buscar carta no catálogo (opcional — preenche foto/número)</label>
+            <input id="leilao-admin-search" placeholder="Nome da carta..." oninput="searchAuctionCards()">
+          </div>
+          <div id="leilao-admin-search-results" class="cv-list" style="max-height:220px;overflow:auto;margin-bottom:10px"></div>
+          <div id="leilao-admin-preview" style="display:none;gap:10px;align-items:center;margin-bottom:10px"></div>
+
+          <div class="ff"><label>Nome da carta *</label><input id="leilao-admin-nome" placeholder="Ex: Charizard SAR"></div>
+          <div class="ff"><label>Condição</label>
+            <select id="leilao-admin-cond">
+              <option value="M">Mint</option>
+              <option value="NM">Quase Nova (NM)</option>
+              <option value="MP">Levemente Jogada (MP)</option>
+              <option value="D">Danificada (D)</option>
+            </select>
+          </div>
+          <div class="ff"><label>Idioma</label>
+            <select id="leilao-admin-lang">
+              <option value="pt-BR">🇧🇷 Português</option>
+              <option value="en">🇺🇸 Inglês</option>
+              <option value="ja">🇯🇵 Japonês</option>
+            </select>
+          </div>
+          <div class="ff"><label>Descrição (opcional)</label><textarea id="leilao-admin-desc" rows="2" placeholder="Estado, detalhes, centralização..."></textarea></div>
+          <div class="ff"><label>Preço inicial (R$) *</label><input type="number" id="leilao-admin-preco" step="0.01" min="0.01"></div>
+          <div class="ff"><label>Incremento mínimo entre lances (R$)</label><input type="number" id="leilao-admin-incremento" step="0.01" value="5"></div>
+          <div class="ff"><label>Preço de reserva (opcional — mínimo pra vender, fica oculto)</label><input type="number" id="leilao-admin-reserva" step="0.01"></div>
+          <div class="ff"><label>Extensão anti-sniping (min. antes do fim que estende o prazo)</label><input type="number" id="leilao-admin-antisnipe" value="3" min="0" max="30"></div>
+          <div style="font-size:9.5px;color:var(--muted);margin-bottom:8px">A carta herda o início/término da rodada escolhida acima.</div>
+          <button class="btn-add" onclick="publishAuction()">🔨 Adicionar Carta à Rodada</button>
+          <div id="leilao-admin-status" style="font-size:10px;color:var(--teal);font-family:'Space Mono',monospace;margin-top:8px"></div>
+        </div>
+      </div>
+
+      <div class="sec-title">📦 Pedidos / Carrinhos do Leilão</div>
+      <div id="leilao-admin-orders"></div>
+
+      <div id="leilao-super-admin-wrap" style="display:none">
+        <div class="sec-title">👥 Leiloeiros Autorizados</div>
+        <div class="mkt-note">
+          Quem estiver aqui ganha os mesmos poderes de leiloeiro (criar rodada, cadastrar carta,
+          marcar pagamento) sem virar admin geral do site. A pessoa precisa ter feito login no
+          MyDeck pelo menos uma vez antes de ser autorizada.
+        </div>
+        <div class="panel">
+          <div class="ff"><label>E-mail da pessoa</label><input id="leilao-leiloeiro-email" placeholder="nome@exemplo.com"></div>
+          <button class="btn-add" onclick="addLeiloeiro()">✓ Autorizar como Leiloeiro</button>
+          <div id="leilao-leiloeiro-status" style="font-size:10px;color:var(--teal);font-family:'Space Mono',monospace;margin-top:8px"></div>
+          <div id="leilao-leiloeiros-list" class="cv-list" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-title" style="margin-top:0">🔥 Leilões Vigentes</div>
+    <div id="leilao-list"></div>
+
+    <div class="mkt-grid" style="margin-top:24px">
+      <div class="panel">
+        <div class="panel-t">📍 Meu Endereço de Entrega</div>
+        <div style="font-size:10.5px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:12px">
+          Obrigatório antes de dar o primeiro lance — é pra onde a carta vai se você arrematar.
+          Envio por conta do comprador.
+        </div>
+        <div class="ff"><label>CEP</label><input id="auc-addr-cep" placeholder="00000-000"></div>
+        <div class="ff"><label>Rua/Logradouro *</label><input id="auc-addr-logradouro"></div>
+        <div class="ff"><label>Número *</label><input id="auc-addr-numero"></div>
+        <div class="ff"><label>Bairro</label><input id="auc-addr-bairro"></div>
+        <div class="ff"><label>Cidade *</label><input id="auc-addr-cidade"></div>
+        <div class="ff"><label>UF *</label>
+          <select id="auc-addr-uf">
+            <option value="">—</option>
+            <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option>
+            <option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option>
+            <option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
+            <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option>
+            <option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option>
+            <option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option>
+            <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
+          </select>
+        </div>
+        <button class="btn-add" onclick="saveLeilaoAddress()">✓ Salvar Endereço</button>
+        <div id="auc-addr-status" style="font-size:10px;color:var(--teal);font-family:'Space Mono',monospace;margin-top:8px"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-t">🧾 Meus Arremates / Pedidos</div>
+        <div class="mkt-term-box" style="margin-bottom:12px">
+          <b>Regras do leilão:</b> pagamento via PIX direto ao leiloeiro (combinado fora do site);
+          envio por conta do comprador; o pedido muda de status conforme o leiloeiro confirma o
+          recebimento e o envio.
+        </div>
+        <div id="leilao-my-orders"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ===== ABA ADMIN (11/08/2026) =====
@@ -794,6 +935,7 @@
 <script defer src="lojas.js"></script>
 <script defer src="lojas_fix_latest_price.js"></script>
 <script defer src="marketplace.js"></script>
+<script defer src="leilao.js"></script>
 <script defer src="positivo.js"></script>
 <script defer src="lojas_store_vespa.js"></script>
 <script defer src="lojas_store_coffeecat_fix.js"></script>

@@ -536,6 +536,7 @@ function go(id,el){
   if(id==='gastos'){renderGastos();}
   if(id==='lojas'){if(typeof renderLojas==='function')renderLojas();}
   if(id==='mercado'){if(typeof renderMercado==='function')renderMercado();}
+  if(id==='leilao'){if(typeof renderLeilaoTab==='function')renderLeilaoTab();}
   if(id==='positivo'){if(typeof renderPositivo==='function')renderPositivo();}
   if(id==='iniciantes'){if(typeof renderIniciantes==='function')renderIniciantes();}
   if(id==='centralizacao'){if(typeof renderCentralizacao==='function')renderCentralizacao();}
