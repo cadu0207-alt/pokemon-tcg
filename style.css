@@ -600,6 +600,13 @@ h1, .hlogo {
   padding: 8px;
   opacity: 0; visibility: hidden; transform: translateY(-6px);
   transition: opacity .15s ease, transform .15s ease, visibility .15s;
+  /* CORRIGIDO 12/08/2026: sem z-index nenhum aqui, o menu ficava misturado
+     com o conteúdo por baixo (toolbar/grid do Fichário) — qualquer elemento
+     ali com z-index próprio (botões MODO, badges de preço etc) furava por
+     cima dele. 500 garante que fica acima de tudo do conteúdo normal da
+     página (nada ali passa de ~100) sem disputar com modais reais (.ov usa
+     1000, telas de centralização usam 99999). */
+  z-index: 500;
 }
 .tdrop:hover .tdrop-menu, .tdrop:focus-within .tdrop-menu {
   opacity: 1; visibility: visible; transform: translateY(0);
@@ -657,6 +664,12 @@ h1, .hlogo {
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 10px;
+    /* CORRIGIDO 12/08/2026: position+z-index próprios — sem isso o container
+       não cria seu próprio contexto de empilhamento e o dropdown (mesmo já
+       com z-index:500 em .tdrop-menu) podia perder de elementos posicionados
+       dentro do grid do Fichário logo abaixo. */
+    position: relative;
+    z-index: 400;
   }
 }
 .fic-tdesk .tdrop-menu { min-width: 260px; }
