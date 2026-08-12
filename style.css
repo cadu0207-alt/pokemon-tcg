@@ -2191,28 +2191,28 @@ body.share-view .btn-add { display: none !important; }
 }
 
 @media (min-width: 1440px) {
+  /* CORRIGIDO 12/08/2026: era ancorado no topo (top: medido a partir do fim
+     da .tabs via JS) — com mais abas (Admin, Centralização) o header cresceu
+     e a medição ficou errada, cobrindo as próprias abas (Simulador/Admin) e
+     até escondendo o próprio botão de minimizar atrás do grupo de ações
+     fixas do topo (Tema/Comunidade). Trocado pra ancorar no canto inferior
+     direito — um lugar neutro, fixo, que nunca disputa espaço com header,
+     abas ou os botões fixos do topo, e não depende de medir mais nada. */
   .updates-log-panel {
-    /* CORRIGIDO 02/08/2026: top:130px fixo ficava por cima da barra de abas
-       em telas onde o header (logo+status+badge de XP) é mais alto que o
-       previsto — a barra de "SIMULADOR" etc. ficava parcialmente coberta.
-       --updates-log-top é calculado em JS (updates.js, positionUpdatesLogPanel())
-       medindo a posição real do fim da .tabs, então acompanha qualquer
-       mudança de altura do header/abas em vez de um valor chutado. */
-    position: fixed; top: var(--updates-log-top, 130px); right: 28px; width: 300px;
-    max-height: calc(100vh - var(--updates-log-top, 130px) - 30px); overflow-y: auto; margin: 0;
-    z-index: 300; /* acima das .tabs (z-index:100) — sempre por cima */
+    position: fixed; bottom: 24px; right: 28px; width: 300px;
+    max-height: min(420px, calc(100vh - 100px)); overflow-y: auto; margin: 0;
+    z-index: 300; /* acima das .tabs (z-index:100), abaixo do .top-fixed-actions (999) */
   }
   .updates-log-list { max-height: none; }
 
-  /* Minimizado em telas largas: encolhe pra uma abinha vertical
-     encostada na borda direita, só com o ícone/texto do envelope. */
+  /* Minimizado em telas largas: encolhe pro "envelope" clicável, sempre
+     visível ali no canto inferior direito. */
   .updates-log-panel.updates-log-collapsed {
-    width: auto; right: 0; max-height: none; overflow: visible;
+    width: auto; max-height: none; overflow: visible;
   }
   .updates-log-panel.updates-log-collapsed .updates-log-collapsed-btn {
-    width: auto; writing-mode: vertical-rl; text-orientation: mixed;
-    border-radius: 10px 0 0 10px; border-right: none; padding: 14px 9px;
-    box-shadow: -3px 3px 10px rgba(0,0,0,.1);
+    width: auto; padding: 10px 16px; border-radius: 30px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.18);
   }
 }
 
