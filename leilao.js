@@ -40,6 +40,7 @@ let aucBlocked=false;
 let aucBlockedReason='';
 let aucSelectedCard=null;
 let aucLeiloeiros=[];
+let aucAutoNavigated=false; // evita reabrir a aba toda vez que o hook de login roda
 
 // ── SOU LEILOEIRO? (admin principal OU autorizado em auction_admins) ─
 async function resolveLeilaoAdminStatus(){
@@ -56,14 +57,21 @@ async function updateLeilaoTabVisibility(){
   const btn=document.getElementById('nav-tab-leilao');
   if(!btn)return;
   await resolveLeilaoAdminStatus();
-  // FASE DE TESTES: só admin principal + leiloeiros autorizados veem a
-  // aba. Pra abrir pra todos os usuários registrados darem lance,
-  // trocar a linha abaixo por: `const show=!!uid();`
-  const show=aucIsLeilaoAdmin;
+  // ABERTO 12/08/2026: qualquer usuário logado no MyDeck vê a aba e pode
+  // dar lance — necessário pro botão "Compartilhar" (link direto pro
+  // leilão, divulgado no WhatsApp) funcionar pra quem recebe o link.
+  // O painel do leiloeiro (cadastrar carta, fechar rodada, marcar
+  // pagamento) continua restrito a aucIsLeilaoAdmin — ver renderLeilaoTab().
+  const show=!!uid();
   btn.style.display=show?'':'none';
   if(!show){
     const pane=document.getElementById('leilao');
     if(pane&&pane.classList.contains('active')&&typeof goToTab==='function')goToTab('dash');
+  }else if(!aucAutoNavigated&&new URLSearchParams(window.location.search).get('leilao')&&typeof goToTab==='function'){
+    // Chegou por um link compartilhado (?leilao=<id>) — abre a aba direto,
+    // sem precisar clicar no menu.
+    aucAutoNavigated=true;
+    goToTab('leilao');
   }
 }
 (function hookLeilaoTabVisibility(){
@@ -89,6 +97,7 @@ async function renderLeilaoTab(){
   renderRoundSelect();
   renderAuctionsList();
   renderMyBidsAndOrders();
+  scrollToSharedAuction();
 
   if(aucIsLeilaoAdmin){
     renderRoundsAdminList();
@@ -177,7 +186,16 @@ function aucCountdown(endAt){
   return`${m}min restantes`;
 }
 
-function aucMinNext(a){return a.current_bid?(+a.current_bid+ +a.min_increment):+a.starting_price;}
+// Incremento mínimo por faixa (regra do leiloeiro, 12/08/2026): até R$10 →
+// R$0,50 · até R$50 → R$1,00 · acima de R$50 → 2% do valor atual. Espelha
+// auction_min_increment() do banco (leilao_setup.sql) — só pra mostrar o
+// mínimo certo no placeholder; quem valida de verdade é sempre o RPC.
+function aucMinIncrement(base){
+  if(base<=10)return 0.5;
+  if(base<=50)return 1;
+  return Math.round(base*0.02*100)/100;
+}
+function aucMinNext(a){return a.current_bid?(+a.current_bid+aucMinIncrement(+a.current_bid)):+a.starting_price;}
 
 function aucImgFor(a){
   if(a.image_url)return a.image_url;
@@ -254,9 +272,57 @@ function aucCardHtml(a){
           <div style="font-size:9.5px;color:var(--muted);margin-top:4px">Lance é compromisso — não dá pra retirar depois de enviado.</div>
           <div id="auc-bid-status-${a.id}" style="font-size:10px;color:var(--accent);margin-top:4px;font-family:'Space Mono',monospace"></div>`:''}
         ${a.status==='agendado'?`<div style="font-size:10.5px;color:var(--muted);margin-top:6px">Começa em ${new Date(a.start_at).toLocaleString('pt-BR')}</div>`:''}
+        <div style="margin-top:10px">
+          <button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal)" onclick="shareAuction(${a.id})">📲 Compartilhar</button>
+        </div>
       </div>
     </div>
   </div>`;
+}
+
+// ── COMPARTILHAR (link direto + mensagem pronta pro WhatsApp) ────
+function aucShareUrl(auctionId){
+  const base=window.location.origin+window.location.pathname;
+  return`${base}?leilao=${auctionId}`;
+}
+
+function shareAuction(auctionId){
+  const a=aucAuctions.find(x=>x.id===auctionId);
+  if(!a)return;
+  const round=aucRoundById(a.round_id);
+  const url=aucShareUrl(auctionId);
+  const precoAtual=fmtR(a.current_bid||a.starting_price);
+  const prazo=new Date(a.end_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  const msg=`🔨 *LEILÃO ${esc(a.card_name)}*\n`+
+    `${AUC_COND_LBL[a.condition]||a.condition} · ${AUC_LANG_LBL[a.language]||a.language}\n\n`+
+    `💰 Lance atual: R$ ${precoAtual}\n`+
+    `⏰ Encerra em: ${prazo}${round?` (${esc(round.title)})`:''}\n\n`+
+    `Dá seu lance aqui:\n${url}`;
+  if(navigator.share){
+    navigator.share({title:`Leilão — ${a.card_name}`,text:msg,url}).catch(()=>{});
+    return;
+  }
+  const waUrl=`https://wa.me/?text=${encodeURIComponent(msg)}`;
+  window.open(waUrl,'_blank');
+  if(navigator.clipboard)navigator.clipboard.writeText(msg).catch(()=>{});
+  setStatus('Mensagem pronta pro WhatsApp (também copiada)','ok');
+}
+
+// Se a página abriu com ?leilao=<id> (link compartilhado), rola até o card
+// assim que a lista renderizar.
+function scrollToSharedAuction(){
+  const params=new URLSearchParams(window.location.search);
+  const id=params.get('leilao');
+  if(!id)return;
+  setTimeout(()=>{
+    const btn=Array.from(document.querySelectorAll(`[onclick="submitBid(${id})"]`))[0];
+    const card=btn?btn.closest('.panel'):null;
+    if(card){
+      card.scrollIntoView({behavior:'smooth',block:'center'});
+      card.style.outline='2px solid var(--teal)';
+      setTimeout(()=>{card.style.outline='';},2500);
+    }
+  },300);
 }
 
 async function submitBid(auctionId){
@@ -477,7 +543,6 @@ async function publishAuction(){
   const language=document.getElementById('leilao-admin-lang')?.value||'pt-BR';
   const description=(document.getElementById('leilao-admin-desc')?.value||'').trim();
   const startingPrice=parseFloat(document.getElementById('leilao-admin-preco')?.value);
-  const minIncrement=parseFloat(document.getElementById('leilao-admin-incremento')?.value)||5;
   const reserveRaw=document.getElementById('leilao-admin-reserva')?.value;
   const reservePrice=reserveRaw?parseFloat(reserveRaw):null;
   const antiSnipe=parseInt(document.getElementById('leilao-admin-antisnipe')?.value)||3;
@@ -504,7 +569,6 @@ async function publishAuction(){
     condition,language,
     description:description||null,
     starting_price:startingPrice,
-    min_increment:minIncrement,
     reserve_price:reservePrice,
     anti_snipe_minutes:antiSnipe,
     start_at:round.start_at,
@@ -517,7 +581,7 @@ async function publishAuction(){
 
   if(statusEl)statusEl.textContent='✓ Carta adicionada à rodada!';
   clearAuctionCardSelection();
-  ['leilao-admin-desc','leilao-admin-preco','leilao-admin-incremento','leilao-admin-reserva']
+  ['leilao-admin-desc','leilao-admin-preco','leilao-admin-reserva']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   setStatus('Carta publicada no leilão','ok');
   await loadRoundsAndAuctions();

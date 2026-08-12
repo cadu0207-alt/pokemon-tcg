@@ -36,9 +36,18 @@
 create table if not exists auction_admins (
   user_id     uuid primary key references auth.users(id),
   email       text not null,
-  added_by    uuid not null default auth.uid() references auth.users(id),
+  -- sem "not null"/default auth.uid() de propósito: quando essa tabela é
+  -- alimentada via add_auction_admin() chamada direto no SQL Editor do
+  -- Supabase (não pelo site), não existe JWT de sessão e auth.uid() vem
+  -- null — descoberto em 12/08/2026 quando o cadastro do Juan falhou com
+  -- "null value in column added_by violates not-null constraint".
+  added_by    uuid references auth.users(id),
   created_at  timestamptz not null default now()
 );
+
+-- Migração pra quem já rodou a v2 anterior com added_by not null:
+alter table auction_admins alter column added_by drop not null;
+alter table auction_admins alter column added_by drop default;
 
 alter table auction_admins enable row level security;
 
@@ -89,14 +98,21 @@ declare
   v_uid uuid;
   v_row auction_admins%rowtype;
 begin
-  if auth.uid() <> 'eb9da0ad-9877-4f17-ac5a-6f1da5eebc9b' then
+  -- auth.uid() vem null quando chamado direto no SQL Editor do Supabase
+  -- (sem JWT de sessão) — nesse caso é sempre confiável, porque só o
+  -- Eduardo tem acesso ao painel do Supabase pra rodar SQL. Só bloqueia
+  -- quando HÁ uma sessão de usuário logado E ela não é a do admin
+  -- principal (isso cobre o caso de alguém tentar chamar essa função
+  -- pelo site/console do navegador sem ser o Eduardo).
+  if auth.uid() is not null and auth.uid() <> 'eb9da0ad-9877-4f17-ac5a-6f1da5eebc9b' then
     raise exception 'Só o administrador principal pode cadastrar leiloeiros.';
   end if;
   select id into v_uid from auth.users where lower(email) = lower(p_email) limit 1;
   if v_uid is null then
     raise exception 'Nenhum usuário encontrado com esse e-mail. A pessoa precisa entrar no MyDeck (fazer login) pelo menos uma vez antes de ser autorizada.';
   end if;
-  insert into auction_admins (user_id, email) values (v_uid, lower(p_email))
+  insert into auction_admins (user_id, email, added_by)
+    values (v_uid, lower(p_email), coalesce(auth.uid(), 'eb9da0ad-9877-4f17-ac5a-6f1da5eebc9b'))
     on conflict (user_id) do update set email = excluded.email
     returning * into v_row;
   return v_row;
@@ -111,7 +127,7 @@ security definer
 set search_path = public
 as $$
 begin
-  if auth.uid() <> 'eb9da0ad-9877-4f17-ac5a-6f1da5eebc9b' then
+  if auth.uid() is not null and auth.uid() <> 'eb9da0ad-9877-4f17-ac5a-6f1da5eebc9b' then
     raise exception 'Só o administrador principal pode remover leiloeiros.';
   end if;
   delete from auction_admins where lower(email) = lower(p_email);
@@ -311,6 +327,23 @@ create policy "auction_order_items_select" on auction_order_items
     or exists(select 1 from auction_orders o where o.id = order_id and o.buyer_id = auth.uid())
   );
 
+-- ── 5b. Incremento mínimo por faixa (regra fixa do leiloeiro, 12/08/2026) ─
+-- Até R$10 → incremento R$0,50 · até R$50 → R$1,00 · acima de R$50 → 2% do
+-- valor atual. Substitui o campo `auctions.min_increment` (a coluna
+-- continua existindo no schema por compatibilidade, mas não é mais usada
+-- no cálculo — a regra agora é sempre essa, igual pra todo leilão).
+create or replace function auction_min_increment(p_base numeric)
+returns numeric
+language sql
+immutable
+as $$
+  select case
+    when p_base <= 10 then 0.50
+    when p_base <= 50 then 1.00
+    else round(p_base * 0.02, 2)
+  end;
+$$;
+
 -- ── 6. RPC place_bid — valida e registra o lance de forma atômica ──
 create or replace function place_bid(p_auction_id bigint, p_amount numeric)
 returns auctions
@@ -353,7 +386,7 @@ begin
   if v_auction.current_bid is null then
     v_min_next := v_auction.starting_price;
   else
-    v_min_next := v_auction.current_bid + v_auction.min_increment;
+    v_min_next := v_auction.current_bid + auction_min_increment(v_auction.current_bid);
   end if;
 
   if p_amount < v_min_next then

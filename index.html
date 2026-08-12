@@ -468,15 +468,18 @@
   </div>
 
   <!-- ===== ABA LEILÃO (12/08/2026) =====
-       Fase de testes: só visível pro Eduardo (nav-tab-leilao, ver leilao.js).
-       Leiloeiro cadastra a carta (busca no catálogo já puxa a foto), define
-       preço inicial, incremento mínimo, reserva opcional e prazo. Participantes
-       precisam de conta MyDeck + endereço de entrega cadastrado pra dar lance.
-       Pagamento é PIX direto ao leiloeiro fora do site; envio por conta do
-       comprador. Regras anti-fraude: incremento mínimo obrigatório entre
-       lances + extensão automática do prazo se alguém dá lance nos últimos
-       minutos (anti-sniping) — tudo validado no banco (leilao_setup.sql),
-       nunca só no client. -->
+       Aberta pra qualquer usuário logado no MyDeck (nav-tab-leilao, ver
+       leilao.js) — o painel de leiloeiro (criar rodada, cadastrar carta,
+       marcar pagamento) continua restrito a quem está em auction_admins.
+       Leiloeiro cadastra a carta dentro de uma rodada (busca no catálogo já
+       puxa a foto), define preço inicial e reserva opcional; o prazo vem da
+       rodada. Participantes precisam de conta MyDeck + endereço de entrega
+       cadastrado pra dar lance. Pagamento é PIX direto ao leiloeiro fora do
+       site; envio por conta do comprador. Regras anti-fraude: incremento
+       mínimo por faixa (até R$10 → R$0,50 · até R$50 → R$1 · acima → 2%)
+       + extensão automática do prazo se alguém dá lance nos últimos minutos
+       (anti-sniping) — tudo validado no banco (leilao_setup.sql), nunca só
+       no client. -->
   <div id="leilao" class="pane">
     <div class="sec-title" style="margin-top:0">🔨 Leilão</div>
 
@@ -532,7 +535,7 @@
           </div>
           <div class="ff"><label>Descrição (opcional)</label><textarea id="leilao-admin-desc" rows="2" placeholder="Estado, detalhes, centralização..."></textarea></div>
           <div class="ff"><label>Preço inicial (R$) *</label><input type="number" id="leilao-admin-preco" step="0.01" min="0.01"></div>
-          <div class="ff"><label>Incremento mínimo entre lances (R$)</label><input type="number" id="leilao-admin-incremento" step="0.01" value="5"></div>
+          <div style="font-size:9.5px;color:var(--muted);margin-bottom:8px">Incremento mínimo entre lances é automático: até R$10 → R$0,50 · até R$50 → R$1 · acima disso → 2% do valor atual.</div>
           <div class="ff"><label>Preço de reserva (opcional — mínimo pra vender, fica oculto)</label><input type="number" id="leilao-admin-reserva" step="0.01"></div>
           <div class="ff"><label>Extensão anti-sniping (min. antes do fim que estende o prazo)</label><input type="number" id="leilao-admin-antisnipe" value="3" min="0" max="30"></div>
           <div style="font-size:9.5px;color:var(--muted);margin-bottom:8px">A carta herda o início/término da rodada escolhida acima.</div>
