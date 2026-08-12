@@ -25,7 +25,7 @@
 <meta name="twitter:title" content="MyDeck — Pokémon TCG Tracker">
 <meta name="twitter:description" content="Tracker gratuito de coleção Pokémon TCG: master set, gastos, cartas tiradas, preço justo e ofertas rastreadas no Mercado Livre.">
 <meta name="twitter:image" content="https://mydecktcg.com.br/icon-512.png">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,900&family=IBM+Plex+Mono:wght@400;600;700&family=DM+Sans:wght@300;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script>
 (function(){
@@ -136,7 +136,7 @@
       </div>
       <div class="home-stats" id="home-stats"><span class="skel" style="width:260px"></span></div>
       <div class="home-sets" id="home-sets" style="margin-top:56px"><!-- preenchido por renderHomeSets() em app.js --></div>
-      <div style="margin-top:64px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);opacity:.7;letter-spacing:.5px">
+      <div style="margin-top:64px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);opacity:.7;letter-spacing:.5px">
         <a href="politica-privacidade.html" style="color:inherit;text-decoration:underline">Política de Privacidade</a>
         &nbsp;·&nbsp; MyDeck — feito por colecionadores, para colecionadores
       </div>
@@ -162,7 +162,7 @@
       <span id="usd-brl" style="margin-left:14px;opacity:.6"></span>
       <div id="user-chip" style="display:none;align-items:center;gap:8px;margin-left:12px;padding:4px 10px 4px 4px;background:var(--surface2);border:1px solid var(--border);border-radius:30px">
         <img id="user-avatar" style="width:26px;height:26px;border-radius:50%;object-fit:cover;background:var(--border)" src="" onerror="this.style.display='none'">
-        <span id="user-display-name" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--text);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+        <span id="user-display-name" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
         <button onclick="signOut()" title="Sair" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0;line-height:1" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">⏻</button>
       </div>
     </div>
@@ -357,7 +357,7 @@
     <div class="mkt-grid">
       <div class="panel">
         <div class="panel-t">📍 Meu Endereço</div>
-        <div style="font-size:10.5px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:12px">
+        <div style="font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:12px">
           Usado só pra sugerir a loja confiável mais próxima de você (como comprador ou vendedor).
         </div>
         <div class="ff"><label>Cidade</label><input id="addr-cidade" placeholder="Ex: Belo Horizonte"></div>
@@ -371,12 +371,12 @@
         <div class="ff"><label>CEP (opcional)</label><input id="addr-cep" placeholder="00000-000"></div>
         <div class="ff"><label>Bairro (opcional)</label><input id="addr-bairro"></div>
         <button class="btn-add" onclick="saveMyAddress()">✓ Salvar Endereço</button>
-        <div id="addr-status" style="font-size:10px;color:var(--teal);font-family:'Space Mono',monospace;margin-top:8px"></div>
+        <div id="addr-status" style="font-size:10px;color:var(--teal);font-family:'IBM Plex Mono',monospace;margin-top:8px"></div>
       </div>
 
       <div class="panel">
         <div class="panel-t">🏪 Cadastrar Loja Confiável</div>
-        <div style="font-size:10.5px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:12px">
+        <div style="font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:12px">
           Só lojas com CNPJ. Fica pendente até aprovação manual.
         </div>
         <div class="ff"><label>Nome Fantasia</label><input id="store-nome"></div>
@@ -411,7 +411,7 @@
         <div class="ff"><label>Nome do responsável que está aceitando</label><input id="store-termo-nome"></div>
 
         <button class="btn-add" onclick="submitTrustedStore()">✓ Enviar Cadastro</button>
-        <div id="store-status" style="font-size:10px;color:var(--teal);font-family:'Space Mono',monospace;margin-top:8px"></div>
+        <div id="store-status" style="font-size:10px;color:var(--teal);font-family:'IBM Plex Mono',monospace;margin-top:8px"></div>
       </div>
     </div>
 
@@ -494,7 +494,7 @@
 
     <!-- Progresso do set atual -->
     <div id="fic-set-info"
-         style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-family:'Space Mono',monospace;
+         style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;
                 font-size:10px;color:var(--muted);margin-bottom:14px;padding:10px 14px;
                 background:var(--surface2);border-radius:6px"></div>
 
@@ -543,10 +543,10 @@
          qualquer sub-aba, avisando que o leilão ainda não vale nada de
          verdade enquanto o sistema está sendo testado. ─────────────── -->
     <div style="background:repeating-linear-gradient(45deg,#c0392b,#c0392b 14px,#a93226 14px,#a93226 28px);border:3px solid #000;border-radius:10px;padding:18px 16px;margin-bottom:20px;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.35)">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(20px,5vw,34px);letter-spacing:1px;color:#fff;text-shadow:0 2px 4px rgba(0,0,0,.6);line-height:1.15">
+      <div style="font-family:'Fraunces',sans-serif;font-size:clamp(20px,5vw,34px);letter-spacing:1px;color:#fff;text-shadow:0 2px 4px rgba(0,0,0,.6);line-height:1.15">
         ⚠️ LEILÃO EM TESTE ⚠️<br>NÃO É VÁLIDO NO MOMENTO
       </div>
-      <div style="font-size:11px;color:#ffe9e6;margin-top:6px;font-family:'Space Mono',monospace">
+      <div style="font-size:11px;color:#ffe9e6;margin-top:6px;font-family:'IBM Plex Mono',monospace">
         Estamos testando o sistema — lances dados agora não geram cobrança nem compromisso de entrega.
       </div>
     </div>
@@ -577,7 +577,7 @@
           <div class="ff"><label>Prazo de pagamento *</label><input type="datetime-local" id="leilao-round-pagamento"></div>
           <div class="ff"><label>Condições de envio (texto livre, opcional)</label><textarea id="leilao-round-frete" rows="2" placeholder="Ex: Frete grátis acima de R$300 (transportadora). Envio por conta do comprador."></textarea></div>
           <button class="btn-add" onclick="createAuctionRound()">✓ Criar Rodada</button>
-          <div id="leilao-round-status" style="font-size:10px;color:var(--teal);font-family:'Space Mono',monospace;margin-top:8px"></div>
+          <div id="leilao-round-status" style="font-size:10px;color:var(--teal);font-family:'IBM Plex Mono',monospace;margin-top:8px"></div>
         </div>
 
         <div class="panel">
@@ -619,7 +619,7 @@
           <div class="ff"><label>Extensão anti-sniping (min. antes do fim que estende o prazo)</label><input type="number" id="leilao-admin-antisnipe" value="3" min="0" max="30"></div>
           <div style="font-size:9.5px;color:var(--muted);margin-bottom:8px">A carta herda o início/término da rodada escolhida acima.</div>
           <button class="btn-add" onclick="publishAuction()">🔨 Adicionar Carta à Rodada</button>
-          <div id="leilao-admin-status" style="font-size:10px;color:var(--teal);font-family:'Space Mono',monospace;margin-top:8px"></div>
+          <div id="leilao-admin-status" style="font-size:10px;color:var(--teal);font-family:'IBM Plex Mono',monospace;margin-top:8px"></div>
         </div>
       </div>
 
@@ -633,7 +633,7 @@
         <div class="panel">
           <div class="ff"><label>E-mail da pessoa</label><input id="leilao-leiloeiro-email" placeholder="nome@exemplo.com"></div>
           <button class="btn-add" onclick="addLeiloeiro()">✓ Autorizar como Leiloeiro</button>
-          <div id="leilao-leiloeiro-status" style="font-size:10px;color:var(--teal);font-family:'Space Mono',monospace;margin-top:8px"></div>
+          <div id="leilao-leiloeiro-status" style="font-size:10px;color:var(--teal);font-family:'IBM Plex Mono',monospace;margin-top:8px"></div>
           <div id="leilao-leiloeiros-list" class="cv-list" style="margin-top:12px"></div>
         </div>
       </div>
@@ -656,7 +656,7 @@
       <div class="mkt-grid" style="margin-top:24px">
         <div class="panel">
           <div class="panel-t">📍 Meu Endereço de Entrega</div>
-          <div style="font-size:10.5px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:12px">
+          <div style="font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:12px">
             Obrigatório antes de dar o primeiro lance — é pra onde a carta vai se você arrematar.
             Envio por conta do comprador.
           </div>
@@ -678,7 +678,7 @@
             </select>
           </div>
           <button class="btn-add" onclick="saveLeilaoAddress()">✓ Salvar Endereço</button>
-          <div id="auc-addr-status" style="font-size:10px;color:var(--teal);font-family:'Space Mono',monospace;margin-top:8px"></div>
+          <div id="auc-addr-status" style="font-size:10px;color:var(--teal);font-family:'IBM Plex Mono',monospace;margin-top:8px"></div>
         </div>
 
         <div class="panel">
@@ -716,7 +716,7 @@
     <div class="modal modal-wide">
       <button class="mc-btn" onclick="closeModal('leilao-rules-ov')">✕</button>
       <div class="panel-t" style="margin-bottom:4px">📜 Regras do Leilão MyDeck</div>
-      <div style="font-size:10.5px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:16px">
+      <div style="font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:16px">
         Leia com atenção antes do seu primeiro lance — dar um lance é um compromisso de compra.
       </div>
 
@@ -961,8 +961,8 @@
       <div style="width:80px;height:80px;margin:0 auto 24px;background:linear-gradient(135deg,#e63946 0%,#ff6b35 100%);border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:40px;box-shadow:0 12px 40px rgba(230,57,70,.4),0 0 0 1px rgba(255,255,255,.08)">🃏</div>
 
       <!-- Brand name -->
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:58px;letter-spacing:8px;color:#fff;line-height:.95;margin-bottom:8px;text-shadow:0 0 60px rgba(230,57,70,.4)">MyDeck</div>
-      <div style="font-family:'Space Mono',monospace;font-size:10px;letter-spacing:4px;color:#3d4566;text-transform:uppercase;margin-bottom:44px">Pokémon TCG Tracker</div>
+      <div style="font-family:'Fraunces',sans-serif;font-size:58px;letter-spacing:8px;color:#fff;line-height:.95;margin-bottom:8px;text-shadow:0 0 60px rgba(230,57,70,.4)">MyDeck</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:4px;color:#3d4566;text-transform:uppercase;margin-bottom:44px">Pokémon TCG Tracker</div>
 
       <!-- Google Sign-In -->
       <button onclick="signInGoogle()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:14px;padding:17px 24px;background:#fff;color:#111827;border:none;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .25s;letter-spacing:.2px;box-shadow:0 4px 20px rgba(0,0,0,.35)"
@@ -972,7 +972,7 @@
         Entrar com Google
       </button>
 
-      <p style="font-family:'Space Mono',monospace;font-size:9px;color:#2a3050;margin-top:24px;line-height:1.7">Coleção na nuvem · Privada · Segura</p>
+      <p style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#2a3050;margin-top:24px;line-height:1.7">Coleção na nuvem · Privada · Segura</p>
     </div>
   </div>
 </div>

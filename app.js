@@ -668,15 +668,17 @@ function updateHomeStats(){
 }
 
 // ── PARTÍCULAS ───────────────────────────────────────────────────
+// AJUSTADO: 35 partículas coloridas (confete arco-íris) era o tell clássico
+// de "hero section gerado por IA". Reduzido pra 10, tom único (dourado
+// desbotado, remete a poeira/brilho de card foil, não confete de festa).
 function initParticles(){
   const c=document.getElementById('particles');if(!c)return;
-  const colors=['#e63946','#118ab2','#06d6a0','#ffd166','#9C27B0'];
-  for(let i=0;i<35;i++){
+  for(let i=0;i<10;i++){
     const p=document.createElement('div');p.className='particle';
-    const sz=1+Math.random()*2.5;
+    const sz=1+Math.random()*1.8;
     p.style.cssText=`left:${Math.random()*100}%;width:${sz}px;height:${sz}px;`+
-      `animation-duration:${8+Math.random()*14}s;animation-delay:${-Math.random()*22}s;`+
-      `background:${colors[Math.floor(Math.random()*colors.length)]};border-radius:${Math.random()>.5?'50%':'2px'}`;
+      `animation-duration:${12+Math.random()*16}s;animation-delay:${-Math.random()*22}s;`+
+      `background:#c8960a;opacity:.5;border-radius:50%`;
     c.appendChild(p);
   }
 }
