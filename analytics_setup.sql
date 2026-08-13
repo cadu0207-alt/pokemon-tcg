@@ -170,6 +170,9 @@ grant execute on function admin_list_users() to authenticated;
 -- 6) admin_set_distribution — quantos usuários distintos e quantas
 -- cartas por coleção (set), pra ver qual Master Set o pessoal mais tá
 -- montando.
+-- CORRIGIDO 13/08/2026: a tabela collection NÃO tem coluna "set" — o
+-- schema real usa slot_key no formato "{set}:{card_n}:{versao}" (ver
+-- slotKey() em app.js). O set é o primeiro pedaço antes do ":".
 create or replace function admin_set_distribution()
 returns json
 language plpgsql
@@ -187,11 +190,11 @@ begin
   into result
   from (
     select
-      set as set_id,
+      split_part(slot_key, ':', 1) as set_id,
       count(distinct user_id) as collectors,
       count(*) as cards_marked
     from collection
-    group by set
+    group by split_part(slot_key, ':', 1)
   ) t;
 
   return result;
