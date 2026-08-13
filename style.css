@@ -84,84 +84,6 @@
 [data-theme="dark"] header { background: linear-gradient(to bottom, rgba(17,20,34,.98), rgba(13,15,24,.96)); }
 [data-theme="dark"] .tabs { background: rgba(17,20,34,.96); }
 
-/* ─── TEMA POKÉMON (leve) ────────────────────────────── */
-/* ADICIONADO 13/08/2026: terceiro tema, direção "Pokédex leve" validada
-   com Eduardo via mockup (brainstorm_redesign_mydeck_pokemon_leve.html,
-   versão E) — branco, cantos bem redondos, fonte arredondada (Fredoka) e
-   uma pokébola desenhada em CSS puro como assinatura visual, sem pesar. */
-[data-theme="pokemon"] {
-  --bg:       #ffffff;
-  --surface:  #fafafa;
-  --surface2: #f7f6f2;
-  --surface3: #f0efe8;
-  --border:   #f0e3e4;
-  --border2:  #ffd3d6;
-
-  --accent:   #e63946;
-  --accent2:  #ff8a3d;
-  --gold:     #d6a324;
-  --teal:     #3f8fd6;
-  --blue:     #3f8fd6;
-  --purple:   #a855f7;
-
-  --text:     #1c1f2e;
-  --text2:    #454b63;
-  --muted:    #9a9585;
-  --muted2:   #b7b2a2;
-  --muted-oncard: #7c7768;
-}
-[data-theme="pokemon"] body { background-image: none; }
-[data-theme="pokemon"] #app-mosaic::after { background: rgba(255,255,255,.92); }
-[data-theme="pokemon"] header { background: rgba(255,255,255,.98); }
-[data-theme="pokemon"] .tabs { background: rgba(255,255,255,.96); }
-
-/* fonte arredondada só nos títulos/números — corpo de texto continua DM Sans
-   pra não perder legibilidade em telas com muita informação (fichário, gastos) */
-[data-theme="pokemon"] .kpi-value,
-[data-theme="pokemon"] .sec-title,
-[data-theme="pokemon"] .panel-t,
-[data-theme="pokemon"] h1, [data-theme="pokemon"] .hlogo,
-[data-theme="pokemon"] .home-title, [data-theme="pokemon"] .home-btn,
-[data-theme="pokemon"] .modal h3, [data-theme="pokemon"] .slot-modal-title,
-[data-theme="pokemon"] .mbinder-title {
-  font-family: 'Fredoka', sans-serif;
-}
-
-/* painéis/KPIs perdem o canto cortado do tema "colecionador" e ficam
-   redondos e suaves, sem sombra pesada — a leveza pedida por Eduardo */
-[data-theme="pokemon"] .panel,
-[data-theme="pokemon"] .kpi,
-[data-theme="pokemon"] .kpi::after,
-[data-theme="pokemon"] .kpi::before {
-  border-radius: 16px;
-}
-[data-theme="pokemon"] .panel::after { display: none; }
-[data-theme="pokemon"] .panel-t {
-  border-bottom-style: solid;
-  border-bottom-color: var(--surface3);
-}
-
-/* pokébola em CSS puro como bullet — sem imagem, sem custo de carregamento */
-[data-theme="pokemon"] .panel-t::before,
-[data-theme="pokemon"] .sec-title::before {
-  content: '';
-  display: inline-block;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: linear-gradient(#e63946 50%, #fff 50%);
-  border: 1.3px solid var(--text);
-  margin-right: 7px;
-  vertical-align: -1px;
-}
-
-/* botões ganham cantos bem redondos, consistentes com o resto do tema */
-[data-theme="pokemon"] .btn-add,
-[data-theme="pokemon"] .btn-cx,
-[data-theme="pokemon"] .btn-outline {
-  border-radius: 20px;
-}
-
 /* transição suave ao alternar tema */
 body, .panel, .kpi, .tab, header, .home-bg, input, select, textarea {
   transition: background-color .25s ease, border-color .25s ease, color .25s ease;
@@ -893,7 +815,10 @@ h1, .hlogo {
   align-items: center;
   gap: 6px;
 }
-.kpi-value { font-family: 'Fraunces', sans-serif; font-size: 40px; letter-spacing: 1px; line-height: 1; }
+/* AJUSTADO 13/08/2026: fonte Fredoka (arredondada) e tamanho reduzidos
+   de 40px pra 34px — validado com Eduardo no mockup "Pokédex Leve" e
+   virou padrão nos dois temas (claro/escuro), não é mais tema à parte. */
+.kpi-value { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 34px; letter-spacing: .2px; line-height: 1; }
 .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
 .kpi.red    .kpi-value { color: var(--accent); }
 .kpi.orange .kpi-value { color: var(--accent2); }
@@ -902,10 +827,14 @@ h1, .hlogo {
 .kpi.blue   .kpi-value { color: var(--blue); }
 
 /* ─── SECTION TITLES ─────────────────────────────────── */
+/* AJUSTADO 13/08/2026: fonte Fredoka + letter-spacing reduzido (a fonte
+   arredondada não pede o espaçamento largo que a serifada Fraunces
+   pedia) — padrão validado no mockup "Pokédex Leve", vale nos 2 temas. */
 .sec-title {
-  font-family: 'Fraunces', sans-serif;
-  font-size: 19px;
-  letter-spacing: 4px;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: .3px;
   margin-bottom: 16px;
   display: flex;
   align-items: center;
@@ -917,6 +846,19 @@ h1, .hlogo {
   flex: 1;
   height: 1px;
   background: linear-gradient(90deg, var(--border2), transparent);
+}
+/* Pokébola em CSS puro (sem imagem) como assinatura visual dos "quadrados
+   de informação" — bullet antes do título, funciona nos dois temas porque
+   a borda usa var(--text) em vez de cor fixa. */
+.sec-title::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: linear-gradient(#e63946 50%, #fff 50%);
+  border: 1.3px solid var(--text);
+  flex-shrink: 0;
 }
 
 /* ─── PANELS ─────────────────────────────────────────── */
@@ -954,18 +896,37 @@ h1, .hlogo {
    entre o resumo do Dashboard e o dado completo na aba correspondente. */
 .panel-link { cursor: pointer; transition: border-color .15s ease, transform .15s ease; }
 .panel-link:hover { border-color: var(--accent2); transform: translateY(-2px); }
+/* AJUSTADO 13/08/2026: mono trocado por Fredoka (fonte + pokébola do
+   mockup "Pokédex Leve" viraram padrão dos 2 temas) — caixa alta com
+   letter-spacing largo não combina com fonte arredondada, então também
+   veio uppercase/letter-spacing pra baixo e o tamanho subiu um pouco
+   pra a fonte não ficar minúscula demais. */
 .panel-t {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 9px;
-  letter-spacing: 2.5px;
-  text-transform: uppercase;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: .2px;
+  text-transform: none;
   color: var(--muted);
   margin-bottom: 16px;
   padding-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
   /* AJUSTADO: linha sólida trocada por picote pontilhado — remete à borda
      serrilhada de um cupom/ficha de catálogo, reforça a identidade sem
      custar nada em legibilidade. */
   border-bottom: 1px dashed var(--border2);
+}
+.panel-t::before {
+  content: '';
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: linear-gradient(#e63946 50%, #fff 50%);
+  border: 1.3px solid var(--text);
+  flex-shrink: 0;
 }
 
 /* ─── BAR CHARTS ─────────────────────────────────────── */
@@ -1606,8 +1567,9 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
   .back-btn { width: 32px; height: 32px; font-size: 15px; }
 
   .kpi { padding: 14px 16px; }
-  .kpi-value { font-size: 30px; }
-  .sec-title { font-size: 15px; letter-spacing: 2px; gap: 8px; }
+  .kpi-value { font-size: 27px; }
+  .sec-title { font-size: 15px; letter-spacing: .2px; gap: 8px; }
+  .sec-title::before { width: 10px; height: 10px; }
 
   .btn-add, .btn-cx, .btn-outline { padding: 10px 16px; font-size: 11px; width: 100%; }
   .mact { flex-direction: column-reverse; }

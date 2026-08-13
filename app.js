@@ -542,29 +542,20 @@ async function toggleSlot(key){
   renderBinder();updateDashProgress();
 }
 
-// ── TEMA CLARO/ESCURO/POKÉMON ────────────────────────────────────
-// AJUSTADO 13/08/2026: virou ciclo de 3 estados (light → dark → pokemon →
-// light). O ícone mostrado é sempre o do tema PRÓXIMO (pra que clicar
-// aí é o que você vai virar), igual a lógica original de claro/escuro.
-const THEME_ORDER = ['light','dark','pokemon'];
-const THEME_META = {
-  light:   { icon:'🌙', color:'#f7f7fa' },
-  dark:    { icon:'🔴', color:'#0d0f18' },
-  pokemon: { icon:'☀️', color:'#ffffff' }
-};
+// ── TEMA CLARO/ESCURO ───────────────────────────────────────────
+// REVERTIDO 13/08/2026: o tema "pokemon" (3º estado) virou padrão de
+// fonte+arte dos quadrados de informação nos dois temas em vez de tema
+// à parte — ver .kpi-value/.sec-title/.panel-t (Fredoka + pokébola em
+// CSS puro). Volta a ser um toggle simples de 2 estados.
 function applyThemeIcon(t){
   const icon=document.getElementById('theme-toggle-icon');
   const meta=document.querySelector('meta[name="theme-color"]');
-  const cur = THEME_META[t] ? t : 'light';
-  const curIdx = THEME_ORDER.indexOf(cur);
-  const next = THEME_ORDER[(curIdx+1) % THEME_ORDER.length];
-  if(icon) icon.textContent = THEME_META[next].icon;
-  if(meta) meta.setAttribute('content', THEME_META[cur].color);
+  if(icon) icon.textContent = t==='dark' ? '☀️' : '🌙';
+  if(meta) meta.setAttribute('content', t==='dark' ? '#0d0f18' : '#f7f7fa');
 }
 function toggleTheme(){
   const cur=document.documentElement.getAttribute('data-theme')||'light';
-  const curIdx = THEME_ORDER.indexOf(cur)>=0 ? THEME_ORDER.indexOf(cur) : 0;
-  const next = THEME_ORDER[(curIdx+1) % THEME_ORDER.length];
+  const next=cur==='dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme',next);
   localStorage.setItem('mydeck-theme',next);
   applyThemeIcon(next);

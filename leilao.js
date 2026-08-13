@@ -114,6 +114,7 @@ async function renderLeilaoTab(){
     await loadAdminAuctionOrders();
     renderAdminOrders();
     renderLeilaoAnalises();
+    renderLeilaoArquivo();
   }
   if(typeof isAdmin==='function'&&isAdmin()){
     await loadLeiloeiros();
@@ -121,11 +122,11 @@ async function renderLeilaoTab(){
   }
 }
 
-// ── SUB-MENU (Leilões / Cadastro / Análises — as duas últimas só leiloeiro) ─
+// ── SUB-MENU (Leilões / Cadastro / Análises / Arquivo — as 3 últimas só leiloeiro) ─
 let aucActiveSubtab='leiloes';
 function switchLeilaoSubtab(name){
   aucActiveSubtab=name;
-  ['leiloes','cadastro','analises'].forEach(n=>{
+  ['leiloes','cadastro','analises','arquivo'].forEach(n=>{
     const pane=document.getElementById('leilao-sub-'+n);
     if(pane)pane.style.display=(n===name)?'':'none';
     const btn=document.querySelector(`.leilao-subtab-btn[data-sub="${n}"]`);
@@ -248,6 +249,106 @@ function renderLeilaoComissao(){
     </div>`;
 }
 
+// ── ARQUIVO (rodadas encerradas — quem deu lance, quem ganhou, opção
+// de arquivar/desarquivar) ────────────────────────────────────────
+// Arquivar é reversível e não apaga nada — só marca auction_rounds.
+// archived=true (RLS já restringe update a is_auction_admin(), igual
+// cancelAuctionRound), o que tira a rodada da lista pública "Leilões"
+// (renderAuctionsList) e da lista de gestão em "Cadastro"
+// (renderRoundsAdminList) sem perder o histórico.
+function renderLeilaoArquivo(){
+  const wrap=document.getElementById('leilao-arquivo-list');
+  if(!wrap)return;
+  const rounds=aucRounds
+    .filter(r=>r.status==='encerrado'||r.status==='cancelado')
+    .sort((a,b)=>new Date(b.end_at)-new Date(a.end_at));
+  if(!rounds.length){wrap.innerHTML=`<div class="cv-item-empty">Nenhuma rodada encerrada ainda.</div>`;return;}
+  wrap.innerHTML=rounds.map(r=>{
+    const cards=aucAuctions.filter(a=>a.round_id===r.id);
+    return`<div class="panel" style="margin-bottom:14px${r.archived?';opacity:.6':''}">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center">
+        <b style="font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.5px">🗓️ ${esc(r.title)}</b>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          ${r.status==='cancelado'?`<span style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">cancelada</span>`:''}
+          ${r.archived
+            ?`<span style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">📦 arquivada${r.archived_at?' em '+new Date(r.archived_at).toLocaleDateString('pt-BR'):''}</span>
+              <button class="cv-item-remove" onclick="unarchiveAuctionRound(${r.id})">Desarquivar</button>`
+            :`<button class="btn-add" onclick="archiveAuctionRound(${r.id})">📦 Arquivar</button>`}
+          <button class="cv-item-remove" onclick="deleteAuctionRound(${r.id})">🗑️ Excluir</button>
+        </div>
+      </div>
+      <div style="font-size:10.5px;color:var(--muted);font-family:'Space Mono',monospace;margin:6px 0">
+        Encerrada em ${new Date(r.end_at).toLocaleString('pt-BR')} · ${cards.length} carta(s)
+      </div>
+      ${cards.length?cards.map(a=>aucArchiveCardHtml(a)).join(''):'<div class="cv-item-empty">Nenhuma carta nesta rodada.</div>'}
+    </div>`;
+  }).join('');
+}
+
+function aucArchiveCardHtml(a){
+  const item=aucAdminOrderItems.find(it=>it.auction_id===a.id);
+  const order=item?aucAdminOrders.find(o=>o.id===item.order_id):null;
+  const img=aucImgFor(a);
+  return`<div style="display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--border);flex-wrap:wrap;align-items:center">
+    ${img?`<img src="${img}" style="width:44px;border-radius:6px;object-fit:contain;background:var(--surface2)">`:''}
+    <div style="flex:1;min-width:200px">
+      <b style="font-size:12.5px">${esc(a.card_name)}</b>
+      <div style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">
+        ${a.winner_id?`Vencedor: ${esc(order?.buyer_email||'—')} · R$ ${fmtR(a.winning_bid)}`:'Sem vencedor'} · ${a.bid_count||0} lance(s)
+        ${order?` · <span style="color:${aucOrderStatusColor(order.status)}">${AUC_ORDER_LBL[order.status]||order.status}</span>`:''}
+      </div>
+    </div>
+    ${a.bid_count?`<button class="cv-item-remove" onclick="toggleAuctionBidLogAdmin(${a.id})">📜 Ver lances</button>`:''}
+    <div id="auc-arquivo-log-${a.id}" style="display:none;width:100%;padding-left:54px;margin-top:2px"></div>
+  </div>`;
+}
+
+// Log completo (e-mail de verdade, não só iniciais) — só o leiloeiro
+// consegue chamar essa RPC (auction_bid_log_admin checa is_auction_admin()
+// no banco). Diferente do log público (auction_bid_log), que só mostra
+// iniciais pra qualquer participante.
+async function toggleAuctionBidLogAdmin(auctionId){
+  const box=document.getElementById(`auc-arquivo-log-${auctionId}`);
+  if(!box)return;
+  if(box.style.display==='none'){
+    box.style.display='block';
+    if(box.dataset.loaded)return;
+    box.innerHTML=`<div style="font-size:10.5px;color:var(--muted)">Carregando…</div>`;
+    const{data,error}=await sbClient.rpc('auction_bid_log_admin',{p_auction_id:auctionId});
+    if(error){
+      console.error('[leilao] auction_bid_log_admin',error);
+      box.innerHTML=`<div style="font-size:10.5px;color:var(--muted)">Não deu pra carregar — rodou leilao_setup.sql atualizado?</div>`;
+      return;
+    }
+    const bids=Array.isArray(data)?data:[];
+    box.innerHTML=bids.length?bids.map(b=>`<div style="display:flex;justify-content:space-between;gap:10px;font-size:11px;padding:3px 0;border-bottom:1px solid var(--border)">
+      <span>${esc(b.email||'—')}</span>
+      <span style="color:var(--teal);white-space:nowrap">R$ ${fmtR(b.amount)} · ${new Date(b.created_at).toLocaleString('pt-BR')}</span>
+    </div>`).join(''):`<div style="font-size:10.5px;color:var(--muted)">Nenhum lance registrado.</div>`;
+    box.dataset.loaded='1';
+  }else{
+    box.style.display='none';
+  }
+}
+
+async function archiveAuctionRound(roundId){
+  if(!aucIsLeilaoAdmin)return;
+  const{error}=await sbClient.from('auction_rounds').update({archived:true,archived_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',roundId);
+  if(error){console.error('[leilao] archiveAuctionRound',error);setStatus('Erro ao arquivar rodada. Verifique se rodou leilao_setup.sql atualizado.','err');return;}
+  setStatus('Rodada arquivada','ok');
+  await loadRoundsAndAuctions();
+  renderAuctionsList();renderRoundsAdminList();renderLeilaoArquivo();
+}
+
+async function unarchiveAuctionRound(roundId){
+  if(!aucIsLeilaoAdmin)return;
+  const{error}=await sbClient.from('auction_rounds').update({archived:false,archived_at:null,updated_at:new Date().toISOString()}).eq('id',roundId);
+  if(error){console.error('[leilao] unarchiveAuctionRound',error);setStatus('Erro ao desarquivar rodada','err');return;}
+  setStatus('Rodada desarquivada','ok');
+  await loadRoundsAndAuctions();
+  renderAuctionsList();renderRoundsAdminList();renderLeilaoArquivo();
+}
+
 async function loadRoundsAndAuctions(){
   if(!uid())return;
   try{
@@ -360,7 +461,7 @@ function aucIsOverdue(o){return o.status==='aguardando_pagamento'&&o.payment_due
 function renderAuctionsList(){
   const wrap=document.getElementById('leilao-list');
   if(!wrap)return;
-  const visibleRounds=aucRounds.filter(r=>r.status!=='cancelado'&&aucAuctions.some(a=>a.round_id===r.id&&a.status!=='cancelado'));
+  const visibleRounds=aucRounds.filter(r=>r.status!=='cancelado'&&!r.archived&&aucAuctions.some(a=>a.round_id===r.id&&a.status!=='cancelado'));
   if(!visibleRounds.length){
     wrap.innerHTML=`<div class="cv-item-empty">Nenhum leilão no momento.</div>`;
     return;
@@ -895,8 +996,11 @@ function renderRoundSelect(){
 function renderRoundsAdminList(){
   const wrap=document.getElementById('leilao-admin-rounds');
   if(!wrap)return;
-  if(!aucRounds.length){wrap.innerHTML=`<div class="cv-item-empty">Nenhuma rodada criada ainda.</div>`;return;}
-  wrap.innerHTML=aucRounds.map(r=>{
+  // Rodada arquivada some daqui — ela já tem seu lugar na sub-aba
+  // "🗄️ Arquivo", pra essa lista não ficar poluída de rodada antiga.
+  const rounds=aucRounds.filter(r=>!r.archived);
+  if(!rounds.length){wrap.innerHTML=`<div class="cv-item-empty">Nenhuma rodada criada ainda.</div>`;return;}
+  wrap.innerHTML=rounds.map(r=>{
     const cards=aucAuctions.filter(a=>a.round_id===r.id&&a.status!=='cancelado');
     const st={agendado:'var(--gold)',ativo:'var(--accent)',encerrado:'var(--teal)',cancelado:'var(--muted)'}[r.status]||'var(--muted)';
     return`<div class="cv-item" style="cursor:default">

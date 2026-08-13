@@ -694,3 +694,39 @@ grant execute on function delete_auction_round(bigint) to authenticated;
 alter table auction_orders add column if not exists mp_preference_id text;
 alter table auction_orders add column if not exists mp_payment_id text;
 alter table auction_orders add column if not exists payment_method text;
+
+-- ================================================================
+-- ARQUIVO DE LEILÕES — 12/08/2026
+-- Rodadas encerradas viram histórico consultável e "arquiváveis" — só
+-- some da lista principal (Leilões/Cadastro), não apaga nada. E uma
+-- versão do log de lances com e-mail de verdade (não só iniciais) pro
+-- leiloeiro conferir quem deu cada lance, ver leilao.js
+-- (toggleAuctionBidLogAdmin / renderLeilaoArquivo).
+-- ================================================================
+
+alter table auction_rounds add column if not exists archived boolean not null default false;
+alter table auction_rounds add column if not exists archived_at timestamptz;
+
+-- Log completo de lances (e-mail, não só iniciais) — só leiloeiro. O
+-- log público (auction_bid_log, já existente) continua só com iniciais
+-- pra todo mundo, esse aqui é a versão "de bastidor" pro leiloeiro
+-- apurar/conferir.
+create or replace function auction_bid_log_admin(p_auction_id bigint)
+returns table(bidder_id uuid, email text, amount numeric, created_at timestamptz)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_auction_admin() then
+    raise exception 'Apenas leiloeiros podem ver o log completo de lances.';
+  end if;
+  return query
+    select b.bidder_id, u.email, b.amount, b.created_at
+    from auction_bids b
+    join auth.users u on u.id = b.bidder_id
+    where b.auction_id = p_auction_id
+    order by b.created_at desc;
+end;
+$$;
+grant execute on function auction_bid_log_admin(bigint) to authenticated;

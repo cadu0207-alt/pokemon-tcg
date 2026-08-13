@@ -43,11 +43,24 @@ async function logTabVisit(tabId) {
 // ── REGISTRO DE CLIQUE EM PRODUTO (rumo ao Mercado Livre) ──────────
 // Chamado pelo onclick do card em lojas.js/renderProductCard. Dispara
 // e deixa o link abrir normalmente — não bloqueia a navegação.
+// CORRIGIDO 13/08/2026: o catch era .then(function(){},function(){}) —
+// engolia QUALQUER erro (RLS, tabela/RPC ausente por analytics_setup.sql
+// nunca ter rodado, sessão expirada) sem deixar rastro nenhum. Eduardo
+// reportou clique real não contabilizando; sem log não dava pra saber
+// se o insert estava sequer sendo tentado. Agora loga no console e não
+// falha mais silenciosamente também quando sbClient/uid não existem.
 function logProductClick(termId) {
-  if (!sbClient || typeof uid !== 'function' || !termId) return;
+  if (!termId) { console.warn('[analytics] logProductClick chamado sem termId'); return; }
+  if (!sbClient) { console.warn('[analytics] logProductClick: sbClient indisponível'); return; }
+  if (typeof uid !== 'function') { console.warn('[analytics] logProductClick: uid() indisponível'); return; }
   const userId = uid();
-  if (!userId) return;
-  sbClient.from('ml_product_clicks').insert({ term_id: termId, user_id: userId }).then(function(){}, function(){});
+  if (!userId) { console.warn('[analytics] logProductClick: usuário não logado, clique não registrado (term_id=' + termId + ')'); return; }
+  sbClient.from('ml_product_clicks').insert({ term_id: termId, user_id: userId }).then(
+    function(res) {
+      if (res && res.error) console.error('[analytics] falha ao gravar clique:', res.error.message, res.error);
+    },
+    function(err) { console.error('[analytics] falha ao gravar clique (exceção):', err); }
+  );
 }
 
 // ── PAINEL ADMIN: ABAS MAIS ACESSADAS ───────────────────────────────
