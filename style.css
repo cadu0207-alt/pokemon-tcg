@@ -84,6 +84,84 @@
 [data-theme="dark"] header { background: linear-gradient(to bottom, rgba(17,20,34,.98), rgba(13,15,24,.96)); }
 [data-theme="dark"] .tabs { background: rgba(17,20,34,.96); }
 
+/* ─── TEMA POKÉMON (leve) ────────────────────────────── */
+/* ADICIONADO 13/08/2026: terceiro tema, direção "Pokédex leve" validada
+   com Eduardo via mockup (brainstorm_redesign_mydeck_pokemon_leve.html,
+   versão E) — branco, cantos bem redondos, fonte arredondada (Fredoka) e
+   uma pokébola desenhada em CSS puro como assinatura visual, sem pesar. */
+[data-theme="pokemon"] {
+  --bg:       #ffffff;
+  --surface:  #fafafa;
+  --surface2: #f7f6f2;
+  --surface3: #f0efe8;
+  --border:   #f0e3e4;
+  --border2:  #ffd3d6;
+
+  --accent:   #e63946;
+  --accent2:  #ff8a3d;
+  --gold:     #d6a324;
+  --teal:     #3f8fd6;
+  --blue:     #3f8fd6;
+  --purple:   #a855f7;
+
+  --text:     #1c1f2e;
+  --text2:    #454b63;
+  --muted:    #9a9585;
+  --muted2:   #b7b2a2;
+  --muted-oncard: #7c7768;
+}
+[data-theme="pokemon"] body { background-image: none; }
+[data-theme="pokemon"] #app-mosaic::after { background: rgba(255,255,255,.92); }
+[data-theme="pokemon"] header { background: rgba(255,255,255,.98); }
+[data-theme="pokemon"] .tabs { background: rgba(255,255,255,.96); }
+
+/* fonte arredondada só nos títulos/números — corpo de texto continua DM Sans
+   pra não perder legibilidade em telas com muita informação (fichário, gastos) */
+[data-theme="pokemon"] .kpi-value,
+[data-theme="pokemon"] .sec-title,
+[data-theme="pokemon"] .panel-t,
+[data-theme="pokemon"] h1, [data-theme="pokemon"] .hlogo,
+[data-theme="pokemon"] .home-title, [data-theme="pokemon"] .home-btn,
+[data-theme="pokemon"] .modal h3, [data-theme="pokemon"] .slot-modal-title,
+[data-theme="pokemon"] .mbinder-title {
+  font-family: 'Fredoka', sans-serif;
+}
+
+/* painéis/KPIs perdem o canto cortado do tema "colecionador" e ficam
+   redondos e suaves, sem sombra pesada — a leveza pedida por Eduardo */
+[data-theme="pokemon"] .panel,
+[data-theme="pokemon"] .kpi,
+[data-theme="pokemon"] .kpi::after,
+[data-theme="pokemon"] .kpi::before {
+  border-radius: 16px;
+}
+[data-theme="pokemon"] .panel::after { display: none; }
+[data-theme="pokemon"] .panel-t {
+  border-bottom-style: solid;
+  border-bottom-color: var(--surface3);
+}
+
+/* pokébola em CSS puro como bullet — sem imagem, sem custo de carregamento */
+[data-theme="pokemon"] .panel-t::before,
+[data-theme="pokemon"] .sec-title::before {
+  content: '';
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: linear-gradient(#e63946 50%, #fff 50%);
+  border: 1.3px solid var(--text);
+  margin-right: 7px;
+  vertical-align: -1px;
+}
+
+/* botões ganham cantos bem redondos, consistentes com o resto do tema */
+[data-theme="pokemon"] .btn-add,
+[data-theme="pokemon"] .btn-cx,
+[data-theme="pokemon"] .btn-outline {
+  border-radius: 20px;
+}
+
 /* transição suave ao alternar tema */
 body, .panel, .kpi, .tab, header, .home-bg, input, select, textarea {
   transition: background-color .25s ease, border-color .25s ease, color .25s ease;
