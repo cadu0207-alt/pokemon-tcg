@@ -50,7 +50,12 @@
 
 /* ─── TEMA ESCURO ────────────────────────────────────── */
 [data-theme="dark"] {
-  --bg:       #0d0f18;
+  /* AJUSTADO 13/08/2026: igual o --bg do tema claro (#e9e9e9, amostrado da
+     logo-mydeck.png) — aqui amostrado de logo-mydeck-dark.png (~#020302,
+     preto quase puro). Junto com o degradê em .home-logo-img (mask-image),
+     a arte passa a se fundir com o fundo da página em vez de aparecer como
+     um retângulo "colado" — ver [[project_logo_tema_white]]. */
+  --bg:       #030303;
   --surface:  #111422;
   --surface2: #181c2e;
   --surface3: #212540;
@@ -253,9 +258,17 @@ body {
    leitor de tela/SEO), a imagem é que carrega a marca visualmente agora. */
 .home-logo-img {
   display: block;
-  width: min(720px, 92vw);
+  width: min(860px, 94vw);
   height: auto;
   margin: 0 auto 40px;
+  /* ADICIONADO 13/08/2026: a arte (logo-mydeck.png / -dark.png) vinha com
+     fundo sólido próprio — mesmo com --bg da página quase idêntico, a borda
+     reta do <img> ainda aparecia como um retângulo "colado" em cima do
+     .home-bg (que tem gradientes radiais + grain por baixo). Um mask-image
+     radial funde as bordas da imagem no fundo da página em vez de cortar
+     seco — sem precisar reexportar a arte com fundo transparente. */
+  -webkit-mask-image: radial-gradient(ellipse 72% 68% at 50% 50%, #000 58%, transparent 100%);
+          mask-image: radial-gradient(ellipse 72% 68% at 50% 50%, #000 58%, transparent 100%);
 }
 /* ADICIONADO 13/08/2026: versão dark da logo (logo-mydeck-dark.png, mesmo
    Rayquaza/tipografia, fundo preto puro em vez de off-white) — troca via
