@@ -257,6 +257,12 @@ body {
   height: auto;
   margin: 0 auto 40px;
 }
+/* ADICIONADO 13/08/2026: versão dark da logo (logo-mydeck-dark.png, mesmo
+   Rayquaza/tipografia, fundo preto puro em vez de off-white) — troca via
+   [data-theme] igual o resto do site, sem precisar de JS novo. */
+.home-logo-dark { display: none; }
+[data-theme="dark"] .home-logo-light { display: none; }
+[data-theme="dark"] .home-logo-dark  { display: block; }
 .sr-only {
   position: absolute;
   width: 1px; height: 1px;
