@@ -24,6 +24,8 @@
     { "key": "sv8",    "file": "cards_sv8.js",    "groupId": 23651, "abbreviation": "SSP" },
     { "key": "sv8pt5", "file": "cards_sv8pt5.js", "groupId": 23821, "abbreviation": "PRE" },
     { "key": "sv9",    "file": "cards_sv9.js",    "groupId": 24073, "abbreviation": "JTG" },
-    { "key": "sv10",   "file": "cards_sv10.js",   "groupId": 24269, "abbreviation": "DRI" }
+    { "key": "sv10",   "file": "cards_sv10.js",   "groupId": 24269, "abbreviation": "DRI" },
+
+    { "key": "pgo",    "file": "cards_pgo.js",    "groupId": 3064,  "abbreviation": "PGO" }
   ]
 }

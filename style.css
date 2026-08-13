@@ -5,7 +5,12 @@
 
 /* ─── TOKENS ─────────────────────────────────────────── */
 :root {
-  --bg:       #f7f7fa;
+  /* AJUSTADO 13/08/2026: off-white padrão da nova arte da logo (logo-mydeck.png,
+     fundo com textura de papel amostrado em #e9e9e9) — mais escuro que o
+     #f7f7fa antigo, então só AUMENTA o contraste de --muted/--text (ver nota
+     de 03/08/2026 abaixo, calculada sobre o valor antigo mais claro — segue
+     válida/folgada com este). */
+  --bg:       #e9e9e9;
   --surface:  #ffffff;
   --surface2: #f0f1f6;
   --surface3: #e6e8f0;
@@ -242,6 +247,24 @@ body {
   letter-spacing: 4px;
   margin-bottom: 48px;
   text-transform: uppercase;
+}
+/* ADICIONADO 13/08/2026: logo ilustrada (logo-mydeck.png) substitui o
+   h1/.home-sub em texto — eles continuam no HTML como .sr-only (só pra
+   leitor de tela/SEO), a imagem é que carrega a marca visualmente agora. */
+.home-logo-img {
+  display: block;
+  width: min(720px, 92vw);
+  height: auto;
+  margin: 0 auto 40px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
 }
 .home-stats {
   font-family: 'IBM Plex Mono', monospace;

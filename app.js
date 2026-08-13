@@ -312,7 +312,7 @@ function getBinderImg(c,setId){
   if(setId==='me04') return imgMe04(n);
   // Sets Escarlate e Violeta — imagens via pokemontcg.io CDN (público)
   // Usa número sem zero à esquerda (padrão do CDN) ou o valor original para cartas especiais (TG01, ACE01...)
-  if(setId.startsWith('sv')||(window.LEGACY_SETS||[]).some(s=>s.id===setId)){
+  if(setId.startsWith('sv')||setId==='pgo'||(window.LEGACY_SETS||[]).some(s=>s.id===setId)){
     const num=isNaN(n)?c.n:n;
     return `https://images.pokemontcg.io/${setId}/${num}.png`;
   }
@@ -890,7 +890,7 @@ const SET_META={
   me2pt5:{label:'🦸 ME2.5(ASC) — Heróis Excelsos',color:'#5C6BC0',chase:'Mega Charizard Y ex Hiper Rara Mega — preço a confirmar',heroCard:294,imgFn:imgMe2pt5,releaseDate:'30/jan/2026'},
   me05:{label:'🌑 ME05(PBL) — Escuridão Absoluta',color:'#424242',chase:'Gladion\'s Showdown SAR — US$1.090',heroCard:118,imgFn:imgMe05,releaseDate:'17/jul/2026'},
   me04:{label:'🔥 ME04(CRI) — Caos Ascendente',color:'var(--accent)',chase:'Mega Greninja ex Gold — R$1.482',heroCard:22,imgFn:imgMe04},
-  me03:{label:'🔵 ME03(POR) — Ordem Perfeita',color:'#1565C0',chase:'Meowth ex SAR — R$870 · Mega Zygarde ex Gold — R$775',heroCard:62,imgFn:imgMe03},
+  me03:{label:'🔵 ME03(POR) — Equilíbrio Perfeito',color:'#1565C0',chase:'Meowth ex SAR — R$870 · Mega Zygarde ex Gold — R$775',heroCard:62,imgFn:imgMe03},
   me02:{label:'👻 ME02(PFL) — Fogo Fantasmagórico',color:'#9C27B0',chase:'Mega Charizard X ex SAR — R$1.809',heroCard:13,imgFn:imgMe02},
   meg: {label:'🌿 MEG(MEG) — Megaevolução',color:'#4CAF50',chase:'Mega Greninja ex UR — R$60',heroCard:3,imgFn:imgMeg},
   mep: {label:'⭐ MEP(MEP) — Parceiros Iniciais',color:'#ffd166',chase:'Charmander MEP038 — R$36',heroCard:38,imgFn:imgMep},
@@ -919,6 +919,7 @@ const SET_CARDS_MAP={
   sv9: ()=>typeof CARDS_SV9!=='undefined'?CARDS_SV9:[],
   sv10:()=>typeof CARDS_SV10!=='undefined'?CARDS_SV10:[],
   svp:()=>typeof CARDS_SVP!=='undefined'?CARDS_SVP:[],
+  pgo:()=>typeof CARDS_PGO!=='undefined'?CARDS_PGO:[],
 };
 // sets legados entram no mapa dinamicamente
 (window.LEGACY_SETS||[]).forEach(ls=>{if(!SET_CARDS_MAP[ls.id])SET_CARDS_MAP[ls.id]=()=>ls.data;});
@@ -929,10 +930,11 @@ const SET_CATALOG=[
   {id:'me2pt5',label:'ME2.5(ASC) — Heróis Excelsos', emoji:'🦸',cards:typeof CARDS_ME2PT5!=='undefined'?CARDS_ME2PT5.length:295,color:'#5C6BC0',series:'ME'},
   {id:'me05',label:'ME05(PBL) — Escuridão Absoluta', emoji:'🌑',cards:typeof CARDS_ME05!=='undefined'?CARDS_ME05.length:120,color:'#757575',series:'ME'},
   {id:'me04',label:'ME04(CRI) — Caos Ascendente',  emoji:'🔥',cards:122,color:'#FF5722',series:'ME'},
-  {id:'me03',label:'ME03(POR) — Ordem Perfeita',   emoji:'🔵',cards:typeof CARDS_ME03!=='undefined'?CARDS_ME03.length:120,color:'#1565C0',series:'ME'},
+  {id:'me03',label:'ME03(POR) — Equilíbrio Perfeito',   emoji:'🔵',cards:typeof CARDS_ME03!=='undefined'?CARDS_ME03.length:120,color:'#1565C0',series:'ME'},
   {id:'me02',label:'ME02(PFL) — Fogo Fantasmagórico', emoji:'👻',cards:130,color:'#9C27B0',series:'ME'},
   {id:'meg', label:'MEG(MEG) — Megaevolução',       emoji:'🌿',cards:188,color:'#4CAF50',series:'ME'},
   {id:'mep', label:'MEP(MEP) — Promos Mega Evolução', emoji:'⭐',cards:typeof CARDS_MEP!=='undefined'?CARDS_MEP.length:54, color:'#ffd166',series:'ME'},
+  {id:'pgo', label:'PGO(PGO) — Pokémon GO',emoji:'🗺️',cards:typeof CARDS_PGO!=='undefined'?CARDS_PGO.length:88,color:'#4285F4',series:'SWSH'},
   {id:'svp', label:'SVP(SVP) — Promos Escarlate e Violeta',emoji:'🎫',cards:typeof CARDS_SVP!=='undefined'?CARDS_SVP.length:218,color:'#546E7A',series:'SV'},
   {id:'sv10',label:'SV10(DRI) — Rivais do Destino',emoji:'⚔️',cards:244,color:'#E91E63',series:'SV'},
   {id:'sv9', label:'SV9(JTG) — Jornada Juntos',     emoji:'🤝',cards:190,color:'#3F51B5',series:'SV'},
@@ -2117,7 +2119,7 @@ function getSetData(){
       sections:[{lbl:'📄 Base — 001 a 081',filter:c=>c.base},{lbl:'✨ Secretas — 082 a 118',filter:c=>!c.base}]},
     me04:{cards:CARDS,imgFn:imgMe04,label:'ME04(CRI) — Caos Ascendente',
       sections:[{lbl:'📄 Base — 001 a 086',filter:c=>c.base},{lbl:'✨ Secretas — 087 a 122',filter:c=>!c.base}]},
-    me03:{cards:me03c,imgFn:imgMe03,label:'ME03(POR) — Ordem Perfeita',
+    me03:{cards:me03c,imgFn:imgMe03,label:'ME03(POR) — Equilíbrio Perfeito',
       sections:[{lbl:'📄 Base — 001 a 070',filter:c=>c.base},{lbl:'✨ Secretas — 071 a 120',filter:c=>!c.base}]},
     me02:{cards:CARDS_ME02,imgFn:imgMe02,label:'ME02(PFL) — Fogo Fantasmagórico',
       sections:[{lbl:'📄 Base — 001 a 094',filter:c=>c.base},{lbl:'✨ Secretas — 095 a 130',filter:c=>!c.base}]},
@@ -2129,10 +2131,13 @@ function getSetData(){
         {lbl:'⭐ Série 1 — Kanto · Sinnoh · Alola (MEP037–045)',  filter:c=>c.series&&c.series.includes('Série 1')},
         {lbl:'⭐ Série 2 — Johto · Unova · Galar (MEP046–054)',   filter:c=>c.series&&c.series.includes('Série 2')},
         {lbl:'⭐ Série 3 — Hoenn · Kalos · Paldea (MEP055–063)',  filter:c=>c.series&&c.series.includes('Série 3')},
-        {lbl:'📦 Promos MEP064–081 — Ordem Perfeita/Caos Ascendente', filter:c=>c.series==='Promos MEP 064–081'},
+        {lbl:'📦 Promos MEP064–081 — Equilíbrio Perfeito/Caos Ascendente', filter:c=>c.series==='Promos MEP 064–081'},
         {lbl:'📦 Promos MEP082–110 — Ex\'s, Legendary Birds & mais', filter:c=>c.series==='Promos MEP 082–110'},
         {lbl:'📦 Outros',                                          filter:c=>!c.series||(!c.series.includes('Série')&&c.series!=='Promos MEP 001–036'&&c.series!=='Promos MEP 064–081'&&c.series!=='Promos MEP 082–110')},
       ]},
+    // ── Pokémon GO (2022) ───────────────────────────────────────────
+    pgo: {cards:typeof CARDS_PGO!=='undefined'?CARDS_PGO:[], label:'PGO(PGO) — Pokémon GO',
+      sections:[{lbl:'📄 Base — 001 a 078',filter:c=>c.base},{lbl:'✨ Secretas — 079 a 088',filter:c=>!c.base}]},
     // ── Escarlate e Violeta (2023-2025) ─────────────────────────────
     svp:   {cards:typeof CARDS_SVP!=='undefined'?CARDS_SVP:[],    label:'SVP(SVP) — Promos Escarlate e Violeta',
       sections:[{lbl:'🎫 Promos (todas)',filter:c=>true}]},
@@ -2786,7 +2791,7 @@ const BINDER_PRESETS=[
 const IMG_FNS={me04:imgMe04,me03:imgMe03,me02:imgMe02,meg:imgMeg,mep:imgMep,me05:imgMe05,me06:imgMe06,me2pt5:imgMe2pt5};
 const CB_SET_LABELS={
   me04:'🔥 ME04(CRI) — Caos Ascendente',
-  me03:'🔵 ME03(POR) — Ordem Perfeita',
+  me03:'🔵 ME03(POR) — Equilíbrio Perfeito',
   me02:'👻 ME02(PFL) — Fogo Fantasmagórico',
   meg: '🌿 MEG(MEG) — Megaevolução',
   mep: '⭐ MEP(MEP) — Promos',
@@ -4126,7 +4131,7 @@ const LAZY_SET_SCRIPTS=[
   'cards_sv1.js','cards_sv2.js','cards_sv3.js','cards_sv3pt5.js',
   'cards_sv4.js','cards_sv4pt5.js','cards_sv5.js','cards_sv6.js',
   'cards_sv6pt5.js','cards_sv7.js','cards_sv8.js','cards_sv8pt5.js',
-  'cards_sv9.js','cards_sv10.js','cards_svp.js',
+  'cards_sv9.js','cards_sv10.js','cards_svp.js','cards_pgo.js',
   'legacy_swsh.js','legacy_sm.js','legacy_xy.js','legacy_bw.js',
   'legacy_hgss.js','legacy_dp.js','legacy_ex.js','legacy_classic.js',
 ];

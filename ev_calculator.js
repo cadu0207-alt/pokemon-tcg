@@ -60,13 +60,13 @@ var CATALOG = [
   { id:'me05-blister4', grupo:'ME05 — Escuridão Absoluta', nome:'Blister Quadriplo (4 boosters)',boosters:4,  varejo:59.99,  set:'me05', extras:[], estimado:true },
   { id:'me05-blister3', grupo:'ME05 — Escuridão Absoluta', nome:'Blister Triplo (3 boosters)',   boosters:3,  varejo:44.99,  set:'me05', extras:[], estimado:true },
   { id:'me05-booster',  grupo:'ME05 — Escuridão Absoluta', nome:'Booster Avulso',                boosters:1,  varejo:14.99,  set:'me05', extras:[], estimado:true },
-  // ── ME03 Ordem Perfeita ───────────────────────────────────
-  { id:'me03-display',  grupo:'ME03 — Ordem Perfeita', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me03', extras:[] },
-  { id:'me03-etb',      grupo:'ME03 — Ordem Perfeita', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me03', extras:[] },
-  { id:'me03-blister4', grupo:'ME03 — Ordem Perfeita', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me03', extras:[] },
-  { id:'me03-blister3', grupo:'ME03 — Ordem Perfeita', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me03', extras:[] },
-  { id:'me03-blister2', grupo:'ME03 — Ordem Perfeita', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me03', extras:[] },
-  { id:'me03-booster',  grupo:'ME03 — Ordem Perfeita', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me03', extras:[] },
+  // ── ME03 Equilíbrio Perfeito ───────────────────────────────────
+  { id:'me03-display',  grupo:'ME03 — Equilíbrio Perfeito', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me03', extras:[] },
+  { id:'me03-etb',      grupo:'ME03 — Equilíbrio Perfeito', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me03', extras:[] },
+  { id:'me03-blister4', grupo:'ME03 — Equilíbrio Perfeito', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me03', extras:[] },
+  { id:'me03-blister3', grupo:'ME03 — Equilíbrio Perfeito', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me03', extras:[] },
+  { id:'me03-blister2', grupo:'ME03 — Equilíbrio Perfeito', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me03', extras:[] },
+  { id:'me03-booster',  grupo:'ME03 — Equilíbrio Perfeito', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me03', extras:[] },
   // ── ME02 Fogo Fantasmagorico ──────────────────────────────
   { id:'me02-display',  grupo:'ME02 — Fogo Fantasmagorico', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me02', extras:[] },
   { id:'me02-etb',      grupo:'ME02 — Fogo Fantasmagorico', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me02', extras:[] },

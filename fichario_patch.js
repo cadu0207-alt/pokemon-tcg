@@ -177,7 +177,7 @@ function imgUrl(n, setId) {
   }
   // Fallback inline (caso app.js ainda não tenha carregado)
   const num = parseInt(n, 10);
-  if (sid.startsWith('sv')) {
+  if (sid.startsWith('sv') || sid === 'pgo') {
     const safe = isNaN(num) ? n : num;
     return `https://images.pokemontcg.io/${sid}/${safe}.png`;
   }

@@ -23,6 +23,8 @@
     { "key": "sv8",    "file": "cards_sv8.js",    "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=639%20ed=SSP" },
     { "key": "sv8pt5", "file": "cards_sv8pt5.js", "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=649%20ed=PRE" },
     { "key": "sv9",    "file": "cards_sv9.js",    "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=654%20ed=JTG" },
-    { "key": "sv10",   "file": "cards_sv10.js",   "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=706%20ed=DRI" }
+    { "key": "sv10",   "file": "cards_sv10.js",   "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=706%20ed=DRI" },
+
+    { "key": "pgo",    "file": "cards_pgo.js",    "url": "https://www.ligapokemon.com.br/?view=cards/search&card=ed=PGO" }
   ]
 }
