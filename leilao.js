@@ -527,22 +527,11 @@ function aucInfoBlockHtml(a,idSuffix){
     </div>`;
 }
 
-// Selo "EM TESTE" sobreposto na foto — mesmo aviso do banner grande do
-// topo, só que direto em cada carta (inclusive quando a foto é
-// compartilhada/print separado, sem o resto da tela).
-function aucTestStampHtml(size){
-  const cfg={sm:{fs:8,w:130,top:6,left:-26},lg:{fs:14,w:200,top:18,left:-42}}[size]||{fs:10,w:150,top:10,left:-30};
-  return`<div style="position:absolute;top:${cfg.top}px;left:${cfg.left}px;width:${cfg.w}px;transform:rotate(-32deg);background:#c0392b;color:#fff;text-align:center;font-size:${cfg.fs}px;font-weight:700;font-family:'Space Mono',monospace;padding:3px 0;box-shadow:0 1px 4px rgba(0,0,0,.4);pointer-events:none;letter-spacing:.5px">EM TESTE</div>`;
-}
-
 function aucCardHtml(a){
   const img=aucImgFor(a);
   return`<div class="panel" style="margin-bottom:14px">
     <div style="display:flex;gap:14px;flex-wrap:wrap">
-      ${img?`<div style="position:relative;overflow:hidden;border-radius:8px;width:100px">
-        <img src="${img}" alt="${esc(a.card_name)}" title="Clique pra ampliar" style="width:100px;border-radius:8px;object-fit:contain;background:var(--surface2);cursor:zoom-in;display:block" onclick="openAuctionZoom(${a.id})" onerror="this.parentElement.style.display='none'">
-        ${aucTestStampHtml('sm')}
-      </div>`:''}
+      ${img?`<img src="${img}" alt="${esc(a.card_name)}" title="Clique pra ampliar" style="width:100px;border-radius:8px;object-fit:contain;background:var(--surface2);cursor:zoom-in" onclick="openAuctionZoom(${a.id})" onerror="this.style.display='none'">`:''}
       <div style="flex:1;min-width:220px">
         ${aucInfoBlockHtml(a,'')}
       </div>
@@ -566,10 +555,9 @@ function renderAuctionZoomContent(a){
   if(!box)return;
   const img=aucImgFor(a);
   box.innerHTML=`<div style="display:flex;flex-wrap:wrap">
-    <div style="flex:1;min-width:240px;background:var(--surface2);display:flex;align-items:center;justify-content:center;padding:24px;position:relative;overflow:hidden">
+    <div style="flex:1;min-width:240px;background:var(--surface2);display:flex;align-items:center;justify-content:center;padding:24px">
       ${img?`<img src="${img}" alt="${esc(a.card_name)}" style="max-width:100%;max-height:60vh;object-fit:contain;border-radius:10px" onerror="this.style.display='none'">`
         :`<div style="font-size:60px">🃏</div>`}
-      ${aucTestStampHtml('lg')}
     </div>
     <div style="flex:1;min-width:260px;padding:24px">
       ${aucInfoBlockHtml(a,'-zoom')}
@@ -909,6 +897,48 @@ async function payAuctionOrder(orderId){
   }
 }
 
+// ── COMBINAR COM O LEILOEIRO (WhatsApp) ───────────────────────────
+// O MyDeck é só a plataforma que roda o leilão — o combinado de envio
+// (e qualquer ajuste de pagamento fora do Checkout Pro) é sempre direto
+// entre comprador e leiloeiro. Isso é intencional e explicado no
+// disclaimer abaixo, não só por transparência: o site nunca teve posse
+// da carta física, então não tem como assumir responsabilidade pelo
+// envio — só pelo funcionamento do leilão em si.
+const AUC_LEILOEIRO_WHATSAPP='5585988930110'; // formato internacional, sem símbolos (wa.me)
+
+function aucWinnerWhatsappMessage(o,round,items){
+  const cartas=items.length
+    ?items.map(it=>`${it.auctions?.card_name||('Carta #'+it.auction_id)} (R$ ${fmtR(it.amount)})`).join(', ')
+    :'—';
+  return`Olá! Ganhei o leilão "${round?round.title:('Rodada #'+o.round_id)}" no MyDeck (mydecktcg.com.br): ${cartas}. `+
+    `Total: R$ ${fmtR(o.amount)}. Como procedo?`;
+}
+
+function contactLeiloeiroWhatsapp(orderId){
+  const o=aucMyOrders.find(x=>x.id===orderId);
+  if(!o)return;
+  const round=aucRoundById(o.round_id);
+  const items=aucMyOrderItems.filter(it=>it.order_id===o.id);
+  const msg=aucWinnerWhatsappMessage(o,round,items);
+  window.open(`https://wa.me/${AUC_LEILOEIRO_WHATSAPP}?text=${encodeURIComponent(msg)}`,'_blank');
+}
+
+// Disclaimer + botão, mostrado em todo pedido arrematado (qualquer
+// status) — pagamento (PIX) e envio são combinados direto pelo
+// WhatsApp por enquanto; pagamento automático (Mercado Pago) fica pra
+// depois — ver payAuctionOrder()/mp-create-payment, código já pronto,
+// só não está no fluxo do comprador no momento.
+function aucWinnerWhatsappBlockHtml(o){
+  return`<div class="mkt-note" style="margin-top:10px;border-color:var(--gold)">
+    <b>💬 Combine pagamento e envio com o leiloeiro.</b> O MyDeck é só a plataforma que roda o leilão —
+    o pagamento (PIX) e o acerto de envio (endereço, transportadora, prazo) são sempre
+    <b>direto entre você e o leiloeiro</b>, o site não participa nem se responsabiliza por essa parte.
+    <div style="margin-top:8px">
+      <button class="btn-add" onclick="contactLeiloeiroWhatsapp(${o.id})">💬 Falar com o leiloeiro no WhatsApp</button>
+    </div>
+  </div>`;
+}
+
 // ── MEUS PEDIDOS (carrinho consolidado por rodada) ────────────────
 function renderMyBidsAndOrders(){
   fillLeilaoAddressForm();
@@ -935,11 +965,7 @@ function renderMyBidsAndOrders(){
       </div>
       <div style="font-size:12px;font-weight:700;border-top:1px solid var(--border);padding-top:6px">Total: <span style="color:var(--teal)">R$ ${fmtR(o.amount)}</span></div>
       ${o.payment_due_at?`<div style="font-size:10.5px;color:${overdue?'var(--accent)':'var(--muted)'};margin-top:4px">Prazo de pagamento: ${new Date(o.payment_due_at).toLocaleString('pt-BR')}</div>`:''}
-      ${o.status==='aguardando_pagamento'?`<div style="margin-top:8px">
-        <button id="auc-pay-btn-${o.id}" class="btn-add" onclick="payAuctionOrder(${o.id})">💳 Pagar agora (PIX / Cartão / Boleto)</button>
-        <div id="auc-pay-status-${o.id}" style="font-size:10.5px;color:var(--accent);margin-top:4px;font-family:'Space Mono',monospace"></div>
-        <div class="mkt-note" style="margin-top:6px">Pagamento processado pelo Mercado Pago — um pagamento só cobre tudo que você arrematou nesta rodada. Envio por conta do comprador.</div>
-      </div>`:''}
+      ${aucWinnerWhatsappBlockHtml(o)}
       ${o.tracking_code?`<div style="font-size:11px;margin-top:6px">📦 Rastreio: <b>${esc(o.tracking_code)}</b></div>`:''}
     </div>`;
   }).join('');
@@ -1192,7 +1218,7 @@ function renderAdminOrders(){
         📍 ${esc(addr.logradouro||'—')}, ${esc(addr.numero||'—')} ${addr.bairro?'— '+esc(addr.bairro):''} · ${esc(addr.cidade||'—')}/${esc(addr.uf||'—')} ${addr.cep?'· CEP '+esc(addr.cep):''}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        ${o.status==='aguardando_pagamento'?`<button class="cv-item-remove" onclick="markOrderPaid(${o.id})" title="O normal é o pagamento confirmar sozinho pelo Mercado Pago — use isso só em exceção (ex: comprador pagou por fora e o webhook não recebeu a confirmação)">✓ Marcar como Pago manualmente (exceção)</button>`:''}
+        ${o.status==='aguardando_pagamento'?`<button class="btn-add" onclick="markOrderPaid(${o.id})">✓ Marcar como Pago (PIX recebido)</button>`:''}
         ${o.status==='pago'?`<input id="auc-track-${o.id}" placeholder="Código de rastreio" class="cv-select" style="width:180px">
           <button class="btn-add" onclick="markOrderShipped(${o.id})">📦 Marcar como Enviado</button>`:''}
         ${o.status==='enviado'?`<button class="btn-add" onclick="markOrderDone(${o.id})">✓ Marcar como Concluído</button>`:''}
