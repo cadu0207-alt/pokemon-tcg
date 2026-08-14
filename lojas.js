@@ -19,8 +19,24 @@
 // ── CONFIG: admin (único que cadastra/edita termos de busca) ────
 const ADMIN_UID = 'eb9da0ad-9877-4f17-ac5a-6f1da5eebc9b';
 const ADMIN_EMAIL = 'cadu0207@gmail.com';
+// ADMIN VIEWER 14/08/2026: adnresollecito@gmail.com — ajudante do Eduardo.
+// Enxerga todos os painéis/abas de admin (isAdmin() continua true pra ele),
+// mas NÃO pode salvar/editar/excluir nada — isso é gated por isAdminEditor(),
+// que só é true pro Eduardo. As policies de RLS no Supabase também seguem
+// checando o ADMIN_UID/ADMIN_EMAIL originais, então mesmo que algum botão
+// de edição escape do isAdminEditor() no front, o banco recusa a escrita.
+const ADMIN_VIEWER_EMAIL = 'adnresollecito@gmail.com';
 function isAdmin() {
+  const email = (currentUser && currentUser.email || '').toLowerCase();
+  return uid() === ADMIN_UID || email === ADMIN_EMAIL || email === ADMIN_VIEWER_EMAIL;
+}
+// Admin "de verdade": pode salvar/editar/excluir. Só o Eduardo.
+function isAdminEditor() {
   return uid() === ADMIN_UID || (currentUser && currentUser.email || '').toLowerCase() === ADMIN_EMAIL;
+}
+// Admin só-leitura: vê tudo, não edita nada.
+function isAdminViewer() {
+  return isAdmin() && !isAdminEditor();
 }
 
 // Link da Central de Afiliados do Mercado Livre (gerador manual de links)
@@ -117,7 +133,7 @@ async function loadSearchTerms() {
 }
 
 async function addSearchTerm(linkOrId, label, collection) {
-  if (!isAdmin() || !linkOrId.trim()) return;
+  if (!isAdminEditor() || !linkOrId.trim()) return;
   const preview = await fetchCatalogPreview(linkOrId);
   if (!preview.ok) { alert('Não consegui cadastrar: ' + preview.error); return; }
 
@@ -141,7 +157,7 @@ async function addSearchTerm(linkOrId, label, collection) {
 }
 
 async function saveCollection(id) {
-  if (!isAdmin()) return;
+  if (!isAdminEditor()) return;
   const input = document.getElementById('coll-' + id);
   if (!input) return;
   const val = input.value.trim();
@@ -151,19 +167,19 @@ async function saveCollection(id) {
 }
 
 async function removeSearchTerm(id) {
-  if (!isAdmin()) return;
+  if (!isAdminEditor()) return;
   await sbClient.from('ml_search_terms').delete().eq('id', id);
   renderLojas();
 }
 
 async function toggleFeatured(id, current) {
-  if (!isAdmin()) return;
+  if (!isAdminEditor()) return;
   await sbClient.from('ml_search_terms').update({ featured: !current }).eq('id', id);
   renderLojas();
 }
 
 async function saveAffiliateUrl(id) {
-  if (!isAdmin()) return;
+  if (!isAdminEditor()) return;
   const input = document.getElementById('aff-' + id);
   if (!input) return;
   const val = input.value.trim();
@@ -270,7 +286,7 @@ function bestRuleForPrice(rules, price) {
 }
 
 async function saveCouponRule(existingId) {
-  if (!isAdmin()) return;
+  if (!isAdminEditor()) return;
   const code = document.getElementById('rule-code').value.trim();
   const type = document.getElementById('rule-type').value;
   const value = parseFloat(document.getElementById('rule-value').value);
@@ -298,13 +314,13 @@ async function saveCouponRule(existingId) {
 }
 
 async function removeCouponRule(id) {
-  if (!isAdmin()) return;
+  if (!isAdminEditor()) return;
   await sbClient.from('ml_coupon_rules').delete().eq('id', id);
   renderLojas();
 }
 
 async function toggleCouponRule(id, current) {
-  if (!isAdmin()) return;
+  if (!isAdminEditor()) return;
   await sbClient.from('ml_coupon_rules').update({ active: !current }).eq('id', id);
   renderLojas();
 }
@@ -315,7 +331,7 @@ async function toggleCouponRule(id, current) {
 // é de fato CHAMADA depois (quando o usuário abre a aba), quando lojas.js
 // já rodou e já definiu window.mydeckGetRealPrice.
 async function saveProductKey(termId) {
-  if (!isAdmin()) return;
+  if (!isAdminEditor()) return;
   const sel = document.getElementById('pkey-' + termId);
   if (!sel) return;
   const val = sel.value || null;
@@ -368,7 +384,7 @@ function applyCouponDiscount(price, coupon) {
 }
 
 async function saveProductCoupon(termId) {
-  if (!isAdmin()) return;
+  if (!isAdminEditor()) return;
   const codeEl = document.getElementById('cupom-code-' + termId);
   const typeEl = document.getElementById('cupom-type-' + termId);
   const valueEl = document.getElementById('cupom-value-' + termId);
@@ -401,7 +417,7 @@ async function saveProductCoupon(termId) {
 }
 
 async function removeProductCoupon(couponId) {
-  if (!isAdmin()) return;
+  if (!isAdminEditor()) return;
   await sbClient.from('ml_coupons').delete().eq('id', couponId);
   renderLojas();
 }
@@ -411,7 +427,7 @@ async function removeProductCoupon(couponId) {
 // por produto. Roda em sequência (não em paralelo) com uma pequena
 // pausa entre chamadas pra não sobrecarregar a Edge Function/API do ML.
 async function refreshAllTerms() {
-  if (!isAdmin()) return;
+  if (!isAdminEditor()) return;
   const btn = document.getElementById('btn-refresh-all');
   const statusEl = document.getElementById('refresh-all-status');
   const terms = await loadSearchTerms();
@@ -445,7 +461,7 @@ async function refreshAllTerms() {
 
 // ── BUSCA no catálogo do Mercado Livre (via Edge Function) — admin ──
 async function runSearchForTerm(termObj, containerEl) {
-  if (!isAdmin()) return;
+  if (!isAdminEditor()) return;
   const label = termObj.label || termObj.term;
   containerEl.innerHTML = '<div class="ml-loading">🔎 Buscando vendedores para "' + label + '"...</div>';
 

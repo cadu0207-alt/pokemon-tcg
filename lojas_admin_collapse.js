@@ -37,6 +37,21 @@
     }
     .ml-term-card-hidden-by-search { display: none !important; }
     .ml-admin-count { font-size: 11px; opacity: .6; margin: 0 0 8px; }
+    .ml-admin-readonly-banner {
+      font-size: 11px; font-family: 'Space Mono', monospace; color: var(--muted);
+      background: rgba(0,0,0,.04); border: 1px dashed var(--border); border-radius: 8px;
+      padding: 8px 12px; margin: 0 0 14px;
+    }
+    /* ADMIN VIEWER 14/08/2026: acesso só-leitura — desabilita visualmente
+       inputs/botões de edição no painel (as funções por trás já recusam
+       a escrita via isAdminEditor(), isso aqui é só pra não deixar botão
+       "morto" clicável). */
+    #lojas-admin.ml-admin-readonly input,
+    #lojas-admin.ml-admin-readonly select,
+    #lojas-admin.ml-admin-readonly textarea,
+    #lojas-admin.ml-admin-readonly button {
+      pointer-events: none; opacity: .55;
+    }
   `;
   document.head.appendChild(style);
 })();
@@ -186,4 +201,11 @@ async function renderAdminPanel() {
     '<input id="ml-admin-term-search" type="text" placeholder="🔎 Filtrar por nome ou coleção..." oninput="filterAdminTerms(this.value)">' +
     '<div class="ml-admin-count" id="ml-admin-count">' + terms.length + ' de ' + terms.length + ' produto(s)</div>' +
     '<div class="ml-terms-list" id="ml-admin-terms-list">' + termsListHtml + '</div>';
+
+  // ADMIN VIEWER: mostra tudo, mas trava a edição visualmente pro ajudante.
+  const editor = typeof isAdminEditor === 'function' && isAdminEditor();
+  holder.classList.toggle('ml-admin-readonly', !editor);
+  if (!editor) {
+    holder.insertAdjacentHTML('afterbegin', '<div class="ml-admin-readonly-banner">👁️ Acesso de visualização — você pode ver tudo aqui, mas só o Eduardo pode salvar/editar/excluir.</div>');
+  }
 }

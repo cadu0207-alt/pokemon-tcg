@@ -115,7 +115,7 @@ async function renderAdminFeedback() {
 }
 
 async function sendFeedbackReply(id) {
-  if (typeof isAdmin !== 'function' || !isAdmin()) return;
+  if (typeof isAdminEditor !== 'function' || !isAdminEditor()) return;
   const input = document.getElementById('reply-input-' + id);
   if (!input) return;
   const replyText = input.value.trim();

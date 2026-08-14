@@ -48,7 +48,13 @@ const AUC_RULES_VERSION='v1'; // precisa bater com a checada em place_bid() no b
 // ── SOU LEILOEIRO? (admin principal OU autorizado em auction_admins) ─
 async function resolveLeilaoAdminStatus(){
   if(!uid()){aucIsLeilaoAdmin=false;return;}
-  if(typeof isAdmin==='function'&&isAdmin()){aucIsLeilaoAdmin=true;return;}
+  // ADMIN VIEWER 14/08/2026: isAdmin() sozinho não basta mais aqui — inclui
+  // o admin só-leitura (adnresollecito@gmail.com), que NÃO deve virar
+  // leiloeiro (cadastrar carta, fechar rodada, marcar pagamento = editar).
+  // Só isAdminEditor() (Eduardo) ganha o papel automaticamente; qualquer
+  // outra pessoa (inclusive o admin viewer) só vira leiloeiro se for
+  // explicitamente autorizada em auction_admins (is_auction_admin() abaixo).
+  if(typeof isAdminEditor==='function'&&isAdminEditor()){aucIsLeilaoAdmin=true;return;}
   try{
     const{data,error}=await sbClient.rpc('is_auction_admin');
     aucIsLeilaoAdmin=!error&&!!data;
@@ -97,7 +103,7 @@ async function renderLeilaoTab(){
   const subnav=document.getElementById('leilao-subnav');
   if(subnav)subnav.style.display=aucIsLeilaoAdmin?'flex':'none';
   const superWrap=document.getElementById('leilao-super-admin-wrap');
-  if(superWrap)superWrap.style.display=(typeof isAdmin==='function'&&isAdmin())?'':'none';
+  if(superWrap)superWrap.style.display=(typeof isAdminEditor==='function'&&isAdminEditor())?'':'none';
   // Quem não é leiloeiro sempre fica na sub-aba "Leilões" (as outras nem
   // aparecem no menu pra ele); leiloeiro mantém a última sub-aba escolhida.
   switchLeilaoSubtab(aucIsLeilaoAdmin?(aucActiveSubtab||'leiloes'):'leiloes');
@@ -116,7 +122,7 @@ async function renderLeilaoTab(){
     renderLeilaoAnalises();
     renderLeilaoArquivo();
   }
-  if(typeof isAdmin==='function'&&isAdmin()){
+  if(typeof isAdminEditor==='function'&&isAdminEditor()){
     await loadLeiloeiros();
     renderLeiloeirosList();
   }
@@ -1276,7 +1282,7 @@ function renderLeiloeirosList(){
 }
 
 async function addLeiloeiro(){
-  if(typeof isAdmin!=='function'||!isAdmin())return;
+  if(typeof isAdminEditor!=='function'||!isAdminEditor())return;
   const statusEl=document.getElementById('leilao-leiloeiro-status');
   const email=(document.getElementById('leilao-leiloeiro-email')?.value||'').trim();
   if(!email){if(statusEl)statusEl.textContent='Informe o e-mail.';return;}
@@ -1294,7 +1300,7 @@ async function addLeiloeiro(){
 }
 
 async function removeLeiloeiro(email){
-  if(typeof isAdmin!=='function'||!isAdmin())return;
+  if(typeof isAdminEditor!=='function'||!isAdminEditor())return;
   if(!confirm(`Remover ${email} como leiloeiro?`))return;
   const{error}=await sbClient.rpc('remove_auction_admin',{p_email:email});
   if(error){console.error('[leilao] removeLeiloeiro',error);setStatus('Erro ao remover leiloeiro','err');return;}

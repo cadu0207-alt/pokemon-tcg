@@ -108,6 +108,7 @@ async function submitTrustedStore(){
 
 // ── LISTAS ──────────────────────────────────────────────────────
 function mktStoreCard(s,{pending}={}){
+  const canEdit=typeof isAdminEditor==='function'&&isAdminEditor();
   return`<div class="mkt-store-card">
     <div class="mkt-store-top">
       <div class="mkt-store-name">${s.nome_fantasia}</div>
@@ -116,7 +117,7 @@ function mktStoreCard(s,{pending}={}){
     <div class="mkt-store-meta">${s.cidade} — ${s.uf} · CNPJ ${s.cnpj}</div>
     ${s.logradouro?`<div class="mkt-store-meta">${s.logradouro}</div>`:''}
     <div class="mkt-store-meta">Comissão: ${s.comissao_pct}% ${s.whatsapp?` · 📱 ${s.whatsapp}`:''}</div>
-    ${pending?`<div style="display:flex;gap:8px;margin-top:10px">
+    ${pending&&canEdit?`<div style="display:flex;gap:8px;margin-top:10px">
       <button class="btn-add" style="padding:5px 10px;font-size:10px" onclick="approveStore('${s.id}')">✓ Aprovar</button>
       <button class="cv-item-remove" onclick="rejectStore('${s.id}')">Rejeitar</button>
     </div>`:''}
@@ -134,6 +135,8 @@ function renderStoreLists(){
     ?active.map(s=>mktStoreCard(s)).join('')
     :`<div class="cv-item-empty">Nenhuma loja ativa ainda em Belo Horizonte ou São Paulo.</div>`;
 
+  // isAdmin() aqui é visibilidade (viewer também vê a fila de pendentes);
+  // os botões de aprovar/rejeitar só aparecem pra isAdminEditor() (mktStoreCard).
   const admin=typeof isAdmin==='function'&&isAdmin();
   const pending=trustedStores.filter(s=>s.status==='pendente');
   if(admin&&pending.length){
@@ -145,12 +148,14 @@ function renderStoreLists(){
 }
 
 async function approveStore(id){
+  if(typeof isAdminEditor!=='function'||!isAdminEditor())return;
   const{error}=await sbClient.from('trusted_stores').update({status:'ativa',updated_at:new Date().toISOString()}).eq('id',id);
   if(error){console.error('[trusted_stores approve]',error);alert('Não foi possível aprovar.');return;}
   await loadMarketplaceData();renderStoreLists();
 }
 
 async function rejectStore(id){
+  if(typeof isAdminEditor!=='function'||!isAdminEditor())return;
   const{error}=await sbClient.from('trusted_stores').update({status:'rejeitada',updated_at:new Date().toISOString()}).eq('id',id);
   if(error){console.error('[trusted_stores reject]',error);alert('Não foi possível rejeitar.');return;}
   await loadMarketplaceData();renderStoreLists();

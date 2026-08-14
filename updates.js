@@ -48,7 +48,7 @@ async function renderUpdatesLog() {
 function renderUpdatesAdminForm() {
   const holder = document.getElementById('admin-updates-wrap');
   if (!holder) return;
-  if (typeof isAdmin !== 'function' || !isAdmin()) { holder.innerHTML = ''; return; }
+  if (typeof isAdminEditor !== 'function' || !isAdminEditor()) { holder.innerHTML = ''; return; }
 
   holder.innerHTML =
     '<div class="sec-title" style="margin-top:28px">📢 Admin · Publicar Atualização</div>' +
@@ -88,7 +88,7 @@ async function loadUpdatesList() {
     return;
   }
 
-  const admin = typeof isAdmin === 'function' && isAdmin();
+  const admin = typeof isAdminEditor === 'function' && isAdminEditor();
 
   list.innerHTML = rows.map(function (u) {
     const dt = u.created_at ? new Date(u.created_at).toLocaleDateString('pt-BR') : '';
@@ -107,7 +107,7 @@ async function loadUpdatesList() {
 }
 
 async function publishUpdate() {
-  if (typeof isAdmin !== 'function' || !isAdmin()) return;
+  if (typeof isAdminEditor !== 'function' || !isAdminEditor()) return;
   const titleInput = document.getElementById('update-title-input');
   const msgInput = document.getElementById('update-msg-input');
   const btn = document.getElementById('update-publish-btn');
@@ -129,7 +129,7 @@ async function publishUpdate() {
 }
 
 async function deleteUpdate(id) {
-  if (typeof isAdmin !== 'function' || !isAdmin()) return;
+  if (typeof isAdminEditor !== 'function' || !isAdminEditor()) return;
   if (!confirm('Apagar essa atualização?')) return;
   const { error } = await sbClient.from('site_updates').delete().eq('id', id);
   if (error) { alert('Erro ao apagar: ' + error.message); return; }
