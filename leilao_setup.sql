@@ -730,3 +730,75 @@ begin
 end;
 $$;
 grant execute on function auction_bid_log_admin(bigint) to authenticated;
+
+-- ================================================================
+-- NOME DO LEILOEIRO (exibição pública) — 12/08/2026
+-- auction_admins só guardava e-mail (e o SELECT é restrito por RLS —
+-- cada um só vê a própria linha). Pra mostrar "Leiloeiro: Fulano" nas
+-- cartas e nas mensagens de compartilhamento pra QUALQUER participante
+-- (não só o próprio leiloeiro), precisa de: 1) um nome de exibição
+-- guardado, e 2) uma forma pública de ler user_id → nome sem expor
+-- e-mail nem outros dados da tabela.
+-- ================================================================
+
+alter table auction_admins add column if not exists display_name text;
+
+-- Cadastra o admin principal (Eduardo) na mesma tabela, só pra ter uma
+-- fonte única de nomes — ele já tem os poderes de leiloeiro via
+-- isAdmin()/checagem de uuid direto no client e nas funções admin;
+-- isso aqui é só o registro do nome de exibição dele.
+insert into auction_admins (user_id, email, display_name, added_by)
+values ('eb9da0ad-9877-4f17-ac5a-6f1da5eebc9b', 'cadu0207@gmail.com', 'Eduardo', null)
+on conflict (user_id) do update set display_name = excluded.display_name;
+
+-- Se o Juan já foi autorizado antes dessa coluna existir, dá pra
+-- definir o nome dele rodando (ajuste o nome se for diferente):
+-- update auction_admins set display_name = 'Juan' where email = 'juanvvictorr@gmail.com';
+
+-- Leitura pública (qualquer usuário logado, não só o leiloeiro) de
+-- user_id → nome de exibição — usada pra mostrar "Leiloeiro: X" nas
+-- cartas e nas mensagens de compartilhamento. Não expõe e-mail nem
+-- outra coluna da tabela.
+create or replace function auction_leiloeiro_names()
+returns table(user_id uuid, display_name text)
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select aa.user_id, coalesce(nullif(trim(aa.display_name),''), split_part(aa.email,'@',1))
+  from auction_admins aa;
+$$;
+grant execute on function auction_leiloeiro_names() to authenticated;
+
+-- add_auction_admin ganhou um 2º parâmetro opcional (nome de exibição)
+-- — recriada aqui por cima da versão anterior, mesmo comportamento de
+-- permissão, só acrescenta display_name no upsert.
+drop function if exists add_auction_admin(text);
+create or replace function add_auction_admin(p_email text, p_display_name text default null)
+returns auction_admins
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid;
+  v_row auction_admins%rowtype;
+begin
+  if auth.uid() is not null and auth.uid() <> 'eb9da0ad-9877-4f17-ac5a-6f1da5eebc9b' then
+    raise exception 'Só o administrador principal pode cadastrar leiloeiros.';
+  end if;
+  select id into v_uid from auth.users where lower(email) = lower(p_email) limit 1;
+  if v_uid is null then
+    raise exception 'Nenhum usuário encontrado com esse e-mail. A pessoa precisa entrar no MyDeck (fazer login) pelo menos uma vez antes de ser autorizada.';
+  end if;
+  insert into auction_admins (user_id, email, display_name, added_by)
+    values (v_uid, lower(p_email), nullif(trim(p_display_name),''), coalesce(auth.uid(), 'eb9da0ad-9877-4f17-ac5a-6f1da5eebc9b'))
+    on conflict (user_id) do update set
+      email = excluded.email,
+      display_name = coalesce(excluded.display_name, auction_admins.display_name)
+    returning * into v_row;
+  return v_row;
+end;
+$$;
+grant execute on function add_auction_admin(text, text) to authenticated;

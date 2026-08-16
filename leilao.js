@@ -40,6 +40,7 @@ let aucBlocked=false;
 let aucBlockedReason='';
 let aucSelectedCard=null;
 let aucLeiloeiros=[];
+let aucLeiloeiroNames={}; // {user_id: nome de exibição} — todo participante vê, ver loadLeiloeiroNames()
 let aucAutoNavigated=false; // evita reabrir a aba toda vez que o hook de login roda
 let aucRulesAccepted=null;  // null=ainda não checou · true/false depois de loadRulesAcceptance()
 let aucPendingBid=null;     // {auctionId,idSuffix} — lance que ficou esperando o aceite das regras
@@ -80,9 +81,9 @@ async function updateLeilaoTabVisibility(){
   if(!show){
     const pane=document.getElementById('leilao');
     if(pane&&pane.classList.contains('active')&&typeof goToTab==='function')goToTab('dash');
-  }else if(!aucAutoNavigated&&new URLSearchParams(window.location.search).get('leilao')&&typeof goToTab==='function'){
-    // Chegou por um link compartilhado (?leilao=<id>) — abre a aba direto,
-    // sem precisar clicar no menu.
+  }else if(!aucAutoNavigated&&typeof goToTab==='function'&&(new URLSearchParams(window.location.search).get('leilao')||new URLSearchParams(window.location.search).get('leilao_rodada'))){
+    // Chegou por um link compartilhado (?leilao=<id> ou ?leilao_rodada=<id>)
+    // — abre a aba direto, sem precisar clicar no menu.
     aucAutoNavigated=true;
     goToTab('leilao');
   }
@@ -109,11 +110,13 @@ async function renderLeilaoTab(){
   switchLeilaoSubtab(aucIsLeilaoAdmin?(aucActiveSubtab||'leiloes'):'leiloes');
 
   await loadRoundsAndAuctions();
+  await loadLeiloeiroNames();
   await loadMyAuctionOrders();
   renderRoundSelect();
   renderAuctionsList();
   renderMyBidsAndOrders();
   scrollToSharedAuction();
+  scrollToSharedRound();
 
   if(aucIsLeilaoAdmin){
     renderRoundsAdminList();
@@ -408,6 +411,19 @@ async function loadLeiloeiros(){
   aucLeiloeiros=Array.isArray(data)?data:[];
 }
 
+// Nomes de exibição dos leiloeiros (uid → nome) — diferente de
+// loadLeiloeiros() acima (que só o admin principal consegue ler, por
+// RLS, e traz e-mail junto), essa é a versão pública/resumida: todo
+// participante logado chama pra saber "Leiloeiro: Fulano" nas cartas e
+// nas mensagens de compartilhamento, sem expor e-mail de ninguém.
+async function loadLeiloeiroNames(){
+  const{data,error}=await sbClient.rpc('auction_leiloeiro_names');
+  if(error){console.error('[leilao] loadLeiloeiroNames',error);aucLeiloeiroNames={};return;}
+  aucLeiloeiroNames={};
+  (Array.isArray(data)?data:[]).forEach(r=>{aucLeiloeiroNames[r.user_id]=r.display_name;});
+}
+function aucLeiloeiroNome(uid){return aucLeiloeiroNames[uid]||'o leiloeiro';}
+
 // ── HELPERS ─────────────────────────────────────────────────────
 function aucRoundById(id){return aucRounds.find(r=>r.id===id);}
 
@@ -477,10 +493,14 @@ function renderAuctionsList(){
     </div>`:'')+
   visibleRounds.map(r=>{
     const cards=aucAuctions.filter(a=>a.round_id===r.id&&a.status!=='cancelado');
-    return`<div class="sec-title" style="margin-top:20px">🗓️ ${esc(r.title)}
-      <span style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;font-weight:400;margin-left:8px">
-        Lances até ${new Date(r.end_at).toLocaleString('pt-BR')} · Pagamento até ${new Date(r.payment_due_at).toLocaleString('pt-BR')}
-      </span></div>
+    return`<div id="leilao-round-sec-${r.id}" class="sec-title" style="margin-top:20px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center">
+      <span>🗓️ ${esc(r.title)}
+        <span style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;font-weight:400;margin-left:8px">
+          Lances até ${new Date(r.end_at).toLocaleString('pt-BR')} · Pagamento até ${new Date(r.payment_due_at).toLocaleString('pt-BR')}
+        </span>
+      </span>
+      ${aucIsLeilaoAdmin?`<button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal);font-size:10px" onclick="shareRoundText(${r.id})">📤 Compartilhar rodada</button>`:''}
+      </div>
       ${r.shipping_note?`<div class="mkt-note" style="margin-bottom:14px">🚚 ${esc(r.shipping_note)}</div>`:''}
       ${cards.map(a=>aucCardHtml(a)).join('')}`;
   }).join('');
@@ -503,6 +523,7 @@ function aucInfoBlockHtml(a,idSuffix){
     <div style="font-size:10.5px;color:var(--muted);font-family:'Space Mono',monospace;margin:4px 0">
       ${AUC_COND_LBL[a.condition]||a.condition} · ${AUC_LANG_LBL[a.language]||a.language}
       ${a.set_id?` · ${esc(a.set_id.toUpperCase())} #${esc(a.card_n||'')}`:''}
+      · Leiloeiro: ${esc(aucLeiloeiroNome(a.created_by))}
     </div>
     ${a.description?`<div style="font-size:11px;color:var(--text);margin-bottom:6px">${esc(a.description)}</div>`:''}
     <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:8px">
@@ -621,6 +642,13 @@ function aucShareUrl(auctionId){
   return`${base}?leilao=${auctionId}`;
 }
 
+// Link de uma RODADA inteira (não uma carta só) — abre a aba de leilão
+// e desce a tela direto pro bloco daquela rodada (ver scrollToSharedRound).
+function aucRoundShareUrl(roundId){
+  const base=window.location.origin+window.location.pathname;
+  return`${base}?leilao_rodada=${roundId}`;
+}
+
 // Baixa a imagem da carta como blob, pra poder ir junto no compartilhamento
 // nativo (celular) ou ser copiada pro clipboard (desktop). Pode falhar se o
 // CDN da imagem (scrydex/tcgdex) não liberar CORS pro fetch — nesse caso
@@ -685,7 +713,8 @@ function aucShareMessage(a){
   return`Ei, vem ver só esse leilão no site mydecktcg.com.br!\n\n`+
     `É a carta *${a.card_name}*${colecao?` da coleção *${colecao}*`:''}. `+
     `Leilão começando dia ${inicio} e terminando dia ${fim}.\n`+
-    `Valor inicial de R$ ${inicial}, no momento em R$ ${atual}.\n\n`+
+    `Valor inicial de R$ ${inicial}, no momento em R$ ${atual}.\n`+
+    `Leiloeiro: ${aucLeiloeiroNome(a.created_by)}.\n\n`+
     `Vem ver no link:\n${url}`;
 }
 
@@ -701,6 +730,37 @@ function shareAuctionText(auctionId){
   window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
   if(navigator.clipboard)navigator.clipboard.writeText(msg).catch(()=>{});
   setStatus('Mensagem pronta pro WhatsApp (também copiada)','ok');
+}
+
+// ── COMPARTILHAR RODADA INTEIRA (botão do leiloeiro) ──────────────
+// Diferente do shareAuctionText/Pdf (uma carta só): divulga a rodada
+// toda de uma vez — quantidade de cartas, início, término e o link.
+function aucRoundShareMessage(round,cards){
+  const url=aucRoundShareUrl(round.id);
+  const ativas=cards.filter(a=>a.status!=='cancelado');
+  const inicio=aucFmtDate(round.start_at);
+  const fim=aucFmtDate(round.end_at);
+  return`🔨 Leilão aberto no MyDeck! 🔨\n\n`+
+    `Rodada: *${round.title}*\n`+
+    `🃏 ${ativas.length} carta${ativas.length===1?'':'s'} em leilão\n`+
+    `🕐 Início: ${inicio}\n`+
+    `⏰ Término: ${fim}\n`+
+    `Leiloeiro: ${aucLeiloeiroNome(round.created_by)}.\n\n`+
+    `Vem dar seu lance no site mydecktcg.com.br:\n${url}`;
+}
+
+function shareRoundText(roundId){
+  const round=aucRoundById(roundId);
+  if(!round)return;
+  const cards=aucAuctions.filter(a=>a.round_id===roundId);
+  const msg=aucRoundShareMessage(round,cards);
+  if(navigator.share){
+    navigator.share({title:`Leilão MyDeck — ${round.title}`,text:msg}).catch(()=>{});
+    return;
+  }
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
+  if(navigator.clipboard)navigator.clipboard.writeText(msg).catch(()=>{});
+  setStatus('Mensagem da rodada pronta pro WhatsApp (também copiada)','ok');
 }
 
 // ── BOTÃO 2: PDF com a foto da carta + a mesma mensagem padrão ────
@@ -783,6 +843,19 @@ function scrollToSharedAuction(){
   if(!a)return;
   aucSharedZoomOpened=true;
   openAuctionZoom(id);
+}
+
+// Mesma ideia, só que pra link de RODADA (?leilao_rodada=<id>) — desce a
+// tela até o bloco daquela rodada em vez de abrir uma carta específica.
+let aucSharedRoundScrolled=false;
+function scrollToSharedRound(){
+  if(aucSharedRoundScrolled)return;
+  const id=parseInt(new URLSearchParams(window.location.search).get('leilao_rodada'));
+  if(!id)return;
+  const el=document.getElementById(`leilao-round-sec-${id}`);
+  if(!el)return;
+  aucSharedRoundScrolled=true;
+  el.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 // Atalho de 1 clique: preenche o valor certo (mínimo ou mínimo+folga) no
@@ -1285,17 +1358,21 @@ async function addLeiloeiro(){
   if(typeof isAdminEditor!=='function'||!isAdminEditor())return;
   const statusEl=document.getElementById('leilao-leiloeiro-status');
   const email=(document.getElementById('leilao-leiloeiro-email')?.value||'').trim();
+  const displayName=(document.getElementById('leilao-leiloeiro-nome')?.value||'').trim();
   if(!email){if(statusEl)statusEl.textContent='Informe o e-mail.';return;}
-  const{error}=await sbClient.rpc('add_auction_admin',{p_email:email});
+  const{error}=await sbClient.rpc('add_auction_admin',{p_email:email,p_display_name:displayName||null});
   if(error){
-    if(statusEl)statusEl.textContent=error.message||'Erro ao autorizar.';
+    if(statusEl)statusEl.textContent=error.message||'Erro ao autorizar. Verifique se rodou leilao_setup.sql atualizado.';
     return;
   }
   if(statusEl)statusEl.textContent=`✓ ${email} autorizado como leiloeiro.`;
   const input=document.getElementById('leilao-leiloeiro-email');
   if(input)input.value='';
+  const nomeInput=document.getElementById('leilao-leiloeiro-nome');
+  if(nomeInput)nomeInput.value='';
   setStatus('Leiloeiro autorizado','ok');
   await loadLeiloeiros();
+  await loadLeiloeiroNames();
   renderLeiloeirosList();
 }
 
