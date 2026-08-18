@@ -802,3 +802,71 @@ begin
 end;
 $$;
 grant execute on function add_auction_admin(text, text) to authenticated;
+
+-- ================================================================
+-- CONTROLE DE ENVIO E FINANCEIRO DO LEILOEIRO — 12/08/2026
+-- Tudo aditivo (colunas novas com default seguro, tabela nova) — não
+-- altera nenhuma coluna/policy/função existente, o leilão que já está
+-- rodando continua funcionando exatamente igual.
+--
+-- 1) HOLD DE ENVIO: alguns compradores preferem esperar ganhar mais
+--    cartas (de rodadas futuras) antes de pedir o envio, pra economizar
+--    frete. O comprador decide isso no próprio pedido (RPC
+--    set_order_shipping_hold — só mexe no PRÓPRIO pedido, e só nesses 3
+--    campos, nunca em status/amount). O leiloeiro só enxerga o pedido
+--    marcado como "segurando" no painel dele — a decisão final de
+--    quando enviar continua sendo do leiloeiro.
+-- 2) FINANCEIRO PRIVADO: quanto o leiloeiro pagou por cada carta
+--    (auction_costs) fica numa tabela separada, nunca visível pro
+--    comprador nem público — só quem é is_auction_admin() lê/escreve.
+-- ================================================================
+
+alter table auction_orders add column if not exists shipping_hold boolean not null default false;
+alter table auction_orders add column if not exists shipping_hold_note text;
+alter table auction_orders add column if not exists shipping_released_at timestamptz;
+
+-- Só o próprio comprador (buyer_id = auth.uid()) consegue chamar isso, e
+-- só altera os 3 campos de hold — não existe policy de UPDATE liberando
+-- isso direto pro client (a única de auction_orders continua sendo
+-- is_auction_admin(), do leiloeiro).
+create or replace function set_order_shipping_hold(p_order_id bigint, p_hold boolean, p_note text default null)
+returns auction_orders
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_row auction_orders%rowtype;
+begin
+  if auth.uid() is null then
+    raise exception 'Faça login.';
+  end if;
+  update auction_orders set
+    shipping_hold = p_hold,
+    shipping_hold_note = nullif(trim(coalesce(p_note,'')),''),
+    shipping_released_at = case when p_hold then null else now() end,
+    updated_at = now()
+  where id = p_order_id and buyer_id = auth.uid()
+  returning * into v_row;
+  if v_row.id is null then
+    raise exception 'Pedido não encontrado ou não é seu.';
+  end if;
+  return v_row;
+end;
+$$;
+grant execute on function set_order_shipping_hold(bigint, boolean, text) to authenticated;
+
+-- ── Custo de aquisição por carta — PRIVADO do leiloeiro ───────────
+create table if not exists auction_costs (
+  auction_id   bigint primary key references auctions(id) on delete cascade,
+  cost_price   numeric,
+  note         text,
+  created_by   uuid references auth.users(id),
+  updated_at   timestamptz not null default now()
+);
+
+alter table auction_costs enable row level security;
+
+drop policy if exists "auction_costs_admin_all" on auction_costs;
+create policy "auction_costs_admin_all" on auction_costs
+  for all using (is_auction_admin()) with check (is_auction_admin());

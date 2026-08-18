@@ -552,6 +552,7 @@
       <button type="button" class="btn-add leilao-subtab-btn" data-sub="cadastro" onclick="switchLeilaoSubtab('cadastro')">➕ Cadastro</button>
       <button type="button" class="btn-add leilao-subtab-btn" data-sub="analises" onclick="switchLeilaoSubtab('analises')">📊 Análises</button>
       <button type="button" class="btn-add leilao-subtab-btn" data-sub="arquivo" onclick="switchLeilaoSubtab('arquivo')">🗄️ Arquivo</button>
+      <button type="button" class="btn-add leilao-subtab-btn" data-sub="financeiro" onclick="switchLeilaoSubtab('financeiro')">💰 Financeiro</button>
     </div>
 
     <!-- ── CADASTRO (leiloeiro/admin) ──────────────────────────────── -->
@@ -650,6 +651,28 @@
         os dados continuam intactos e dá pra desarquivar quando quiser.
       </div>
       <div id="leilao-arquivo-list"></div>
+    </div>
+
+    <!-- ── FINANCEIRO (leiloeiro/admin, dados privados) ────────────── -->
+    <div id="leilao-sub-financeiro" style="display:none">
+      <div class="mkt-note" style="border-color:var(--gold);color:var(--gold)">
+        🔒 Só você vê essa aba. Preço pago, margem e lucro nunca aparecem pro comprador nem em nenhum lugar público do site.
+      </div>
+      <div class="kpi-grid" id="leilao-financeiro-kpis" style="margin:16px 0 24px"></div>
+
+      <div class="mkt-grid">
+        <div class="panel">
+          <div class="panel-t">📈 Lucro por semana</div>
+          <div id="leilao-financeiro-chart-semana"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-t">📈 Lucro por mês</div>
+          <div id="leilao-financeiro-chart-mes"></div>
+        </div>
+      </div>
+
+      <div class="sec-title">🃏 Cartas arrematadas — custo, venda e margem</div>
+      <div id="leilao-financeiro-list"></div>
     </div>
 
     <!-- ── LEILÕES (todo mundo) ────────────────────────────────────── -->

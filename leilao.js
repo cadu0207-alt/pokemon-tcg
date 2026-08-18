@@ -124,6 +124,8 @@ async function renderLeilaoTab(){
     renderAdminOrders();
     renderLeilaoAnalises();
     renderLeilaoArquivo();
+    await loadAuctionCosts();
+    renderLeilaoFinanceiro();
   }
   if(typeof isAdminEditor==='function'&&isAdminEditor()){
     await loadLeiloeiros();
@@ -135,7 +137,7 @@ async function renderLeilaoTab(){
 let aucActiveSubtab='leiloes';
 function switchLeilaoSubtab(name){
   aucActiveSubtab=name;
-  ['leiloes','cadastro','analises','arquivo'].forEach(n=>{
+  ['leiloes','cadastro','analises','arquivo','financeiro'].forEach(n=>{
     const pane=document.getElementById('leilao-sub-'+n);
     if(pane)pane.style.display=(n===name)?'':'none';
     const btn=document.querySelector(`.leilao-subtab-btn[data-sub="${n}"]`);
@@ -256,6 +258,176 @@ function renderLeilaoComissao(){
       </div>
       ${tabelaFaixas}
     </div>`;
+}
+
+// ── FINANCEIRO PRIVADO DO LEILOEIRO (12/08/2026) ──────────────────
+// Preço que o leiloeiro pagou por cada carta (auction_costs, tabela
+// separada e travada por RLS — só is_auction_admin() lê/escreve, nunca
+// aparece pro comprador nem em nenhuma tela pública). Tudo aditivo:
+// não mexe em nada do fluxo de leilão que já está rodando.
+let aucAuctionCosts={}; // {auction_id: {cost_price, note}}
+
+async function loadAuctionCosts(){
+  const{data,error}=await sbClient.from('auction_costs').select('*');
+  if(error){console.error('[leilao] loadAuctionCosts',error);aucAuctionCosts={};return;}
+  aucAuctionCosts={};
+  (Array.isArray(data)?data:[]).forEach(c=>{aucAuctionCosts[c.auction_id]={cost_price:c.cost_price,note:c.note};});
+}
+
+async function saveCostPrice(auctionId){
+  if(!aucIsLeilaoAdmin)return;
+  const input=document.getElementById(`auc-cost-${auctionId}`);
+  const raw=input?.value;
+  if(raw===''||raw==null){setStatus('Informe o valor que você pagou pela carta','err');return;}
+  const val=parseFloat(raw);
+  if(isNaN(val)||val<0){setStatus('Valor de custo inválido','err');return;}
+  const{error}=await sbClient.from('auction_costs')
+    .upsert({auction_id:auctionId,cost_price:val,created_by:uid(),updated_at:new Date().toISOString()},{onConflict:'auction_id'});
+  if(error){console.error('[leilao] saveCostPrice',error);setStatus('Erro ao salvar custo. Verifique se rodou leilao_setup.sql atualizado.','err');return;}
+  aucAuctionCosts[auctionId]={...(aucAuctionCosts[auctionId]||{}),cost_price:val};
+  setStatus('Custo salvo','ok');
+  renderLeilaoFinanceiro();
+}
+
+function aucMonthKey(d){
+  d=new Date(d);
+  return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function aucWeekKey(d){
+  d=new Date(d);
+  const day=(d.getDay()+6)%7; // 0=segunda
+  const monday=new Date(d);
+  monday.setDate(d.getDate()-day);
+  monday.setHours(0,0,0,0);
+  return monday.toISOString().slice(0,10);
+}
+
+// Monta uma linha por carta arrematada: venda, custo (se cadastrado),
+// comissão MyDeck RATEADA (a comissão real é calculada por faixa sobre
+// o total pago no MÊS — aqui ela é distribuída proporcionalmente entre
+// as cartas daquele mês, pra cada linha fazer sentido sozinha) e lucro
+// líquido = venda − custo − comissão. Só entra no cálculo quando o
+// pedido já foi PAGO (senão não tem como saber em qual mês a comissão
+// vai cair).
+function aucComputeFinanceiroRows(){
+  const pagosPorMes={};
+  aucAdminOrders.forEach(o=>{
+    if(['pago','enviado','concluido'].includes(o.status)&&o.paid_at){
+      const k=aucMonthKey(o.paid_at);
+      pagosPorMes[k]=(pagosPorMes[k]||0)+ +o.amount;
+    }
+  });
+  const comissaoPorMes={};
+  Object.keys(pagosPorMes).forEach(k=>{comissaoPorMes[k]=aucCommissionBreakdown(pagosPorMes[k]).commission;});
+
+  const arrematados=aucAuctions.filter(a=>a.status==='encerrado'&&a.winner_id);
+  return arrematados.map(a=>{
+    const item=aucAdminOrderItems.find(it=>it.auction_id===a.id);
+    const order=item?aucAdminOrders.find(o=>o.id===item.order_id):null;
+    const venda=+a.winning_bid||0;
+    const costEntry=aucAuctionCosts[a.id];
+    const custo=(costEntry&&costEntry.cost_price!=null)?+costEntry.cost_price:null;
+    let comissao=null;
+    if(order&&order.paid_at&&['pago','enviado','concluido'].includes(order.status)){
+      const k=aucMonthKey(order.paid_at);
+      const totalMes=pagosPorMes[k]||0;
+      comissao=totalMes>0?comissaoPorMes[k]*((+item.amount)/totalMes):0;
+    }
+    const lucro=(custo!=null&&comissao!=null)?(venda-custo-comissao):null;
+    return{a,order,item,venda,custo,comissao,lucro};
+  }).sort((x,y)=>new Date(y.a.end_at)-new Date(x.a.end_at));
+}
+
+// Gráfico de barras simples em SVG (sem lib externa) — barras acima da
+// linha de base são lucro, abaixo seriam prejuízo (custo+comissão >
+// venda). value negativo/positivo já vem calculado em aucAggregateByPeriod.
+function aucAggregateByPeriod(rows,granularity){
+  const map={};
+  rows.forEach(r=>{
+    if(r.lucro==null||!r.order?.paid_at)return;
+    const key=granularity==='month'?aucMonthKey(r.order.paid_at):aucWeekKey(r.order.paid_at);
+    map[key]=(map[key]||0)+r.lucro;
+  });
+  return Object.keys(map).sort().slice(-12).map(k=>({key:k,value:map[k]}));
+}
+
+function aucBarChartSvg(data){
+  if(!data.length)return`<div class="cv-item-empty">Ainda não há cartas com custo E pagamento registrados suficientes pra montar o gráfico.</div>`;
+  const w=560,h=170,pad=28;
+  const max=Math.max(0,...data.map(d=>d.value));
+  const min=Math.min(0,...data.map(d=>d.value));
+  const range=(max-min)||1;
+  const zeroY=pad+(max/range)*(h-pad*2);
+  const gap=(w-pad*2)/data.length;
+  const barW=Math.max(gap*0.6,4);
+  const bars=data.map((d,i)=>{
+    const x=pad+i*gap+(gap-barW)/2;
+    const barH=Math.max(Math.abs(d.value)/range*(h-pad*2),1);
+    const y=d.value>=0?zeroY-barH:zeroY;
+    const color=d.value>=0?'var(--teal)':'var(--accent)';
+    return`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${barH.toFixed(1)}" fill="${color}" rx="2"><title>${esc(d.key)}: R$ ${fmtR(d.value)}</title></rect>`;
+  }).join('');
+  const labels=data.map((d,i)=>{
+    const x=pad+i*gap+gap/2;
+    return`<text x="${x.toFixed(1)}" y="${h-6}" font-size="8" fill="var(--muted)" text-anchor="middle" font-family="'Space Mono',monospace">${esc(d.key.slice(5))}</text>`;
+  }).join('');
+  return`<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px;display:block">
+    <line x1="${pad}" y1="${zeroY.toFixed(1)}" x2="${w-pad}" y2="${zeroY.toFixed(1)}" stroke="var(--border)" stroke-width="1"/>
+    ${bars}${labels}
+  </svg>`;
+}
+
+function renderLeilaoFinanceiro(){
+  const kpiWrap=document.getElementById('leilao-financeiro-kpis');
+  const listWrap=document.getElementById('leilao-financeiro-list');
+  const chartSemanaWrap=document.getElementById('leilao-financeiro-chart-semana');
+  const chartMesWrap=document.getElementById('leilao-financeiro-chart-mes');
+  if(!kpiWrap||!listWrap)return;
+
+  const rows=aucComputeFinanceiroRows();
+  const receitaTotal=rows.reduce((s,r)=>s+r.venda,0);
+  const comCusto=rows.filter(r=>r.custo!=null);
+  const custoTotal=comCusto.reduce((s,r)=>s+r.custo,0);
+  const comLucro=rows.filter(r=>r.lucro!=null);
+  const lucroTotal=comLucro.reduce((s,r)=>s+r.lucro,0);
+  const comissaoTotal=comLucro.reduce((s,r)=>s+(r.comissao||0),0);
+  const faltandoCusto=rows.length-comCusto.length;
+
+  const kpi=(label,value,color)=>`<div class="panel" style="padding:16px">
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${label}</div>
+    <div style="font-size:22px;font-weight:700;color:${color||'var(--text)'}">${value}</div>
+  </div>`;
+  kpiWrap.innerHTML=
+    kpi('RECEITA TOTAL',`R$ ${fmtR(receitaTotal)}`,'var(--teal)')+
+    kpi('CUSTO CADASTRADO',`R$ ${fmtR(custoTotal)}`)+
+    kpi('COMISSÃO MYDECK (rateada)',`R$ ${fmtR(comissaoTotal)}`,'var(--gold)')+
+    kpi('LUCRO LÍQUIDO',`R$ ${fmtR(lucroTotal)}`,lucroTotal>=0?'var(--teal)':'var(--accent)')+
+    kpi('FALTA CADASTRAR CUSTO',faltandoCusto,faltandoCusto?'var(--gold)':'var(--text)');
+
+  if(chartSemanaWrap)chartSemanaWrap.innerHTML=aucBarChartSvg(aucAggregateByPeriod(rows,'week'));
+  if(chartMesWrap)chartMesWrap.innerHTML=aucBarChartSvg(aucAggregateByPeriod(rows,'month'));
+
+  if(!rows.length){listWrap.innerHTML=`<div class="cv-item-empty">Nenhuma carta arrematada ainda.</div>`;return;}
+  listWrap.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">
+    <thead><tr style="text-align:left;color:var(--muted);font-family:'Space Mono',monospace;font-size:9px">
+      <th style="padding:6px">CARTA</th><th style="padding:6px">COMPRADOR</th>
+      <th style="padding:6px;text-align:right">VENDA</th><th style="padding:6px">CUSTO PAGO</th>
+      <th style="padding:6px;text-align:right">COMISSÃO</th><th style="padding:6px;text-align:right">LUCRO</th>
+    </tr></thead>
+    <tbody>
+      ${rows.map(r=>`<tr style="border-top:1px solid var(--border)">
+        <td style="padding:6px">${esc(r.a.card_name)}</td>
+        <td style="padding:6px;color:var(--muted)">${esc(r.order?.buyer_email||'—')}</td>
+        <td style="padding:6px;text-align:right;color:var(--teal)">R$ ${fmtR(r.venda)}</td>
+        <td style="padding:6px">
+          <input type="number" id="auc-cost-${r.a.id}" value="${r.custo!=null?r.custo:''}" placeholder="0,00" step="0.01" min="0" style="width:80px" class="cv-select">
+          <button class="cv-item-remove" style="padding:2px 8px;font-size:10px" onclick="saveCostPrice(${r.a.id})">💾</button>
+        </td>
+        <td style="padding:6px;text-align:right;color:var(--gold)">${r.comissao!=null?'R$ '+fmtR(r.comissao):'—'}</td>
+        <td style="padding:6px;text-align:right;font-weight:700;color:${r.lucro==null?'var(--muted)':(r.lucro>=0?'var(--teal)':'var(--accent)')}">${r.lucro!=null?'R$ '+fmtR(r.lucro):'—'}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table></div>`;
 }
 
 // ── ARQUIVO (rodadas encerradas — quem deu lance, quem ganhou, opção
@@ -1045,9 +1217,51 @@ function renderMyBidsAndOrders(){
       <div style="font-size:12px;font-weight:700;border-top:1px solid var(--border);padding-top:6px">Total: <span style="color:var(--teal)">R$ ${fmtR(o.amount)}</span></div>
       ${o.payment_due_at?`<div style="font-size:10.5px;color:${overdue?'var(--accent)':'var(--muted)'};margin-top:4px">Prazo de pagamento: ${new Date(o.payment_due_at).toLocaleString('pt-BR')}</div>`:''}
       ${aucWinnerWhatsappBlockHtml(o)}
+      ${aucShippingHoldBlockHtml(o)}
       ${o.tracking_code?`<div style="font-size:11px;margin-top:6px">📦 Rastreio: <b>${esc(o.tracking_code)}</b></div>`:''}
     </div>`;
   }).join('');
+}
+
+// ── SEGURAR ENVIO (comprador decide) ──────────────────────────────
+// Quem já arrematou e ainda não recebeu pode pedir pra "guardar" o
+// envio — o leiloeiro fica sabendo que essa pessoa prefere esperar
+// juntar mais cartas antes de despachar (economiza frete pra ela). A
+// decisão final de quando enviar continua com o leiloeiro; isso aqui
+// só sinaliza a preferência dele no painel de pedidos.
+function aucShippingHoldBlockHtml(o){
+  if(['enviado','concluido','cancelado'].includes(o.status))return'';
+  if(o.shipping_hold){
+    return`<div class="mkt-note" style="margin-top:8px;border-color:var(--muted)">
+      🕐 <b>Você pediu pra segurar o envio</b>${o.shipping_hold_note?`: "${esc(o.shipping_hold_note)}"`:''} —
+      vai esperar você juntar mais arremates antes de despachar.
+      <div style="margin-top:6px">
+        <button class="cv-item-remove" onclick="releaseShippingHold(${o.id})">📦 Já posso receber — liberar para envio</button>
+      </div>
+    </div>`;
+  }
+  return`<div style="margin-top:8px">
+    <button class="cv-item-remove" onclick="requestShippingHold(${o.id})">🕐 Quero guardar e enviar junto com outro leilão futuro</button>
+  </div>`;
+}
+
+async function requestShippingHold(orderId){
+  if(!uid())return;
+  const note=(prompt('Quer deixar um recado pro leiloeiro sobre isso? (opcional — ex: "vou juntar com a próxima rodada")')||'').trim();
+  const{error}=await sbClient.rpc('set_order_shipping_hold',{p_order_id:orderId,p_hold:true,p_note:note||null});
+  if(error){console.error('[leilao] requestShippingHold',error);setStatus(error.message||'Erro ao segurar o envio. Verifique se rodou leilao_setup.sql atualizado.','err');return;}
+  setStatus('Envio marcado pra segurar','ok');
+  await loadMyAuctionOrders();
+  renderMyBidsAndOrders();
+}
+
+async function releaseShippingHold(orderId){
+  if(!uid())return;
+  const{error}=await sbClient.rpc('set_order_shipping_hold',{p_order_id:orderId,p_hold:false});
+  if(error){console.error('[leilao] releaseShippingHold',error);setStatus(error.message||'Erro ao liberar o envio','err');return;}
+  setStatus('Envio liberado — o leiloeiro já pode despachar','ok');
+  await loadMyAuctionOrders();
+  renderMyBidsAndOrders();
 }
 
 // ================================================================
@@ -1296,6 +1510,9 @@ function renderAdminOrders(){
       <div style="font-size:10.5px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:8px">
         📍 ${esc(addr.logradouro||'—')}, ${esc(addr.numero||'—')} ${addr.bairro?'— '+esc(addr.bairro):''} · ${esc(addr.cidade||'—')}/${esc(addr.uf||'—')} ${addr.cep?'· CEP '+esc(addr.cep):''}
       </div>
+      ${o.shipping_hold?`<div class="mkt-note" style="margin-bottom:8px;border-color:var(--gold);color:var(--gold)">
+        🕐 <b>Comprador pediu pra segurar o envio</b>${o.shipping_hold_note?`: "${esc(o.shipping_hold_note)}"`:''} — combine com ele antes de despachar, se preferir.
+      </div>`:''}
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         ${o.status==='aguardando_pagamento'?`<button class="btn-add" onclick="markOrderPaid(${o.id})">✓ Marcar como Pago (PIX recebido)</button>`:''}
         ${o.status==='pago'?`<input id="auc-track-${o.id}" placeholder="Código de rastreio" class="cv-select" style="width:180px">
