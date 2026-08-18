@@ -870,3 +870,65 @@ alter table auction_costs enable row level security;
 drop policy if exists "auction_costs_admin_all" on auction_costs;
 create policy "auction_costs_admin_all" on auction_costs
   for all using (is_auction_admin()) with check (is_auction_admin());
+
+-- ================================================================
+-- CARTA ARREMATADA → FICHÁRIO — 12/08/2026
+-- Depois que o leiloeiro confirma o pagamento, o comprador ganha um
+-- botão "Adicionar ao Fichário" que insere a carta na coleção pessoal
+-- dele (tabela `collection`, já existente — não criamos nada novo lá,
+-- só reaproveitamos saveSlot() do fichario_patch.js pelo client).
+-- Aqui só precisamos rastrear SE aquele item do pedido já foi
+-- adicionado, pra não deixar duplicar quantity clicando 2x.
+-- ================================================================
+
+alter table auction_order_items add column if not exists added_to_collection boolean not null default false;
+alter table auction_order_items add column if not exists added_to_collection_at timestamptz;
+
+-- Só o próprio comprador do pedido (join com auction_orders.buyer_id)
+-- consegue marcar o item dele — não é policy de UPDATE direta (a única
+-- que existe em auction_order_items continua sendo SELECT), é só essa
+-- função pontual, então não abre brecha pra alterar amount/auction_id.
+create or replace function mark_order_item_added_to_collection(p_item_id bigint)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_buyer uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'Faça login.';
+  end if;
+  select o.buyer_id into v_buyer
+    from auction_order_items i
+    join auction_orders o on o.id = i.order_id
+    where i.id = p_item_id;
+  if v_buyer is null then
+    raise exception 'Item de pedido não encontrado.';
+  end if;
+  if v_buyer <> auth.uid() then
+    raise exception 'Este item não é seu.';
+  end if;
+  update auction_order_items set
+    added_to_collection = true,
+    added_to_collection_at = now()
+  where id = p_item_id;
+end;
+$$;
+grant execute on function mark_order_item_added_to_collection(bigint) to authenticated;
+
+-- ================================================================
+-- TIPO DE CARTA (versão/variante) NO CADASTRO DO LEILÃO — 13/08/2026
+-- auctions.version já existia na tabela (sempre ficou null até agora,
+-- não tinha campo no formulário). Passa a ser preenchido pelo leiloeiro
+-- na hora de cadastrar a carta, usando o MESMO vocabulário que o
+-- fichário já usa (N/F/RH/SP — ver getSlots()/getVerFromRar() em
+-- app.js), pra: 1) mostrar o tipo certo pros participantes no leilão,
+-- e 2) pular a etapa de "qual versão você comprou" na hora de incluir
+-- a carta arrematada no fichário (leilao.js, addOrderToFichario).
+-- ================================================================
+
+alter table auctions drop constraint if exists auctions_version_check;
+alter table auctions add constraint auctions_version_check
+  check (version is null or version in ('N','F','RH','SP'));

@@ -543,16 +543,17 @@
     <div class="sec-title" style="margin-top:0">🔨 Leilão</div>
 
 
-    <!-- SUB-MENU 12/08/2026: só leiloeiros/admin veem (aucIsLeilaoAdmin,
-         leilao.js). "Leilões" é o que qualquer participante já via antes;
-         "Cadastro" e "Análises" eram tudo misturado num painel só
-         (leilao-admin-wrap) e viraram abas internas separadas. -->
-    <div id="leilao-subnav" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+    <!-- SUB-MENU 12/08/2026, reaberto pra todo usuário logado em 13/08/2026:
+         "Leilões" e "Meus Arremates" qualquer participante vê; "Cadastro",
+         "Análises", "Arquivo" e "Financeiro" continuam só pro leiloeiro/admin
+         (aucIsLeilaoAdmin, leilao.js esconde/mostra cada um individualmente). -->
+    <div id="leilao-subnav" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
       <button type="button" class="btn-add leilao-subtab-btn" data-sub="leiloes" onclick="switchLeilaoSubtab('leiloes')">🃏 Leilões</button>
-      <button type="button" class="btn-add leilao-subtab-btn" data-sub="cadastro" onclick="switchLeilaoSubtab('cadastro')">➕ Cadastro</button>
-      <button type="button" class="btn-add leilao-subtab-btn" data-sub="analises" onclick="switchLeilaoSubtab('analises')">📊 Análises</button>
-      <button type="button" class="btn-add leilao-subtab-btn" data-sub="arquivo" onclick="switchLeilaoSubtab('arquivo')">🗄️ Arquivo</button>
-      <button type="button" class="btn-add leilao-subtab-btn" data-sub="financeiro" onclick="switchLeilaoSubtab('financeiro')">💰 Financeiro</button>
+      <button type="button" class="btn-add leilao-subtab-btn" data-sub="meus-arremates" onclick="switchLeilaoSubtab('meus-arremates')">🏆 Meus Arremates</button>
+      <button type="button" id="leilao-tab-cadastro" class="btn-add leilao-subtab-btn" data-sub="cadastro" onclick="switchLeilaoSubtab('cadastro')" style="display:none">➕ Cadastro</button>
+      <button type="button" id="leilao-tab-analises" class="btn-add leilao-subtab-btn" data-sub="analises" onclick="switchLeilaoSubtab('analises')" style="display:none">📊 Análises</button>
+      <button type="button" id="leilao-tab-arquivo" class="btn-add leilao-subtab-btn" data-sub="arquivo" onclick="switchLeilaoSubtab('arquivo')" style="display:none">🗄️ Arquivo</button>
+      <button type="button" id="leilao-tab-financeiro" class="btn-add leilao-subtab-btn" data-sub="financeiro" onclick="switchLeilaoSubtab('financeiro')" style="display:none">💰 Financeiro</button>
     </div>
 
     <!-- ── CADASTRO (leiloeiro/admin) ──────────────────────────────── -->
@@ -606,6 +607,16 @@
               <option value="ja">🇯🇵 Japonês</option>
             </select>
           </div>
+          <div class="ff"><label>Tipo de carta (versão)</label>
+            <select id="leilao-admin-versao">
+              <option value="">— não informar —</option>
+              <option value="N">Normal</option>
+              <option value="F">Foil / Holo</option>
+              <option value="RH">Reverse Holo</option>
+              <option value="SP">Especial (Full Art, Alt Art, SAR, Secreta, Gold, Ilustração Especial, Promo...)</option>
+            </select>
+          </div>
+          <div style="font-size:9.5px;color:var(--muted);margin-bottom:8px">Informar o tipo já mostra pros participantes e evita perguntar depois na hora de incluir a carta arrematada no fichário de quem ganhar.</div>
           <div class="ff"><label>Descrição (opcional)</label><textarea id="leilao-admin-desc" rows="2" placeholder="Estado, detalhes, centralização..."></textarea></div>
           <div class="ff"><label>Preço inicial (R$) *</label><input type="number" id="leilao-admin-preco" step="0.01" min="0.01"></div>
           <div style="font-size:9.5px;color:var(--muted);margin-bottom:8px">Incremento mínimo entre lances é automático: até R$10 → R$0,50 · até R$50 → R$1 · acima disso → 2% do valor atual.</div>
@@ -679,8 +690,12 @@
     <div id="leilao-sub-leiloes">
       <div class="sec-title" style="margin-top:0">🔥 Leilões Vigentes</div>
       <div id="leilao-list"></div>
+    </div>
 
-      <div class="mkt-grid" style="margin-top:24px">
+    <!-- ── MEUS ARREMATES (todo mundo — endereço, pedidos, pagamento,
+         envio e o botão de incluir a carta comprada no fichário) ──── -->
+    <div id="leilao-sub-meus-arremates" style="display:none">
+      <div class="mkt-grid">
         <div class="panel">
           <div class="panel-t">📍 Meu Endereço de Entrega</div>
           <div style="font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:12px">
@@ -713,7 +728,8 @@
           <div class="mkt-term-box" style="margin-bottom:12px">
             <b>Regras do leilão:</b> pagamento via PIX direto ao leiloeiro (combinado fora do site);
             envio por conta do comprador; o pedido muda de status conforme o leiloeiro confirma o
-            recebimento e o envio.
+            recebimento e o envio. Depois que o pagamento for confirmado, aparece aqui um botão
+            pra já incluir a carta no seu fichário.
           </div>
           <div id="leilao-my-orders"></div>
         </div>
@@ -731,6 +747,18 @@
     <div class="modal modal-wide" style="padding:0;overflow:hidden">
       <button class="mc-btn" onclick="closeModal('leilao-zoom-ov')">✕</button>
       <div id="leilao-zoom-content"></div>
+    </div>
+  </div>
+
+  <!-- ESCOLHA DE VERSÃO (13/08/2026): algumas cartas têm mais de uma versão
+       física possível (ex: Normal + Reverse Holo) — quando isso acontece,
+       addOrderToFichario() (leilao.js) para aqui e pede pra pessoa confirmar
+       qual delas é a carta que ela arrematou, antes de gravar no fichário. -->
+  <div class="ov" id="leilao-fichario-pick-ov" onclick="if(event.target===this)closeModal('leilao-fichario-pick-ov')">
+    <div class="modal">
+      <button class="mc-btn" onclick="closeModal('leilao-fichario-pick-ov')">✕</button>
+      <div class="panel-t" style="margin-bottom:8px">Qual versão dessa carta você arrematou?</div>
+      <div id="leilao-fichario-pick-content"></div>
     </div>
   </div>
 

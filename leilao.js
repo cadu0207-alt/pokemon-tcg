@@ -101,13 +101,23 @@ async function updateLeilaoTabVisibility(){
 // ── CARREGAR TUDO ───────────────────────────────────────────────
 async function renderLeilaoTab(){
   await resolveLeilaoAdminStatus();
-  const subnav=document.getElementById('leilao-subnav');
-  if(subnav)subnav.style.display=aucIsLeilaoAdmin?'flex':'none';
+  // Subnav em si é visível pra todo usuário logado desde 13/08/2026 ("Leilões"
+  // e "Meus Arremates" — botão de incluir carta comprada no fichário); só os
+  // 4 botões de gestão (Cadastro/Análises/Arquivo/Financeiro) continuam
+  // escondidos de quem não é leiloeiro.
+  ['leilao-tab-cadastro','leilao-tab-analises','leilao-tab-arquivo','leilao-tab-financeiro'].forEach(id=>{
+    const btn=document.getElementById(id);
+    if(btn)btn.style.display=aucIsLeilaoAdmin?'':'none';
+  });
   const superWrap=document.getElementById('leilao-super-admin-wrap');
   if(superWrap)superWrap.style.display=(typeof isAdminEditor==='function'&&isAdminEditor())?'':'none';
-  // Quem não é leiloeiro sempre fica na sub-aba "Leilões" (as outras nem
-  // aparecem no menu pra ele); leiloeiro mantém a última sub-aba escolhida.
-  switchLeilaoSubtab(aucIsLeilaoAdmin?(aucActiveSubtab||'leiloes'):'leiloes');
+  // Quem não é leiloeiro só pode ficar em Leilões/Meus Arremates (as outras
+  // sub-abas nem aparecem no menu pra ele); leiloeiro mantém a última
+  // sub-aba escolhida.
+  const allowed=aucIsLeilaoAdmin
+    ?['leiloes','meus-arremates','cadastro','analises','arquivo','financeiro']
+    :['leiloes','meus-arremates'];
+  switchLeilaoSubtab(allowed.includes(aucActiveSubtab)?aucActiveSubtab:'leiloes');
 
   await loadRoundsAndAuctions();
   await loadLeiloeiroNames();
@@ -137,7 +147,7 @@ async function renderLeilaoTab(){
 let aucActiveSubtab='leiloes';
 function switchLeilaoSubtab(name){
   aucActiveSubtab=name;
-  ['leiloes','cadastro','analises','arquivo','financeiro'].forEach(n=>{
+  ['leiloes','meus-arremates','cadastro','analises','arquivo','financeiro'].forEach(n=>{
     const pane=document.getElementById('leilao-sub-'+n);
     if(pane)pane.style.display=(n===name)?'':'none';
     const btn=document.querySelector(`.leilao-subtab-btn[data-sub="${n}"]`);
@@ -562,7 +572,7 @@ async function loadMyAuctionOrders(){
   aucBlockedReason=flag?.reason||'';
   aucRulesAccepted=rules?.rules_version===AUC_RULES_VERSION;
   if(aucMyOrders.length){
-    const{data:items}=await sbClient.from('auction_order_items').select('*, auctions(card_name,image_url)').in('order_id',aucMyOrders.map(o=>o.id));
+    const{data:items}=await sbClient.from('auction_order_items').select('*, auctions(card_name,image_url,set_id,card_n,version)').in('order_id',aucMyOrders.map(o=>o.id));
     aucMyOrderItems=Array.isArray(items)?items:[];
   }else aucMyOrderItems=[];
 }
@@ -572,7 +582,7 @@ async function loadAdminAuctionOrders(){
   if(error){console.error('[leilao] admin orders',error);aucAdminOrders=[];aucAdminOrderItems=[];return;}
   aucAdminOrders=Array.isArray(orders)?orders:[];
   if(aucAdminOrders.length){
-    const{data:items}=await sbClient.from('auction_order_items').select('*, auctions(card_name,image_url)').in('order_id',aucAdminOrders.map(o=>o.id));
+    const{data:items}=await sbClient.from('auction_order_items').select('*, auctions(card_name,image_url,set_id,card_n,version)').in('order_id',aucAdminOrders.map(o=>o.id));
     aucAdminOrderItems=Array.isArray(items)?items:[];
   }else aucAdminOrderItems=[];
 }
@@ -694,6 +704,7 @@ function aucInfoBlockHtml(a,idSuffix){
     </div>
     <div style="font-size:10.5px;color:var(--muted);font-family:'Space Mono',monospace;margin:4px 0">
       ${AUC_COND_LBL[a.condition]||a.condition} · ${AUC_LANG_LBL[a.language]||a.language}
+      ${a.version?` · ${esc(AUC_VER_LBL[a.version]||a.version)}`:''}
       ${a.set_id?` · ${esc(a.set_id.toUpperCase())} #${esc(a.card_n||'')}`:''}
       · Leiloeiro: ${esc(aucLeiloeiroNome(a.created_by))}
     </div>
@@ -883,7 +894,7 @@ function aucShareMessage(a){
   const inicial=fmtR(a.starting_price);
   const atual=fmtR(a.current_bid||a.starting_price);
   return`Ei, vem ver só esse leilão no site mydecktcg.com.br!\n\n`+
-    `É a carta *${a.card_name}*${colecao?` da coleção *${colecao}*`:''}. `+
+    `É a carta *${a.card_name}*${a.version?` (${AUC_VER_LBL[a.version]||a.version})`:''}${colecao?` da coleção *${colecao}*`:''}. `+
     `Leilão começando dia ${inicio} e terminando dia ${fim}.\n`+
     `Valor inicial de R$ ${inicial}, no momento em R$ ${atual}.\n`+
     `Leiloeiro: ${aucLeiloeiroNome(a.created_by)}.\n\n`+
@@ -1216,11 +1227,147 @@ function renderMyBidsAndOrders(){
       </div>
       <div style="font-size:12px;font-weight:700;border-top:1px solid var(--border);padding-top:6px">Total: <span style="color:var(--teal)">R$ ${fmtR(o.amount)}</span></div>
       ${o.payment_due_at?`<div style="font-size:10.5px;color:${overdue?'var(--accent)':'var(--muted)'};margin-top:4px">Prazo de pagamento: ${new Date(o.payment_due_at).toLocaleString('pt-BR')}</div>`:''}
+      ${aucFicharioBlockHtml(o,items)}
       ${aucWinnerWhatsappBlockHtml(o)}
       ${aucShippingHoldBlockHtml(o)}
       ${o.tracking_code?`<div style="font-size:11px;margin-top:6px">📦 Rastreio: <b>${esc(o.tracking_code)}</b></div>`:''}
     </div>`;
   }).join('');
+}
+
+// ── INCLUIR NO FICHÁRIO (depois que o leiloeiro confirma o pagamento) ─
+// Reaproveita a MESMA tabela/função de sempre (collection + saveSlot,
+// de fichario_patch.js) — nada de tabela nova pra coleção. Só soma
+// +1 na quantidade que a pessoa já tinha daquela carta (preservando o
+// que já estava registrado) e guarda a origem ("Leilão MyDeck #...")
+// junto com as outras origens que já existiam pro slot.
+const AUC_VER_LBL={N:'Normal',F:'Holo/Foil',RH:'Reverse Holo',SP:'Especial/Secreta'};
+let aucFicharioQueue=[];
+let aucFicharioSetsUsed=new Set();
+let aucFicharioPending=null; // {item,card,setId} esperando o usuário escolher a versão no modal
+
+function aucFicharioBlockHtml(o,items){
+  if(!['pago','enviado','concluido'].includes(o.status))return'';
+  const pendentes=items.filter(it=>!it.added_to_collection);
+  if(!pendentes.length){
+    return`<div style="font-size:10.5px;color:var(--teal);margin-top:8px">✓ Já incluído no seu fichário</div>`;
+  }
+  return`<div style="margin-top:8px">
+    <button class="btn-add" onclick="addOrderToFichario(${o.id})">➕ Adicionar ${pendentes.length>1?'as cartas':'a carta'} ao Fichário</button>
+  </div>`;
+}
+
+function aucGetCardForAuction(setId,cardN){
+  if(!setId||!cardN)return null;
+  const all=typeof getAllCatalogCards==='function'?getAllCatalogCards():[];
+  return all.find(cc=>cc._setId===setId&&cc.n===cardN)||null;
+}
+
+async function addOrderToFichario(orderId){
+  if(!uid())return;
+  if(typeof saveSlot!=='function'||typeof getSlots!=='function'||typeof getAllCatalogCards!=='function'){
+    setStatus('O fichário ainda não carregou nesta página — recarregue e tente de novo','err');
+    return;
+  }
+  const items=aucMyOrderItems.filter(it=>it.order_id===orderId&&!it.added_to_collection);
+  if(!items.length){setStatus('Essas cartas já estão no seu fichário','ok');return;}
+  aucFicharioQueue=items.slice();
+  aucFicharioSetsUsed=new Set();
+  await processNextFicharioItem();
+}
+
+async function processNextFicharioItem(){
+  if(!aucFicharioQueue.length){
+    await finishFicharioImport();
+    return;
+  }
+  const item=aucFicharioQueue.shift();
+  const a=item.auctions;
+  if(!a||!a.set_id||!a.card_n){
+    // Carta cadastrada manualmente pelo leiloeiro, sem vínculo com o
+    // catálogo — não dá pra montar o slot do fichário automaticamente.
+    console.warn('[leilao] item sem set_id/card_n, não deu pra incluir no fichário',item);
+    setStatus(`"${item.auctions?.card_name||'uma carta'}" não tem vínculo com o catálogo — inclua ela manualmente no fichário`,'err');
+    await processNextFicharioItem();
+    return;
+  }
+  const card=aucGetCardForAuction(a.set_id,a.card_n);
+  if(!card){
+    console.warn('[leilao] carta não encontrada no catálogo, não deu pra incluir no fichário',a);
+    setStatus(`Não achei "${a.card_name}" no catálogo do set ${a.set_id} — inclua ela manualmente no fichário`,'err');
+    await processNextFicharioItem();
+    return;
+  }
+  const slots=getSlots(card,a.set_id);
+  // Se o leiloeiro já informou o tipo de carta no cadastro (a.version) e
+  // ele bate com uma das versões possíveis dessa carta, usa direto —
+  // só pergunta de novo quando não sobrar dúvida nenhuma pra resolver.
+  const versaoJaInformada=a.version&&slots.some(s=>s.ver===a.version);
+  if(slots.length<=1||versaoJaInformada){
+    const ver=versaoJaInformada?a.version:(slots[0]?.ver||'N');
+    await commitFicharioItem(item,card,a.set_id,ver);
+    await processNextFicharioItem();
+  }else{
+    aucFicharioPending={item,card,setId:a.set_id};
+    const box=document.getElementById('leilao-fichario-pick-content');
+    if(box){
+      box.innerHTML=`<div style="font-size:11px;color:var(--muted);margin-bottom:10px">${esc(card.name)} — essa carta tem mais de uma versão possível, escolha a certa:</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${slots.map(s=>`<button class="btn-add" onclick="pickFicharioVersion('${s.ver}')">${esc(AUC_VER_LBL[s.ver]||s.ver)}</button>`).join('')}
+        </div>`;
+    }
+    if(typeof openModal==='function')openModal('leilao-fichario-pick-ov');
+  }
+}
+
+async function pickFicharioVersion(ver){
+  if(typeof closeModal==='function')closeModal('leilao-fichario-pick-ov');
+  const pending=aucFicharioPending;
+  aucFicharioPending=null;
+  if(!pending)return;
+  await commitFicharioItem(pending.item,pending.card,pending.setId,ver);
+  await processNextFicharioItem();
+}
+
+async function commitFicharioItem(item,card,setId,ver){
+  const key=`${setId}:${card.n}:${ver}`;
+  const prev=(typeof collectedQty!=='undefined')?collectedQty.get(key):null;
+  const prevQty=prev?.qty||0;
+  const prevOrigins=prev?.origins||[];
+  const dataStr=new Date(item.created_at||Date.now()).toLocaleDateString('pt-BR');
+  const origin=`Leilão MyDeck #${item.auction_id} — R$ ${fmtR(item.amount)}, pago em ${dataStr}`;
+
+  await saveSlot(key,prevQty+1,[...prevOrigins,origin]);
+
+  // saveSlot() não lança exceção em erro (mostra alert() e retorna) —
+  // confere se o estado em memória realmente refletiu a mudança antes
+  // de marcar o item como incluído, senão a pessoa poderia clicar nunca
+  // mais e o item ficaria escondido mesmo sem ter salvado de verdade.
+  const after=(typeof collectedQty!=='undefined')?collectedQty.get(key):null;
+  if(!after||after.qty!==prevQty+1){
+    setStatus(`Não deu pra salvar "${card.name}" no fichário — tente de novo`,'err');
+    return;
+  }
+
+  const{error}=await sbClient.rpc('mark_order_item_added_to_collection',{p_item_id:item.id});
+  if(error)console.error('[leilao] mark_order_item_added_to_collection',error);
+  item.added_to_collection=true;
+  aucFicharioSetsUsed.add(setId);
+}
+
+async function finishFicharioImport(){
+  renderMyBidsAndOrders();
+  if(aucFicharioSetsUsed.size){
+    setStatus('Cartas incluídas no seu fichário!','ok');
+    if(typeof updateDashProgress==='function')updateDashProgress();
+    if(typeof goToTab==='function'){
+      goToTab('fichario');
+      if(aucFicharioSetsUsed.size===1&&typeof switchSet==='function'){
+        switchSet([...aucFicharioSetsUsed][0]);
+      }
+    }
+  }
+  aucFicharioSetsUsed=new Set();
 }
 
 // ── SEGURAR ENVIO (comprador decide) ──────────────────────────────
@@ -1396,6 +1543,7 @@ async function publishAuction(){
   const cardName=(document.getElementById('leilao-admin-nome')?.value||'').trim();
   const condition=document.getElementById('leilao-admin-cond')?.value||'M';
   const language=document.getElementById('leilao-admin-lang')?.value||'pt-BR';
+  const versao=document.getElementById('leilao-admin-versao')?.value||null;
   const description=(document.getElementById('leilao-admin-desc')?.value||'').trim();
   const startingPrice=parseFloat(document.getElementById('leilao-admin-preco')?.value);
   const reserveRaw=document.getElementById('leilao-admin-reserva')?.value;
@@ -1419,7 +1567,7 @@ async function publishAuction(){
     card_name:cardName,
     set_id:aucSelectedCard?.setId||null,
     card_n:aucSelectedCard?.n||null,
-    version:null,
+    version:versao||null,
     image_url:imageUrl||null,
     condition,language,
     description:description||null,
@@ -1438,6 +1586,7 @@ async function publishAuction(){
   clearAuctionCardSelection();
   ['leilao-admin-desc','leilao-admin-preco','leilao-admin-reserva']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const versaoEl=document.getElementById('leilao-admin-versao');if(versaoEl)versaoEl.value='';
   setStatus('Carta publicada no leilão','ok');
   await loadRoundsAndAuctions();
   renderAuctionsList();
