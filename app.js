@@ -3878,7 +3878,7 @@ function _fmtBadge(p){
 // abaixo — só então o HTML real (com as imagens) é injetado. Rolar rápido
 // não "pula" cartas: HOME_ROW_SAFETY_MARGIN dá um respiro antes da linha
 // ficar visível de fato, pra imagem já estar carregada quando ela aparece.
-const HOME_ROW_SAFETY_MARGIN = '900px 0px 900px 0px';
+var HOME_ROW_SAFETY_MARGIN = '900px 0px 900px 0px';
 var _homeRowObserver = null;
 
 function _homeRowCardHtml(cat,meta,top3,id,code,name){
