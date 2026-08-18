@@ -44,31 +44,40 @@
   <a class="back" href="index.html">&larr; Voltar para o MyDeck</a>
   <div class="card">
     <h1>Política de Privacidade</h1>
-    <div class="updated">Última atualização: julho de 2026</div>
+    <div class="updated">Última atualização: agosto de 2026</div>
 
-    <p>O MyDeck é um projeto pessoal, sem fins comerciais além dos links de afiliado descritos abaixo, criado para ajudar colecionadores de Pokémon TCG a organizar sua coleção. Esta página explica de forma simples o que fazemos com os dados de quem usa o site.</p>
+    <p>O MyDeck é um projeto pessoal, sem fins comerciais além dos links de afiliado e das taxas de intermediação descritos abaixo, criado para ajudar colecionadores de Pokémon TCG a organizar sua coleção e, se quiserem, negociar cartas entre si. Esta página explica de forma simples o que fazemos com os dados de quem usa o site. Ver também nossos <a href="termos-de-uso.html">Termos de Uso</a>.</p>
 
     <h2>Quais dados coletamos</h2>
-    <p>Ao entrar com sua conta Google, coletamos apenas o necessário para autenticação e identificação da sua conta (nome, e-mail e foto de perfil, fornecidos pelo próprio Google). Os dados da sua coleção — cartas, compras, valores e progresso — ficam armazenados de forma privada, vinculados à sua conta.</p>
+    <p>Isso depende de como você cria sua conta:</p>
+    <ul>
+      <li><strong>Login com Google:</strong> coletamos nome, e-mail e foto de perfil, fornecidos pelo próprio Google.</li>
+      <li><strong>Cadastro com email e senha:</strong> coletamos o email e o nome de usuário que você escolher. A senha é gerenciada de forma segura pelo Supabase (nosso provedor de autenticação) e nunca fica visível para nós em texto puro.</li>
+    </ul>
+    <p>Os dados da sua coleção — cartas, compras, valores e progresso — ficam armazenados de forma privada, vinculados à sua conta. Se você usar as áreas de marketplace, ofertas ou lojas, também podemos coletar, apenas quando você fornecer voluntariamente: cidade/UF (para achar loja/comprador mais próximo — o restante do endereço, quando informado, fica privado e só você acessa) e o conteúdo das ofertas/listagens que você criar.</p>
 
     <h2>Como usamos os dados</h2>
     <ul>
       <li>Para manter sua coleção salva e sincronizada entre sessões.</li>
       <li>Para exibir seu progresso, gastos e estatísticas dentro do próprio site.</li>
+      <li>Para viabilizar o contato entre usuários e lojas parceiras nas áreas de marketplace, ofertas e leilão (nesse caso, apenas cidade/UF e as informações da própria listagem/oferta ficam visíveis para outros usuários — nunca seu endereço completo).</li>
       <li>Não vendemos, compartilhamos ou usamos seus dados para publicidade de terceiros.</li>
     </ul>
 
     <h2>Armazenamento</h2>
-    <p>Os dados são armazenados via Supabase (infraestrutura de banco de dados em nuvem), com autenticação segura e acesso restrito ao próprio usuário dono da conta.</p>
+    <p>Os dados são armazenados via Supabase (infraestrutura de banco de dados em nuvem), com autenticação segura e acesso restrito ao próprio usuário dono da conta, usando controle de acesso por linha (Row Level Security) — ou seja, cada usuário só acessa os próprios dados privados, mesmo com todos compartilhando o mesmo banco.</p>
+
+    <h2>Marketplace, lojas e leilões</h2>
+    <p>O MyDeck não processa pagamentos: eles acontecem diretamente entre comprador e vendedor (Pix, dinheiro ou outro meio combinado entre as partes), fora da plataforma. Lojas parceiras cadastradas fornecem dados de contato e endereço comercial (CNPJ, telefone, WhatsApp, endereço), usados para exibição no site e verificação básica.</p>
 
     <h2>Links de afiliado</h2>
     <p>A aba <strong>Lojas &amp; Ofertas</strong> contém links de produtos do Mercado Livre através do programa de afiliados. Isso significa que, ao clicar em um desses links e realizar uma compra, o MyDeck pode receber uma pequena comissão do Mercado Livre — sem qualquer custo adicional para você. Os preços exibidos são apenas informativos e podem mudar a qualquer momento; sempre confira o valor final diretamente na página do produto antes de concluir a compra.</p>
 
     <h2>Cookies e dados técnicos</h2>
-    <p>O site pode usar armazenamento local do navegador (localStorage/sessionStorage) apenas para lembrar preferências de uso, como abas abertas — nunca para rastreamento publicitário.</p>
+    <p>O site pode usar armazenamento local do navegador (localStorage/sessionStorage) apenas para lembrar preferências de uso, como abas abertas — nunca para rastreamento publicitário. Também registramos estatísticas de uso agregadas (ex: quais abas são mais visitadas) para melhorar o site.</p>
 
     <h2>Seus direitos</h2>
-    <p>Você pode solicitar a exclusão da sua conta e dos dados associados a qualquer momento, entrando em contato pelo e-mail abaixo.</p>
+    <p>Você pode solicitar a exclusão da sua conta e dos dados associados, corrigir informações incorretas ou pedir uma cópia dos seus dados a qualquer momento, entrando em contato pelo e-mail abaixo.</p>
 
     <h2>Contato</h2>
     <p>Dúvidas sobre esta política podem ser enviadas para <a href="mailto:cadu0207@gmail.com">cadu0207@gmail.com</a>.</p>
