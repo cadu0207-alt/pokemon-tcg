@@ -759,6 +759,18 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
     return;
   }
 
+  // CORRIGIDO 18/08/2026: impressão de fichário grande baixava TODAS as
+  // imagens em resolução `large` (Scrydex) de uma vez, sem aviso — um set
+  // de ~250 cartas passava fácil de 150-200MB num único clique (reportado
+  // por usuário em rede móvel). Abaixo: (1) aviso de tamanho antes de abrir
+  // o popup pra sets grandes, (2) usa imgThumb() (versão pequena, ~1/10 do
+  // peso) em vez de imgUrl() puro — ver troca no loop de render mais abaixo.
+  if (slots.length > 60) {
+    const estMB = Math.round(slots.length * 0.05); // ~50KB/imagem em thumb
+    const ok = confirm(`Isso vai carregar ${slots.length} imagens (~${estMB}MB estimados). Continuar?`);
+    if (!ok) return;
+  }
+
   const slotsPerPage = N * N;
   const CARD_W_MM = 63, CARD_H_MM = 88, GAP_MM = 3;
   const PAGE_W = N * CARD_W_MM + (N - 1) * GAP_MM + 20;
@@ -806,7 +818,7 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
       const grayFilter = qty > 0 ? '' : 'filter:grayscale(100%) opacity(0.4);';
       popup.document.write(`
       <div class="slot">
-        <img src="${imgUrl(c.n, setId)}" alt="${c.name}" style="${grayFilter}"
+        <img src="${(typeof imgThumb === 'function') ? imgThumb(imgUrl(c.n, setId)) : imgUrl(c.n, setId)}" alt="${c.name}" style="${grayFilter}"
              onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=empty>${c.n}<br>${c.name}</div>')">
         <div class="badge" style="background:${col}33;color:${col}">${v}${qty>1?' ×'+qty:''}</div>
         <div class="num">${c.n}</div>

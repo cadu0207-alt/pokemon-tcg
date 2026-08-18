@@ -92,6 +92,108 @@ async function signOut(){
   _showAuth(true);
 }
 
+// ── LOGIN/CADASTRO POR EMAIL+SENHA (18/08/2026) ────────────────────
+// Antes só existia "Entrar com Google" — pedido: oferecer também
+// cadastro tradicional (email/senha/usuário), com aceite explícito de
+// termos de uso + política de privacidade, igual concorrência.
+function authSwitchTab(tab){
+  const tabLogin=document.getElementById('auth-tab-login'), tabSignup=document.getElementById('auth-tab-signup');
+  const formLogin=document.getElementById('auth-form-login'), formSignup=document.getElementById('auth-form-signup');
+  const msg=document.getElementById('auth-msg'); if(msg) msg.style.display='none';
+  const isLogin=tab==='login';
+  if(tabLogin){tabLogin.style.background=isLogin?'#e63946':'transparent';tabLogin.style.color=isLogin?'#fff':'#9aa0b8';}
+  if(tabSignup){tabSignup.style.background=!isLogin?'#e63946':'transparent';tabSignup.style.color=!isLogin?'#fff':'#9aa0b8';}
+  if(formLogin) formLogin.style.display=isLogin?'flex':'none';
+  if(formSignup) formSignup.style.display=!isLogin?'flex':'none';
+}
+window.authSwitchTab=authSwitchTab;
+
+function authTogglePw(id,btn){
+  const inp=document.getElementById(id);
+  if(!inp) return;
+  const show=inp.type==='password';
+  inp.type=show?'text':'password';
+  if(btn) btn.textContent=show?'🙈':'👁';
+}
+window.authTogglePw=authTogglePw;
+
+function _authMsg(text,type){
+  const el=document.getElementById('auth-msg');
+  if(!el) return;
+  el.textContent=text;
+  el.style.display='block';
+  el.style.background=type==='error'?'rgba(230,57,70,.14)':'rgba(6,214,160,.14)';
+  el.style.color=type==='error'?'#ff8a94':'#6ee7c2';
+  el.style.border=`1px solid ${type==='error'?'rgba(230,57,70,.3)':'rgba(6,214,160,.3)'}`;
+}
+
+async function doSignInEmail(){
+  const email=(document.getElementById('auth-login-email')?.value||'').trim();
+  const password=document.getElementById('auth-login-password')?.value||'';
+  if(!email||!password){_authMsg('Preencha email e senha.','error');return;}
+  const btn=document.querySelector('#auth-form-login .auth-submit');
+  if(btn){btn.disabled=true;btn.textContent='Entrando...';}
+  const{error}=await sbClient.auth.signInWithPassword({email,password});
+  if(btn){btn.disabled=false;btn.textContent='Entrar';}
+  if(error){
+    _authMsg(error.message.includes('Invalid login credentials')?'Email ou senha incorretos.':error.message,'error');
+    return;
+  }
+  // onAuthStateChange cuida de fechar o overlay e carregar os dados
+}
+window.doSignInEmail=doSignInEmail;
+
+async function doSignUpEmail(){
+  const email=(document.getElementById('auth-signup-email')?.value||'').trim();
+  const username=(document.getElementById('auth-signup-username')?.value||'').trim();
+  const password=document.getElementById('auth-signup-password')?.value||'';
+  const password2=document.getElementById('auth-signup-password2')?.value||'';
+  const age=document.getElementById('auth-signup-age')?.checked;
+  const terms=document.getElementById('auth-signup-terms')?.checked;
+
+  if(!email||!username||!password||!password2){_authMsg('Preencha todos os campos.','error');return;}
+  if(username.length<3){_authMsg('Nome de usuário precisa ter pelo menos 3 caracteres.','error');return;}
+  if(password.length<6){_authMsg('A senha precisa ter pelo menos 6 caracteres.','error');return;}
+  if(password!==password2){_authMsg('As senhas não coincidem.','error');return;}
+  if(!age){_authMsg('É necessário declarar que você é maior de 18 anos.','error');return;}
+  if(!terms){_authMsg('É necessário aceitar os Termos de Uso e a Política de Privacidade.','error');return;}
+
+  const btn=document.querySelector('#auth-form-signup .auth-submit');
+  if(btn){btn.disabled=true;btn.textContent='Cadastrando...';}
+  const{data,error}=await sbClient.auth.signUp({
+    email,password,
+    options:{
+      data:{username,full_name:username,terms_accepted_at:new Date().toISOString(),terms_version:'v1'},
+      emailRedirectTo:window.location.href.split('?')[0].split('#')[0]
+    }
+  });
+  if(btn){btn.disabled=false;btn.textContent='🐾 Cadastrar';}
+  if(error){
+    _authMsg(error.message.includes('already registered')||error.message.includes('already exists')?'Esse email já tem uma conta cadastrada.':error.message,'error');
+    return;
+  }
+  // Supabase, por padrão, exige confirmação de email antes de liberar a sessão
+  // (data.session vem null nesse caso) — se emailConfirm estiver desligado no
+  // projeto, a sessão já vem pronta e onAuthStateChange loga direto.
+  if(data?.session){
+    _authMsg('Conta criada! Entrando...','success');
+  }else{
+    _authMsg('Conta criada! Confira seu email para confirmar o cadastro antes de entrar.','success');
+  }
+}
+window.doSignUpEmail=doSignUpEmail;
+
+async function authForgotPassword(){
+  const email=(document.getElementById('auth-login-email')?.value||'').trim();
+  if(!email){_authMsg('Digite seu email no campo acima e clique em "Esqueci minha senha" de novo.','error');return;}
+  const{error}=await sbClient.auth.resetPasswordForEmail(email,{
+    redirectTo:window.location.href.split('?')[0].split('#')[0]
+  });
+  if(error){_authMsg(error.message,'error');return;}
+  _authMsg('Enviamos um link de redefinição de senha pro seu email.','success');
+}
+window.authForgotPassword=authForgotPassword;
+
 function _showAuth(show){
   const ov=document.getElementById('auth-overlay');
   if(ov) ov.style.display=show?'flex':'none';
@@ -105,7 +207,10 @@ function _updateUserChip(user){
   const av=document.getElementById('user-avatar');
   const nm=document.getElementById('user-display-name');
   if(av) av.src=m.avatar_url||m.picture||'';
-  if(nm) nm.textContent=(m.full_name||m.name||user.email||'').split(' ')[0];
+  // CORRIGIDO 18/08/2026: contas criadas por email/senha não têm avatar_url/
+  // full_name do Google — usam m.username (definido no cadastro) como nome
+  // de exibição, com fallback pro email caso nem isso exista.
+  if(nm) nm.textContent=(m.full_name||m.name||m.username||user.email||'').split(' ')[0];
 }
 
 // Escuta mudanças de sessão (login/logout/refresh)
