@@ -50,7 +50,7 @@ const AUC_RULES_VERSION='v1'; // precisa bater com a checada em place_bid() no b
 async function resolveLeilaoAdminStatus(){
   if(!uid()){aucIsLeilaoAdmin=false;return;}
   // ADMIN VIEWER 14/08/2026: isAdmin() sozinho não basta mais aqui — inclui
-  // o admin só-leitura (adnresollecito@gmail.com), que NÃO deve virar
+  // o admin só-leitura (ajudante do Eduardo), que NÃO deve virar
   // leiloeiro (cadastrar carta, fechar rodada, marcar pagamento = editar).
   // Só isAdminEditor() (Eduardo) ganha o papel automaticamente; qualquer
   // outra pessoa (inclusive o admin viewer) só vira leiloeiro se for
