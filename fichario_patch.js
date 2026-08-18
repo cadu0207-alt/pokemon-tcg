@@ -766,7 +766,7 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
   // o popup pra sets grandes, (2) usa imgThumb() (versão pequena, ~1/10 do
   // peso) em vez de imgUrl() puro — ver troca no loop de render mais abaixo.
   if (slots.length > 60) {
-    const estMB = Math.round(slots.length * 0.05); // ~50KB/imagem em thumb
+    const estMB = Math.round(slots.length * 0.09); // ~90KB/imagem em /medium
     const ok = confirm(`Isso vai carregar ${slots.length} imagens (~${estMB}MB estimados). Continuar?`);
     if (!ok) return;
   }
@@ -818,7 +818,7 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
       const grayFilter = qty > 0 ? '' : 'filter:grayscale(100%) opacity(0.4);';
       popup.document.write(`
       <div class="slot">
-        <img src="${(typeof imgThumb === 'function') ? imgThumb(imgUrl(c.n, setId)) : imgUrl(c.n, setId)}" alt="${c.name}" style="${grayFilter}"
+        <img src="${(typeof imgMedium === 'function') ? imgMedium(imgUrl(c.n, setId)) : imgUrl(c.n, setId)}" alt="${c.name}" style="${grayFilter}"
              onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=empty>${c.n}<br>${c.name}</div>')">
         <div class="badge" style="background:${col}33;color:${col}">${v}${qty>1?' ×'+qty:''}</div>
         <div class="num">${c.n}</div>

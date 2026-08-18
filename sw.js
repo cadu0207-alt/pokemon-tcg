@@ -5,7 +5,11 @@
 // versao velha por dias mesmo depois de pushes corrigindo bugs (ver feedback_coding).
 // Fix: {cache:'no-store'} forca ida real a rede pros assets proprios.
 // Bump de versao (v2 para v3) tambem limpa o cache antigo de quem ja tinha instalado o SW.
-const CACHE = 'mydeck-v3';
+// v4 (18/08/2026): bump por causa da troca large->small/medium nas imagens de
+// carta (home + fichario + impressao) -- forca quem ja tinha SW instalado a
+// pegar a versao nova do app.js/fichario_patch.js em vez de servir a versao
+// antiga (que ainda pedia /large em varios lugares) do cache local.
+const CACHE = 'mydeck-v4';
 const STATIC = ['./', './index.html', './style.css', './app.js', './fichario_patch.js', './ev_calculator.js',
   './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
