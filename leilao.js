@@ -662,19 +662,106 @@ function aucOrderStatusColor(s){
 function aucIsOverdue(o){return o.status==='aguardando_pagamento'&&o.payment_due_at&&new Date(o.payment_due_at)<new Date();}
 
 // ── LISTA PÚBLICA DE LEILÕES (agrupada por rodada) ─────────────
+// ── BUSCA + FILTROS (tela de Leilões) ───────────────────────────
+// Estado só de UI (não vai pro banco) — busca por texto livre e até um
+// valor selecionado por grupo de filtro, ambos recalculados a cada
+// renderAuctionsList() a partir das cartas realmente em leilão no
+// momento (não mostra opção de filtro sem nada pra filtrar).
+let aucSearchTerm='';
+let aucActiveFilters={};
+
+function aucNormalize(s){
+  return(s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+
+function aucApplySearchFilter(){
+  const el=document.getElementById('leilao-search');
+  aucSearchTerm=aucNormalize(el?el.value:'');
+  renderAuctionsList();
+}
+
+function aucToggleFilter(group,value){
+  aucActiveFilters[group]=(aucActiveFilters[group]===value)?null:value;
+  renderAuctionsList();
+}
+
+function aucHasActiveSearchOrFilter(){
+  return!!aucSearchTerm||Object.values(aucActiveFilters).some(v=>v);
+}
+
+function aucCardMatchesSearch(a){
+  if(!aucSearchTerm)return true;
+  const hay=aucNormalize(`${a.card_name} ${a.set_id||''} ${a.card_n||''}`);
+  return hay.includes(aucSearchTerm);
+}
+
+function aucCardMatchesFilters(a){
+  if(aucActiveFilters.set&&a.set_id!==aucActiveFilters.set)return false;
+  if(aucActiveFilters.version&&(a.version||'')!==aucActiveFilters.version)return false;
+  if(aucActiveFilters.condition&&a.condition!==aucActiveFilters.condition)return false;
+  if(aucActiveFilters.language&&a.language!==aucActiveFilters.language)return false;
+  return true;
+}
+
+// Monta os chips de filtro a partir das cartas visíveis agora — só
+// mostra um grupo (Set/Tipo/Condição/Idioma) quando há mais de um valor
+// diferente pra escolher, senão o filtro não serviria pra nada.
+function aucRenderFilterBar(allCards){
+  const bar=document.getElementById('leilao-filter-bar');
+  if(!bar)return;
+  const groups=[
+    {key:'set',values:[...new Set(allCards.map(a=>a.set_id).filter(Boolean))].sort(),fmt:v=>v.toUpperCase()},
+    {key:'version',values:[...new Set(allCards.map(a=>a.version).filter(Boolean))],fmt:v=>AUC_VER_LBL[v]||v},
+    {key:'condition',values:[...new Set(allCards.map(a=>a.condition).filter(Boolean))],fmt:v=>AUC_COND_LBL[v]||v},
+    {key:'language',values:[...new Set(allCards.map(a=>a.language).filter(Boolean))],fmt:v=>AUC_LANG_LBL[v]||v},
+  ].filter(g=>g.values.length>1);
+  if(!groups.length){bar.innerHTML='';return;}
+  bar.innerHTML=groups.map(g=>g.values.map(v=>
+    `<button class="filter-chip${aucActiveFilters[g.key]===v?' filter-chip-active':''}" onclick="aucToggleFilter('${g.key}','${v}')">${esc(g.fmt(v))}</button>`
+  ).join('')).join('');
+}
+
+// Top N leilões ativos por quantidade de lances — a fileira "mais
+// movimentados" que fica sempre em primeiro, pra destacar disputa.
+function aucComputeHotCards(allCards,n){
+  return allCards.filter(a=>a.status==='ativo'&&(a.bid_count||0)>0)
+    .sort((x,y)=>(y.bid_count||0)-(x.bid_count||0))
+    .slice(0,n||3);
+}
+
 function renderAuctionsList(){
   const wrap=document.getElementById('leilao-list');
+  const hotWrap=document.getElementById('leilao-hot-list');
   if(!wrap)return;
   const visibleRounds=aucRounds.filter(r=>r.status!=='cancelado'&&!r.archived&&aucAuctions.some(a=>a.round_id===r.id&&a.status!=='cancelado'));
   if(!visibleRounds.length){
+    if(hotWrap)hotWrap.innerHTML='';
+    const bar=document.getElementById('leilao-filter-bar');
+    if(bar)bar.innerHTML='';
     wrap.innerHTML=`<div class="cv-item-empty">Nenhum leilão no momento.</div>`;
     return;
   }
-  wrap.innerHTML=(aucBlocked?`<div class="mkt-note" style="border-color:var(--accent);color:var(--accent)">
+
+  const allCards=visibleRounds.flatMap(r=>aucAuctions.filter(a=>a.round_id===r.id&&a.status!=='cancelado'));
+  aucRenderFilterBar(allCards);
+
+  // Com busca/filtro ativo esconde a fileira de destaque — misturar
+  // "mais movimentados" (fora do filtro) com o resultado filtrado só
+  // confundiria quem tá procurando uma carta específica.
+  if(hotWrap){
+    const hot=aucHasActiveSearchOrFilter()?[]:aucComputeHotCards(allCards,3);
+    hotWrap.innerHTML=hot.length?`<div class="sec-title" style="margin-top:0;font-size:13px">🔥 Mais movimentados</div>
+      <div class="auc-grid" style="margin-bottom:22px">${hot.map(a=>aucCardHtml(a,true)).join('')}</div>`:'';
+  }
+
+  const blockedNote=aucBlocked?`<div class="mkt-note" style="border-color:var(--accent);color:var(--accent)">
       🚫 Você está temporariamente bloqueado de dar lances: ${esc(aucBlockedReason||'pagamento pendente de uma rodada anterior')}. Fale com o leiloeiro pra liberar.
-    </div>`:'')+
-  visibleRounds.map(r=>{
-    const cards=aucAuctions.filter(a=>a.round_id===r.id&&a.status!=='cancelado');
+    </div>`:'';
+
+  const roundsHtml=visibleRounds.map(r=>{
+    const cards=aucAuctions.filter(a=>a.round_id===r.id&&a.status!=='cancelado')
+      .filter(a=>aucCardMatchesSearch(a)&&aucCardMatchesFilters(a));
+    if(!cards.length)return'';
     return`<div id="leilao-round-sec-${r.id}" class="sec-title" style="margin-top:20px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center">
       <span>🗓️ ${esc(r.title)}
         <span style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;font-weight:400;margin-left:8px">
@@ -684,8 +771,10 @@ function renderAuctionsList(){
       ${aucIsLeilaoAdmin?`<button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal);font-size:10px" onclick="shareRoundText(${r.id})">📤 Compartilhar rodada</button>`:''}
       </div>
       ${r.shipping_note?`<div class="mkt-note" style="margin-bottom:14px">🚚 ${esc(r.shipping_note)}</div>`:''}
-      ${cards.map(a=>aucCardHtml(a)).join('')}`;
-  }).join('');
+      <div class="auc-grid">${cards.map(a=>aucCardHtml(a)).join('')}</div>`;
+  }).filter(Boolean).join('');
+
+  wrap.innerHTML=blockedNote+(roundsHtml||`<div class="cv-item-empty">Nenhum leilão encontrado com esse filtro.</div>`);
   refreshOpenAuctionZoom();
 }
 
@@ -737,15 +826,20 @@ function aucInfoBlockHtml(a,idSuffix){
     </div>`;
 }
 
-function aucCardHtml(a){
+// isHot: true quando é a cópia renderizada na fileira "🔥 Mais
+// movimentados" — usa um idSuffix próprio ('-hot') pra não colidir com
+// o input/botões da MESMA carta que também aparece na grade da rodada
+// logo abaixo (mesmo padrão do zoom, ver openAuctionZoom).
+function aucCardHtml(a,isHot){
   const img=aucImgFor(a);
-  return`<div class="panel" style="margin-bottom:14px">
+  return`<div class="panel${isHot?' auc-hot-card':''}">
     <div style="display:flex;gap:14px;flex-wrap:wrap">
       ${img?`<img src="${img}" alt="${esc(a.card_name)}" title="Clique pra ampliar" style="width:100px;border-radius:8px;object-fit:contain;background:var(--surface2);cursor:zoom-in" onclick="openAuctionZoom(${a.id})" onerror="this.style.display='none'">`:''}
       <div style="flex:1;min-width:220px">
-        ${aucInfoBlockHtml(a,'')}
+        ${aucInfoBlockHtml(a,isHot?'-hot':'')}
       </div>
     </div>
+    ${isHot?`<div style="margin-top:8px;font-size:9.5px;color:var(--gold);font-family:'Space Mono',monospace">🔥 ${a.bid_count||0} lances — um dos mais disputados</div>`:''}
   </div>`;
 }
 
