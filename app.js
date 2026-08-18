@@ -396,6 +396,15 @@ function imgThumb(url){
   if(url.includes('images.scrydex.com'))return url.replace(/\/large$/,'/small');
   return url;
 }
+// PERF 18/08/2026: variante intermediária pra impressão/PDF — /small (~55KB)
+// fica granulado demais quando impresso em 63x88mm; /large (~680KB) é peso
+// desnecessário pra isso. /medium (~90KB) é o meio-termo, só pro fichário
+// virar PDF/impresso — grids continuam em /small.
+function imgMedium(url){
+  if(typeof url!=='string')return url;
+  if(url.includes('images.scrydex.com'))return url.replace(/\/large$/,'/medium');
+  return url;
+}
 function handleCardImgError(img,setId,n){
   if(img.dataset.imgTry!=='1'){
     const alt=imgAltUrl(setId,n);
@@ -3854,6 +3863,51 @@ function _fmtBadge(p){
   return'R$ '+p.toFixed(2).replace('.',',');
 }
 
+// PERF 18/08/2026 (dados móveis): a home tinha TODAS as linhas de era
+// (Mega Evolução, Escarlate&Violeta, Espada&Escudo, Sol&Lua...) montadas de
+// uma vez no innerHTML, com <img loading="lazy"> em cada carta — mas
+// loading="lazy" nativo só considera distância vertical até o viewport,
+// não o clipping horizontal de containers com overflow-x (carrossel). Ou
+// seja: TODAS as linhas, mesmo as "escondidas" pelo scroll horizontal,
+// contavam como "visíveis" e baixavam a imagem de cara. Resultado: ~150
+// sets × imagem de carta = dezenas de MB só de abrir a home, antes do
+// usuário rolar um pixel sequer (reportado: ~370MB só pra criar conta e
+// logar, em rede móvel).
+// Fix: cada linha de era vira um placeholder leve (só o título, sem
+// nenhuma <img>) até entrar na margem de segurança do IntersectionObserver
+// abaixo — só então o HTML real (com as imagens) é injetado. Rolar rápido
+// não "pula" cartas: HOME_ROW_SAFETY_MARGIN dá um respiro antes da linha
+// ficar visível de fato, pra imagem já estar carregada quando ela aparece.
+const HOME_ROW_SAFETY_MARGIN = '900px 0px 900px 0px';
+let _homeRowObserver = null;
+
+function _homeRowCardHtml(cat,meta,top3,id,code,name){
+  if(cat.upcoming||!top3.length){
+    const hero=meta?meta.imgFn(meta.heroCard):(top3[0]?homeImg(id,top3[0].n):'');
+    return`<div class="hset-wrap" data-tilt><div class="hset" style="border-color:${cat.color}88">
+      <div class="hset-glow" style="background:radial-gradient(circle at 50% 50%,${cat.color},transparent 70%)"></div>
+      <div class="hset-img-wrap">${hero?`<img loading="lazy" decoding="async" src="${imgThumb(hero)}" alt="${code}" onerror="this.style.opacity='.25'">`:''}</div>
+      <div style="position:absolute;top:10px;right:10px;background:#f0932b;color:#fff;font-size:8px;padding:2px 8px;border-radius:4px;font-family:'Space Mono',monospace;z-index:4">EM BREVE</div>
+      <div class="hset-info"><div class="hset-name">${name}</div>
+      <div class="hset-code">${code}${meta&&meta.releaseDate?' · '+meta.releaseDate:''}</div></div>
+    </div></div>`;
+  }
+  const c0=top3[0];
+  return`<div class="hset-wrap" data-tilt>
+    <div class="hset" id="hset-${id}" data-setid="${id}" data-cards="${safeJSON(top3)}" style="border-color:${cat.color}88">
+      <div class="hset-glow" style="background:radial-gradient(circle at 50% 50%,${cat.color},transparent 70%)"></div>
+      <div class="hset-img-wrap"><img loading="lazy" decoding="async" src="${imgThumb(homeImg(id,c0.n))}" alt="${code}" onerror="this.style.opacity='.25'"></div>
+      <div class="hset-price-badge">${_fmtBadge(c0.price)}</div>
+      <div class="hset-rank-badge">1</div>
+      <div class="hset-dots">${top3.map((_,i)=>`<span class="hset-dot${i===0?' active':''}"></span>`).join('')}</div>
+      <div class="hset-info">
+        <div class="hset-name">${name}</div>
+        <div class="hset-code">${code} · ${cat.cards} cartas</div>
+        <div class="hset-card-name">${c0.name}</div>
+      </div>
+    </div></div>`;
+}
+
 function renderHomeSets(){
   const box=document.getElementById('home-sets');
   if(!box)return;
@@ -3861,42 +3915,44 @@ function renderHomeSets(){
   const groups=seriesOrder
     .map(sr=>({t:(SERIES_META[sr]||{}).t||sr,ids:SET_CATALOG.filter(s=>s.series===sr).map(s=>s.id)}))
     .filter(g=>g.ids.length);
+
+  if(_homeRowObserver){ _homeRowObserver.disconnect(); _homeRowObserver=null; }
+
   let html='';
-  groups.forEach(g=>{
-    const cardsHtml=g.ids.map(id=>{
-      const cat=SET_CATALOG.find(s=>s.id===id);if(!cat)return'';
-      const meta=(typeof SET_META!=='undefined'&&SET_META[id])||null;
-      const top3=_topCards(id,3);
-      const name=cat.label.split('—')[1]?.trim().toUpperCase()||cat.label;
-      const code=cat.label.split('—')[0].trim();
-      if(cat.upcoming||!top3.length){
-        const hero=meta?meta.imgFn(meta.heroCard):(top3[0]?homeImg(id,top3[0].n):'');
-        return`<div class="hset-wrap" data-tilt><div class="hset" style="border-color:${cat.color}88">
-          <div class="hset-glow" style="background:radial-gradient(circle at 50% 50%,${cat.color},transparent 70%)"></div>
-          <div class="hset-img-wrap">${hero?`<img loading="lazy" decoding="async" src="${imgThumb(hero)}" alt="${code}" onerror="this.style.opacity='.25'">`:''}</div>
-          <div style="position:absolute;top:10px;right:10px;background:#f0932b;color:#fff;font-size:8px;padding:2px 8px;border-radius:4px;font-family:'Space Mono',monospace;z-index:4">EM BREVE</div>
-          <div class="hset-info"><div class="hset-name">${name}</div>
-          <div class="hset-code">${code}${meta&&meta.releaseDate?' · '+meta.releaseDate:''}</div></div>
-        </div></div>`;
-      }
-      const c0=top3[0];
-      return`<div class="hset-wrap" data-tilt>
-        <div class="hset" id="hset-${id}" data-setid="${id}" data-cards="${safeJSON(top3)}" style="border-color:${cat.color}88">
-          <div class="hset-glow" style="background:radial-gradient(circle at 50% 50%,${cat.color},transparent 70%)"></div>
-          <div class="hset-img-wrap"><img loading="lazy" decoding="async" src="${imgThumb(homeImg(id,c0.n))}" alt="${code}" onerror="this.style.opacity='.25'"></div>
-          <div class="hset-price-badge">${_fmtBadge(c0.price)}</div>
-          <div class="hset-rank-badge">1</div>
-          <div class="hset-dots">${top3.map((_,i)=>`<span class="hset-dot${i===0?' active':''}"></span>`).join('')}</div>
-          <div class="hset-info">
-            <div class="hset-name">${name}</div>
-            <div class="hset-code">${code} · ${cat.cards} cartas</div>
-            <div class="hset-card-name">${c0.name}</div>
-          </div>
-        </div></div>`;
-    }).join('');
-    html+=`<div class="hsec-title">${g.t}</div><div class="home-row">${cardsHtml}</div>`;
+  groups.forEach((g,gi)=>{
+    // Linha 0 (primeira era, sempre "acima da dobra") renderiza na hora —
+    // sem isso o primeiro paint ficaria vazio. As demais entram via observer.
+    html+=`<div class="hsec-title">${g.t}</div><div class="home-row" id="home-row-${gi}" data-group="${gi}"${gi===0?'':' data-lazy-row="1"'}>`
+        + (gi===0? _buildRowCardsHtml(g):'')
+        + `</div>`;
   });
   box.innerHTML=html;
+
+  const lazyRows=box.querySelectorAll('[data-lazy-row="1"]');
+  if(!lazyRows.length)return;
+  _homeRowObserver=new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(!entry.isIntersecting)return;
+      const el=entry.target;
+      const gi=parseInt(el.dataset.group,10);
+      const g=groups[gi];
+      if(g) el.innerHTML=_buildRowCardsHtml(g);
+      el.removeAttribute('data-lazy-row');
+      _homeRowObserver.unobserve(el);
+    });
+  },{root:null,rootMargin:HOME_ROW_SAFETY_MARGIN,threshold:0});
+  lazyRows.forEach(el=>_homeRowObserver.observe(el));
+}
+
+function _buildRowCardsHtml(g){
+  return g.ids.map(id=>{
+    const cat=SET_CATALOG.find(s=>s.id===id);if(!cat)return'';
+    const meta=(typeof SET_META!=='undefined'&&SET_META[id])||null;
+    const top3=_topCards(id,3);
+    const name=cat.label.split('—')[1]?.trim().toUpperCase()||cat.label;
+    const code=cat.label.split('—')[0].trim();
+    return _homeRowCardHtml(cat,meta,top3,id,code,name);
+  }).join('');
 }
 
 // ── HEADER: subtítulo dinâmico ───────────────────────────────────
@@ -4137,11 +4193,11 @@ function renderSharedCustomBinder(cardIds, binderName){
   let total=0,got=0;
   const cellsHtml=items.map(c=>{
     const slots=getSlots(c,c._setId);
-    const imgUrl=getBinderImg(c,c._setId)||'';
+    const imgUrl=imgThumb(getBinderImg(c,c._setId)||'');
     let anyCollected=false;
     slots.forEach(s=>{ total++; if(collected.has(slotKey(c._setId+':',c.n,s.ver))){got++;anyCollected=true;} });
     return `<div class="bc2${anyCollected?' collected':''}">
-      <div class="bc2-in"><img src="${imgUrl}" loading="lazy" alt="${c.name||''}" onerror="this.style.opacity=.15"></div>
+      <div class="bc2-in"><img src="${imgUrl}" loading="lazy" decoding="async" alt="${c.name||''}" onerror="this.style.opacity=.15"></div>
       <div class="chk">✓</div>
     </div>`;
   }).join('');
