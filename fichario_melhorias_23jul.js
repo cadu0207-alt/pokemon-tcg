@@ -838,6 +838,13 @@ function fmInjectDexBadges(){
 }
 
 let fmSortByDex = localStorage.getItem('fm_sort_by_dex')==='1';
+// CORRIGIDO 18/08/2026 (reportado pelo Eduardo: "ao desmarcar 'Ordenar por
+// Dex', a lista não volta à ordenação anterior"): fmApplyDexSort() reordena
+// o DOM de verdade via appendChild (não é só visual), então desmarcar sem
+// fazer nada deixava a grade "travada" na ordem por Dex pra sempre. Antes
+// tinha um `return` antecipado quando fmSortByDex===false; agora, nesse
+// caso, a função reordena de volta pela ordem natural do set (a mesma
+// ordem/posição de getSetCards()) em vez de simplesmente não fazer nada.
 function fmApplyDexSort(){
   const btn=document.getElementById('fm-dexsort-btn');
   if(btn){
@@ -846,18 +853,24 @@ function fmApplyDexSort(){
   }
   if(typeof ficViewMode!=='undefined' && ficViewMode!=='grid') return; // só faz sentido na Grade
   const wrap=document.getElementById('bwrap');
-  if(!wrap||typeof getSetCards!=='function'||!fmSortByDex) return;
+  if(!wrap||typeof getSetCards!=='function') return;
   const cards=getSetCards();
   wrap.querySelectorAll('.bgrid').forEach(grid=>{
     const els=[...grid.children];
     els.sort((a,b)=>{
-      const ca=cards.find(c=>String(c.n)===String(a.dataset.n));
-      const cb=cards.find(c=>String(c.n)===String(b.dataset.n));
-      const da=ca?fmDexOf(ca):null, db=cb?fmDexOf(cb):null;
-      if(da==null&&db==null) return 0;
-      if(da==null) return 1;
-      if(db==null) return -1;
-      return da-db;
+      if(fmSortByDex){
+        const ca=cards.find(c=>String(c.n)===String(a.dataset.n));
+        const cb=cards.find(c=>String(c.n)===String(b.dataset.n));
+        const da=ca?fmDexOf(ca):null, db=cb?fmDexOf(cb):null;
+        if(da==null&&db==null) return 0;
+        if(da==null) return 1;
+        if(db==null) return -1;
+        return da-db;
+      }
+      // Ordem natural: posição de cada carta no array de getSetCards().
+      const ia=cards.findIndex(c=>String(c.n)===String(a.dataset.n));
+      const ib=cards.findIndex(c=>String(c.n)===String(b.dataset.n));
+      return ia-ib;
     });
     els.forEach(el=>grid.appendChild(el));
   });

@@ -93,6 +93,14 @@
 }
 .amrow.paused { animation-play-state: paused !important; }
 #pg-app .pane { position: relative; z-index: 1; background: var(--bg); }
+/* CORRIGIDO 18/08/2026: .stripe, #feedback-bar-wrap e #global-ctcg-banner-wrap
+   ficam FORA de .pane no DOM, então (sem position própria) eram pintados
+   ANTES do #app-mosaic na stacking order — o overlay quase-opaco do mosaico
+   (::after) cobria tudo, deixando a barra de feedback ("site em construção")
+   e o input de mensagem praticamente invisíveis. Mesmo tratamento de .pane. */
+#pg-app > .stripe,
+#pg-app > #feedback-bar-wrap,
+#pg-app > #global-ctcg-banner-wrap { position: relative; z-index: 1; }
 </style>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -1025,7 +1033,7 @@
 
       <!-- Brand name -->
       <div style="font-family:'Fraunces',sans-serif;font-size:44px;letter-spacing:6px;color:#fff;line-height:.95;margin-bottom:6px;text-shadow:0 0 60px rgba(230,57,70,.4)">MyDeck</div>
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:4px;color:#3d4566;text-transform:uppercase;margin-bottom:26px">Pokémon TCG Tracker</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:4px;color:#8891b0;text-transform:uppercase;margin-bottom:26px">Pokémon TCG Tracker</div>
 
       <!-- Tabs: Entrar / Criar Conta -->
       <div style="display:flex;background:rgba(255,255,255,.05);border-radius:12px;padding:4px;margin-bottom:20px">
@@ -1043,7 +1051,7 @@
         Entrar com Google
       </button>
 
-      <div style="display:flex;align-items:center;gap:12px;margin:20px 0;color:#3d4566;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px">
+      <div style="display:flex;align-items:center;gap:12px;margin:20px 0;color:#8891b0;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px">
         <div style="flex:1;height:1px;background:rgba(255,255,255,.08)"></div>OU<div style="flex:1;height:1px;background:rgba(255,255,255,.08)"></div>
       </div>
 
@@ -1079,7 +1087,7 @@
         <button type="submit" class="auth-submit" style="margin-top:6px">🐾 Cadastrar</button>
       </form>
 
-      <p style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#2a3050;margin-top:22px;line-height:1.7">Coleção na nuvem · Privada · Segura</p>
+      <p style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6b7288;margin-top:22px;line-height:1.7">Coleção na nuvem · Privada · Segura</p>
     </div>
   </div>
 </div>

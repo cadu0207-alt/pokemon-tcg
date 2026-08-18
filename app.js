@@ -516,7 +516,9 @@ function lprice(setId,n,fallback){
 let purchases=[],pulledCards=[],collected=new Set(),collectedQty=new Map(),valueHistory=[],cardListings=[],buyOrders=[];
 
 // ── VERSÕES ──────────────────────────────────────────────────────
-const VER_COLOR={N:'#c8cfe8',F:'#118ab2',RH:'#06d6a0',SP:'#ff6b35'};
+// CORRIGIDO 18/08/2026: N era #c8cfe8, quase igual a var(--border) — ver
+// mesma correção em VERSIONS (fichario_patch.js).
+const VER_COLOR={N:'#7c5cff',F:'#118ab2',RH:'#06d6a0',SP:'#ff6b35'};
 const VER_LABEL={N:'Normal',F:'Foil',RH:'Reverse Holo',SP:'Especial'};
 const VER_SHORT={N:'N',F:'F',RH:'RH',SP:'★'};
 
