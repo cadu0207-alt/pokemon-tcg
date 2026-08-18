@@ -702,10 +702,10 @@
     <div id="leilao-sub-meus-arremates" style="display:none">
       <div class="mkt-grid">
         <div class="panel">
-          <div class="panel-t">📍 Meu Endereço de Entrega</div>
+          <div class="panel-t">📍 Meu Endereço de Entrega e WhatsApp</div>
           <div style="font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:12px">
-            Obrigatório antes de dar o primeiro lance — é pra onde a carta vai se você arrematar.
-            Envio por conta do comprador.
+            Obrigatório antes de dar o primeiro lance — é pra onde a carta vai se você arrematar, e é
+            por esse WhatsApp que o leiloeiro combina pagamento e envio com você. Envio por conta do comprador.
           </div>
           <div class="ff"><label>CEP</label><input id="auc-addr-cep" placeholder="00000-000"></div>
           <div class="ff"><label>Rua/Logradouro *</label><input id="auc-addr-logradouro"></div>
@@ -724,7 +724,8 @@
               <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
             </select>
           </div>
-          <button class="btn-add" onclick="saveLeilaoAddress()">✓ Salvar Endereço</button>
+          <div class="ff"><label>WhatsApp *</label><input id="auc-addr-whatsapp" placeholder="(xx) xxxxx-xxxx" inputmode="tel" maxlength="15" oninput="aucOnPhoneInput(this)"></div>
+          <button class="btn-add" onclick="saveLeilaoAddress()">✓ Salvar Endereço e WhatsApp</button>
           <div id="auc-addr-status" style="font-size:10px;color:var(--teal);font-family:'IBM Plex Mono',monospace;margin-top:8px"></div>
         </div>
 

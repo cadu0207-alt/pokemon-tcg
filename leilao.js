@@ -1167,10 +1167,11 @@ async function submitBid(auctionId,idSuffix){
   const amount=parseFloat(input?.value);
   if(!amount||amount<=0){if(statusEl)statusEl.textContent='Informe um valor válido.';return;}
 
-  // Boa prática: exige endereço de entrega cadastrado ANTES de aceitar
-  // o lance, pra não ter vencedor sem pra onde enviar a carta depois.
-  if(!aucAddress||!aucAddress.cidade||!aucAddress.uf||!aucAddress.logradouro){
-    if(statusEl)statusEl.innerHTML='Cadastre seu endereço de entrega antes de dar lance (veja "📍 Meu Endereço de Entrega" abaixo).';
+  // Boa prática: exige endereço de entrega E WhatsApp cadastrados ANTES
+  // de aceitar o lance — sem WhatsApp o leiloeiro não teria como chamar
+  // quem ganhou pra combinar pagamento/envio.
+  if(!aucAddress||!aucAddress.cidade||!aucAddress.uf||!aucAddress.logradouro||!aucAddress.whatsapp){
+    if(statusEl)statusEl.innerHTML='Cadastre seu endereço de entrega e WhatsApp antes de dar lance (veja "📍 Meu Endereço de Entrega" abaixo).';
     return;
   }
 
@@ -1187,10 +1188,33 @@ async function submitBid(auctionId,idSuffix){
   refreshOpenAuctionZoom();
 }
 
-// ── MEU ENDEREÇO DE ENTREGA (reaproveita tabela user_addresses) ──
+// ── TELEFONE/WHATSAPP — máscara (xx) xxxxx-xxxx e extração de dígitos ──
+// Usado tanto no campo do comprador (endereço) quanto na hora de montar
+// o link wa.me pro leiloeiro chamar quem ganhou.
+function aucPhoneDigits(v){
+  return(v||'').replace(/\D/g,'');
+}
+
+function aucPhoneMask(v){
+  const d=aucPhoneDigits(v).slice(0,11);
+  if(!d.length)return'';
+  if(d.length<=2)return`(${d}`;
+  if(d.length<=6)return`(${d.slice(0,2)}) ${d.slice(2)}`;
+  if(d.length<=10)return`(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;
+  return`(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;
+}
+
+function aucOnPhoneInput(el){
+  el.value=aucPhoneMask(el.value);
+  el.setSelectionRange(el.value.length,el.value.length);
+}
+
+// ── MEU ENDEREÇO DE ENTREGA + WHATSAPP (reaproveita user_addresses) ──
 function fillLeilaoAddressForm(){
   const map={'auc-addr-cep':'cep','auc-addr-logradouro':'logradouro','auc-addr-numero':'numero','auc-addr-bairro':'bairro','auc-addr-cidade':'cidade','auc-addr-uf':'uf'};
   Object.keys(map).forEach(id=>{const el=document.getElementById(id);if(el)el.value=aucAddress?.[map[id]]||'';});
+  const wEl=document.getElementById('auc-addr-whatsapp');
+  if(wEl)wEl.value=aucPhoneMask(aucAddress?.whatsapp||'');
 }
 
 async function saveLeilaoAddress(){
@@ -1201,17 +1225,23 @@ async function saveLeilaoAddress(){
   const bairro=document.getElementById('auc-addr-bairro')?.value.trim();
   const cidade=document.getElementById('auc-addr-cidade')?.value.trim();
   const uf=document.getElementById('auc-addr-uf')?.value;
+  const whatsappDigits=aucPhoneDigits(document.getElementById('auc-addr-whatsapp')?.value);
   const statusEl=document.getElementById('auc-addr-status');
   if(!logradouro||!numero||!cidade||!uf){
     if(statusEl)statusEl.textContent='Preencha ao menos rua, número, cidade e UF — é o endereço que vai receber a carta.';
     return;
   }
+  if(whatsappDigits.length!==10&&whatsappDigits.length!==11){
+    if(statusEl)statusEl.textContent='Informe um WhatsApp válido, com DDD — ex: (85) 98888-7777. É por ele que o leiloeiro combina pagamento e envio com você.';
+    return;
+  }
+  const whatsapp=aucPhoneMask(whatsappDigits);
   const{data,error}=await sbClient.from('user_addresses')
-    .upsert({user_id:uid(),cep:cep||null,logradouro,numero,bairro:bairro||null,cidade,uf,updated_at:new Date().toISOString()},{onConflict:'user_id'})
+    .upsert({user_id:uid(),cep:cep||null,logradouro,numero,bairro:bairro||null,cidade,uf,whatsapp,updated_at:new Date().toISOString()},{onConflict:'user_id'})
     .select();
   if(error){console.error('[leilao] user_addresses upsert',error);if(statusEl)statusEl.textContent='Erro ao salvar. Verifique se rodou leilao_setup.sql/marketplace_setup.sql no Supabase.';return;}
   aucAddress=Array.isArray(data)?data[0]:aucAddress;
-  if(statusEl)statusEl.textContent='✓ Endereço salvo.';
+  if(statusEl)statusEl.textContent='✓ Endereço e WhatsApp salvos.';
   setStatus('Endereço de entrega salvo','ok');
 }
 
@@ -1277,6 +1307,33 @@ function contactLeiloeiroWhatsapp(orderId){
   const items=aucMyOrderItems.filter(it=>it.order_id===o.id);
   const msg=aucWinnerWhatsappMessage(o,round,items);
   window.open(`https://wa.me/${AUC_LEILOEIRO_WHATSAPP}?text=${encodeURIComponent(msg)}`,'_blank');
+}
+
+// ── LEILOEIRO → COMPRADOR (WhatsApp, mão bidirecional) ─────────────
+// Mesmo espírito de contactLeiloeiroWhatsapp acima, só que no sentido
+// contrário: o leiloeiro chama quem ganhou usando o WhatsApp que o
+// próprio comprador cadastrou no endereço de entrega. O número vem do
+// snapshot tirado no fechamento da rodada (auction_orders.shipping_snapshot
+// — ver close_round em leilao_setup.sql), não de uma consulta direta a
+// user_addresses (RLS só deixa cada um ler a própria linha).
+function aucAdminWhatsappMessage(o,round,items){
+  const cartas=items.length
+    ?items.map(it=>`${it.auctions?.card_name||('Carta #'+it.auction_id)} (R$ ${fmtR(it.amount)})`).join(', ')
+    :'—';
+  return`Olá! Aqui é do MyDeck (mydecktcg.com.br) — você ganhou o leilão "${round?round.title:('Rodada #'+o.round_id)}": ${cartas}. `+
+    `Total: R$ ${fmtR(o.amount)}. Vamos combinar o pagamento (PIX) e o envio?`;
+}
+
+function contactBuyerWhatsapp(orderId){
+  const o=aucAdminOrders.find(x=>x.id===orderId);
+  if(!o)return;
+  const addr=o.shipping_snapshot||{};
+  const digits=aucPhoneDigits(addr.whatsapp);
+  if(digits.length!==10&&digits.length!==11){setStatus('Este comprador não tem WhatsApp cadastrado (pedido de antes dessa opção existir).','err');return;}
+  const round=aucRoundById(o.round_id);
+  const items=aucAdminOrderItems.filter(it=>it.order_id===o.id);
+  const msg=aucAdminWhatsappMessage(o,round,items);
+  window.open(`https://wa.me/55${digits}?text=${encodeURIComponent(msg)}`,'_blank');
 }
 
 // Disclaimer + botão, mostrado em todo pedido arrematado (qualquer
@@ -1756,6 +1813,10 @@ function renderAdminOrders(){
       ${o.shipping_hold?`<div class="mkt-note" style="margin-bottom:8px;border-color:var(--gold);color:var(--gold)">
         🕐 <b>Comprador pediu pra segurar o envio</b>${o.shipping_hold_note?`: "${esc(o.shipping_hold_note)}"`:''} — combine com ele antes de despachar, se preferir.
       </div>`:''}
+      <div style="margin-bottom:8px">
+        ${addr.whatsapp?`<button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal);font-size:10.5px" onclick="contactBuyerWhatsapp(${o.id})">💬 Chamar no WhatsApp (${esc(addr.whatsapp)})</button>`
+          :`<div style="font-size:10px;color:var(--muted)">Comprador sem WhatsApp cadastrado (pedido anterior a essa opção).</div>`}
+      </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         ${o.status==='aguardando_pagamento'?`<button class="btn-add" onclick="markOrderPaid(${o.id})">✓ Marcar como Pago (PIX recebido)</button>`:''}
         ${o.status==='pago'?`<input id="auc-track-${o.id}" placeholder="Código de rastreio" class="cv-select" style="width:180px">

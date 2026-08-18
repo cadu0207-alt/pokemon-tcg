@@ -932,3 +932,24 @@ grant execute on function mark_order_item_added_to_collection(bigint) to authent
 alter table auctions drop constraint if exists auctions_version_check;
 alter table auctions add constraint auctions_version_check
   check (version is null or version in ('N','F','RH','SP'));
+
+-- ================================================================
+-- WHATSAPP DO COMPRADOR (contato bidirecional) — 18/08/2026
+-- Reaproveita a mesma tabela user_addresses (compartilhada com o
+-- marketplace) — coluna nova, aditiva, não mexe em nada existente.
+-- O leiloeiro já podia ser contatado pelo comprador (WhatsApp fixo,
+-- ver AUC_LEILOEIRO_WHATSAPP em leilao.js); agora funciona nos dois
+-- sentidos: o leiloeiro consegue chamar o comprador que ganhou usando
+-- o número que ele mesmo cadastrou.
+--
+-- Não precisa de nenhuma RPC nova pro leiloeiro ler o WhatsApp do
+-- comprador — close_round() já tira um snapshot de user_addresses
+-- inteiro (to_jsonb(a)) pra auction_orders.shipping_snapshot no
+-- fechamento de cada rodada, então a coluna nova flui automaticamente
+-- pros PRÓXIMOS pedidos fechados a partir de agora. Pedidos já
+-- fechados antes de rodar esse SQL não têm o número no snapshot —
+-- o botão de contato no painel do leiloeiro simplesmente não aparece
+-- nesses casos (ver renderAdminOrders/contactBuyerWhatsapp).
+-- ================================================================
+
+alter table user_addresses add column if not exists whatsapp text;
