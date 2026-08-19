@@ -424,6 +424,14 @@ function getBinderImg(c,setId){
   if(setId==='mep')  return imgMep(n);
   // svp usa o fallback genérico sv* logo abaixo (pokemontcg.io CDN)
   if(setId==='me04') return imgMe04(n);
+  // Raio Preto (Black Bolt) e Fogo Branco (White Flare) — EV10.5, jul/2025.
+  // Adicionados 19/08/2026 (indicação de usuário). IDs oficiais pokemontcg.io
+  // (zsv10pt5/rsv10pt5) não começam com "sv" — não caem no fallback genérico
+  // abaixo, por isso entram explicitamente aqui antes dele.
+  if(setId==='zsv10pt5'||setId==='rsv10pt5'){
+    const num=isNaN(n)?c.n:n;
+    return `https://images.pokemontcg.io/${setId}/${num}.png`;
+  }
   // Sets Escarlate e Violeta — imagens via pokemontcg.io CDN (público)
   // Usa número sem zero à esquerda (padrão do CDN) ou o valor original para cartas especiais (TG01, ACE01...)
   if(setId.startsWith('sv')||setId==='pgo'||(window.LEGACY_SETS||[]).some(s=>s.id===setId)){
@@ -463,7 +471,11 @@ const TCGDX={
   me04:'me04',me03:'me03',me02:'me02',meg:'me01',mep:'mep',
   sv1:'sv1',sv2:'sv2',sv3:'sv3',sv3pt5:'sv3pt5',sv4:'sv4',sv4pt5:'sv4pt5',
   sv5:'sv5',sv6:'sv6',sv6pt5:'sv6pt5',sv7:'sv7',sv8:'sv8',sv8pt5:'sv8pt5',
-  sv9:'sv9',sv10:'sv10'
+  sv9:'sv9',sv10:'sv10',
+  // Raio Preto/Fogo Branco — id tcgdex ainda não confirmado manualmente —
+  // deixado best-effort (mesmo id do pokemontcg.io) — se não bater, o fetch
+  // simplesmente falha em silêncio (try/catch) e o preço estático continua valendo.
+  zsv10pt5:'zsv10pt5',rsv10pt5:'rsv10pt5'
 };
 const LP_KEY='lp_v2',LP_TTL=24*3600*1000;
 const _lp={};  // {setId: {cardN: {eur:float|null, usd:float|null}}}
@@ -1045,6 +1057,8 @@ const SET_CARDS_MAP={
   sv8pt5:()=>typeof CARDS_SV8PT5!=='undefined'?CARDS_SV8PT5:[],
   sv9: ()=>typeof CARDS_SV9!=='undefined'?CARDS_SV9:[],
   sv10:()=>typeof CARDS_SV10!=='undefined'?CARDS_SV10:[],
+  zsv10pt5:()=>typeof CARDS_ZSV10PT5!=='undefined'?CARDS_ZSV10PT5:[],
+  rsv10pt5:()=>typeof CARDS_RSV10PT5!=='undefined'?CARDS_RSV10PT5:[],
   svp:()=>typeof CARDS_SVP!=='undefined'?CARDS_SVP:[],
   pgo:()=>typeof CARDS_PGO!=='undefined'?CARDS_PGO:[],
 };
@@ -1060,6 +1074,11 @@ const SET_CATALOG=[
   {id:'me03',label:'ME03(POR) — Equilíbrio Perfeito',   emoji:'🔵',cards:typeof CARDS_ME03!=='undefined'?CARDS_ME03.length:120,color:'#1565C0',series:'ME'},
   {id:'me02',label:'ME02(PFL) — Fogo Fantasmagórico', emoji:'👻',cards:130,color:'#9C27B0',series:'ME'},
   {id:'meg', label:'MEG(MEG) — Megaevolução',       emoji:'🌿',cards:188,color:'#4CAF50',series:'ME'},
+  // Raio Preto/Fogo Branco (EV10.5) — jul/2025, era Escarlate e Violeta, lançado
+  // pouco antes da Megaevolução começar (por isso entram aqui, não como ME0x).
+  // Adicionados 19/08/2026 (indicação de usuário).
+  {id:'zsv10pt5',label:'EV10.5(BLK) — Raio Preto', emoji:'🐉',cards:typeof CARDS_ZSV10PT5!=='undefined'?CARDS_ZSV10PT5.length:172,color:'#212121',series:'SV'},
+  {id:'rsv10pt5',label:'EV10.5(WHT) — Fogo Branco', emoji:'🦢',cards:typeof CARDS_RSV10PT5!=='undefined'?CARDS_RSV10PT5.length:173,color:'#f5f5f5',series:'SV'},
   {id:'mep', label:'MEP(MEP) — Promos Mega Evolução', emoji:'⭐',cards:typeof CARDS_MEP!=='undefined'?CARDS_MEP.length:54, color:'#ffd166',series:'ME'},
   {id:'pgo', label:'PGO(PGO) — Pokémon GO',emoji:'🗺️',cards:typeof CARDS_PGO!=='undefined'?CARDS_PGO.length:88,color:'#4285F4',series:'SWSH'},
   {id:'svp', label:'SVP(SVP) — Promos Escarlate e Violeta',emoji:'🎫',cards:typeof CARDS_SVP!=='undefined'?CARDS_SVP.length:218,color:'#546E7A',series:'SV'},
@@ -2269,6 +2288,10 @@ function getSetData(){
     svp:   {cards:typeof CARDS_SVP!=='undefined'?CARDS_SVP:[],    label:'SVP(SVP) — Promos Escarlate e Violeta',
       sections:[{lbl:'🎫 Promos (todas)',filter:c=>true}]},
     sv10:  {cards:typeof CARDS_SV10!=='undefined'?CARDS_SV10:[],  label:'SV10(DRI) — Rivais do Destino',
+      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
+    zsv10pt5:{cards:typeof CARDS_ZSV10PT5!=='undefined'?CARDS_ZSV10PT5:[],label:'EV10.5(BLK) — Raio Preto',
+      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
+    rsv10pt5:{cards:typeof CARDS_RSV10PT5!=='undefined'?CARDS_RSV10PT5:[],label:'EV10.5(WHT) — Fogo Branco',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
     sv9:   {cards:typeof CARDS_SV9!=='undefined'?CARDS_SV9:[],    label:'SV9(JTG) — Jornada Juntos',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
@@ -4305,7 +4328,7 @@ const LAZY_SET_SCRIPTS=[
   'cards_sv1.js','cards_sv2.js','cards_sv3.js','cards_sv3pt5.js',
   'cards_sv4.js','cards_sv4pt5.js','cards_sv5.js','cards_sv6.js',
   'cards_sv6pt5.js','cards_sv7.js','cards_sv8.js','cards_sv8pt5.js',
-  'cards_sv9.js','cards_sv10.js','cards_svp.js','cards_pgo.js',
+  'cards_sv9.js','cards_sv10.js','cards_zsv10pt5.js','cards_rsv10pt5.js','cards_svp.js','cards_pgo.js',
   'legacy_swsh.js','legacy_sm.js','legacy_xy.js','legacy_bw.js',
   'legacy_hgss.js','legacy_dp.js','legacy_ex.js','legacy_classic.js',
 ];
