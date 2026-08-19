@@ -1477,6 +1477,50 @@ async function payAuctionOrder(orderId){
   }
 }
 
+// ── PAGAMENTO ONLINE DA LOJA (Mercado Pago Checkout Pro) ──────────
+// Mesmo padrão de payAuctionOrder() acima, só que pra reservas da
+// "Loja do Leiloeiro" (store_reservations) via a Edge Function
+// mp-create-store-payment (supabase/functions/) — a confirmação
+// também é automática, pelo mesmo mp-webhook (compartilhado entre os
+// dois fluxos, distinguidos pelo prefixo "store:" no external_reference).
+//
+// AINDA NÃO ESTÁ NO FLUXO DO COMPRADOR (19/08/2026) — backend pronto
+// (tabela, RLS, Edge Functions), só não está ligado em nenhum botão
+// visível ainda. Quando for a hora de expor, chamar payStoreReservation(id)
+// a partir do bloco de uma reserva com status 'reservado' (ver
+// renderMyLojaReservations) e mostrar data.error se resp.ok/data.ok forem
+// falsos, igual ao botão de pagamento do leilão.
+async function payStoreReservation(reservationId){
+  if(!uid())return;
+  const btn=document.getElementById(`loja-pay-btn-${reservationId}`);
+  const statusEl=document.getElementById(`loja-pay-status-${reservationId}`);
+  const resetBtn=()=>{if(btn){btn.disabled=false;btn.textContent='💳 Pagar agora (PIX / Cartão / Boleto)';}};
+  if(btn){btn.disabled=true;btn.textContent='Gerando pagamento...';}
+  if(statusEl)statusEl.textContent='';
+  try{
+    const{data:sessionData}=await sbClient.auth.getSession();
+    const token=sessionData?.session?.access_token;
+    if(!token){if(statusEl)statusEl.textContent='Sessão expirada — faça login de novo.';resetBtn();return;}
+
+    const resp=await fetch(SUPABASE_URL+'/functions/v1/mp-create-store-payment',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},
+      body:JSON.stringify({reservation_id:reservationId})
+    });
+    const data=await resp.json().catch(()=>({}));
+    if(!resp.ok||!data.ok){
+      if(statusEl)statusEl.textContent=data.error||'Erro ao gerar pagamento.';
+      resetBtn();
+      return;
+    }
+    window.location.href=data.init_point;
+  }catch(e){
+    console.error('[leilao] payStoreReservation',e);
+    if(statusEl)statusEl.textContent='Erro ao gerar pagamento. Tente de novo em instantes.';
+    resetBtn();
+  }
+}
+
 // ── COMBINAR COM O LEILOEIRO (WhatsApp) ───────────────────────────
 // O MyDeck é só a plataforma que roda o leilão — o combinado de envio
 // (e qualquer ajuste de pagamento fora do Checkout Pro) é sempre direto
