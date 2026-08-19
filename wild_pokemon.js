@@ -225,10 +225,10 @@
 
   // ── Pokébolas: tiers + chance de captura por raridade ─────────
   const WP_BALL_META = {
-    pokeball:   { label: 'Poké Ball',   emoji: '⚪', wobbles: 1, top: '#ee3f43' },
-    greatball:  { label: 'Great Ball',  emoji: '🔵', wobbles: 2, top: '#3a7bd5', accent: '#ee3f43' },
-    ultraball:  { label: 'Ultra Ball',  emoji: '🟡', wobbles: 3, top: '#2b2b2b', accent: '#ffd166' },
-    masterball: { label: 'Master Ball', emoji: '🟣', wobbles: 1, top: '#8e44ad', accent: '#ff6fb3', btn: '#ff6fb3' }, // sempre captura, sem drama
+    pokeball:   { label: 'Poké Ball',   wobbles: 1, img: 'poke-ball' },
+    greatball:  { label: 'Great Ball',  wobbles: 2, img: 'great-ball' },
+    ultraball:  { label: 'Ultra Ball',  wobbles: 3, img: 'ultra-ball' },
+    masterball: { label: 'Master Ball', wobbles: 1, img: 'master-ball' }, // sempre captura, sem drama
   };
   const WP_BALL_ORDER = ['pokeball', 'greatball', 'ultraball', 'masterball'];
 
@@ -244,16 +244,13 @@
   // colorida por tier + tarja preta + botão central, igual ao formato
   // real de cada bola (Great Ball com friso vermelho, Ultra com dourado,
   // Master roxa com botão rosa).
+  function wpBallSpriteUrl(imgSlug) {
+    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${imgSlug}.png`;
+  }
   function wpBallIconHtml(tier, size) {
     size = size || 26;
     const meta = WP_BALL_META[tier];
-    const btnSize = Math.round(size * 0.34);
-    return `<span class="wp-ball-icon" style="width:${size}px;height:${size}px">
-      <span class="wp-ball-top" style="background:${meta.top}"></span>
-      ${meta.accent ? `<span class="wp-ball-accent" style="background:${meta.accent}"></span>` : ''}
-      <span class="wp-ball-band"></span>
-      <span class="wp-ball-center" style="width:${btnSize}px;height:${btnSize}px;${meta.btn ? `border-color:${meta.btn}` : ''}"></span>
-    </span>`;
+    return `<img class="wp-ball-icon" src="${wpBallSpriteUrl(meta.img)}" alt="${meta.label}" style="width:${size}px;height:${size}px">`;
   }
 
   function wpSpriteUrl(dex) {
@@ -389,18 +386,7 @@
     .wp-ball-btn:hover:not(.wp-ball-disabled) { border-color: #ffd166aa; transform: translateY(-2px); }
     .wp-ball-btn .wp-ball-qty { font-family: 'Space Mono', monospace; color: #9aa0c0; }
     .wp-ball-disabled { opacity: .3; cursor: not-allowed; }
-    .wp-ball-icon {
-      position: relative; display: inline-block; border-radius: 50%;
-      border: 2px solid #1a1a1a; background: #fff; overflow: hidden;
-      box-shadow: 0 1px 4px rgba(0,0,0,.45);
-    }
-    .wp-ball-icon .wp-ball-top { position: absolute; top: 0; left: 0; right: 0; height: 50%; }
-    .wp-ball-icon .wp-ball-accent { position: absolute; left: 0; right: 0; top: calc(50% - 6px); height: 3px; z-index: 1; }
-    .wp-ball-icon .wp-ball-band { position: absolute; left: 0; right: 0; top: calc(50% - 1.5px); height: 3px; background: #1a1a1a; z-index: 2; }
-    .wp-ball-icon .wp-ball-center {
-      position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
-      border-radius: 50%; background: #fff; border: 2px solid #1a1a1a; z-index: 3;
-    }
+    .wp-ball-icon { object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); }
     .wp-thrown-ball {
       position: fixed; z-index: 9999; pointer-events: none;
       transition: left .4s cubic-bezier(.3,.6,.4,1), top .4s cubic-bezier(.3,.6,.4,1);
