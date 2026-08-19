@@ -41,6 +41,7 @@ let aucBlockedReason='';
 let aucSelectedCard=null;
 let aucLeiloeiros=[];
 let aucLeiloeiroNames={}; // {user_id: nome de exibição} — todo participante vê, ver loadLeiloeiroNames()
+let aucMyBidAuctionIds=new Set(); // leilões em que eu já dei lance (ver loadMyBidAuctionIds)
 let aucAutoNavigated=false; // evita reabrir a aba toda vez que o hook de login roda
 let aucRulesAccepted=null;  // null=ainda não checou · true/false depois de loadRulesAcceptance()
 let aucPendingBid=null;     // {auctionId,idSuffix} — lance que ficou esperando o aceite das regras
@@ -121,6 +122,7 @@ async function renderLeilaoTab(){
 
   await loadRoundsAndAuctions();
   await loadLeiloeiroNames();
+  await loadMyBidAuctionIds();
   await loadMyAuctionOrders();
   renderRoundSelect();
   renderAuctionsList();
@@ -173,9 +175,14 @@ function goToLeilaoAddressForm(){
 function renderLeilaoAnalises(){
   const wrap=document.getElementById('leilao-analises-kpis');
   if(!wrap)return;
-  const ativos=aucAuctions.filter(a=>a.status==='ativo').length;
+  const ativosLotes=aucAuctions.filter(a=>a.status==='ativo');
   const arrematados=aucAuctions.filter(a=>a.status==='encerrado'&&a.winner_id);
   const totalArrecadado=arrematados.reduce((s,a)=>s+ +a.winning_bid,0);
+  // "Em disputa agora" — diferente de TOTAL ARRECADADO (só o que já
+  // fechou/foi pago): soma do lance atual (ou preço inicial se ainda
+  // sem lance) de todo lote AINDA ativo, ou seja, quanto já tá em jogo
+  // nas rodadas em andamento neste exato momento.
+  const valorEmDisputa=ativosLotes.reduce((s,a)=>s+ +(a.current_bid||a.starting_price||0),0);
   const pendentes=aucAdminOrders.filter(o=>o.status==='aguardando_pagamento');
   const vencidos=pendentes.filter(o=>aucIsOverdue(o));
   const totalPendente=pendentes.reduce((s,o)=>s+ +o.amount,0);
@@ -184,12 +191,139 @@ function renderLeilaoAnalises(){
     <div style="font-size:22px;font-weight:700;color:${color||'var(--text)'}">${value}</div>
   </div>`;
   wrap.innerHTML=
-    kpi('LEILÕES ATIVOS',ativos)+
+    kpi('LOTES ATIVOS',ativosLotes.length)+
+    kpi('VALOR EM DISPUTA AGORA',`R$ ${fmtR(valorEmDisputa)}`,'var(--gold)')+
     kpi('CARTAS ARREMATADAS',arrematados.length)+
     kpi('TOTAL ARRECADADO',`R$ ${fmtR(totalArrecadado)}`,'var(--teal)')+
     kpi('PAGAMENTOS PENDENTES',`${pendentes.length} · R$ ${fmtR(totalPendente)}`,'var(--gold)')+
     kpi('PAGAMENTOS VENCIDOS',vencidos.length,vencidos.length?'var(--accent)':'var(--text)');
   renderLeilaoComissao();
+  renderLeilaoAnalisesCountdown();
+  renderLeilaoAnalisesPorLeiloeiro();
+  renderLeilaoAnalisesChart();
+}
+
+// Rodada "atual" pra fins de contador/gráfico — entre as rodadas ainda
+// abertas (com pelo menos 1 lote ativo), a que fecha mais cedo.
+function aucCurrentRoundForAnalises(){
+  const now=new Date();
+  const abertas=aucRounds.filter(r=>r.status!=='cancelado'&&!r.archived&&new Date(r.end_at)>now
+    &&aucAuctions.some(a=>a.round_id===r.id&&a.status==='ativo'));
+  if(!abertas.length)return null;
+  return abertas.sort((a,b)=>new Date(a.end_at)-new Date(b.end_at))[0];
+}
+
+// Contador ao vivo (atualiza sozinho a cada segundo) de quanto falta
+// pra fechar a rodada atual — se sair da tela/renderizar de novo, o
+// intervalo antigo se auto-limpa assim que não achar mais o elemento.
+let aucAnalisesCountdownTimer=null;
+function renderLeilaoAnalisesCountdown(){
+  const wrap=document.getElementById('leilao-analises-countdown');
+  if(!wrap)return;
+  if(aucAnalisesCountdownTimer){clearInterval(aucAnalisesCountdownTimer);aucAnalisesCountdownTimer=null;}
+  const round=aucCurrentRoundForAnalises();
+  if(!round){wrap.innerHTML=`<div class="cv-item-empty">Nenhuma rodada ativa no momento.</div>`;return;}
+  wrap.innerHTML=`<div class="panel" style="padding:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+    <div>
+      <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">RODADA ATUAL</div>
+      <div style="font-size:15px;font-weight:700">${esc(round.title)}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">⏱️ ENCERRA EM</div>
+      <div id="leilao-analises-countdown-value" style="font-size:20px;font-weight:700;color:var(--gold)"></div>
+    </div>
+  </div>`;
+  const tick=()=>{
+    const el=document.getElementById('leilao-analises-countdown-value');
+    if(!el){clearInterval(aucAnalisesCountdownTimer);aucAnalisesCountdownTimer=null;return;}
+    el.textContent=aucCountdown(round.end_at);
+  };
+  tick();
+  aucAnalisesCountdownTimer=setInterval(tick,1000);
+}
+
+// Quantos lotes ativos (e quanto valor) cada leiloeiro tem rodando
+// agora — soma aucAuctions por created_by, sem precisar de query nova
+// (os dados já estão carregados via loadRoundsAndAuctions).
+function renderLeilaoAnalisesPorLeiloeiro(){
+  const wrap=document.getElementById('leilao-analises-por-leiloeiro');
+  if(!wrap)return;
+  const ativos=aucAuctions.filter(a=>a.status==='ativo');
+  const porLeiloeiro={};
+  ativos.forEach(a=>{
+    const key=a.created_by||'—';
+    if(!porLeiloeiro[key])porLeiloeiro[key]={count:0,valor:0};
+    porLeiloeiro[key].count++;
+    porLeiloeiro[key].valor+=+(a.current_bid||a.starting_price||0);
+  });
+  const keys=Object.keys(porLeiloeiro);
+  if(!keys.length){wrap.innerHTML=`<div class="cv-item-empty">Nenhum lote ativo no momento.</div>`;return;}
+  wrap.innerHTML=keys.map(k=>{
+    const d=porLeiloeiro[k];
+    return`<div class="panel" style="padding:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <b>${esc(aucLeiloeiroNome(k))}</b>
+      <span style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace">${d.count} lote${d.count===1?'':'s'} ativo${d.count===1?'':'s'} · R$ ${fmtR(d.valor)} em disputa</span>
+    </div>`;
+  }).join('');
+}
+
+// Gráfico de linha (tempo x valor total acumulado da rodada) — busca o
+// histórico de lances de TODOS os lotes da rodada atual (auction_bids,
+// já liberado pra qualquer is_auction_admin() ler via RLS, sem RPC
+// nova) e reconstrói, lance a lance, o "placar" somado da rodada: cada
+// lance novo substitui o anterior DAQUELE lote no total (cada lance só
+// pode ser maior que o anterior do mesmo lote, então dá pra andar por
+// delta sem precisar reprocessar tudo a cada ponto).
+async function renderLeilaoAnalisesChart(){
+  const wrap=document.getElementById('leilao-analises-chart');
+  if(!wrap)return;
+  const round=aucCurrentRoundForAnalises();
+  if(!round){wrap.innerHTML=`<div class="cv-item-empty">Sem rodada ativa pra montar o gráfico.</div>`;return;}
+  const auctionIds=aucAuctions.filter(a=>a.round_id===round.id).map(a=>a.id);
+  if(!auctionIds.length){wrap.innerHTML=`<div class="cv-item-empty">Sem lotes nessa rodada.</div>`;return;}
+  wrap.innerHTML=`<div class="cv-item-empty">Carregando…</div>`;
+  const{data,error}=await sbClient.from('auction_bids').select('auction_id,amount,created_at').in('auction_id',auctionIds).order('created_at',{ascending:true});
+  if(error){console.error('[leilao] renderLeilaoAnalisesChart',error);wrap.innerHTML=`<div class="cv-item-empty">Não deu pra carregar o histórico de lances.</div>`;return;}
+  const bids=data||[];
+  // Não reconsulta se a rodada mudou enquanto o fetch estava rodando
+  // (leiloeiro trocando de sub-aba rápido, por ex.) — o wrap ainda existir
+  // já é suficiente checagem prática aqui.
+  if(!bids.length){wrap.innerHTML=`<div class="cv-item-empty">Ainda não teve lance nessa rodada.</div>`;return;}
+  const leading={};
+  let total=0;
+  const points=bids.map(b=>{
+    const prev=leading[b.auction_id]||0;
+    total+=(+b.amount-prev);
+    leading[b.auction_id]=+b.amount;
+    return{t:new Date(b.created_at),total};
+  });
+  wrap.innerHTML=aucLineChartSvg(points);
+}
+
+// Gráfico de linha simples em SVG (sem lib externa), mesmo espírito do
+// aucBarChartSvg do Financeiro — aqui a linha vai até "agora" (ou até o
+// fim da rodada se ela já tiver encerrado) pra mostrar o patamar atual.
+function aucLineChartSvg(points){
+  const w=640,h=190,pad=34;
+  const tStart=points[0].t.getTime();
+  const tEnd=Math.max(points[points.length-1].t.getTime(),Date.now());
+  const tRange=(tEnd-tStart)||1;
+  const maxV=Math.max(...points.map(p=>p.total),1);
+  const x=t=>pad+((t-tStart)/tRange)*(w-pad*2);
+  const y=v=>h-pad-(v/maxV)*(h-pad*2);
+  let path=`M ${x(tStart).toFixed(1)} ${y(0).toFixed(1)}`;
+  points.forEach(p=>{path+=` L ${x(p.t.getTime()).toFixed(1)} ${y(p.total).toFixed(1)}`;});
+  path+=` L ${x(tEnd).toFixed(1)} ${y(points[points.length-1].total).toFixed(1)}`;
+  const areaPath=path+` L ${x(tEnd).toFixed(1)} ${y(0).toFixed(1)} L ${x(tStart).toFixed(1)} ${y(0).toFixed(1)} Z`;
+  const fmtT=ms=>new Date(ms).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  return`<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px;display:block">
+    <path d="${areaPath}" fill="var(--teal)" opacity="0.12"/>
+    <path d="${path}" fill="none" stroke="var(--teal)" stroke-width="2"/>
+    <line x1="${pad}" y1="${(h-pad).toFixed(1)}" x2="${w-pad}" y2="${(h-pad).toFixed(1)}" stroke="var(--border)" stroke-width="1"/>
+    <text x="${pad}" y="${h-8}" font-size="8" fill="var(--muted)" font-family="'Space Mono',monospace">${esc(fmtT(tStart))}</text>
+    <text x="${w-pad}" y="${h-8}" font-size="8" fill="var(--muted)" font-family="'Space Mono',monospace" text-anchor="end">${esc(fmtT(tEnd))}</text>
+    <text x="${pad}" y="${(y(maxV)+9).toFixed(1)}" font-size="8" fill="var(--muted)" font-family="'Space Mono',monospace">R$ ${fmtR(maxV)}</text>
+  </svg>`;
 }
 
 // ── COMISSÃO MYDECK (mesmos termos combinados com o leiloeiro, baseados
@@ -617,6 +751,17 @@ async function loadLeiloeiroNames(){
 }
 function aucLeiloeiroNome(uid){return aucLeiloeiroNames[uid]||'o leiloeiro';}
 
+// Em quais leilões eu já dei algum lance (mesmo que tenha sido
+// superado depois) — usado só pra destacar "Seus leilões em andamento"
+// no topo da lista. A policy de auction_bids já deixa cada um ler os
+// PRÓPRIOS lances direto (bidder_id = auth.uid()), sem precisar de RPC.
+async function loadMyBidAuctionIds(){
+  if(!uid()){aucMyBidAuctionIds=new Set();return;}
+  const{data,error}=await sbClient.from('auction_bids').select('auction_id').eq('bidder_id',uid());
+  if(error){console.error('[leilao] loadMyBidAuctionIds',error);return;}
+  aucMyBidAuctionIds=new Set((data||[]).map(r=>r.auction_id));
+}
+
 // ── HELPERS ─────────────────────────────────────────────────────
 function aucRoundById(id){return aucRounds.find(r=>r.id===id);}
 
@@ -756,13 +901,24 @@ function renderAuctionsList(){
   const allCards=visibleRounds.flatMap(r=>aucAuctions.filter(a=>a.round_id===r.id&&a.status!=='cancelado'));
   aucRenderFilterBar(allCards);
 
-  // Com busca/filtro ativo esconde a fileira de destaque — misturar
-  // "mais movimentados" (fora do filtro) com o resultado filtrado só
-  // confundiria quem tá procurando uma carta específica.
+  // Com busca/filtro ativo esconde as fileiras de destaque — misturar
+  // "seus leilões"/"mais movimentados" (fora do filtro) com o resultado
+  // filtrado só confundiria quem tá procurando uma carta específica.
   if(hotWrap){
-    const hot=aucHasActiveSearchOrFilter()?[]:aucComputeHotCards(allCards,3);
-    hotWrap.innerHTML=hot.length?`<div class="sec-title" style="margin-top:0;font-size:13px">🔥 Mais movimentados</div>
-      <div class="auc-grid" style="margin-bottom:22px">${hot.map(a=>aucCardHtml(a,true)).join('')}</div>`:'';
+    if(aucHasActiveSearchOrFilter()){
+      hotWrap.innerHTML='';
+    }else{
+      // "Seus leilões em andamento" sempre entra ANTES dos destaques —
+      // são os leilões em que você já deu lance (aucMyBidAuctionIds,
+      // ver loadMyBidAuctionIds), ainda ativos.
+      const mine=allCards.filter(a=>a.status==='ativo'&&aucMyBidAuctionIds.has(a.id));
+      const mineHtml=mine.length?`<div class="sec-title" style="margin-top:0;font-size:13px">🎯 Seus leilões em andamento</div>
+        <div class="auc-grid" style="margin-bottom:22px">${mine.map(a=>aucCardHtml(a,'mine')).join('')}</div>`:'';
+      const hot=aucComputeHotCards(allCards,3);
+      const hotHtml=hot.length?`<div class="sec-title" style="margin-top:0;font-size:13px">🔥 Mais movimentados</div>
+        <div class="auc-grid" style="margin-bottom:22px">${hot.map(a=>aucCardHtml(a,'hot')).join('')}</div>`:'';
+      hotWrap.innerHTML=mineHtml+hotHtml;
+    }
   }
 
   const blockedNote=aucBlocked?`<div class="mkt-note" style="border-color:var(--accent);color:var(--accent)">
@@ -837,20 +993,22 @@ function aucInfoBlockHtml(a,idSuffix){
     </div>`;
 }
 
-// isHot: true quando é a cópia renderizada na fileira "🔥 Mais
-// movimentados" — usa um idSuffix próprio ('-hot') pra não colidir com
-// o input/botões da MESMA carta que também aparece na grade da rodada
-// logo abaixo (mesmo padrão do zoom, ver openAuctionZoom).
-function aucCardHtml(a,isHot){
+// kind: ''|'hot'|'mine' — quando a MESMA carta aparece em mais de uma
+// fileira ao mesmo tempo (destaque/"seus leilões"/grade da rodada), cada
+// cópia precisa de um idSuffix próprio ('-hot'/'-mine') pra não colidir
+// no input/botões de lance (mesmo padrão do zoom, ver openAuctionZoom).
+function aucCardHtml(a,kind){
   const img=aucImgFor(a);
-  return`<div class="panel${isHot?' auc-hot-card':''}">
+  const idSuffix=kind?'-'+kind:'';
+  return`<div class="panel${kind==='hot'?' auc-hot-card':''}${kind==='mine'?' auc-mine-card':''}">
     <div style="display:flex;gap:14px;flex-wrap:wrap">
       ${img?`<img src="${img}" alt="${esc(a.card_name)}" title="Clique pra ampliar" style="width:100px;border-radius:8px;object-fit:contain;background:var(--surface2);cursor:zoom-in" onclick="openAuctionZoom(${a.id})" onerror="this.style.display='none'">`:''}
       <div style="flex:1;min-width:220px">
-        ${aucInfoBlockHtml(a,isHot?'-hot':'')}
+        ${aucInfoBlockHtml(a,idSuffix)}
       </div>
     </div>
-    ${isHot?`<div style="margin-top:8px;font-size:9.5px;color:var(--gold);font-family:'Space Mono',monospace">🔥 ${a.bid_count||0} lances — um dos mais disputados</div>`:''}
+    ${kind==='hot'?`<div style="margin-top:8px;font-size:9.5px;color:var(--gold);font-family:'Space Mono',monospace">🔥 ${a.bid_count||0} lances — um dos mais disputados</div>`:''}
+    ${kind==='mine'?`<div style="margin-top:8px;font-size:9.5px;color:var(--teal);font-family:'Space Mono',monospace">🎯 Você já deu lance nesse</div>`:''}
   </div>`;
 }
 
@@ -1198,6 +1356,7 @@ async function submitBid(auctionId,idSuffix){
   if(statusEl)statusEl.textContent='';
   if(input)input.value='';
   setStatus('Lance registrado!','ok');
+  aucMyBidAuctionIds.add(auctionId); // já entra na fileira "Seus leilões" sem esperar reload
   await loadRoundsAndAuctions();
   renderAuctionsList();
   refreshOpenAuctionZoom();
