@@ -130,12 +130,17 @@ async function renderLeilaoTab(){
   scrollToSharedAuction();
   scrollToSharedRound();
 
+  // Bloco da Loja isolado em try/catch: se algo aqui falhar (ex.: SQL da
+  // loja ainda não rodado no Supabase), não pode derrubar o resto da aba
+  // (Análises/Financeiro do leilão) que roda depois. 19/08/2026.
   if(typeof loadLojaItems==='function'){
-    await sbClient.rpc('expire_store_reservations').catch(e=>console.error('[loja] expire_store_reservations',e));
-    await loadLojaItems();
-    await loadMyLojaReservations();
-    renderLojaGrid();
-    renderMyLojaReservations();
+    try{
+      await sbClient.rpc('expire_store_reservations').catch(e=>console.error('[loja] expire_store_reservations',e));
+      await loadLojaItems();
+      await loadMyLojaReservations();
+      renderLojaGrid();
+      renderMyLojaReservations();
+    }catch(e){console.error('[loja] erro no bloco público da loja',e);}
   }
 
   if(aucIsLeilaoAdmin){
@@ -144,19 +149,24 @@ async function renderLeilaoTab(){
     renderAdminOrders();
     renderLeilaoArquivo();
     await loadAuctionCosts();
-    if(typeof loadAdminLojaReservations==='function'){
-      renderLojaAdminItems();
-      await loadAdminLojaReservations();
-      renderLojaAdminReservations();
-    }
-    if(typeof loadLojaItemCosts==='function')await loadLojaItemCosts();
-    // renderLeilaoAnalises() vem DEPOIS de tudo acima porque o card de
-    // "total geral" (leilão+loja) e a comissão da loja dependem de
-    // aucAdminOrders/lojaAdminReservations já estarem carregados.
+
+    // Análises/Financeiro do LEILÃO rodam ANTES do bloco da loja de propósito:
+    // assim, mesmo se algo na loja (menos testada) falhar, a análise do
+    // leilão sempre é desenhada. O card "total geral" dentro de
+    // renderLeilaoAnalises já lida com lojaAdminReservations undefined.
     renderLeilaoAnalises();
     renderLeilaoFinanceiro();
-    if(typeof renderLojaAnalises==='function')renderLojaAnalises();
-    if(typeof renderLojaFinanceiro==='function')renderLojaFinanceiro();
+
+    try{
+      if(typeof loadAdminLojaReservations==='function'){
+        renderLojaAdminItems();
+        await loadAdminLojaReservations();
+        renderLojaAdminReservations();
+      }
+      if(typeof loadLojaItemCosts==='function')await loadLojaItemCosts();
+      if(typeof renderLojaAnalises==='function')renderLojaAnalises();
+      if(typeof renderLojaFinanceiro==='function')renderLojaFinanceiro();
+    }catch(e){console.error('[loja] erro no bloco admin da loja',e);}
   }
   if(typeof isAdminEditor==='function'&&isAdminEditor()){
     await loadLeiloeiros();
