@@ -59,6 +59,9 @@
   const WP_STORAGE_BALLS = 'wp_wild_balls_v2';
   const WP_STORAGE_SOUND = 'wp_sound_on_v1';
   const WP_STORAGE_ENABLED = 'wp_enabled_v1';
+  const WP_STORAGE_DAILY_BALLS = 'wp_daily_balls_v1'; // { date, count } — teto de Poké Ball ganha só por ficar com o site aberto
+  const WP_STORAGE_DAILY_BONUS = 'wp_daily_bonus_v1'; // 'YYYY-MM-DD' do último dia em que já deu a Great Ball de primeiro acesso
+  const WP_DAILY_BALL_CAP = 5; // máximo de Poké Ball/dia só pelo ganho passivo (uso do site) — não limita ganhos manuais/por ação real
   const WP_LIFETIME_MS = 8000; // quanto tempo o Pokémon fica visível antes de sumir sozinho
 
   // ── Dados: Kanto 151 (dex, slug PokeAPI, nome, raridade) ──────
@@ -266,14 +269,166 @@
     try { localStorage.setItem(key, JSON.stringify(obj)); } catch (e) {}
   }
 
+  // Dia local do usuário (não UTC) — é o que ele percebe como "hoje".
+  function wpTodayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  // ── Teto diário de Poké Ball por "ficar parado" (uso passivo do site) ──
+  // Só conta o ganho automático (wpMaybeGrantBallFromUsage) — bolas dadas
+  // na mão (console) ou por ações reais no futuro (leilão, etc.) não
+  // passam por aqui e não são limitadas por isso.
+  function wpDailyBallsCount() {
+    const s = wpLoadJSON(WP_STORAGE_DAILY_BALLS, { date: null, count: 0 });
+    return s.date === wpTodayStr() ? s.count : 0;
+  }
+  function wpDailyBallsIncrement() {
+    const today = wpTodayStr();
+    wpSaveJSON(WP_STORAGE_DAILY_BALLS, { date: today, count: wpDailyBallsCount() + 1 });
+  }
+
+  // ── Bônus de primeiro acesso do dia: 1 Great Ball ───────────────
+  function wpCheckDailyLoginBonus() {
+    const today = wpTodayStr();
+    if (wpLoadJSON(WP_STORAGE_DAILY_BONUS, null) === today) return; // já deu hoje
+    wpSaveJSON(WP_STORAGE_DAILY_BONUS, today);
+    window.wpGrantBall('greatball', 1, 'primeiro acesso do dia');
+  }
+
   let wpCatches = wpLoadJSON(WP_STORAGE_CATCHES, {}); // { [slug]: { count, firstCaughtAt } }
   // saldo inicial de bolas pra já dar pra testar sem precisar chamar wpGrantBall na mão
   let wpBalls = wpLoadJSON(WP_STORAGE_BALLS, { pokeball: 5, greatball: 2, ultraball: 1, masterball: 0 });
   let wpSoundOn = wpLoadJSON(WP_STORAGE_SOUND, false);
   let wpEnabled = wpLoadJSON(WP_STORAGE_ENABLED, true);
 
-  function wpSaveCatches() { wpSaveJSON(WP_STORAGE_CATCHES, wpCatches); }
-  function wpSaveBalls() { wpSaveJSON(WP_STORAGE_BALLS, wpBalls); }
+  // ── Sync com Supabase (conta do usuário) ────────────────────────
+  // Mesmo padrão de segurança do xp_system.js: sbClient/currentUser são
+  // const/let no topo de app.js, então window.sbClient NÃO funciona —
+  // tem que checar o identificador direto (ver feedback_coding).
+  function wpHasClient() { return typeof sbClient !== 'undefined' && !!sbClient; }
+  function wpUid() { return (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : null; }
+
+  // localStorage continua sendo o cache local pra UI responder na hora
+  // (offline-first). Se logado, cada mudança também é espelhada no
+  // Supabase em background (fire-and-forget, não trava a UI). Sem RPC
+  // por enquanto — ver comentário no topo do wild_pokemon_setup.sql.
+  function wpSaveCatches() {
+    wpSaveJSON(WP_STORAGE_CATCHES, wpCatches);
+  }
+  function wpSaveBalls() {
+    wpSaveJSON(WP_STORAGE_BALLS, wpBalls);
+  }
+
+  function wpDbUpsertCatch(mon) {
+    if (!wpHasClient() || !wpUid()) return;
+    const rec = wpCatches[mon.s];
+    sbClient.from('wild_catches').upsert({
+      user_id: wpUid(),
+      pokemon_slug: mon.s,
+      dex: mon.d,
+      rarity: mon.r,
+      count: rec.count,
+      first_caught_at: new Date(rec.firstCaughtAt).toISOString(),
+      last_caught_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,pokemon_slug' }).then(({ error }) => {
+      if (error) console.warn('[wp] falha ao salvar captura no Supabase:', error.message);
+    });
+  }
+
+  function wpDbSaveBalls() {
+    if (!wpHasClient() || !wpUid()) return;
+    sbClient.from('wild_balls').upsert({
+      user_id: wpUid(),
+      pokeball: wpBalls.pokeball || 0,
+      greatball: wpBalls.greatball || 0,
+      ultraball: wpBalls.ultraball || 0,
+      masterball: wpBalls.masterball || 0,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' }).then(({ error }) => {
+      if (error) console.warn('[wp] falha ao salvar pokébolas no Supabase:', error.message);
+    });
+  }
+
+  // Puxa a coleção/inventário da nuvem quando o usuário está logado.
+  // IMPORTANTE: não sobrescreve o localStorage às cegas — quem já
+  // jogava antes dessa migração tem captura só local, então isso faz
+  // um MERGE (maior contagem, menor first_caught_at) e sobe de volta
+  // pro Supabase o que estava só local, em vez de simplesmente
+  // substituir pelo que a nuvem tinha (que, na primeira sincronia, é
+  // vazio, e apagaria o progresso local se sobrescrevesse). Sem
+  // login, continua 100% localStorage (modo visitante).
+  async function wpSyncFromCloud() {
+    if (!wpHasClient() || !wpUid()) return; // visitante — só localStorage mesmo
+    try {
+      const [catchesRes, ballsRes] = await Promise.all([
+        sbClient.from('wild_catches').select('pokemon_slug,count,first_caught_at').eq('user_id', wpUid()),
+        sbClient.from('wild_balls').select('*').eq('user_id', wpUid()).maybeSingle(),
+      ]);
+
+      if (!catchesRes.error && catchesRes.data) {
+        const cloudCatches = {};
+        catchesRes.data.forEach(row => {
+          cloudCatches[row.pokemon_slug] = { count: row.count, firstCaughtAt: new Date(row.first_caught_at).getTime() };
+        });
+
+        const merged = {};
+        const toUpload = [];
+        const allSlugs = new Set([...Object.keys(wpCatches), ...Object.keys(cloudCatches)]);
+        allSlugs.forEach(slug => {
+          const local = wpCatches[slug];
+          const cloud = cloudCatches[slug];
+          if (local && cloud) {
+            const count = Math.max(local.count, cloud.count);
+            const firstCaughtAt = Math.min(local.firstCaughtAt, cloud.firstCaughtAt);
+            merged[slug] = { count, firstCaughtAt };
+            if (count !== cloud.count || firstCaughtAt !== cloud.firstCaughtAt) toUpload.push(slug);
+          } else if (local) {
+            merged[slug] = local;
+            toUpload.push(slug); // só existia local — sobe pra nuvem
+          } else {
+            merged[slug] = cloud;
+          }
+        });
+
+        wpCatches = merged;
+        wpSaveJSON(WP_STORAGE_CATCHES, wpCatches);
+
+        toUpload.forEach(slug => {
+          const mon = WP_KANTO151.find(m => m.s === slug);
+          if (mon) wpDbUpsertCatch(mon);
+        });
+      }
+
+      if (!ballsRes.error && ballsRes.data) {
+        // Mesmo cuidado: se o saldo local (de antes da migração) for
+        // maior que o da nuvem, mantém o maior em vez de sobrescrever
+        // pra baixo — assim ninguém "perde" bolas que já tinha.
+        const cloudBalls = {
+          pokeball: ballsRes.data.pokeball || 0,
+          greatball: ballsRes.data.greatball || 0,
+          ultraball: ballsRes.data.ultraball || 0,
+          masterball: ballsRes.data.masterball || 0,
+        };
+        const mergedBalls = {
+          pokeball: Math.max(wpBalls.pokeball || 0, cloudBalls.pokeball),
+          greatball: Math.max(wpBalls.greatball || 0, cloudBalls.greatball),
+          ultraball: Math.max(wpBalls.ultraball || 0, cloudBalls.ultraball),
+          masterball: Math.max(wpBalls.masterball || 0, cloudBalls.masterball),
+        };
+        wpBalls = mergedBalls;
+        wpSaveJSON(WP_STORAGE_BALLS, wpBalls);
+        if (JSON.stringify(mergedBalls) !== JSON.stringify(cloudBalls)) wpDbSaveBalls();
+      } else if (!ballsRes.error && !ballsRes.data) {
+        // primeira vez desse usuário logado — cria a linha na nuvem com o saldo atual
+        wpDbSaveBalls();
+      }
+
+      wpUpdateBadge();
+    } catch (e) {
+      console.warn('[wp] falha ao sincronizar com Supabase:', e);
+    }
+  }
 
   // ── Som (Web Audio API — sem depender de arquivo externo) ─────
   let wpAudioCtx = null;
@@ -599,6 +754,7 @@
 
     wpBalls[tier] = Math.max(0, (wpBalls[tier] || 0) - 1);
     wpSaveBalls();
+    wpDbSaveBalls();
     wpUpdateBadge();
     wpSoundBall();
 
@@ -644,6 +800,7 @@
       wpCatches[mon.s].count++;
       wpCatches[mon.s].firstCaughtAt = wpCatches[mon.s].firstCaughtAt || Date.now();
       wpSaveCatches();
+      wpDbUpsertCatch(mon);
 
       el.classList.add('wp-caught');
       setTimeout(() => el.remove(), 500);
@@ -690,14 +847,17 @@
     if (!WP_BALL_META[tier]) { console.warn('[wp] tier inválido:', tier); return; }
     wpBalls[tier] = (wpBalls[tier] || 0) + qty;
     wpSaveBalls();
+    wpDbSaveBalls();
     wpUpdateBadge();
     wpToastRaw(wpBallIconHtml(tier, 22), `+${qty} ${WP_BALL_META[tier].label}${reason ? ' — ' + reason : ''}`, true);
   };
 
   function wpMaybeGrantBallFromUsage(baseChance) {
     if (!wpEnabled) return; // minigame desligado — não ganha bola nem spawna
+    if (wpDailyBallsCount() >= WP_DAILY_BALL_CAP) return; // teto diário de bola por uso passivo já batido
     if (Math.random() < baseChance) {
       window.wpGrantBall('pokeball', 1, 'por usar o site');
+      wpDailyBallsIncrement();
     }
   }
 
@@ -852,6 +1012,16 @@
     wpInit();
   }
 
+  // Cobre o caso do evento de auth já ter disparado antes deste script
+  // terminar de instalar os hooks (mesma janela de segurança do xp_system.js).
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(() => { wpSyncFromCloud(); wpCheckDailyLoginBonus(); }, 900);
+    });
+  } else {
+    setTimeout(() => { wpSyncFromCloud(); wpCheckDailyLoginBonus(); }, 900);
+  }
+
   // ── Debug (console) ─────────────────────────────────────────
   window.wpForceSpawn = () => wpSpawn(1);
   window.wpReset = () => {
@@ -859,10 +1029,12 @@
     wpBalls = { pokeball: 5, greatball: 2, ultraball: 1, masterball: 0 };
     wpSaveCatches();
     wpSaveBalls();
+    localStorage.removeItem(WP_STORAGE_DAILY_BALLS);
+    localStorage.removeItem(WP_STORAGE_DAILY_BONUS);
     wpUpdateBadge();
   };
   window.wpStatus = () => {
     const balls = WP_BALL_ORDER.map(t => `${WP_BALL_META[t].emoji}${wpBalls[t] || 0}`).join(' ');
-    return `${Object.keys(wpCatches).length}/${WP_KANTO151.length} capturados · bolas: ${balls}`;
+    return `${Object.keys(wpCatches).length}/${WP_KANTO151.length} capturados · bolas: ${balls} · Poké Ball hoje: ${wpDailyBallsCount()}/${WP_DAILY_BALL_CAP}`;
   };
 })();
