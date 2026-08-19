@@ -54,7 +54,7 @@
 (function () {
   'use strict';
 
-  const WP_TEST_MODE = true; // ⚠️ trocar pra false depois de validar o ritmo
+  const WP_TEST_MODE = false; // modo real — cadência de verdade (~3.75min de intervalo médio, ver WP_DAILY_TARGETS)
   const WP_STORAGE_CATCHES = 'wp_wild_catches_v2';
   const WP_STORAGE_BALLS = 'wp_wild_balls_v2';
   const WP_STORAGE_SOUND = 'wp_sound_on_v1';
@@ -225,10 +225,10 @@
 
   // ── Pokébolas: tiers + chance de captura por raridade ─────────
   const WP_BALL_META = {
-    pokeball:   { label: 'Poké Ball',   emoji: '⚪', wobbles: 1 },
-    greatball:  { label: 'Great Ball',  emoji: '🔵', wobbles: 2 },
-    ultraball:  { label: 'Ultra Ball',  emoji: '🟡', wobbles: 3 },
-    masterball: { label: 'Master Ball', emoji: '🟣', wobbles: 1 }, // sempre captura, sem drama
+    pokeball:   { label: 'Poké Ball',   emoji: '⚪', wobbles: 1, top: '#ee3f43' },
+    greatball:  { label: 'Great Ball',  emoji: '🔵', wobbles: 2, top: '#3a7bd5', accent: '#ee3f43' },
+    ultraball:  { label: 'Ultra Ball',  emoji: '🟡', wobbles: 3, top: '#2b2b2b', accent: '#ffd166' },
+    masterball: { label: 'Master Ball', emoji: '🟣', wobbles: 1, top: '#8e44ad', accent: '#ff6fb3', btn: '#ff6fb3' }, // sempre captura, sem drama
   };
   const WP_BALL_ORDER = ['pokeball', 'greatball', 'ultraball', 'masterball'];
 
@@ -239,6 +239,22 @@
     ultraball:  { comum: .99, rara: .90, especial: .65, ultra_rara: .30 },
     masterball: { comum: 1,   rara: 1,   especial: 1,   ultra_rara: 1   },
   };
+
+  // Desenha a pokébola em CSS (sem depender de imagem externa) — metade
+  // colorida por tier + tarja preta + botão central, igual ao formato
+  // real de cada bola (Great Ball com friso vermelho, Ultra com dourado,
+  // Master roxa com botão rosa).
+  function wpBallIconHtml(tier, size) {
+    size = size || 26;
+    const meta = WP_BALL_META[tier];
+    const btnSize = Math.round(size * 0.34);
+    return `<span class="wp-ball-icon" style="width:${size}px;height:${size}px">
+      <span class="wp-ball-top" style="background:${meta.top}"></span>
+      ${meta.accent ? `<span class="wp-ball-accent" style="background:${meta.accent}"></span>` : ''}
+      <span class="wp-ball-band"></span>
+      <span class="wp-ball-center" style="width:${btnSize}px;height:${btnSize}px;${meta.btn ? `border-color:${meta.btn}` : ''}"></span>
+    </span>`;
+  }
 
   function wpSpriteUrl(dex) {
     return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${dex}.png`;
@@ -305,7 +321,29 @@
       transition: transform .35s cubic-bezier(.34,1.56,.64,1);
       touch-action: manipulation;
     }
-    .wp-spawn img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+    .wp-spawn img { position: relative; z-index: 2; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+    .wp-aura { position: absolute; inset: -20px; border-radius: 50%; pointer-events: none; z-index: 0; filter: blur(7px); }
+    .wp-aura-rara { background: radial-gradient(circle, #06d6a077 0%, transparent 68%); animation: wpAuraPulse 2.4s ease-in-out infinite; }
+    .wp-aura-especial { background: radial-gradient(circle, #4cc9f099 0%, transparent 68%); animation: wpAuraPulse 1.9s ease-in-out infinite; }
+    .wp-aura-ultra_rara { background: radial-gradient(circle, #ffd166cc 0%, transparent 68%); animation: wpAuraPulse 1.1s ease-in-out infinite; }
+    @keyframes wpAuraPulse {
+      0%, 100% { transform: scale(.82); opacity: .45; }
+      50%      { transform: scale(1.18); opacity: .9; }
+    }
+    .wp-ring { position: absolute; inset: -11px; border-radius: 50%; pointer-events: none; z-index: 1; border: 2px solid transparent; }
+    .wp-ring-especial { border-top-color: #4cc9f0; border-right-color: #4cc9f055; animation: wpRingSpin 3s linear infinite; }
+    .wp-ring-ultra_rara { border-top-color: #ffd166; border-right-color: #ffd16688; border-bottom-color: #ffd16633; animation: wpRingSpin 1.5s linear infinite; }
+    @keyframes wpRingSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .wp-sparkles { position: absolute; inset: -14px; pointer-events: none; z-index: 1; }
+    .wp-sparkles span {
+      position: absolute; width: 4px; height: 4px; border-radius: 50%;
+      background: #fff8d6; box-shadow: 0 0 7px 2px #ffd166cc;
+      animation: wpTwinkle 1.3s ease-in-out infinite;
+    }
+    @keyframes wpTwinkle {
+      0%, 100% { opacity: 0; transform: scale(.3); }
+      50%      { opacity: 1; transform: scale(1); }
+    }
     .wp-spawn.wp-bl { left: -78px; bottom: 18px; }
     .wp-spawn.wp-br { right: -78px; bottom: 18px; }
     .wp-spawn.wp-tl { left: -78px; top: 90px; }
@@ -349,11 +387,22 @@
       transition: border-color .15s, transform .15s;
     }
     .wp-ball-btn:hover:not(.wp-ball-disabled) { border-color: #ffd166aa; transform: translateY(-2px); }
-    .wp-ball-btn .wp-ball-emoji { font-size: 22px; }
     .wp-ball-btn .wp-ball-qty { font-family: 'Space Mono', monospace; color: #9aa0c0; }
     .wp-ball-disabled { opacity: .3; cursor: not-allowed; }
+    .wp-ball-icon {
+      position: relative; display: inline-block; border-radius: 50%;
+      border: 2px solid #1a1a1a; background: #fff; overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,.45);
+    }
+    .wp-ball-icon .wp-ball-top { position: absolute; top: 0; left: 0; right: 0; height: 50%; }
+    .wp-ball-icon .wp-ball-accent { position: absolute; left: 0; right: 0; top: calc(50% - 6px); height: 3px; z-index: 1; }
+    .wp-ball-icon .wp-ball-band { position: absolute; left: 0; right: 0; top: calc(50% - 1.5px); height: 3px; background: #1a1a1a; z-index: 2; }
+    .wp-ball-icon .wp-ball-center {
+      position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+      border-radius: 50%; background: #fff; border: 2px solid #1a1a1a; z-index: 3;
+    }
     .wp-thrown-ball {
-      position: fixed; z-index: 9999; font-size: 30px; pointer-events: none;
+      position: fixed; z-index: 9999; pointer-events: none;
       transition: left .4s cubic-bezier(.3,.6,.4,1), top .4s cubic-bezier(.3,.6,.4,1);
     }
     .wp-thrown-ball.wp-wobble { animation: wpWobble .35s ease-in-out; }
@@ -411,7 +460,6 @@
     .wp-tab { background: #111422; border: 1px solid #ffffff14; border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 13px; color: #9aa0c0; }
     .wp-tab.wp-tab-active { color: #ffd166; border-color: #ffd16655; }
     .wp-inv-row { display: flex; align-items: center; gap: 12px; background: #111422; border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; }
-    .wp-inv-row .wp-ball-emoji { font-size: 26px; }
     .wp-inv-row .wp-inv-label { flex: 1; font-size: 14px; }
     .wp-inv-row .wp-inv-qty { font-family: 'Space Mono', monospace; font-size: 16px; color: #ffd166; }
     .wp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; }
@@ -452,19 +500,37 @@
     return WP_KANTO151[0];
   }
 
+  // Aura visual por raridade — comum não tem nada (fica "normal" mesmo),
+  // rara tem brilho verde suave, especial ganha um anel giratório azul,
+  // ultra-rara ganha anel dourado mais rápido + partículas brilhando.
+  // Dá uma pista visual da raridade sem revelar o nome (continua "???").
+  function wpAuraHtml(r) {
+    if (r === 'comum') return '';
+    let html = `<div class="wp-aura wp-aura-${r}"></div>`;
+    if (r === 'especial' || r === 'ultra_rara') html += `<div class="wp-ring wp-ring-${r}"></div>`;
+    if (r === 'ultra_rara') {
+      const sparkles = Array.from({ length: 6 }, () => {
+        const top = Math.round(Math.random() * 84);
+        const left = Math.round(Math.random() * 84);
+        const delay = (Math.random() * 1.2).toFixed(2);
+        return `<span style="top:${top}%;left:${left}%;animation-delay:${delay}s"></span>`;
+      }).join('');
+      html += `<div class="wp-sparkles">${sparkles}</div>`;
+    }
+    return html;
+  }
+
   function wpSpawn(chance) {
     if (!wpEnabled) return; // minigame desligado pelo usuário
     if (wpActiveEl) return; // só 1 por vez na tela
     if (Math.random() > chance) return;
 
     const mon = wpPickMon();
-    const meta = WP_RARITY_META[mon.r];
     const corner = WP_CORNERS[Math.floor(Math.random() * WP_CORNERS.length)];
 
     const el = document.createElement('div');
     el.className = `wp-spawn ${corner}`;
-    el.style.filter = meta.glow !== 'none' ? `drop-shadow(0 4px 14px rgba(0,0,0,.55)) drop-shadow(${meta.glow})` : '';
-    el.innerHTML = `<img src="${wpSpriteUrl(mon.d)}" alt="${mon.n}">`;
+    el.innerHTML = `${wpAuraHtml(mon.r)}<img src="${wpSpriteUrl(mon.d)}" alt="${mon.n}">`;
     el.title = '???';
     document.body.appendChild(el);
     wpActiveEl = el;
@@ -516,11 +582,10 @@
     else picker.style.right = `${Math.max(8, window.innerWidth - rect.right)}px`;
 
     picker.innerHTML = WP_BALL_ORDER.map(tier => {
-      const meta = WP_BALL_META[tier];
       const qty = wpBalls[tier] || 0;
       const disabled = qty <= 0;
       return `<div class="wp-ball-btn ${disabled ? 'wp-ball-disabled' : ''}" data-tier="${tier}">
-        <span class="wp-ball-emoji">${meta.emoji}</span>
+        ${wpBallIconHtml(tier, 24)}
         <span class="wp-ball-qty">${qty}</span>
       </div>`;
     }).join('');
@@ -552,10 +617,9 @@
     wpSoundBall();
 
     const rect = el.getBoundingClientRect();
-    const ballMeta = WP_BALL_META[tier];
     const ballEl = document.createElement('div');
     ballEl.className = 'wp-thrown-ball';
-    ballEl.textContent = ballMeta.emoji;
+    ballEl.innerHTML = wpBallIconHtml(tier, 28);
     ballEl.style.left = `${rect.left + rect.width / 2 - 15}px`;
     ballEl.style.top = `${rect.top + rect.height / 2 - 15}px`;
     document.body.appendChild(ballEl);
@@ -641,7 +705,7 @@
     wpBalls[tier] = (wpBalls[tier] || 0) + qty;
     wpSaveBalls();
     wpUpdateBadge();
-    wpToastRaw(WP_BALL_META[tier].emoji, `+${qty} ${WP_BALL_META[tier].label}${reason ? ' — ' + reason : ''}`, true);
+    wpToastRaw(wpBallIconHtml(tier, 22), `+${qty} ${WP_BALL_META[tier].label}${reason ? ' — ' + reason : ''}`, true);
   };
 
   function wpMaybeGrantBallFromUsage(baseChance) {
@@ -712,7 +776,7 @@
     const invHtml = WP_BALL_ORDER.map(tier => {
       const meta = WP_BALL_META[tier];
       return `<div class="wp-inv-row">
-        <span class="wp-ball-emoji">${meta.emoji}</span>
+        ${wpBallIconHtml(tier, 28)}
         <span class="wp-inv-label">${meta.label}</span>
         <span class="wp-inv-qty">${wpBalls[tier] || 0}</span>
       </div>`;
