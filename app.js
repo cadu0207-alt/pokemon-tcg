@@ -428,6 +428,13 @@ function getBinderImg(c,setId){
   // Usa número sem zero à esquerda (padrão do CDN) ou o valor original para cartas especiais (TG01, ACE01...)
   if(setId.startsWith('sv')||setId==='pgo'||(window.LEGACY_SETS||[]).some(s=>s.id===setId)){
     const num=isNaN(n)?c.n:n;
+    // FIX 18/08/2026: "Celebrations: Classic Collection" (cel25c) é um caso
+    // especial no pokemontcg.io — cada card real tem id tipo "cel25c-4_A"
+    // (ou _A1.._A4 pras variantes de arte de algumas cartas), e o arquivo de
+    // imagem segue esse mesmo sufixo (".../cel25c/4_A.png"). Sem o "_A" a
+    // URL dá 404 pra TODAS as 25 cartas do set (reportado no console: 51+
+    // erros 404 em cel25c/*.png). Confirmado direto na API oficial.
+    if(setId==='cel25c') return `https://images.pokemontcg.io/${setId}/${num}_A.png`;
     return `https://images.pokemontcg.io/${setId}/${num}.png`;
   }
   return imgMe04(n);
