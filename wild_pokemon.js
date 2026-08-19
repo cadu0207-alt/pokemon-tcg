@@ -279,6 +279,10 @@
   // Só conta o ganho automático (wpMaybeGrantBallFromUsage) — bolas dadas
   // na mão (console) ou por ações reais no futuro (leilão, etc.) não
   // passam por aqui e não são limitadas por isso.
+  // localStorage continua sendo o cache rápido (funciona pra visitante
+  // sem login também); pra quem está logado, isso é sincronizado com a
+  // tabela wild_daily no Supabase (ver wpDbSaveDaily/wpSyncFromCloud
+  // logo abaixo) pra não dar pra "resetar o teto" trocando de aparelho.
   function wpDailyBallsCount() {
     const s = wpLoadJSON(WP_STORAGE_DAILY_BALLS, { date: null, count: 0 });
     return s.date === wpTodayStr() ? s.count : 0;
@@ -286,14 +290,16 @@
   function wpDailyBallsIncrement() {
     const today = wpTodayStr();
     wpSaveJSON(WP_STORAGE_DAILY_BALLS, { date: today, count: wpDailyBallsCount() + 1 });
+    wpDbSaveDaily();
   }
 
   // ── Bônus de primeiro acesso do dia: 1 Great Ball ───────────────
   function wpCheckDailyLoginBonus() {
     const today = wpTodayStr();
-    if (wpLoadJSON(WP_STORAGE_DAILY_BONUS, null) === today) return; // já deu hoje
+    if (wpLoadJSON(WP_STORAGE_DAILY_BONUS, null) === today) return; // já deu hoje (neste aparelho, ou já sincronizado da conta)
     wpSaveJSON(WP_STORAGE_DAILY_BONUS, today);
     window.wpGrantBall('greatball', 1, 'primeiro acesso do dia');
+    wpDbSaveDaily();
   }
 
   let wpCatches = wpLoadJSON(WP_STORAGE_CATCHES, {}); // { [slug]: { count, firstCaughtAt } }
@@ -350,6 +356,26 @@
     });
   }
 
+  // Teto de Poké Ball/dia + bônus de login, por CONTA (não mais só por
+  // dispositivo) — evita logar em dois aparelhos e ganhar o bônus/teto
+  // em dobro. Lê o que já está no localStorage (fonte imediata) e sobe
+  // pra tabela wild_daily.
+  function wpDbSaveDaily() {
+    if (!wpHasClient() || !wpUid()) return;
+    const today = wpTodayStr();
+    const ballsState = wpLoadJSON(WP_STORAGE_DAILY_BALLS, { date: today, count: 0 });
+    const bonusDate = wpLoadJSON(WP_STORAGE_DAILY_BONUS, null);
+    sbClient.from('wild_daily').upsert({
+      user_id: wpUid(),
+      day: today,
+      passive_balls: ballsState.date === today ? ballsState.count : 0,
+      login_bonus_claimed: bonusDate === today,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' }).then(({ error }) => {
+      if (error) console.warn('[wp] falha ao salvar contadores diários no Supabase:', error.message);
+    });
+  }
+
   // Puxa a coleção/inventário da nuvem quando o usuário está logado.
   // IMPORTANTE: não sobrescreve o localStorage às cegas — quem já
   // jogava antes dessa migração tem captura só local, então isso faz
@@ -361,9 +387,10 @@
   async function wpSyncFromCloud() {
     if (!wpHasClient() || !wpUid()) return; // visitante — só localStorage mesmo
     try {
-      const [catchesRes, ballsRes] = await Promise.all([
+      const [catchesRes, ballsRes, dailyRes] = await Promise.all([
         sbClient.from('wild_catches').select('pokemon_slug,count,first_caught_at').eq('user_id', wpUid()),
         sbClient.from('wild_balls').select('*').eq('user_id', wpUid()).maybeSingle(),
+        sbClient.from('wild_daily').select('*').eq('user_id', wpUid()).maybeSingle(),
       ]);
 
       if (!catchesRes.error && catchesRes.data) {
@@ -422,6 +449,29 @@
       } else if (!ballsRes.error && !ballsRes.data) {
         // primeira vez desse usuário logado — cria a linha na nuvem com o saldo atual
         wpDbSaveBalls();
+      }
+
+      // Teto diário de Poké Ball + bônus de login — por CONTA agora, não
+      // mais só por dispositivo. Se a nuvem já tem um registro de HOJE,
+      // funde com o que está no localStorage (o maior valor de cada,
+      // "já reclamado" vence "não reclamado") pra ninguém dobrar o teto
+      // ou o bônus logando em outro aparelho. Se o dia da nuvem for
+      // diferente de hoje (ou não existir linha ainda), é dia novo — o
+      // local já começa zerado e o primeiro grant/bônus cria a linha.
+      if (!dailyRes.error && dailyRes.data && dailyRes.data.day === wpTodayStr()) {
+        const today = wpTodayStr();
+        const localBalls = wpDailyBallsCount();
+        const localBonus = wpLoadJSON(WP_STORAGE_DAILY_BONUS, null) === today;
+        const cloudBalls = dailyRes.data.passive_balls || 0;
+        const cloudBonus = !!dailyRes.data.login_bonus_claimed;
+
+        const mergedBalls = Math.max(localBalls, cloudBalls);
+        const mergedBonus = localBonus || cloudBonus;
+
+        wpSaveJSON(WP_STORAGE_DAILY_BALLS, { date: today, count: mergedBalls });
+        if (mergedBonus) wpSaveJSON(WP_STORAGE_DAILY_BONUS, today);
+
+        if (mergedBalls !== cloudBalls || mergedBonus !== cloudBonus) wpDbSaveDaily();
       }
 
       wpUpdateBadge();
@@ -1014,12 +1064,20 @@
 
   // Cobre o caso do evento de auth já ter disparado antes deste script
   // terminar de instalar os hooks (mesma janela de segurança do xp_system.js).
+  // Importante: espera o wpSyncFromCloud() TERMINAR antes de checar o
+  // bônus de login — senão, em usuário logado em dois aparelhos, o
+  // segundo aparelho poderia rodar wpCheckDailyLoginBonus() antes de
+  // saber que o outro já reclamou hoje e dar a Great Ball em dobro.
+  async function wpDailyBootSequence() {
+    await wpSyncFromCloud();
+    wpCheckDailyLoginBonus();
+  }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
-      setTimeout(() => { wpSyncFromCloud(); wpCheckDailyLoginBonus(); }, 900);
+      setTimeout(wpDailyBootSequence, 900);
     });
   } else {
-    setTimeout(() => { wpSyncFromCloud(); wpCheckDailyLoginBonus(); }, 900);
+    setTimeout(wpDailyBootSequence, 900);
   }
 
   // ── Debug (console) ─────────────────────────────────────────
@@ -1031,6 +1089,7 @@
     wpSaveBalls();
     localStorage.removeItem(WP_STORAGE_DAILY_BALLS);
     localStorage.removeItem(WP_STORAGE_DAILY_BONUS);
+    if (wpHasClient() && wpUid()) wpDbSaveDaily(); // zera também na conta (dia "hoje" com contadores em 0/false)
     wpUpdateBadge();
   };
   window.wpStatus = () => {
