@@ -102,22 +102,22 @@ async function updateLeilaoTabVisibility(){
 // ── CARREGAR TUDO ───────────────────────────────────────────────
 async function renderLeilaoTab(){
   await resolveLeilaoAdminStatus();
-  // Subnav em si é visível pra todo usuário logado desde 13/08/2026 ("Leilões"
-  // e "Meus Arremates" — botão de incluir carta comprada no fichário); só os
-  // 4 botões de gestão (Cadastro/Análises/Arquivo/Financeiro) continuam
-  // escondidos de quem não é leiloeiro.
-  ['leilao-tab-cadastro','leilao-tab-analises','leilao-tab-arquivo','leilao-tab-financeiro'].forEach(id=>{
+  // Subnav em si é visível pra todo usuário logado desde 13/08/2026 ("Leilões",
+  // "Meus Arremates" e, desde 19/08/2026, "Loja do Leiloeiro"); só os botões de
+  // gestão (Cadastro/Estoque/Análises/Arquivo/Financeiro) continuam escondidos
+  // de quem não é leiloeiro.
+  ['leilao-tab-cadastro','leilao-tab-estoque','leilao-tab-analises','leilao-tab-arquivo','leilao-tab-financeiro'].forEach(id=>{
     const btn=document.getElementById(id);
     if(btn)btn.style.display=aucIsLeilaoAdmin?'':'none';
   });
   const superWrap=document.getElementById('leilao-super-admin-wrap');
   if(superWrap)superWrap.style.display=(typeof isAdminEditor==='function'&&isAdminEditor())?'':'none';
-  // Quem não é leiloeiro só pode ficar em Leilões/Meus Arremates (as outras
-  // sub-abas nem aparecem no menu pra ele); leiloeiro mantém a última
+  // Quem não é leiloeiro só pode ficar em Leilões/Meus Arremates/Loja (as
+  // outras sub-abas nem aparecem no menu pra ele); leiloeiro mantém a última
   // sub-aba escolhida.
   const allowed=aucIsLeilaoAdmin
-    ?['leiloes','meus-arremates','cadastro','analises','arquivo','financeiro']
-    :['leiloes','meus-arremates'];
+    ?['leiloes','meus-arremates','loja','cadastro','estoque','analises','arquivo','financeiro']
+    :['leiloes','meus-arremates','loja'];
   switchLeilaoSubtab(allowed.includes(aucActiveSubtab)?aucActiveSubtab:'leiloes');
 
   await loadRoundsAndAuctions();
@@ -130,14 +130,44 @@ async function renderLeilaoTab(){
   scrollToSharedAuction();
   scrollToSharedRound();
 
+  // Bloco da Loja isolado em try/catch: se algo aqui falhar (ex.: SQL da
+  // loja ainda não rodado no Supabase), não pode derrubar o resto da aba
+  // (Análises/Financeiro do leilão) que roda depois. 19/08/2026.
+  if(typeof loadLojaItems==='function'){
+    try{
+      const{error:expErr}=await sbClient.rpc('expire_store_reservations');
+      if(expErr)console.error('[loja] expire_store_reservations',expErr);
+      await loadLojaItems();
+      await loadMyLojaReservations();
+      renderLojaGrid();
+      renderMyLojaReservations();
+    }catch(e){console.error('[loja] erro no bloco público da loja',e);}
+  }
+
   if(aucIsLeilaoAdmin){
     renderRoundsAdminList();
     await loadAdminAuctionOrders();
     renderAdminOrders();
-    renderLeilaoAnalises();
     renderLeilaoArquivo();
     await loadAuctionCosts();
+
+    // Análises/Financeiro do LEILÃO rodam ANTES do bloco da loja de propósito:
+    // assim, mesmo se algo na loja (menos testada) falhar, a análise do
+    // leilão sempre é desenhada. O card "total geral" dentro de
+    // renderLeilaoAnalises já lida com lojaAdminReservations undefined.
+    renderLeilaoAnalises();
     renderLeilaoFinanceiro();
+
+    try{
+      if(typeof loadAdminLojaReservations==='function'){
+        renderLojaAdminItems();
+        await loadAdminLojaReservations();
+        renderLojaAdminReservations();
+      }
+      if(typeof loadLojaItemCosts==='function')await loadLojaItemCosts();
+      if(typeof renderLojaAnalises==='function')renderLojaAnalises();
+      if(typeof renderLojaFinanceiro==='function')renderLojaFinanceiro();
+    }catch(e){console.error('[loja] erro no bloco admin da loja',e);}
   }
   if(typeof isAdminEditor==='function'&&isAdminEditor()){
     await loadLeiloeiros();
@@ -145,11 +175,12 @@ async function renderLeilaoTab(){
   }
 }
 
-// ── SUB-MENU (Leilões / Cadastro / Análises / Arquivo — as 3 últimas só leiloeiro) ─
+// ── SUB-MENU (Leilões / Loja / Cadastro / Estoque / Análises / Arquivo —
+// as 5 últimas só leiloeiro) ──────────────────────────────────────
 let aucActiveSubtab='leiloes';
 function switchLeilaoSubtab(name){
   aucActiveSubtab=name;
-  ['leiloes','meus-arremates','cadastro','analises','arquivo','financeiro'].forEach(n=>{
+  ['leiloes','meus-arremates','loja','cadastro','estoque','analises','arquivo','financeiro'].forEach(n=>{
     const pane=document.getElementById('leilao-sub-'+n);
     if(pane)pane.style.display=(n===name)?'':'none';
     const btn=document.querySelector(`.leilao-subtab-btn[data-sub="${n}"]`);
@@ -201,6 +232,7 @@ function renderLeilaoAnalises(){
   renderLeilaoAnalisesCountdown();
   renderLeilaoAnalisesPorLeiloeiro();
   renderLeilaoAnalisesChart();
+  renderLeilaoAnalisesUltimosLances();
 }
 
 // Rodada "atual" pra fins de contador/gráfico — entre as rodadas ainda
@@ -324,6 +356,41 @@ function aucLineChartSvg(points){
     <text x="${w-pad}" y="${h-8}" font-size="8" fill="var(--muted)" font-family="'Space Mono',monospace" text-anchor="end">${esc(fmtT(tEnd))}</text>
     <text x="${pad}" y="${(y(maxV)+9).toFixed(1)}" font-size="8" fill="var(--muted)" font-family="'Space Mono',monospace">R$ ${fmtR(maxV)}</text>
   </svg>`;
+}
+
+// Feed "por escrito" dos últimos 10 lances da rodada atual (todos os
+// lotes ativos, não só um) — nome do comprador, valor, carta e
+// data/hora. Usa a RPC admin auction_round_recent_bids_admin (nome
+// real via metadata/e-mail, igual auction_bid_log_admin já faz por
+// lote único; essa aqui junta a rodada inteira num só feed). 19/08/2026.
+async function renderLeilaoAnalisesUltimosLances(){
+  const wrap=document.getElementById('leilao-analises-ultimos-lances');
+  if(!wrap)return;
+  const round=aucCurrentRoundForAnalises();
+  if(!round){wrap.innerHTML=`<div class="cv-item-empty">Sem rodada ativa no momento.</div>`;return;}
+  wrap.innerHTML=`<div class="cv-item-empty">Carregando…</div>`;
+  const{data,error}=await sbClient.rpc('auction_round_recent_bids_admin',{p_round_id:round.id,p_limit:10});
+  if(error){console.error('[leilao] auction_round_recent_bids_admin',error);wrap.innerHTML=`<div class="cv-item-empty">Não deu pra carregar os últimos lances.</div>`;return;}
+  const bids=Array.isArray(data)?data:[];
+  if(!bids.length){wrap.innerHTML=`<div class="cv-item-empty">Ainda não teve lance nessa rodada.</div>`;return;}
+  wrap.innerHTML=`<div class="panel" style="padding:0;overflow:hidden">
+    <table style="width:100%;border-collapse:collapse;font-size:11.5px">
+      <thead><tr style="text-align:left;color:var(--muted);font-family:'Space Mono',monospace;font-size:9px">
+        <th style="padding:8px 10px">NOME</th>
+        <th style="padding:8px 10px">CARTA</th>
+        <th style="padding:8px 10px;text-align:right">VALOR</th>
+        <th style="padding:8px 10px;text-align:right">DATA/HORA</th>
+      </tr></thead>
+      <tbody>
+        ${bids.map(b=>`<tr style="border-top:1px solid var(--border)">
+          <td style="padding:8px 10px">${esc(b.bidder_name||b.bidder_email||'—')}</td>
+          <td style="padding:8px 10px;color:var(--muted)">${esc(b.card_name||('Lote #'+b.auction_id))}</td>
+          <td style="padding:8px 10px;text-align:right;color:var(--teal);font-weight:700">R$ ${fmtR(b.amount)}</td>
+          <td style="padding:8px 10px;text-align:right;color:var(--muted);white-space:nowrap">${new Date(b.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
 }
 
 // ── COMISSÃO MYDECK (mesmos termos combinados com o leiloeiro, baseados
@@ -1452,6 +1519,50 @@ async function payAuctionOrder(orderId){
     window.location.href=data.init_point;
   }catch(e){
     console.error('[leilao] payAuctionOrder',e);
+    if(statusEl)statusEl.textContent='Erro ao gerar pagamento. Tente de novo em instantes.';
+    resetBtn();
+  }
+}
+
+// ── PAGAMENTO ONLINE DA LOJA (Mercado Pago Checkout Pro) ──────────
+// Mesmo padrão de payAuctionOrder() acima, só que pra reservas da
+// "Loja do Leiloeiro" (store_reservations) via a Edge Function
+// mp-create-store-payment (supabase/functions/) — a confirmação
+// também é automática, pelo mesmo mp-webhook (compartilhado entre os
+// dois fluxos, distinguidos pelo prefixo "store:" no external_reference).
+//
+// AINDA NÃO ESTÁ NO FLUXO DO COMPRADOR (19/08/2026) — backend pronto
+// (tabela, RLS, Edge Functions), só não está ligado em nenhum botão
+// visível ainda. Quando for a hora de expor, chamar payStoreReservation(id)
+// a partir do bloco de uma reserva com status 'reservado' (ver
+// renderMyLojaReservations) e mostrar data.error se resp.ok/data.ok forem
+// falsos, igual ao botão de pagamento do leilão.
+async function payStoreReservation(reservationId){
+  if(!uid())return;
+  const btn=document.getElementById(`loja-pay-btn-${reservationId}`);
+  const statusEl=document.getElementById(`loja-pay-status-${reservationId}`);
+  const resetBtn=()=>{if(btn){btn.disabled=false;btn.textContent='💳 Pagar agora (PIX / Cartão / Boleto)';}};
+  if(btn){btn.disabled=true;btn.textContent='Gerando pagamento...';}
+  if(statusEl)statusEl.textContent='';
+  try{
+    const{data:sessionData}=await sbClient.auth.getSession();
+    const token=sessionData?.session?.access_token;
+    if(!token){if(statusEl)statusEl.textContent='Sessão expirada — faça login de novo.';resetBtn();return;}
+
+    const resp=await fetch(SUPABASE_URL+'/functions/v1/mp-create-store-payment',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},
+      body:JSON.stringify({reservation_id:reservationId})
+    });
+    const data=await resp.json().catch(()=>({}));
+    if(!resp.ok||!data.ok){
+      if(statusEl)statusEl.textContent=data.error||'Erro ao gerar pagamento.';
+      resetBtn();
+      return;
+    }
+    window.location.href=data.init_point;
+  }catch(e){
+    console.error('[leilao] payStoreReservation',e);
     if(statusEl)statusEl.textContent='Erro ao gerar pagamento. Tente de novo em instantes.';
     resetBtn();
   }

@@ -953,3 +953,294 @@ alter table auctions add constraint auctions_version_check
 -- ================================================================
 
 alter table user_addresses add column if not exists whatsapp text;
+
+-- ================================================================
+-- LOJA DO LEILOEIRO — venda direta, preço fixo (cartas e produtos
+-- selados) — 19/08/2026
+--
+-- Reaproveita toda a infraestrutura de confiança já criada pro leilão:
+-- quem pode vender = is_auction_admin() (mesmo grupo Eduardo/Juan),
+-- comprador precisa de endereço + WhatsApp cadastrados (user_addresses,
+-- mesma tabela do leilão), contato pós-reserva é WhatsApp (mesmo
+-- padrão de contactLeiloeiroWhatsapp/contactBuyerWhatsapp).
+--
+-- Fluxo combinado com o Eduardo: por enquanto só "Reservar + WhatsApp"
+-- (sem cobrança automática) — as colunas de Mercado Pago (mp_preference_id/
+-- mp_payment_id/payment_method) já ficam prontas aqui, do mesmo jeito
+-- que já foi feito em auction_orders, pra quando for hora de ligar o
+-- Checkout Pro nessa parte também não precisar de nova migração.
+-- ================================================================
+
+-- ── 1. ITENS DA LOJA ────────────────────────────────────────────
+create table if not exists store_items (
+  id             bigint generated always as identity primary key,
+  created_by     uuid not null references auth.users(id) default auth.uid(),
+  kind           text not null check (kind in ('carta','selado')),
+  title          text not null,
+  set_id         text,
+  card_n         text,
+  version        text check (version is null or version in ('N','F','RH','SP')),
+  condition      text check (condition is null or condition in ('M','NM','MP','D')),
+  language       text check (language is null or language in ('pt-BR','en','ja')),
+  image_url      text,
+  description    text,
+  price          numeric not null check (price > 0),
+  qty_total      int not null default 1 check (qty_total > 0),
+  qty_reserved   int not null default 0 check (qty_reserved >= 0),
+  qty_sold       int not null default 0 check (qty_sold >= 0),
+  status         text not null default 'ativo' check (status in ('ativo','pausado','esgotado','removido')),
+  payment_method text not null default 'whatsapp' check (payment_method in ('whatsapp','mercado_pago')),
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now()
+);
+
+alter table store_items enable row level security;
+
+-- Todo mundo vê os itens ativos/pausados/esgotados (vitrine pública);
+-- "removido" só o próprio leiloeiro enxerga (soft-delete, mantém histórico).
+drop policy if exists "store_items_select_public" on store_items;
+create policy "store_items_select_public" on store_items
+  for select using (status <> 'removido' or is_auction_admin());
+
+-- Cadastrar/editar/remover é só leiloeiro (mesmo grupo do leilão).
+drop policy if exists "store_items_admin_write" on store_items;
+create policy "store_items_admin_write" on store_items
+  for all using (is_auction_admin()) with check (is_auction_admin());
+
+-- ── 2. RESERVAS/PEDIDOS DA LOJA ─────────────────────────────────
+create table if not exists store_reservations (
+  id                bigint generated always as identity primary key,
+  item_id           bigint not null references store_items(id) on delete cascade,
+  buyer_id          uuid not null references auth.users(id) default auth.uid(),
+  qty               int not null check (qty > 0),
+  unit_price        numeric not null,
+  status            text not null default 'reservado' check (status in ('reservado','pago','enviado','concluido','cancelado','expirado')),
+  buyer_email       text,
+  shipping_snapshot jsonb,
+  payment_method    text not null default 'whatsapp' check (payment_method in ('whatsapp','mercado_pago')),
+  mp_preference_id  text,
+  mp_payment_id     text,
+  tracking_code     text,
+  expires_at        timestamptz,
+  paid_at           timestamptz,
+  shipped_at        timestamptz,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
+);
+
+alter table store_reservations enable row level security;
+
+drop policy if exists "store_reservations_select" on store_reservations;
+create policy "store_reservations_select" on store_reservations
+  for select using (buyer_id = auth.uid() or is_auction_admin());
+
+-- Update direto só pro leiloeiro (marcar pago/enviado/concluído — mesmo
+-- padrão de markOrderPaid/markOrderShipped em auction_orders). O
+-- comprador cancela só via RPC (cancel_store_reservation), que valida
+-- dono + status antes de mexer. Sem policy de INSERT direta — todo
+-- reserva nasce por reserve_store_item(), que valida estoque e
+-- endereço/WhatsApp antes de gravar qualquer coisa.
+drop policy if exists "store_reservations_admin_update" on store_reservations;
+create policy "store_reservations_admin_update" on store_reservations
+  for update using (is_auction_admin()) with check (is_auction_admin());
+
+-- Ajusta o estoque (qty_reserved/qty_sold) sozinho sempre que o status
+-- de uma reserva muda — assim tanto a RPC de cancelamento quanto o
+-- update direto do leiloeiro (marcar pago/enviado) continuam corretos
+-- sem duplicar essa lógica em cada função.
+create or replace function store_reservation_after_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.status = old.status then return new; end if;
+
+  if new.status = 'pago' and old.status = 'reservado' then
+    update store_items set
+      qty_reserved = greatest(qty_reserved - new.qty, 0),
+      qty_sold = qty_sold + new.qty,
+      updated_at = now()
+    where id = new.item_id;
+  elsif new.status in ('cancelado','expirado') and old.status = 'reservado' then
+    update store_items set
+      qty_reserved = greatest(qty_reserved - new.qty, 0),
+      updated_at = now()
+    where id = new.item_id;
+  end if;
+
+  update store_items set status = 'esgotado', updated_at = now()
+    where id = new.item_id and status = 'ativo'
+      and (qty_total - qty_reserved - qty_sold) <= 0;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_store_reservation_after_update on store_reservations;
+create trigger trg_store_reservation_after_update
+  after update on store_reservations
+  for each row execute function store_reservation_after_update();
+
+-- ── 3. RESERVAR (comprador) ─────────────────────────────────────
+-- Trava a linha do item (for update) pra dois compradores não
+-- conseguirem reservar a última unidade ao mesmo tempo. Exige
+-- endereço + WhatsApp cadastrados (mesma exigência do leilão).
+create or replace function reserve_store_item(p_item_id bigint, p_qty int default 1)
+returns store_reservations
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_item store_items%rowtype;
+  v_addr jsonb;
+  v_email text;
+  v_row store_reservations%rowtype;
+begin
+  if auth.uid() is null then
+    raise exception 'Faça login.';
+  end if;
+  if p_qty is null or p_qty <= 0 then
+    raise exception 'Quantidade inválida.';
+  end if;
+
+  select * into v_item from store_items where id = p_item_id for update;
+  if not found then raise exception 'Item não encontrado.'; end if;
+  if v_item.status <> 'ativo' then raise exception 'Esse item não está mais disponível.'; end if;
+  if (v_item.qty_total - v_item.qty_reserved - v_item.qty_sold) < p_qty then
+    raise exception 'Não tem mais estoque suficiente desse item.';
+  end if;
+
+  select to_jsonb(a) into v_addr from user_addresses a where a.user_id = auth.uid();
+  if v_addr is null or v_addr->>'logradouro' is null or coalesce(v_addr->>'whatsapp','') = '' then
+    raise exception 'Cadastre seu endereço de entrega e WhatsApp antes de reservar (aba Leilão → Meus Arremates).';
+  end if;
+  select email into v_email from auth.users where id = auth.uid();
+
+  update store_items set qty_reserved = qty_reserved + p_qty, updated_at = now()
+    where id = p_item_id;
+
+  insert into store_reservations (item_id, buyer_id, qty, unit_price, buyer_email, shipping_snapshot, expires_at)
+  values (p_item_id, auth.uid(), p_qty, v_item.price, v_email, v_addr, now() + interval '24 hours')
+  returning * into v_row;
+
+  return v_row;
+end;
+$$;
+grant execute on function reserve_store_item(bigint, int) to authenticated;
+
+-- ── 4. CANCELAR RESERVA (comprador ou leiloeiro) ────────────────
+create or replace function cancel_store_reservation(p_reservation_id bigint)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_res store_reservations%rowtype;
+begin
+  select * into v_res from store_reservations where id = p_reservation_id for update;
+  if not found then raise exception 'Reserva não encontrada.'; end if;
+  if v_res.buyer_id <> auth.uid() and not is_auction_admin() then
+    raise exception 'Você não pode cancelar essa reserva.';
+  end if;
+  if v_res.status <> 'reservado' then
+    raise exception 'Essa reserva já não está mais em aberto.';
+  end if;
+
+  update store_reservations set status = 'cancelado', updated_at = now() where id = p_reservation_id;
+end;
+$$;
+grant execute on function cancel_store_reservation(bigint) to authenticated;
+
+-- ── 5. MANUTENÇÃO LAZY (chamada pelo front, sem cron) ───────────
+-- Expira reservas de 24h que ninguém pagou — libera o estoque de volta
+-- sozinho (via trigger acima). Mesmo padrão de close_all_expired_rounds.
+create or replace function expire_store_reservations()
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update store_reservations set status = 'expirado', updated_at = now()
+  where status = 'reservado' and expires_at < now();
+$$;
+grant execute on function expire_store_reservations() to authenticated;
+
+-- ================================================================
+-- CUSTO DE AQUISIÇÃO DOS ITENS DA LOJA — integração com Financeiro
+-- (19/08/2026)
+--
+-- Mesmo padrão de auction_costs: tabela PRIVADA (só leiloeiro lê/escreve
+-- via is_auction_admin()), nunca exposta pro comprador. Não dá pra
+-- colocar custo direto em store_items porque essa tabela tem SELECT
+-- público (vitrine) — colocar lá vazaria o preço de custo pra qualquer
+-- visitante que olhasse a resposta da API.
+--
+-- Comissão da Loja fica SEPARADA da comissão do Leilão (confirmado com
+-- o Eduardo) — cada uma com sua própria progressão de faixas sobre o
+-- total pago do mês; o painel mostra as duas mais um card de total
+-- geral (só soma, não afeta a faixa de nenhuma das duas).
+-- ================================================================
+
+create table if not exists store_item_costs (
+  item_id     bigint primary key references store_items(id) on delete cascade,
+  cost_price  numeric,
+  note        text,
+  created_by  uuid references auth.users(id),
+  updated_at  timestamptz not null default now()
+);
+
+alter table store_item_costs enable row level security;
+
+drop policy if exists "store_item_costs_admin_all" on store_item_costs;
+create policy "store_item_costs_admin_all" on store_item_costs
+  for all using (is_auction_admin()) with check (is_auction_admin());
+
+-- ================================================================
+-- ÚLTIMOS LANCES DA RODADA (Análises) — 19/08/2026
+-- Feed "por escrito" dos últimos 10 lances de TODOS os lotes ativos
+-- da rodada atual: nome do comprador, valor, carta e data/hora. Só
+-- leiloeiro vê (usa nome/e-mail real, não iniciais como o log
+-- público auction_bid_log). Reaproveita a mesma lógica de nome de
+-- auction_bidder_initials (full_name/name do metadata, senão e-mail).
+-- ================================================================
+create or replace function auction_round_recent_bids_admin(p_round_id bigint, p_limit int default 10)
+returns table(
+  auction_id bigint,
+  card_name text,
+  bidder_id uuid,
+  bidder_name text,
+  bidder_email text,
+  amount numeric,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+begin
+  if not is_auction_admin() then
+    raise exception 'Apenas leiloeiros podem ver o feed de lances.';
+  end if;
+  return query
+    select
+      b.auction_id,
+      a.card_name,
+      b.bidder_id,
+      nullif(trim(coalesce(u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name', '')), '') as bidder_name,
+      u.email::text as bidder_email,
+      b.amount,
+      b.created_at
+    from auction_bids b
+    join auctions a on a.id = b.auction_id
+    join auth.users u on u.id = b.bidder_id
+    where a.round_id = p_round_id
+    order by b.created_at desc
+    limit p_limit;
+end;
+$$;
+grant execute on function auction_round_recent_bids_admin(bigint, int) to authenticated;

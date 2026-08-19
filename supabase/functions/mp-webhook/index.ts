@@ -2,10 +2,15 @@
 // MyDeck — Supabase Edge Function: mp-webhook
 //
 // Recebe a notificação do Mercado Pago quando um pagamento muda de
-// status (aprovado, rejeitado, pendente...) e, se for um pagamento
-// aprovado de um pedido de leilão, marca o auction_orders como pago
-// automaticamente — substitui o "Marcar como Pago" manual do leiloeiro
-// pra pedidos pagos pelo Checkout Pro.
+// status (aprovado, rejeitado, pendente...) e marca o pedido correto
+// como pago automaticamente — substitui o "Marcar como Pago" manual
+// do leiloeiro pra pedidos pagos pelo Checkout Pro. Atende DOIS tipos
+// de pedido, distinguidos pelo external_reference que cada Edge
+// Function de criação de pagamento gerou:
+//   • auction_orders     → external_reference = "<id>" (número puro,
+//                          formato original, criado por mp-create-payment)
+//   • store_reservations → external_reference = "store:<id>" (criado
+//                          por mp-create-store-payment)
 //
 // SEGURANÇA — nunca confia no corpo da notificação em si (qualquer um
 // pode mandar um POST fingindo ser o Mercado Pago dizendo "aprovado").
@@ -19,11 +24,11 @@
 // Deploy:
 //   supabase functions deploy mp-webhook --no-verify-jwt
 // Secrets necessários (supabase secrets set ...):
-//   MP_ACCESS_TOKEN   (mesmo token usado em mp-create-payment)
+//   MP_ACCESS_TOKEN   (mesmo token usado em mp-create-payment/mp-create-store-payment)
 //
 // Configuração no Mercado Pago: não precisa cadastrar nada manualmente
 // no painel — a notification_url já vai junto em cada preference
-// criada por mp-create-payment.
+// criada por mp-create-payment/mp-create-store-payment.
 // ================================================================
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -48,10 +53,110 @@ const sbAdmin = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 );
 
-interface OrderRow {
+interface AuctionOrderRow {
   id: number;
   buyer_id: string;
   status: string;
+}
+
+interface StoreReservationRow {
+  id: number;
+  buyer_id: string;
+  status: string;
+}
+
+const DONE_STATUSES = ['pago', 'enviado', 'concluido'];
+
+// ── auction_orders (external_reference = "<id>") ────────────────────
+async function handleAuctionOrder(orderId: number, payment: any) {
+  const { data: order } = await sbAdmin
+    .from('auction_orders')
+    .select('id, buyer_id, status')
+    .eq('id', orderId)
+    .maybeSingle<AuctionOrderRow>();
+
+  if (!order) return json({ ok: true, ignored: true, reason: 'pedido não encontrado' });
+
+  // Idempotência — pagamento já processado antes, não refaz nada.
+  if (DONE_STATUSES.includes(order.status)) {
+    return json({ ok: true, already: true });
+  }
+
+  if (payment.status !== 'approved') {
+    // pending/rejected/in_process etc — só registra o payment_id pra
+    // rastreio, não muda o status do pedido ainda.
+    await sbAdmin
+      .from('auction_orders')
+      .update({ mp_payment_id: String(payment.id), updated_at: new Date().toISOString() })
+      .eq('id', order.id);
+    return json({ ok: true, status: payment.status });
+  }
+
+  await sbAdmin
+    .from('auction_orders')
+    .update({
+      status: 'pago',
+      paid_at: new Date().toISOString(),
+      mp_payment_id: String(payment.id),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', order.id);
+
+  // Pagou → resolve o bloqueio por inadimplência, igual ao
+  // markOrderPaid() manual (leilao.js).
+  await sbAdmin
+    .from('auction_bidder_flags')
+    .update({ blocked: false, updated_at: new Date().toISOString() })
+    .eq('user_id', order.buyer_id);
+
+  return json({ ok: true, approved: true, kind: 'auction' });
+}
+
+// ── store_reservations (external_reference = "store:<id>") ──────────
+// Diferente de auction_orders, aqui NÃO mexemos em estoque/qty_sold
+// direto — o trigger store_reservation_after_update() (leilao_setup.sql)
+// já faz isso sozinho quando o status vira 'pago', mesmo padrão do
+// leiloeiro marcando manualmente no painel dele.
+async function handleStoreReservation(reservationId: number, payment: any) {
+  const { data: res } = await sbAdmin
+    .from('store_reservations')
+    .select('id, buyer_id, status')
+    .eq('id', reservationId)
+    .maybeSingle<StoreReservationRow>();
+
+  if (!res) return json({ ok: true, ignored: true, reason: 'reserva não encontrada' });
+
+  // Idempotência — mesma regra do lado do leilão.
+  if (DONE_STATUSES.includes(res.status)) {
+    return json({ ok: true, already: true });
+  }
+
+  if (payment.status !== 'approved') {
+    await sbAdmin
+      .from('store_reservations')
+      .update({ mp_payment_id: String(payment.id), updated_at: new Date().toISOString() })
+      .eq('id', res.id);
+    return json({ ok: true, status: payment.status });
+  }
+
+  // Só atualiza reservas ainda 'reservado' (não confirma pagamento de
+  // uma reserva já cancelada/expirada — o comprador precisaria reservar
+  // de novo primeiro).
+  if (res.status !== 'reservado') {
+    return json({ ok: true, ignored: true, reason: `reserva em status ${res.status}` });
+  }
+
+  await sbAdmin
+    .from('store_reservations')
+    .update({
+      status: 'pago',
+      paid_at: new Date().toISOString(),
+      mp_payment_id: String(payment.id),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', res.id);
+
+  return json({ ok: true, approved: true, kind: 'store' });
 }
 
 Deno.serve(async (req) => {
@@ -99,50 +204,18 @@ Deno.serve(async (req) => {
     }
 
     const payment = await payRes.json();
-    const orderId = parseInt(payment.external_reference);
-    if (!orderId) return json({ ok: true, ignored: true, reason: 'sem external_reference' });
+    const ref = String(payment.external_reference ?? '');
+    if (!ref) return json({ ok: true, ignored: true, reason: 'sem external_reference' });
 
-    const { data: order } = await sbAdmin
-      .from('auction_orders')
-      .select('id, buyer_id, status')
-      .eq('id', orderId)
-      .maybeSingle<OrderRow>();
-
-    if (!order) return json({ ok: true, ignored: true, reason: 'pedido não encontrado' });
-
-    // Idempotência — pagamento já processado antes, não refaz nada.
-    if (order.status === 'pago' || order.status === 'enviado' || order.status === 'concluido') {
-      return json({ ok: true, already: true });
+    if (ref.startsWith('store:')) {
+      const reservationId = parseInt(ref.slice('store:'.length));
+      if (!reservationId) return json({ ok: true, ignored: true, reason: 'external_reference de loja inválido' });
+      return await handleStoreReservation(reservationId, payment);
     }
 
-    if (payment.status !== 'approved') {
-      // pending/rejected/in_process etc — só registra o payment_id pra
-      // rastreio, não muda o status do pedido ainda.
-      await sbAdmin
-        .from('auction_orders')
-        .update({ mp_payment_id: String(payment.id), updated_at: new Date().toISOString() })
-        .eq('id', order.id);
-      return json({ ok: true, status: payment.status });
-    }
-
-    await sbAdmin
-      .from('auction_orders')
-      .update({
-        status: 'pago',
-        paid_at: new Date().toISOString(),
-        mp_payment_id: String(payment.id),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', order.id);
-
-    // Pagou → resolve o bloqueio por inadimplência, igual ao
-    // markOrderPaid() manual (leilao.js).
-    await sbAdmin
-      .from('auction_bidder_flags')
-      .update({ blocked: false, updated_at: new Date().toISOString() })
-      .eq('user_id', order.buyer_id);
-
-    return json({ ok: true, approved: true });
+    const orderId = parseInt(ref);
+    if (!orderId) return json({ ok: true, ignored: true, reason: 'external_reference inválido' });
+    return await handleAuctionOrder(orderId, payment);
   } catch (err) {
     console.error('[mp-webhook] erro', err);
     // Ainda assim 200 — erro nosso não deve virar retry infinito do MP;
