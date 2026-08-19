@@ -1232,7 +1232,7 @@ begin
       a.card_name,
       b.bidder_id,
       nullif(trim(coalesce(u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name', '')), '') as bidder_name,
-      u.email as bidder_email,
+      u.email::text as bidder_email,
       b.amount,
       b.created_at
     from auction_bids b

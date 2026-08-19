@@ -135,7 +135,8 @@ async function renderLeilaoTab(){
   // (Análises/Financeiro do leilão) que roda depois. 19/08/2026.
   if(typeof loadLojaItems==='function'){
     try{
-      await sbClient.rpc('expire_store_reservations').catch(e=>console.error('[loja] expire_store_reservations',e));
+      const{error:expErr}=await sbClient.rpc('expire_store_reservations');
+      if(expErr)console.error('[loja] expire_store_reservations',expErr);
       await loadLojaItems();
       await loadMyLojaReservations();
       renderLojaGrid();
