@@ -21,8 +21,13 @@
 /* ─────────────────────────────────────────────
    CONSTANTES DE VERSÃO
 ───────────────────────────────────────────── */
+// CORRIGIDO 18/08/2026: cor de "Normal" (#c8cfe8) era quase idêntica a
+// var(--border) (#dcdfe8 no tema claro) — o Eduardo reportou que, com mais
+// de uma variação, uma ficava verde (RH) e a outra cinza-claro (N), e a
+// cinza-claro parecia "não selecionada" (mesma cor do dot vazio). Trocado
+// por um roxo saturado, bem distinto das outras 3 cores e do cinza de fundo.
 const VERSIONS = [
-  { code: 'N',  label: 'Normal',       color: '#c8cfe8', bg: 'rgba(200,207,232,.15)' },
+  { code: 'N',  label: 'Normal',       color: '#7c5cff', bg: 'rgba(124,92,255,.15)' },
   { code: 'F',  label: 'Foil/Holo',   color: '#118ab2', bg: 'rgba(17,138,178,.15)'  },
   { code: 'RH', label: 'Reverse Holo', color: '#06d6a0', bg: 'rgba(6,214,160,.15)'   },
   { code: 'SP', label: 'Especial',     color: '#ff6b35', bg: 'rgba(255,107,53,.15)'  },
@@ -782,7 +787,7 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
   popup.document.write(`<!DOCTYPE html><html><head><title>Fichário ${labelOverride || getSetLabel()}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { background:#fff; font-family:sans-serif; }
+    body { background:#fff; font-family:sans-serif; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
     .page { width:${PAGE_W}mm; height:${PAGE_H}mm; display:grid;
       grid-template-columns:repeat(${N},${CARD_W_MM}mm);
       grid-template-rows:repeat(${N},${CARD_H_MM}mm);
@@ -793,7 +798,16 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
     .slot .empty { display:flex;align-items:center;justify-content:center;height:100%;color:#ccc;font-size:8pt; }
     .slot .badge { position:absolute;top:1mm;left:1mm;font-size:6pt;padding:.5mm 1.5mm;border-radius:1mm;font-weight:bold; }
     .slot .num { position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:5pt;color:#666;background:rgba(255,255,255,.7);padding:.5mm; }
-    @media print { html,body{width:${PAGE_W}mm;} .page{page-break-after:always;break-after:page;} .no-print{display:none!important;} }
+    /* CORRIGIDO 18/08/2026 (pedido de usuário: "uma lojinha me pediu pra imprimir
+       a lista de faltantes colorida, facilita a identificação das cartas"):
+       -webkit-print-color-adjust/print-color-adjust garantem que a maioria dos
+       navegadores mantenha as cores de fundo (badge de versão) na impressão sem
+       precisar que o usuário ative manualmente "imprimir imagens de fundo". */
+    @media print {
+      html,body{width:${PAGE_W}mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;}
+      .page{page-break-after:always;break-after:page;} .no-print{display:none!important;}
+      * { -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; color-adjust:exact!important; }
+    }
   </style></head><body>`);
 
   const onlyLabel = onlyState === 'missing' ? ' · só faltantes' : onlyState === 'collected' ? ' · só coletadas' : '';
@@ -803,7 +817,7 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
     <button onclick="window.close()" style="background:#1e2436;color:#aaa;border:none;padding:8px 12px;border-radius:6px;cursor:pointer">✕</button>
   </div>`);
 
-  const verColors = { N:'#c8cfe8', F:'#118ab2', RH:'#06d6a0', SP:'#ff6b35' };
+  const verColors = { N:'#7c5cff', F:'#118ab2', RH:'#06d6a0', SP:'#ff6b35' };
 
   for (let pi = 0; pi < Math.ceil(slots.length / slotsPerPage); pi++) {
     const page = slots.slice(pi * slotsPerPage, (pi + 1) * slotsPerPage);
@@ -815,7 +829,13 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
       const key = `${setId}:${c.n}:${v}`;
       const qty = ficCollection[key]?.qty || (collected.has(key) ? 1 : 0);
       const col = verColors[v] || '#999';
-      const grayFilter = qty > 0 ? '' : 'filter:grayscale(100%) opacity(0.4);';
+      // CORRIGIDO 18/08/2026: quando a impressão já está filtrada por
+      // "só faltantes"/"só coletadas" (onlyState), TODA carta da lista tem o
+      // mesmo status por definição — aplicar o filtro cinza (que existe pra
+      // diferenciar coletada/faltante no fichário COMPLETO) só deixava a lista
+      // de faltantes toda apagada, sem servir pra nada. Só escurece quando
+      // imprime o fichário sem filtro (onlyState undefined).
+      const grayFilter = (qty > 0 || onlyState) ? '' : 'filter:grayscale(100%) opacity(0.4);';
       popup.document.write(`
       <div class="slot">
         <img src="${(typeof imgMedium === 'function') ? imgMedium(imgUrl(c.n, setId)) : imgUrl(c.n, setId)}" alt="${c.name}" style="${grayFilter}"

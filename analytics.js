@@ -7,7 +7,7 @@
 //
 // Depende de sbClient/currentUser/uid() (app.js) e isAdmin() (lojas.js).
 // Precisa rodar analytics_setup.sql no Supabase antes de funcionar
-// (cria tab_visits, ml_product_clicks e as funções admin_* usadas aqui).
+// (cria tab_visits, ml_product_redirects e as funções admin_* usadas aqui).
 // ================================================================
 
 // Nomes amigáveis pra cada aba — bate com os ids dos <div class="pane">
@@ -45,23 +45,33 @@ async function logTabVisit(tabId) {
 // e deixa o link abrir normalmente — não bloqueia a navegação.
 // CORRIGIDO 13/08/2026: o catch era .then(function(){},function(){}) —
 // engolia QUALQUER erro (RLS, tabela/RPC ausente por analytics_setup.sql
-// nunca ter rodado, sessão expirada) sem deixar rastro nenhum. Eduardo
-// reportou clique real não contabilizando; sem log não dava pra saber
-// se o insert estava sequer sendo tentado. Agora loga no console e não
-// falha mais silenciosamente também quando sbClient/uid não existem.
-function logProductClick(termId) {
-  if (!termId) { console.warn('[analytics] logProductClick chamado sem termId'); return; }
-  if (!sbClient) { console.warn('[analytics] logProductClick: sbClient indisponível'); return; }
-  if (typeof uid !== 'function') { console.warn('[analytics] logProductClick: uid() indisponível'); return; }
+// nunca ter rodado, sessão expirada) sem deixar rastro nenhum.
+// RENOMEADO 19/08/2026 (logProductClick → logProductRedirect,
+// ml_product_clicks → ml_product_redirects): bloqueadores de anúncio/
+// privacidade (uBlock, AdGuard, Brave Shields etc.) derrubam qualquer
+// requisição de rede cuja URL contenha a palavra "click" — e o insert
+// ia pra /rest/v1/ml_product_clicks, então nem SAÍA do navegador.
+// Confirmado nos Logs do Supabase: /rest/v1/tab_visits (outro evento
+// de analytics) aparecia aos montes com 201; /rest/v1/ml_product_clicks
+// tinha ZERO requisições, mesmo com cliques reais logado. Precisa
+// rodar rename_clicks_to_redirects.sql no Supabase pra essa versão
+// funcionar (renomeia tabela/policies/RPC).
+function logProductRedirect(termId) {
+  if (!termId) { console.warn('[analytics] logProductRedirect chamado sem termId'); return; }
+  if (!sbClient) { console.warn('[analytics] logProductRedirect: sbClient indisponível'); return; }
+  if (typeof uid !== 'function') { console.warn('[analytics] logProductRedirect: uid() indisponível'); return; }
   const userId = uid();
-  if (!userId) { console.warn('[analytics] logProductClick: usuário não logado, clique não registrado (term_id=' + termId + ')'); return; }
-  sbClient.from('ml_product_clicks').insert({ term_id: termId, user_id: userId }).then(
+  if (!userId) { console.warn('[analytics] logProductRedirect: usuário não logado, clique não registrado (term_id=' + termId + ')'); return; }
+  sbClient.from('ml_product_redirects').insert({ term_id: termId, user_id: userId }).then(
     function(res) {
       if (res && res.error) console.error('[analytics] falha ao gravar clique:', res.error.message, res.error);
     },
     function(err) { console.error('[analytics] falha ao gravar clique (exceção):', err); }
   );
 }
+// Alias de compatibilidade — caso algum onclick antigo em cache do
+// navegador do usuário ainda chame o nome velho antes de recarregar.
+function logProductClick(termId) { logProductRedirect(termId); }
 
 // ── PAINEL ADMIN: ABAS MAIS ACESSADAS ───────────────────────────────
 function barRowHtml(label, value, maxValue, extra) {
@@ -111,14 +121,19 @@ async function renderAdminTabStats() {
 }
 
 // ── PAINEL ADMIN: PRODUTOS MAIS CLICADOS (Mercado Livre) ───────────
-async function renderAdminProductClicks() {
-  const holder = document.getElementById('admin-product-clicks-wrap');
+// RENOMEADA 19/08/2026 (renderAdminProductClicks → renderAdminProductRedirects,
+// admin-product-clicks-wrap → admin-product-redirects-wrap,
+// admin_product_click_stats → admin_product_redirect_stats): mesma
+// causa do logProductRedirect acima — "click" na URL da RPC também
+// cai em filtro de bloqueador. Ver comentário em logProductRedirect.
+async function renderAdminProductRedirects() {
+  const holder = document.getElementById('admin-product-redirects-wrap');
   if (!holder) return;
   if (typeof isAdmin !== 'function' || !isAdmin()) { holder.innerHTML = ''; return; }
 
   holder.innerHTML = '<div class="admin-stats-loading">Carregando cliques...</div>';
 
-  const { data, error } = await sbClient.rpc('admin_product_click_stats', { days: 30 });
+  const { data, error } = await sbClient.rpc('admin_product_redirect_stats', { days: 30 });
   if (error) {
     holder.innerHTML =
       '<div class="sec-title" style="margin-top:28px">🛒 Cliques rumo ao Mercado Livre</div>' +

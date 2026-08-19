@@ -93,6 +93,14 @@
 }
 .amrow.paused { animation-play-state: paused !important; }
 #pg-app .pane { position: relative; z-index: 1; background: var(--bg); }
+/* CORRIGIDO 18/08/2026: .stripe, #feedback-bar-wrap e #global-ctcg-banner-wrap
+   ficam FORA de .pane no DOM, então (sem position própria) eram pintados
+   ANTES do #app-mosaic na stacking order — o overlay quase-opaco do mosaico
+   (::after) cobria tudo, deixando a barra de feedback ("site em construção")
+   e o input de mensagem praticamente invisíveis. Mesmo tratamento de .pane. */
+#pg-app > .stripe,
+#pg-app > #feedback-bar-wrap,
+#pg-app > #global-ctcg-banner-wrap { position: relative; z-index: 1; }
 </style>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -245,7 +253,7 @@
     <button type="button" class="tab" id="nav-tab-leilao" style="display:none" onclick="go('leilao',this)">🔨 Leilão</button>
     <!-- ADMIN 11/08/2026: aba própria, só visível pro Eduardo (isAdmin(), lojas.js)
          — display:none aqui é o estado padrão/seguro; admin_panel.js mostra via JS
-         só depois de confirmar o e-mail logado (cadu0207@gmail.com). -->
+         só depois de confirmar o e-mail logado (e-mail do Eduardo). -->
     <button type="button" class="tab" id="nav-tab-admin" style="display:none" onclick="go('admin',this)">🔐 Admin</button>
     <button type="button" class="tab" onclick="window.open('simulador.html','_blank')" style="background:linear-gradient(90deg,#7b2ff744,#f107a322);color:#c084fc">🎰 Simulador</button>
   </nav>
@@ -650,6 +658,11 @@
     <!-- ── ANÁLISES (leiloeiro/admin) ──────────────────────────────── -->
     <div id="leilao-sub-analises" style="display:none">
       <div class="kpi-grid" id="leilao-analises-kpis" style="margin-bottom:24px"></div>
+      <div id="leilao-analises-countdown" style="margin-bottom:24px"></div>
+      <div class="sec-title" style="margin-top:0">📋 Lotes ativos por leiloeiro</div>
+      <div id="leilao-analises-por-leiloeiro" style="margin-bottom:24px"></div>
+      <div class="sec-title" style="margin-top:0">📈 Valor total do leilão ao longo do tempo (rodada atual)</div>
+      <div id="leilao-analises-chart" class="panel" style="margin-bottom:24px"></div>
       <div class="sec-title" style="margin-top:0">💰 Comissão MyDeck (mês)</div>
       <div id="leilao-analises-comissao" style="margin-bottom:24px"></div>
       <div class="sec-title" style="margin-top:0">📦 Pedidos / Carrinhos do Leilão</div>
@@ -841,7 +854,7 @@
        Dashboard; aprovações de Lojas Confiáveis viviam em Lojas Confiáveis;
        aprovações de Cadastro Positivo viviam em Cadastro Positivo; cadastro
        de produtos/cupons do ML vivia em Lojas & Ofertas). A aba em si só
-       fica visível (nav-tab-admin) pra quem loga como cadu0207@gmail.com —
+       fica visível (nav-tab-admin) pra quem loga como o e-mail do Eduardo —
        ver admin_panel.js. Cada bloco é preenchido pela função que já existia
        no arquivo original (admin_stats.js, feedback.js, updates.js,
        marketplace.js, positivo.js, lojas.js/lojas_admin_collapse.js). -->
@@ -849,7 +862,7 @@
     <div class="sec-title" style="margin-top:0">🔐 Painel Admin</div>
     <div id="admin-stats-wrap"></div>
     <div id="admin-tab-analytics-wrap"></div>
-    <div id="admin-product-clicks-wrap"></div>
+    <div id="admin-product-redirects-wrap"></div>
     <div id="admin-set-distribution-wrap"></div>
     <div id="admin-userlist-wrap"></div>
     <div id="admin-feedback-wrap"></div>
@@ -1025,7 +1038,7 @@
 
       <!-- Brand name -->
       <div style="font-family:'Fraunces',sans-serif;font-size:44px;letter-spacing:6px;color:#fff;line-height:.95;margin-bottom:6px;text-shadow:0 0 60px rgba(230,57,70,.4)">MyDeck</div>
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:4px;color:#3d4566;text-transform:uppercase;margin-bottom:26px">Pokémon TCG Tracker</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:4px;color:#8891b0;text-transform:uppercase;margin-bottom:26px">Pokémon TCG Tracker</div>
 
       <!-- Tabs: Entrar / Criar Conta -->
       <div style="display:flex;background:rgba(255,255,255,.05);border-radius:12px;padding:4px;margin-bottom:20px">
@@ -1043,7 +1056,7 @@
         Entrar com Google
       </button>
 
-      <div style="display:flex;align-items:center;gap:12px;margin:20px 0;color:#3d4566;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px">
+      <div style="display:flex;align-items:center;gap:12px;margin:20px 0;color:#8891b0;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px">
         <div style="flex:1;height:1px;background:rgba(255,255,255,.08)"></div>OU<div style="flex:1;height:1px;background:rgba(255,255,255,.08)"></div>
       </div>
 
@@ -1079,7 +1092,7 @@
         <button type="submit" class="auth-submit" style="margin-top:6px">🐾 Cadastrar</button>
       </form>
 
-      <p style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#2a3050;margin-top:22px;line-height:1.7">Coleção na nuvem · Privada · Segura</p>
+      <p style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6b7288;margin-top:22px;line-height:1.7">Coleção na nuvem · Privada · Segura</p>
     </div>
   </div>
 </div>
@@ -1257,6 +1270,7 @@
 <script defer src="analytics.js"></script>
 <script defer src="admin_panel.js"></script>
 <script defer src="xp_system.js"></script>
+<script defer src="wild_pokemon.js"></script>
 <script>
 // Renderizar EV ao abrir a aba Preco Justo (após scripts deferidos)
 document.addEventListener('DOMContentLoaded', function(){

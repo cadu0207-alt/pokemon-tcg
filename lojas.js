@@ -17,22 +17,29 @@
 // ================================================================
 
 // ── CONFIG: admin (único que cadastra/edita termos de busca) ────
+// PRIVACIDADE 18/08/2026: antes esse arquivo tinha os e-mails reais do
+// Eduardo e do ajudante em texto puro — como lojas.js é baixado por
+// QUALQUER visitante do site (client-side) e o repo é público no GitHub,
+// isso vazava os dois e-mails pra internet inteira. A checagem agora usa
+// só o UID do Supabase (que sozinho não dá acesso a nada — quem protege
+// de verdade são as policies de RLS no banco, checando auth.uid()).
 const ADMIN_UID = 'eb9da0ad-9877-4f17-ac5a-6f1da5eebc9b';
-const ADMIN_EMAIL = 'cadu0207@gmail.com';
-// ADMIN VIEWER 14/08/2026: adnresollecito@gmail.com — ajudante do Eduardo.
-// Enxerga todos os painéis/abas de admin (isAdmin() continua true pra ele),
-// mas NÃO pode salvar/editar/excluir nada — isso é gated por isAdminEditor(),
-// que só é true pro Eduardo. As policies de RLS no Supabase também seguem
-// checando o ADMIN_UID/ADMIN_EMAIL originais, então mesmo que algum botão
-// de edição escape do isAdminEditor() no front, o banco recusa a escrita.
-const ADMIN_VIEWER_EMAIL = 'adnresollecito@gmail.com';
+// ADMIN VIEWER 14/08/2026: ajudante do Eduardo. Enxerga todos os painéis/
+// abas de admin (isAdmin() continua true pra ele), mas NÃO pode salvar/
+// editar/excluir nada — isso é gated por isAdminEditor(), que só é true
+// pro Eduardo. As policies de RLS no Supabase também seguem checando o
+// UID original, então mesmo que algum botão de edição escape do
+// isAdminEditor() no front, o banco recusa a escrita.
+// TODO(Eduardo): preencher com o UID do ajudante (Supabase → Authentication
+// → Users → copiar o UID ao lado do e-mail dele). Até lá, isAdminViewer()
+// fica restrito só a você.
+const ADMIN_VIEWER_UID = ''; // <- colar o UID aqui
 function isAdmin() {
-  const email = (currentUser && currentUser.email || '').toLowerCase();
-  return uid() === ADMIN_UID || email === ADMIN_EMAIL || email === ADMIN_VIEWER_EMAIL;
+  return uid() === ADMIN_UID || (ADMIN_VIEWER_UID && uid() === ADMIN_VIEWER_UID);
 }
 // Admin "de verdade": pode salvar/editar/excluir. Só o Eduardo.
 function isAdminEditor() {
-  return uid() === ADMIN_UID || (currentUser && currentUser.email || '').toLowerCase() === ADMIN_EMAIL;
+  return uid() === ADMIN_UID;
 }
 // Admin só-leitura: vê tudo, não edita nada.
 function isAdminViewer() {
@@ -632,7 +639,7 @@ function renderProductCard(term, history, featured, coupon, rules, dealScore) {
       )
     : '<div class="product-price">R$ ' + fmtBRLLoja(best.price) + '</div>';
   return (
-    '<a class="product-card' + (featured ? ' product-card-featured' : '') + '"' + collectionAttr + scoreAttr + ' href="' + linkUrl + '" target="_blank" rel="noopener' + (term.affiliate_url ? ' sponsored' : '') + '" onclick="if(typeof logProductClick===\'function\')logProductClick(' + term.id + ')">' +
+    '<a class="product-card' + (featured ? ' product-card-featured' : '') + '"' + collectionAttr + scoreAttr + ' href="' + linkUrl + '" target="_blank" rel="noopener' + (term.affiliate_url ? ' sponsored' : '') + '" onclick="if(typeof logProductRedirect===\'function\')logProductRedirect(' + term.id + ')">' +
       (featured ? '<div class="product-badge">🔥 OFERTA IMPERDÍVEL</div>' : '') +
       '<img class="product-img" src="' + imgSrc + '" alt="' + label + '">' +
       '<div class="product-info">' +

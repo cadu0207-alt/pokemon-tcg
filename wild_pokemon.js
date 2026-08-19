@@ -1,0 +1,868 @@
+// ================================================================
+// MyDeck — Pokémon Escondidos + Pokébolas (wild_pokemon.js) — v2 TESTE
+// ================================================================
+// v2 (18/08/2026): evolução do protótipo v1 (27 Parceiros Iniciais).
+// Mudanças: pool = Kanto 151 completo, sistema de pokébolas (ganhar
+// por uso do site, jogar na captura com chance de fuga), suspense
+// de captura (bola treme antes de confirmar), som opcional (mudo
+// por padrão), coleção com raridade.
+//
+// Ainda é TESTE — persistência 100% localStorage, sem Supabase e
+// sem integração real com xp_system.js. Se validar a sensação de
+// jogo, o próximo passo é migrar pra tabela Supabase com RPC
+// (mesmo padrão anti-cheat do leilão/XP) — ver [[project_pokemon_escondidos]].
+//
+// Arquivo AUTOCONTIDO: não edita app.js/style.css/index.html (além
+// da 1 linha de <script> já existente). Prefixo wp* em tudo.
+//
+// ── Raridade (Kanto 151, classificação por estágio de evolução) ──
+// comum (70): formas base/intermediárias de linhas evolutivas
+// rara (54): evoluções finais "normais"
+// especial (21): evoluções finais icônicas/fortes + únicos (Ditto,
+//   Porygon, Eeveelutions, fósseis, Snorlax, Kangaskhan, Chansey...)
+// ultra_rara (6): as 5 lendárias de Kanto (Articuno/Zapdos/Moltres/
+//   Mewtwo/Mew) + Dragonite (pseudo-lendário)
+// Rascunho ajustável — dex/nome vêm de POKEDEX_NACIONAL (pokedex_nacional.js),
+// raridade foi atribuída manualmente, não pela PokeAPI.
+//
+// ── Pokébolas ──────────────────────────────────────────────────
+// 4 tipos: pokeball < greatball < ultraball < masterball. Cada uma
+// tem uma chance de captura por raridade (ver WP_CATCH_RATES). A
+// bola é sempre consumida na tentativa (sucesso ou fuga), igual ao
+// jogo oficial — isso dá peso real à escolha de qual bola usar.
+//
+// Ganho de bolas nesta fase de teste: ainda não conectado às ações
+// reais do site (vencer leilão, completar set etc — isso fica pra
+// quando migrar pro Supabase). Por enquanto: uso do site (timer +
+// troca de aba) dá chance de Poké Ball, e existe uma função pública
+// pra simular outros gatilhos:
+//   window.wpGrantBall('greatball', 1, 'teste manual')
+//
+// ── Botões no badge (canto inferior esquerdo) ──────────────────
+//   🎮/🚫  liga/desliga o minigame inteiro (para de aparecer e de
+//          dar bola; some qualquer Pokémon na tela na hora)
+//   🔊/🔇  liga/desliga o som
+//
+// ── Debug no console ─────────────────────────────────────────
+//   wpForceSpawn()              → força um Pokémon aparecer agora
+//   wpGrantBall(tier, qty, why) → dá bolas (tier: pokeball/greatball/ultraball/masterball)
+//   wpToggle()                  → liga/desliga o minigame (mesmo botão do badge)
+//   wpReset()                   → zera capturas E bolas
+//   wpStatus()                  → mostra progresso + inventário
+// ================================================================
+
+(function () {
+  'use strict';
+
+  const WP_TEST_MODE = false; // modo real — cadência de verdade (~3.75min de intervalo médio, ver WP_DAILY_TARGETS)
+  const WP_STORAGE_CATCHES = 'wp_wild_catches_v2';
+  const WP_STORAGE_BALLS = 'wp_wild_balls_v2';
+  const WP_STORAGE_SOUND = 'wp_sound_on_v1';
+  const WP_STORAGE_ENABLED = 'wp_enabled_v1';
+  const WP_LIFETIME_MS = 8000; // quanto tempo o Pokémon fica visível antes de sumir sozinho
+
+  // ── Dados: Kanto 151 (dex, slug PokeAPI, nome, raridade) ──────
+  const WP_KANTO151 = [
+    {d:1,s:"bulbasaur",n:"Bulbasaur",r:"comum"},
+    {d:2,s:"ivysaur",n:"Ivysaur",r:"comum"},
+    {d:3,s:"venusaur",n:"Venusaur",r:"especial"},
+    {d:4,s:"charmander",n:"Charmander",r:"comum"},
+    {d:5,s:"charmeleon",n:"Charmeleon",r:"comum"},
+    {d:6,s:"charizard",n:"Charizard",r:"especial"},
+    {d:7,s:"squirtle",n:"Squirtle",r:"comum"},
+    {d:8,s:"wartortle",n:"Wartortle",r:"comum"},
+    {d:9,s:"blastoise",n:"Blastoise",r:"especial"},
+    {d:10,s:"caterpie",n:"Caterpie",r:"comum"},
+    {d:11,s:"metapod",n:"Metapod",r:"comum"},
+    {d:12,s:"butterfree",n:"Butterfree",r:"rara"},
+    {d:13,s:"weedle",n:"Weedle",r:"comum"},
+    {d:14,s:"kakuna",n:"Kakuna",r:"comum"},
+    {d:15,s:"beedrill",n:"Beedrill",r:"rara"},
+    {d:16,s:"pidgey",n:"Pidgey",r:"comum"},
+    {d:17,s:"pidgeotto",n:"Pidgeotto",r:"comum"},
+    {d:18,s:"pidgeot",n:"Pidgeot",r:"rara"},
+    {d:19,s:"rattata",n:"Rattata",r:"comum"},
+    {d:20,s:"raticate",n:"Raticate",r:"rara"},
+    {d:21,s:"spearow",n:"Spearow",r:"comum"},
+    {d:22,s:"fearow",n:"Fearow",r:"rara"},
+    {d:23,s:"ekans",n:"Ekans",r:"comum"},
+    {d:24,s:"arbok",n:"Arbok",r:"rara"},
+    {d:25,s:"pikachu",n:"Pikachu",r:"comum"},
+    {d:26,s:"raichu",n:"Raichu",r:"rara"},
+    {d:27,s:"sandshrew",n:"Sandshrew",r:"comum"},
+    {d:28,s:"sandslash",n:"Sandslash",r:"rara"},
+    {d:29,s:"nidoran-f",n:"Nidoran♀",r:"comum"},
+    {d:30,s:"nidorina",n:"Nidorina",r:"comum"},
+    {d:31,s:"nidoqueen",n:"Nidoqueen",r:"rara"},
+    {d:32,s:"nidoran-m",n:"Nidoran♂",r:"comum"},
+    {d:33,s:"nidorino",n:"Nidorino",r:"comum"},
+    {d:34,s:"nidoking",n:"Nidoking",r:"rara"},
+    {d:35,s:"clefairy",n:"Clefairy",r:"comum"},
+    {d:36,s:"clefable",n:"Clefable",r:"rara"},
+    {d:37,s:"vulpix",n:"Vulpix",r:"comum"},
+    {d:38,s:"ninetales",n:"Ninetales",r:"rara"},
+    {d:39,s:"jigglypuff",n:"Jigglypuff",r:"comum"},
+    {d:40,s:"wigglytuff",n:"Wigglytuff",r:"rara"},
+    {d:41,s:"zubat",n:"Zubat",r:"comum"},
+    {d:42,s:"golbat",n:"Golbat",r:"rara"},
+    {d:43,s:"oddish",n:"Oddish",r:"comum"},
+    {d:44,s:"gloom",n:"Gloom",r:"comum"},
+    {d:45,s:"vileplume",n:"Vileplume",r:"rara"},
+    {d:46,s:"paras",n:"Paras",r:"comum"},
+    {d:47,s:"parasect",n:"Parasect",r:"rara"},
+    {d:48,s:"venonat",n:"Venonat",r:"comum"},
+    {d:49,s:"venomoth",n:"Venomoth",r:"rara"},
+    {d:50,s:"diglett",n:"Diglett",r:"comum"},
+    {d:51,s:"dugtrio",n:"Dugtrio",r:"rara"},
+    {d:52,s:"meowth",n:"Meowth",r:"comum"},
+    {d:53,s:"persian",n:"Persian",r:"rara"},
+    {d:54,s:"psyduck",n:"Psyduck",r:"comum"},
+    {d:55,s:"golduck",n:"Golduck",r:"rara"},
+    {d:56,s:"mankey",n:"Mankey",r:"comum"},
+    {d:57,s:"primeape",n:"Primeape",r:"rara"},
+    {d:58,s:"growlithe",n:"Growlithe",r:"comum"},
+    {d:59,s:"arcanine",n:"Arcanine",r:"rara"},
+    {d:60,s:"poliwag",n:"Poliwag",r:"comum"},
+    {d:61,s:"poliwhirl",n:"Poliwhirl",r:"comum"},
+    {d:62,s:"poliwrath",n:"Poliwrath",r:"rara"},
+    {d:63,s:"abra",n:"Abra",r:"comum"},
+    {d:64,s:"kadabra",n:"Kadabra",r:"comum"},
+    {d:65,s:"alakazam",n:"Alakazam",r:"especial"},
+    {d:66,s:"machop",n:"Machop",r:"comum"},
+    {d:67,s:"machoke",n:"Machoke",r:"comum"},
+    {d:68,s:"machamp",n:"Machamp",r:"especial"},
+    {d:69,s:"bellsprout",n:"Bellsprout",r:"comum"},
+    {d:70,s:"weepinbell",n:"Weepinbell",r:"comum"},
+    {d:71,s:"victreebel",n:"Victreebel",r:"rara"},
+    {d:72,s:"tentacool",n:"Tentacool",r:"comum"},
+    {d:73,s:"tentacruel",n:"Tentacruel",r:"rara"},
+    {d:74,s:"geodude",n:"Geodude",r:"comum"},
+    {d:75,s:"graveler",n:"Graveler",r:"comum"},
+    {d:76,s:"golem",n:"Golem",r:"especial"},
+    {d:77,s:"ponyta",n:"Ponyta",r:"comum"},
+    {d:78,s:"rapidash",n:"Rapidash",r:"rara"},
+    {d:79,s:"slowpoke",n:"Slowpoke",r:"comum"},
+    {d:80,s:"slowbro",n:"Slowbro",r:"rara"},
+    {d:81,s:"magnemite",n:"Magnemite",r:"comum"},
+    {d:82,s:"magneton",n:"Magneton",r:"rara"},
+    {d:83,s:"farfetchd",n:"Farfetch'd",r:"rara"},
+    {d:84,s:"doduo",n:"Doduo",r:"comum"},
+    {d:85,s:"dodrio",n:"Dodrio",r:"rara"},
+    {d:86,s:"seel",n:"Seel",r:"comum"},
+    {d:87,s:"dewgong",n:"Dewgong",r:"rara"},
+    {d:88,s:"grimer",n:"Grimer",r:"comum"},
+    {d:89,s:"muk",n:"Muk",r:"rara"},
+    {d:90,s:"shellder",n:"Shellder",r:"comum"},
+    {d:91,s:"cloyster",n:"Cloyster",r:"rara"},
+    {d:92,s:"gastly",n:"Gastly",r:"comum"},
+    {d:93,s:"haunter",n:"Haunter",r:"comum"},
+    {d:94,s:"gengar",n:"Gengar",r:"especial"},
+    {d:95,s:"onix",n:"Onix",r:"rara"},
+    {d:96,s:"drowzee",n:"Drowzee",r:"comum"},
+    {d:97,s:"hypno",n:"Hypno",r:"rara"},
+    {d:98,s:"krabby",n:"Krabby",r:"comum"},
+    {d:99,s:"kingler",n:"Kingler",r:"rara"},
+    {d:100,s:"voltorb",n:"Voltorb",r:"comum"},
+    {d:101,s:"electrode",n:"Electrode",r:"rara"},
+    {d:102,s:"exeggcute",n:"Exeggcute",r:"comum"},
+    {d:103,s:"exeggutor",n:"Exeggutor",r:"rara"},
+    {d:104,s:"cubone",n:"Cubone",r:"comum"},
+    {d:105,s:"marowak",n:"Marowak",r:"rara"},
+    {d:106,s:"hitmonlee",n:"Hitmonlee",r:"rara"},
+    {d:107,s:"hitmonchan",n:"Hitmonchan",r:"rara"},
+    {d:108,s:"lickitung",n:"Lickitung",r:"rara"},
+    {d:109,s:"koffing",n:"Koffing",r:"comum"},
+    {d:110,s:"weezing",n:"Weezing",r:"rara"},
+    {d:111,s:"rhyhorn",n:"Rhyhorn",r:"comum"},
+    {d:112,s:"rhydon",n:"Rhydon",r:"rara"},
+    {d:113,s:"chansey",n:"Chansey",r:"especial"},
+    {d:114,s:"tangela",n:"Tangela",r:"rara"},
+    {d:115,s:"kangaskhan",n:"Kangaskhan",r:"especial"},
+    {d:116,s:"horsea",n:"Horsea",r:"comum"},
+    {d:117,s:"seadra",n:"Seadra",r:"rara"},
+    {d:118,s:"goldeen",n:"Goldeen",r:"comum"},
+    {d:119,s:"seaking",n:"Seaking",r:"rara"},
+    {d:120,s:"staryu",n:"Staryu",r:"comum"},
+    {d:121,s:"starmie",n:"Starmie",r:"rara"},
+    {d:122,s:"mr-mime",n:"Mr. Mime",r:"rara"},
+    {d:123,s:"scyther",n:"Scyther",r:"especial"},
+    {d:124,s:"jynx",n:"Jynx",r:"rara"},
+    {d:125,s:"electabuzz",n:"Electabuzz",r:"rara"},
+    {d:126,s:"magmar",n:"Magmar",r:"rara"},
+    {d:127,s:"pinsir",n:"Pinsir",r:"especial"},
+    {d:128,s:"tauros",n:"Tauros",r:"especial"},
+    {d:129,s:"magikarp",n:"Magikarp",r:"comum"},
+    {d:130,s:"gyarados",n:"Gyarados",r:"especial"},
+    {d:131,s:"lapras",n:"Lapras",r:"especial"},
+    {d:132,s:"ditto",n:"Ditto",r:"especial"},
+    {d:133,s:"eevee",n:"Eevee",r:"comum"},
+    {d:134,s:"vaporeon",n:"Vaporeon",r:"especial"},
+    {d:135,s:"jolteon",n:"Jolteon",r:"especial"},
+    {d:136,s:"flareon",n:"Flareon",r:"especial"},
+    {d:137,s:"porygon",n:"Porygon",r:"especial"},
+    {d:138,s:"omanyte",n:"Omanyte",r:"comum"},
+    {d:139,s:"omastar",n:"Omastar",r:"rara"},
+    {d:140,s:"kabuto",n:"Kabuto",r:"comum"},
+    {d:141,s:"kabutops",n:"Kabutops",r:"rara"},
+    {d:142,s:"aerodactyl",n:"Aerodactyl",r:"especial"},
+    {d:143,s:"snorlax",n:"Snorlax",r:"especial"},
+    {d:144,s:"articuno",n:"Articuno",r:"ultra_rara"},
+    {d:145,s:"zapdos",n:"Zapdos",r:"ultra_rara"},
+    {d:146,s:"moltres",n:"Moltres",r:"ultra_rara"},
+    {d:147,s:"dratini",n:"Dratini",r:"comum"},
+    {d:148,s:"dragonair",n:"Dragonair",r:"comum"},
+    {d:149,s:"dragonite",n:"Dragonite",r:"ultra_rara"},
+    {d:150,s:"mewtwo",n:"Mewtwo",r:"ultra_rara"},
+    {d:151,s:"mew",n:"Mew",r:"ultra_rara"}
+  ];
+
+  const WP_RARITY_META = {
+    comum:      { label: 'Comum',      color: '#9aa0c0', glow: 'none' },
+    rara:       { label: 'Rara',       color: '#06d6a0', glow: '0 0 14px #06d6a066' },
+    especial:   { label: 'Especial',   color: '#4cc9f0', glow: '0 0 18px #4cc9f088' },
+    ultra_rara: { label: 'Ultra-rara', color: '#ffd166', glow: '0 0 24px #ffd166aa' },
+  };
+
+  // ── Pokébolas: tiers + chance de captura por raridade ─────────
+  const WP_BALL_META = {
+    pokeball:   { label: 'Poké Ball',   wobbles: 1, img: 'poke-ball' },
+    greatball:  { label: 'Great Ball',  wobbles: 2, img: 'great-ball' },
+    ultraball:  { label: 'Ultra Ball',  wobbles: 3, img: 'ultra-ball' },
+    masterball: { label: 'Master Ball', wobbles: 1, img: 'master-ball' }, // sempre captura, sem drama
+  };
+  const WP_BALL_ORDER = ['pokeball', 'greatball', 'ultraball', 'masterball'];
+
+  // [tier][raridade] = chance de sucesso (0-1)
+  const WP_CATCH_RATES = {
+    pokeball:   { comum: .90, rara: .35, especial: .10, ultra_rara: .02 },
+    greatball:  { comum: .97, rara: .70, especial: .35, ultra_rara: .10 },
+    ultraball:  { comum: .99, rara: .90, especial: .65, ultra_rara: .30 },
+    masterball: { comum: 1,   rara: 1,   especial: 1,   ultra_rara: 1   },
+  };
+
+  // Desenha a pokébola em CSS (sem depender de imagem externa) — metade
+  // colorida por tier + tarja preta + botão central, igual ao formato
+  // real de cada bola (Great Ball com friso vermelho, Ultra com dourado,
+  // Master roxa com botão rosa).
+  function wpBallSpriteUrl(imgSlug) {
+    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${imgSlug}.png`;
+  }
+  function wpBallIconHtml(tier, size) {
+    size = size || 26;
+    const meta = WP_BALL_META[tier];
+    return `<img class="wp-ball-icon" src="${wpBallSpriteUrl(meta.img)}" alt="${meta.label}" style="width:${size}px;height:${size}px">`;
+  }
+
+  function wpSpriteUrl(dex) {
+    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${dex}.png`;
+  }
+
+  // ── Persistência local (teste — sem Supabase ainda) ────────────
+  function wpLoadJSON(key, fallback) {
+    try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+    catch (e) { return fallback; }
+  }
+  function wpSaveJSON(key, obj) {
+    try { localStorage.setItem(key, JSON.stringify(obj)); } catch (e) {}
+  }
+
+  let wpCatches = wpLoadJSON(WP_STORAGE_CATCHES, {}); // { [slug]: { count, firstCaughtAt } }
+  // saldo inicial de bolas pra já dar pra testar sem precisar chamar wpGrantBall na mão
+  let wpBalls = wpLoadJSON(WP_STORAGE_BALLS, { pokeball: 5, greatball: 2, ultraball: 1, masterball: 0 });
+  let wpSoundOn = wpLoadJSON(WP_STORAGE_SOUND, false);
+  let wpEnabled = wpLoadJSON(WP_STORAGE_ENABLED, true);
+
+  function wpSaveCatches() { wpSaveJSON(WP_STORAGE_CATCHES, wpCatches); }
+  function wpSaveBalls() { wpSaveJSON(WP_STORAGE_BALLS, wpBalls); }
+
+  // ── Som (Web Audio API — sem depender de arquivo externo) ─────
+  let wpAudioCtx = null;
+  function wpAudio() {
+    if (!wpSoundOn) return null;
+    if (!wpAudioCtx) {
+      try { wpAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch (e) { return null; }
+    }
+    return wpAudioCtx;
+  }
+  function wpBeep(freq, startOffset, dur, type, gainPeak) {
+    const ctx = wpAudio();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.value = freq;
+    const t0 = ctx.currentTime + startOffset;
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(gainPeak ?? 0.12, t0 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  }
+  function wpSoundSpawn() { wpBeep(880, 0, 0.15, 'triangle', 0.08); }
+  function wpSoundWobble() { wpBeep(220, 0, 0.12, 'square', 0.07); }
+  function wpSoundCatch() { wpBeep(523, 0, 0.12); wpBeep(659, 0.12, 0.12); wpBeep(784, 0.24, 0.28); }
+  function wpSoundFlee() { wpBeep(300, 0, 0.1, 'sawtooth', 0.08); wpBeep(180, 0.1, 0.25, 'sawtooth', 0.08); }
+  function wpSoundBall() { wpBeep(660, 0, 0.08, 'triangle', 0.06); wpBeep(990, 0.08, 0.14, 'triangle', 0.06); }
+
+  // ── CSS ──────────────────────────────────────────────────────
+  const wpStyle = document.createElement('style');
+  wpStyle.textContent = `
+    .wp-spawn {
+      position: fixed;
+      z-index: 9998;
+      width: 84px; height: 84px;
+      cursor: pointer;
+      filter: drop-shadow(0 4px 14px rgba(0,0,0,.55));
+      transition: transform .35s cubic-bezier(.34,1.56,.64,1);
+      touch-action: manipulation;
+    }
+    .wp-spawn img { position: relative; z-index: 2; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+    .wp-aura { position: absolute; inset: -20px; border-radius: 50%; pointer-events: none; z-index: 0; filter: blur(7px); }
+    .wp-aura-rara { background: radial-gradient(circle, #06d6a077 0%, transparent 68%); animation: wpAuraPulse 2.4s ease-in-out infinite; }
+    .wp-aura-especial { background: radial-gradient(circle, #4cc9f099 0%, transparent 68%); animation: wpAuraPulse 1.9s ease-in-out infinite; }
+    .wp-aura-ultra_rara { background: radial-gradient(circle, #ffd166cc 0%, transparent 68%); animation: wpAuraPulse 1.1s ease-in-out infinite; }
+    @keyframes wpAuraPulse {
+      0%, 100% { transform: scale(.82); opacity: .45; }
+      50%      { transform: scale(1.18); opacity: .9; }
+    }
+    .wp-ring { position: absolute; inset: -11px; border-radius: 50%; pointer-events: none; z-index: 1; border: 2px solid transparent; }
+    .wp-ring-especial { border-top-color: #4cc9f0; border-right-color: #4cc9f055; animation: wpRingSpin 3s linear infinite; }
+    .wp-ring-ultra_rara { border-top-color: #ffd166; border-right-color: #ffd16688; border-bottom-color: #ffd16633; animation: wpRingSpin 1.5s linear infinite; }
+    @keyframes wpRingSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .wp-sparkles { position: absolute; inset: -14px; pointer-events: none; z-index: 1; }
+    .wp-sparkles span {
+      position: absolute; width: 4px; height: 4px; border-radius: 50%;
+      background: #fff8d6; box-shadow: 0 0 7px 2px #ffd166cc;
+      animation: wpTwinkle 1.3s ease-in-out infinite;
+    }
+    @keyframes wpTwinkle {
+      0%, 100% { opacity: 0; transform: scale(.3); }
+      50%      { opacity: 1; transform: scale(1); }
+    }
+    .wp-spawn.wp-bl { left: -78px; bottom: 18px; }
+    .wp-spawn.wp-br { right: -78px; bottom: 18px; }
+    .wp-spawn.wp-tl { left: -78px; top: 90px; }
+    .wp-spawn.wp-in.wp-bl { transform: translateX(86px); }
+    .wp-spawn.wp-in.wp-br { transform: translateX(-86px); }
+    .wp-spawn.wp-in.wp-tl { transform: translateX(86px); }
+    .wp-spawn.wp-peek { animation: wpPeek 1.6s ease-in-out infinite; }
+    @keyframes wpPeek {
+      0%, 100% { transform: translateX(var(--wpx,86px)) translateY(0) rotate(0deg); }
+      50%      { transform: translateX(var(--wpx,86px)) translateY(-10px) rotate(-5deg); }
+    }
+    .wp-spawn.wp-shy { animation: wpShy .5s ease-out forwards; }
+    @keyframes wpShy {
+      0%   { transform: translateX(var(--wpx,86px)); }
+      100% { transform: translateX(calc(var(--wpx,86px) * .35)); }
+    }
+    .wp-spawn.wp-caught { animation: wpCaught .5s ease-out forwards; }
+    @keyframes wpCaught {
+      0%   { transform: scale(1); opacity: 1; }
+      60%  { transform: scale(1.3); opacity: .8; }
+      100% { transform: scale(0); opacity: 0; }
+    }
+    .wp-spawn.wp-fled { animation: wpFled .55s ease-in forwards; }
+    @keyframes wpFled {
+      0%   { transform: translateX(var(--wpx,86px)) scale(1); opacity: 1; }
+      100% { transform: translateX(calc(var(--wpx,86px) * 3)) scale(.4); opacity: 0; }
+    }
+    .wp-glow { position: absolute; inset: -6px; border-radius: 50%; pointer-events: none; }
+    .wp-ballpicker {
+      position: fixed; z-index: 9999;
+      background: linear-gradient(135deg, #111422, #181c2e);
+      border: 1px solid #52597a55; border-radius: 14px;
+      padding: 10px; display: flex; gap: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.55);
+    }
+    .wp-ball-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      background: #0d0f18; border: 1px solid #ffffff14; border-radius: 10px;
+      padding: 8px 10px; cursor: pointer; color: #f2f2f2;
+      font-family: 'DM Sans', sans-serif; font-size: 11px;
+      transition: border-color .15s, transform .15s;
+    }
+    .wp-ball-btn:hover:not(.wp-ball-disabled) { border-color: #ffd166aa; transform: translateY(-2px); }
+    .wp-ball-btn .wp-ball-qty { font-family: 'Space Mono', monospace; color: #9aa0c0; }
+    .wp-ball-disabled { opacity: .3; cursor: not-allowed; }
+    .wp-ball-icon { object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); }
+    .wp-thrown-ball {
+      position: fixed; z-index: 9999; pointer-events: none;
+      transition: left .4s cubic-bezier(.3,.6,.4,1), top .4s cubic-bezier(.3,.6,.4,1);
+    }
+    .wp-thrown-ball.wp-wobble { animation: wpWobble .35s ease-in-out; }
+    @keyframes wpWobble {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-18deg); }
+      75% { transform: rotate(18deg); }
+    }
+    .wp-toast {
+      position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%) translateY(20px);
+      background: linear-gradient(135deg, #111422, #181c2e);
+      border: 1px solid #ffd16655;
+      color: #f2f2f2;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      z-index: 10000;
+      display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.5);
+      opacity: 0;
+      transition: opacity .35s ease, transform .35s ease;
+      max-width: 88vw;
+    }
+    .wp-toast.wp-show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .wp-toast img { width: 34px; height: 34px; object-fit: contain; }
+    .wp-toast b { font-family: 'Bebas Neue', sans-serif; letter-spacing: .5px; }
+    .wp-toast.wp-fail { border-color: #e6394666; }
+    .wp-toast.wp-fail b { color: #e63946; }
+    .wp-badge {
+      position: fixed; left: 14px; bottom: 14px; z-index: 9997;
+      background: #111422; border: 1px solid #52597a55;
+      color: #f2f2f2; font-family: 'Space Mono', monospace; font-size: 12.5px;
+      padding: 8px 12px; border-radius: 999px;
+      display: flex; align-items: center; gap: 10px;
+      cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.4);
+    }
+    .wp-badge:hover { border-color: #ffd166aa; }
+    .wp-badge .wp-sound-btn, .wp-badge .wp-power-btn { cursor: pointer; opacity: .7; }
+    .wp-badge .wp-sound-btn:hover, .wp-badge .wp-power-btn:hover { opacity: 1; }
+    .wp-badge.wp-badge-off { opacity: .55; }
+    .wp-badge.wp-badge-off .wp-power-btn { opacity: 1; }
+    .wp-modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 10001;
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    .wp-modal {
+      background: #0d0f18; border: 1px solid #52597a44; border-radius: 16px;
+      max-width: 640px; width: 100%; max-height: 84vh; overflow-y: auto;
+      padding: 22px; font-family: 'DM Sans', sans-serif; color: #f2f2f2;
+    }
+    .wp-modal h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: .5px; font-size: 24px; margin: 0 0 4px; color: #ffd166; }
+    .wp-modal .wp-sub { color: #9aa0c0; font-size: 13px; margin-bottom: 14px; }
+    .wp-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+    .wp-tab { background: #111422; border: 1px solid #ffffff14; border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 13px; color: #9aa0c0; }
+    .wp-tab.wp-tab-active { color: #ffd166; border-color: #ffd16655; }
+    .wp-inv-row { display: flex; align-items: center; gap: 12px; background: #111422; border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; }
+    .wp-inv-row .wp-inv-label { flex: 1; font-size: 14px; }
+    .wp-inv-row .wp-inv-qty { font-family: 'Space Mono', monospace; font-size: 16px; color: #ffd166; }
+    .wp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; }
+    .wp-cell { background: #111422; border-radius: 10px; padding: 8px; text-align: center; border: 1px solid #ffffff0d; }
+    .wp-cell img { width: 48px; height: 48px; object-fit: contain; opacity: .25; filter: grayscale(1); }
+    .wp-cell.wp-got img { opacity: 1; filter: none; }
+    .wp-cell .wp-n { font-size: 10px; margin-top: 4px; color: #9aa0c0; }
+    .wp-cell.wp-got .wp-n { color: #06d6a0; }
+    .wp-cell .wp-r { font-size: 8.5px; text-transform: uppercase; letter-spacing: .5px; }
+    .wp-close { float: right; background: none; border: none; color: #9aa0c0; font-size: 20px; cursor: pointer; }
+  `;
+  document.head.appendChild(wpStyle);
+
+  // ── Spawn engine ─────────────────────────────────────────────
+  let wpActiveEl = null;
+  let wpActiveMon = null;
+  let wpActiveTimeoutId = null;
+  const WP_CORNERS = ['wp-bl', 'wp-br', 'wp-tl'];
+
+  // ── Cadência por dia (pedido do Eduardo, 18/08) ────────────────
+  // "normais" (comum) 240x/dia, "raros" 120x/dia, "super raro" 24x/dia.
+  // O bucket "raros" do pedido cobre as raridades rara+especial do
+  // catálogo (que continuam distintas pra chance de captura/bola) —
+  // dividido entre elas na proporção de quantas espécies cada uma tem
+  // (54 rara : 21 especial) pra não desbalancear a distribuição.
+  const WP_DAILY_TARGETS = { comum: 240, rara: 86, especial: 34, ultra_rara: 24 }; // soma = 384/dia
+  const WP_DAILY_TOTAL = Object.values(WP_DAILY_TARGETS).reduce((a, b) => a + b, 0);
+  const WP_DAY_MS = 24 * 60 * 60 * 1000;
+  const WP_TEST_DAY_COMPRESS_MS = 20 * 60 * 1000; // no modo teste, "1 dia" cabe em 20min pra validar rápido
+
+  function wpPickMon() {
+    const totalWeight = WP_KANTO151.reduce((sum, m) => sum + WP_DAILY_TARGETS[m.r], 0);
+    let roll = Math.random() * totalWeight;
+    for (const m of WP_KANTO151) {
+      roll -= WP_DAILY_TARGETS[m.r];
+      if (roll <= 0) return m;
+    }
+    return WP_KANTO151[0];
+  }
+
+  // Aura visual por raridade — comum não tem nada (fica "normal" mesmo),
+  // rara tem brilho verde suave, especial ganha um anel giratório azul,
+  // ultra-rara ganha anel dourado mais rápido + partículas brilhando.
+  // Dá uma pista visual da raridade sem revelar o nome (continua "???").
+  function wpAuraHtml(r) {
+    if (r === 'comum') return '';
+    let html = `<div class="wp-aura wp-aura-${r}"></div>`;
+    if (r === 'especial' || r === 'ultra_rara') html += `<div class="wp-ring wp-ring-${r}"></div>`;
+    if (r === 'ultra_rara') {
+      const sparkles = Array.from({ length: 6 }, () => {
+        const top = Math.round(Math.random() * 84);
+        const left = Math.round(Math.random() * 84);
+        const delay = (Math.random() * 1.2).toFixed(2);
+        return `<span style="top:${top}%;left:${left}%;animation-delay:${delay}s"></span>`;
+      }).join('');
+      html += `<div class="wp-sparkles">${sparkles}</div>`;
+    }
+    return html;
+  }
+
+  function wpSpawn(chance) {
+    if (!wpEnabled) return; // minigame desligado pelo usuário
+    if (wpActiveEl) return; // só 1 por vez na tela
+    if (Math.random() > chance) return;
+
+    const mon = wpPickMon();
+    const corner = WP_CORNERS[Math.floor(Math.random() * WP_CORNERS.length)];
+
+    const el = document.createElement('div');
+    el.className = `wp-spawn ${corner}`;
+    el.innerHTML = `${wpAuraHtml(mon.r)}<img src="${wpSpriteUrl(mon.d)}" alt="${mon.n}">`;
+    el.title = '???';
+    document.body.appendChild(el);
+    wpActiveEl = el;
+    wpActiveMon = mon;
+
+    requestAnimationFrame(() => { el.classList.add('wp-in', 'wp-peek'); });
+    wpSoundSpawn();
+
+    // foge sozinho se o mouse chegar perto sem clicar (só pra rara+)
+    if (mon.r !== 'comum') {
+      el.addEventListener('mouseenter', () => {
+        if (el !== wpActiveEl) return;
+        el.classList.remove('wp-peek');
+        el.classList.add('wp-shy');
+      }, { once: true });
+    }
+
+    wpActiveTimeoutId = setTimeout(() => wpDespawn(el), WP_LIFETIME_MS);
+
+    el.addEventListener('click', (ev) => {
+      wpOpenBallPicker(ev, mon, el);
+    });
+  }
+
+  function wpDespawn(el) {
+    if (!el || el !== wpActiveEl) return;
+    el.classList.remove('wp-in', 'wp-peek', 'wp-shy');
+    setTimeout(() => { el.remove(); }, 400);
+    wpActiveEl = null;
+    wpActiveMon = null;
+  }
+
+  // ── Seletor de pokébola ─────────────────────────────────────
+  function wpOpenBallPicker(ev, mon, el) {
+    document.querySelectorAll('.wp-ballpicker').forEach(n => n.remove());
+
+    const totalBalls = WP_BALL_ORDER.reduce((s, t) => s + (wpBalls[t] || 0), 0);
+    if (totalBalls === 0) {
+      wpToastRaw('🎒', 'Sem pokébolas! Use o site pra ganhar mais.', false);
+      return;
+    }
+
+    const rect = el.getBoundingClientRect();
+    const picker = document.createElement('div');
+    picker.className = 'wp-ballpicker';
+    const isLeft = rect.left < window.innerWidth / 2;
+    picker.style.bottom = `${window.innerHeight - rect.top + 10}px`;
+    if (isLeft) picker.style.left = `${Math.max(8, rect.left)}px`;
+    else picker.style.right = `${Math.max(8, window.innerWidth - rect.right)}px`;
+
+    picker.innerHTML = WP_BALL_ORDER.map(tier => {
+      const qty = wpBalls[tier] || 0;
+      const disabled = qty <= 0;
+      return `<div class="wp-ball-btn ${disabled ? 'wp-ball-disabled' : ''}" data-tier="${tier}">
+        ${wpBallIconHtml(tier, 24)}
+        <span class="wp-ball-qty">${qty}</span>
+      </div>`;
+    }).join('');
+    document.body.appendChild(picker);
+
+    const closePicker = () => picker.remove();
+    setTimeout(() => document.addEventListener('click', function onDoc(e) {
+      if (!picker.contains(e.target)) { closePicker(); document.removeEventListener('click', onDoc); }
+    }), 0);
+
+    picker.querySelectorAll('.wp-ball-btn:not(.wp-ball-disabled)').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closePicker();
+        wpThrowBall(btn.dataset.tier, mon, el);
+      });
+    });
+  }
+
+  // ── Arremesso + suspense (treme e resolve) ──────────────────
+  function wpThrowBall(tier, mon, el) {
+    if (el !== wpActiveEl || mon !== wpActiveMon) return; // já sumiu/mudou
+    clearTimeout(wpActiveTimeoutId);
+    wpActiveEl = null; // trava novo spawn enquanto resolve
+
+    wpBalls[tier] = Math.max(0, (wpBalls[tier] || 0) - 1);
+    wpSaveBalls();
+    wpUpdateBadge();
+    wpSoundBall();
+
+    const rect = el.getBoundingClientRect();
+    const ballEl = document.createElement('div');
+    ballEl.className = 'wp-thrown-ball';
+    ballEl.innerHTML = wpBallIconHtml(tier, 28);
+    ballEl.style.left = `${rect.left + rect.width / 2 - 15}px`;
+    ballEl.style.top = `${rect.top + rect.height / 2 - 15}px`;
+    document.body.appendChild(ballEl);
+
+    requestAnimationFrame(() => {
+      ballEl.style.left = `${rect.left + rect.width / 2 - 15}px`;
+      ballEl.style.top = `${rect.top + rect.height / 2 - 8}px`;
+    });
+
+    const chance = WP_CATCH_RATES[tier][mon.r];
+    const success = Math.random() < chance;
+    const wobbles = tier === 'masterball' ? 1 : WP_BALL_META[tier].wobbles;
+
+    el.classList.remove('wp-peek', 'wp-shy');
+
+    let i = 0;
+    const wobbleStep = () => {
+      i++;
+      ballEl.classList.remove('wp-wobble');
+      void ballEl.offsetWidth; // reflow pra reiniciar a animação
+      ballEl.classList.add('wp-wobble');
+      wpSoundWobble();
+      if (i < wobbles) {
+        setTimeout(wobbleStep, 420);
+      } else {
+        setTimeout(() => wpResolveCatch(success, mon, el, ballEl, tier), 420);
+      }
+    };
+    setTimeout(wobbleStep, 500);
+  }
+
+  function wpResolveCatch(success, mon, el, ballEl, tier) {
+    ballEl.remove();
+    if (success) {
+      wpCatches[mon.s] = wpCatches[mon.s] || { count: 0 };
+      wpCatches[mon.s].count++;
+      wpCatches[mon.s].firstCaughtAt = wpCatches[mon.s].firstCaughtAt || Date.now();
+      wpSaveCatches();
+
+      el.classList.add('wp-caught');
+      setTimeout(() => el.remove(), 500);
+      wpSoundCatch();
+      wpToastCatch(mon, true);
+      wpUpdateBadge();
+    } else {
+      el.classList.add('wp-fled');
+      setTimeout(() => el.remove(), 550);
+      wpSoundFlee();
+      wpToastCatch(mon, false, tier);
+    }
+    wpActiveMon = null;
+  }
+
+  // ── Toasts ───────────────────────────────────────────────────
+  function wpToastRaw(emoji, text, success) {
+    const el = document.createElement('div');
+    el.className = `wp-toast ${success === false ? 'wp-fail' : ''}`;
+    el.innerHTML = `<span style="font-size:22px">${emoji}</span><span>${text}</span>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('wp-show'));
+    setTimeout(() => { el.classList.remove('wp-show'); setTimeout(() => el.remove(), 350); }, 3400);
+  }
+
+  function wpToastCatch(mon, success, tier) {
+    const meta = WP_RARITY_META[mon.r];
+    const el = document.createElement('div');
+    el.className = `wp-toast ${success ? '' : 'wp-fail'}`;
+    if (success) {
+      const isNew = wpCatches[mon.s].count === 1;
+      el.innerHTML = `<img src="${wpSpriteUrl(mon.d)}" alt=""><span>${isNew ? 'Você pegou!!!' : 'De novo!'} <b style="color:${meta.color}">${mon.n}</b> · ${meta.label}</span>`;
+    } else {
+      el.innerHTML = `<img src="${wpSpriteUrl(mon.d)}" alt=""><span><b>${mon.n}</b> fugiu com a ${WP_BALL_META[tier].label}! Foi por pouco.</span>`;
+    }
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('wp-show'));
+    setTimeout(() => { el.classList.remove('wp-show'); setTimeout(() => el.remove(), 350); }, 3600);
+  }
+
+  // ── Ganho de pokébolas (uso do site) ────────────────────────
+  window.wpGrantBall = function (tier, qty, reason) {
+    qty = qty || 1;
+    if (!WP_BALL_META[tier]) { console.warn('[wp] tier inválido:', tier); return; }
+    wpBalls[tier] = (wpBalls[tier] || 0) + qty;
+    wpSaveBalls();
+    wpUpdateBadge();
+    wpToastRaw(wpBallIconHtml(tier, 22), `+${qty} ${WP_BALL_META[tier].label}${reason ? ' — ' + reason : ''}`, true);
+  };
+
+  function wpMaybeGrantBallFromUsage(baseChance) {
+    if (!wpEnabled) return; // minigame desligado — não ganha bola nem spawna
+    if (Math.random() < baseChance) {
+      window.wpGrantBall('pokeball', 1, 'por usar o site');
+    }
+  }
+
+  // ── Liga/desliga o minigame inteiro ─────────────────────────
+  function wpSetEnabled(on) {
+    wpEnabled = on;
+    wpSaveJSON(WP_STORAGE_ENABLED, wpEnabled);
+    if (!wpEnabled && wpActiveEl) {
+      document.querySelectorAll('.wp-ballpicker').forEach(n => n.remove());
+      wpActiveEl.remove();
+      wpActiveEl = null;
+      wpActiveMon = null;
+    }
+    wpUpdateBadge();
+  }
+  window.wpToggle = () => { wpSetEnabled(!wpEnabled); return wpEnabled ? 'minigame ligado' : 'minigame desligado'; };
+
+  // ── Badge + modal (inventário + pokédex) ────────────────────
+  let wpBadgeEl = null;
+
+  function wpUpdateBadge() {
+    if (!wpBadgeEl) return;
+    const totalCaught = Object.keys(wpCatches).length;
+    const totalBalls = WP_BALL_ORDER.reduce((s, t) => s + (wpBalls[t] || 0), 0);
+    wpBadgeEl.classList.toggle('wp-badge-off', !wpEnabled);
+    wpBadgeEl.querySelector('.wp-badge-text').textContent = wpEnabled
+      ? `🎒 ${totalBalls} · 🐾 ${totalCaught}/${WP_KANTO151.length}`
+      : `Minigame desligado`;
+    const powerBtn = wpBadgeEl.querySelector('.wp-power-btn');
+    if (powerBtn) { powerBtn.textContent = wpEnabled ? '🎮' : '🚫'; powerBtn.title = wpEnabled ? 'Desligar minigame' : 'Ligar minigame'; }
+  }
+
+  function wpBuildBadge() {
+    if (wpBadgeEl) return;
+    wpBadgeEl = document.createElement('div');
+    wpBadgeEl.className = 'wp-badge';
+    wpBadgeEl.innerHTML = `<span class="wp-badge-text"></span><span class="wp-sound-btn" title="Som">${wpSoundOn ? '🔊' : '🔇'}</span><span class="wp-power-btn" title="Desligar minigame">${wpEnabled ? '🎮' : '🚫'}</span>`;
+    wpBadgeEl.querySelector('.wp-badge-text').addEventListener('click', wpOpenDex);
+    wpBadgeEl.querySelector('.wp-sound-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      wpSoundOn = !wpSoundOn;
+      wpSaveJSON(WP_STORAGE_SOUND, wpSoundOn);
+      e.target.textContent = wpSoundOn ? '🔊' : '🔇';
+      if (wpSoundOn) wpSoundCatch();
+    });
+    wpBadgeEl.querySelector('.wp-power-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      wpSetEnabled(!wpEnabled);
+    });
+    document.body.appendChild(wpBadgeEl);
+    wpUpdateBadge();
+  }
+
+  function wpOpenDex(tab) {
+    tab = tab || 'dex';
+    const backdrop = document.createElement('div');
+    backdrop.className = 'wp-modal-backdrop';
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) backdrop.remove(); });
+
+    const totalCaught = Object.keys(wpCatches).length;
+
+    const invHtml = WP_BALL_ORDER.map(tier => {
+      const meta = WP_BALL_META[tier];
+      return `<div class="wp-inv-row">
+        ${wpBallIconHtml(tier, 28)}
+        <span class="wp-inv-label">${meta.label}</span>
+        <span class="wp-inv-qty">${wpBalls[tier] || 0}</span>
+      </div>`;
+    }).join('');
+
+    const dexHtml = WP_KANTO151.map(mon => {
+      const got = !!wpCatches[mon.s];
+      const meta = WP_RARITY_META[mon.r];
+      return `<div class="wp-cell ${got ? 'wp-got' : ''}">
+        <img src="${wpSpriteUrl(mon.d)}" alt="">
+        <div class="wp-n">${got ? mon.n : '???'}</div>
+        <div class="wp-r" style="color:${got ? meta.color : '#52597a'}">${got ? meta.label : ''}</div>
+      </div>`;
+    }).join('');
+
+    backdrop.innerHTML = `<div class="wp-modal">
+      <button class="wp-close" aria-label="Fechar">×</button>
+      <h3>🐾 Pokémon Escondidos</h3>
+      <div class="wp-sub">${totalCaught}/${WP_KANTO151.length} capturados — flagre os Pokémon que aparecem espiando pelo site</div>
+      <div class="wp-tabs">
+        <div class="wp-tab" data-tab="dex">Pokédex</div>
+        <div class="wp-tab" data-tab="inv">Inventário</div>
+      </div>
+      <div class="wp-panel-dex" style="display:${tab === 'dex' ? 'grid' : 'none'}" class="wp-grid">${dexHtml}</div>
+      <div class="wp-panel-inv" style="display:${tab === 'inv' ? 'block' : 'none'}">${invHtml}</div>
+    </div>`;
+
+    document.body.appendChild(backdrop);
+    backdrop.querySelector('.wp-panel-dex').classList.add('wp-grid');
+    backdrop.querySelector('.wp-close').addEventListener('click', () => backdrop.remove());
+    backdrop.querySelectorAll('.wp-tab').forEach(t => {
+      t.classList.toggle('wp-tab-active', t.dataset.tab === tab);
+      t.addEventListener('click', () => {
+        backdrop.querySelectorAll('.wp-tab').forEach(x => x.classList.remove('wp-tab-active'));
+        t.classList.add('wp-tab-active');
+        backdrop.querySelector('.wp-panel-dex').style.display = t.dataset.tab === 'dex' ? 'grid' : 'none';
+        backdrop.querySelector('.wp-panel-inv').style.display = t.dataset.tab === 'inv' ? 'block' : 'none';
+      });
+    });
+  }
+
+  // ── Timer base ───────────────────────────────────────────────
+  // Intervalo médio derivado direto da cadência diária (384 aparições/dia
+  // no total, distribuídas por raridade em wpPickMon). No modo teste, o
+  // "dia" é comprimido pra 20min só pra dar pra validar rápido — a
+  // PROPORÇÃO entre raridades é a mesma dos dois modos, só a velocidade
+  // muda. chance=1 porque a raridade sorteada já embute a probabilidade;
+  // o intervalo entre tentativas é que faz a cadência de verdade.
+  const WP_AVG_INTERVAL_MS = (WP_TEST_MODE ? WP_TEST_DAY_COMPRESS_MS : WP_DAY_MS) / WP_DAILY_TOTAL;
+
+  function wpScheduleBase() {
+    const jitter = 0.5 + Math.random(); // 0.5x–1.5x pra não ficar num ritmo mecânico
+    const intervalMs = WP_AVG_INTERVAL_MS * jitter;
+    setTimeout(() => {
+      wpSpawn(1);
+      wpMaybeGrantBallFromUsage(WP_TEST_MODE ? 0.03 : 0.06);
+      wpScheduleBase();
+    }, intervalMs);
+  }
+
+  // ── Hook em window.go (troca de aba) — mesmo padrão de xp_system.js ──
+  // Chance extra (bônus por interação), independente da cadência base acima.
+  (function hookWildPokemon() {
+    function tryHook() {
+      if (typeof window.go !== 'function') {
+        setTimeout(tryHook, 50);
+        return;
+      }
+      const originalGo = window.go;
+      window.go = function (id, el) {
+        originalGo(id, el);
+        wpSpawn(WP_TEST_MODE ? 0.5 : 0.15);
+        wpMaybeGrantBallFromUsage(WP_TEST_MODE ? 0.15 : 0.05);
+      };
+    }
+    tryHook();
+  })();
+
+  // ── Boot ─────────────────────────────────────────────────────
+  function wpInit() {
+    wpBuildBadge();
+    wpScheduleBase();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wpInit);
+  } else {
+    wpInit();
+  }
+
+  // ── Debug (console) ─────────────────────────────────────────
+  window.wpForceSpawn = () => wpSpawn(1);
+  window.wpReset = () => {
+    wpCatches = {};
+    wpBalls = { pokeball: 5, greatball: 2, ultraball: 1, masterball: 0 };
+    wpSaveCatches();
+    wpSaveBalls();
+    wpUpdateBadge();
+  };
+  window.wpStatus = () => {
+    const balls = WP_BALL_ORDER.map(t => `${WP_BALL_META[t].emoji}${wpBalls[t] || 0}`).join(' ');
+    return `${Object.keys(wpCatches).length}/${WP_KANTO151.length} capturados · bolas: ${balls}`;
+  };
+})();
