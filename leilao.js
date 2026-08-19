@@ -102,22 +102,22 @@ async function updateLeilaoTabVisibility(){
 // ── CARREGAR TUDO ───────────────────────────────────────────────
 async function renderLeilaoTab(){
   await resolveLeilaoAdminStatus();
-  // Subnav em si é visível pra todo usuário logado desde 13/08/2026 ("Leilões"
-  // e "Meus Arremates" — botão de incluir carta comprada no fichário); só os
-  // 4 botões de gestão (Cadastro/Análises/Arquivo/Financeiro) continuam
-  // escondidos de quem não é leiloeiro.
-  ['leilao-tab-cadastro','leilao-tab-analises','leilao-tab-arquivo','leilao-tab-financeiro'].forEach(id=>{
+  // Subnav em si é visível pra todo usuário logado desde 13/08/2026 ("Leilões",
+  // "Meus Arremates" e, desde 19/08/2026, "Loja do Leiloeiro"); só os botões de
+  // gestão (Cadastro/Estoque/Análises/Arquivo/Financeiro) continuam escondidos
+  // de quem não é leiloeiro.
+  ['leilao-tab-cadastro','leilao-tab-estoque','leilao-tab-analises','leilao-tab-arquivo','leilao-tab-financeiro'].forEach(id=>{
     const btn=document.getElementById(id);
     if(btn)btn.style.display=aucIsLeilaoAdmin?'':'none';
   });
   const superWrap=document.getElementById('leilao-super-admin-wrap');
   if(superWrap)superWrap.style.display=(typeof isAdminEditor==='function'&&isAdminEditor())?'':'none';
-  // Quem não é leiloeiro só pode ficar em Leilões/Meus Arremates (as outras
-  // sub-abas nem aparecem no menu pra ele); leiloeiro mantém a última
+  // Quem não é leiloeiro só pode ficar em Leilões/Meus Arremates/Loja (as
+  // outras sub-abas nem aparecem no menu pra ele); leiloeiro mantém a última
   // sub-aba escolhida.
   const allowed=aucIsLeilaoAdmin
-    ?['leiloes','meus-arremates','cadastro','analises','arquivo','financeiro']
-    :['leiloes','meus-arremates'];
+    ?['leiloes','meus-arremates','loja','cadastro','estoque','analises','arquivo','financeiro']
+    :['leiloes','meus-arremates','loja'];
   switchLeilaoSubtab(allowed.includes(aucActiveSubtab)?aucActiveSubtab:'leiloes');
 
   await loadRoundsAndAuctions();
@@ -130,6 +130,14 @@ async function renderLeilaoTab(){
   scrollToSharedAuction();
   scrollToSharedRound();
 
+  if(typeof loadLojaItems==='function'){
+    await sbClient.rpc('expire_store_reservations').catch(e=>console.error('[loja] expire_store_reservations',e));
+    await loadLojaItems();
+    await loadMyLojaReservations();
+    renderLojaGrid();
+    renderMyLojaReservations();
+  }
+
   if(aucIsLeilaoAdmin){
     renderRoundsAdminList();
     await loadAdminAuctionOrders();
@@ -138,6 +146,11 @@ async function renderLeilaoTab(){
     renderLeilaoArquivo();
     await loadAuctionCosts();
     renderLeilaoFinanceiro();
+    if(typeof loadAdminLojaReservations==='function'){
+      renderLojaAdminItems();
+      await loadAdminLojaReservations();
+      renderLojaAdminReservations();
+    }
   }
   if(typeof isAdminEditor==='function'&&isAdminEditor()){
     await loadLeiloeiros();
@@ -145,11 +158,12 @@ async function renderLeilaoTab(){
   }
 }
 
-// ── SUB-MENU (Leilões / Cadastro / Análises / Arquivo — as 3 últimas só leiloeiro) ─
+// ── SUB-MENU (Leilões / Loja / Cadastro / Estoque / Análises / Arquivo —
+// as 5 últimas só leiloeiro) ──────────────────────────────────────
 let aucActiveSubtab='leiloes';
 function switchLeilaoSubtab(name){
   aucActiveSubtab=name;
-  ['leiloes','meus-arremates','cadastro','analises','arquivo','financeiro'].forEach(n=>{
+  ['leiloes','meus-arremates','loja','cadastro','estoque','analises','arquivo','financeiro'].forEach(n=>{
     const pane=document.getElementById('leilao-sub-'+n);
     if(pane)pane.style.display=(n===name)?'':'none';
     const btn=document.querySelector(`.leilao-subtab-btn[data-sub="${n}"]`);

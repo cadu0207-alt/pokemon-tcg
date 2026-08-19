@@ -560,7 +560,9 @@
     <div id="leilao-subnav" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
       <button type="button" class="btn-add leilao-subtab-btn" data-sub="leiloes" onclick="switchLeilaoSubtab('leiloes')">🃏 Leilões</button>
       <button type="button" class="btn-add leilao-subtab-btn" data-sub="meus-arremates" onclick="switchLeilaoSubtab('meus-arremates')">🏆 Meus Arremates</button>
+      <button type="button" class="btn-add leilao-subtab-btn" data-sub="loja" onclick="switchLeilaoSubtab('loja')">🏪 Loja do Leiloeiro</button>
       <button type="button" id="leilao-tab-cadastro" class="btn-add leilao-subtab-btn" data-sub="cadastro" onclick="switchLeilaoSubtab('cadastro')" style="display:none">➕ Cadastro</button>
+      <button type="button" id="leilao-tab-estoque" class="btn-add leilao-subtab-btn" data-sub="estoque" onclick="switchLeilaoSubtab('estoque')" style="display:none">📦 Estoque da Loja</button>
       <button type="button" id="leilao-tab-analises" class="btn-add leilao-subtab-btn" data-sub="analises" onclick="switchLeilaoSubtab('analises')" style="display:none">📊 Análises</button>
       <button type="button" id="leilao-tab-arquivo" class="btn-add leilao-subtab-btn" data-sub="arquivo" onclick="switchLeilaoSubtab('arquivo')" style="display:none">🗄️ Arquivo</button>
       <button type="button" id="leilao-tab-financeiro" class="btn-add leilao-subtab-btn" data-sub="financeiro" onclick="switchLeilaoSubtab('financeiro')" style="display:none">💰 Financeiro</button>
@@ -755,6 +757,86 @@
           <div id="leilao-my-orders"></div>
         </div>
       </div>
+    </div>
+
+    <!-- ── LOJA DO LEILOEIRO (19/08/2026, todo mundo) ──────────────
+         Venda direta, preço fixo — reaproveita a confiança/autorização
+         já existente do leilão (is_auction_admin()) e o endereço +
+         WhatsApp que o comprador já cadastrou em "Meus Arremates". -->
+    <div id="leilao-sub-loja" style="display:none">
+      <div class="mkt-note">
+        Venda direta do leiloeiro, preço fixo — cartas avulsas e produtos selados. "Reservar" segura o
+        item por 24h; pagamento (PIX) e envio são combinados direto no WhatsApp, mesmo modelo do leilão.
+      </div>
+      <div style="margin-bottom:14px">
+        <input type="text" id="loja-search" placeholder="🔍 Buscar na loja..." class="cv-select" style="width:100%;max-width:420px" oninput="renderLojaGrid()">
+        <div id="loja-filter-bar" class="collection-filter-bar" style="margin-top:10px"></div>
+      </div>
+      <div id="loja-grid"></div>
+
+      <div class="sec-title">🧾 Minhas Reservas</div>
+      <div id="loja-my-reservations"></div>
+    </div>
+
+    <!-- ── ESTOQUE DA LOJA (leiloeiro/admin) ───────────────────────── -->
+    <div id="leilao-sub-estoque" style="display:none">
+      <div class="mkt-grid">
+        <div class="panel">
+          <div class="panel-t">🃏 Cadastrar Carta</div>
+          <div class="ff"><label>Buscar carta no catálogo (opcional — preenche foto/número)</label>
+            <input id="loja-carta-search" placeholder="Nome da carta..." oninput="searchLojaCards()">
+          </div>
+          <div id="loja-carta-search-results" class="cv-list" style="max-height:220px;overflow:auto;margin-bottom:10px"></div>
+          <div id="loja-carta-preview" style="display:none;gap:10px;align-items:center;margin-bottom:10px"></div>
+          <div class="ff"><label>Nome da carta *</label><input id="loja-carta-nome" placeholder="Ex: Charizard SAR"></div>
+          <div class="ff"><label>Condição</label>
+            <select id="loja-carta-cond">
+              <option value="M">Mint</option>
+              <option value="NM">Quase Nova (NM)</option>
+              <option value="MP">Levemente Jogada (MP)</option>
+              <option value="D">Danificada (D)</option>
+            </select>
+          </div>
+          <div class="ff"><label>Idioma</label>
+            <select id="loja-carta-lang">
+              <option value="pt-BR">🇧🇷 Português</option>
+              <option value="en">🇺🇸 Inglês</option>
+              <option value="ja">🇯🇵 Japonês</option>
+            </select>
+          </div>
+          <div class="ff"><label>Tipo de carta (versão)</label>
+            <select id="loja-carta-versao">
+              <option value="">— não informar —</option>
+              <option value="N">Normal</option>
+              <option value="F">Foil / Holo</option>
+              <option value="RH">Reverse Holo</option>
+              <option value="SP">Especial (Full Art, Alt Art, SAR, Secreta, Gold, Ilustração Especial, Promo...)</option>
+            </select>
+          </div>
+          <div class="ff"><label>Descrição (opcional)</label><textarea id="loja-carta-desc" rows="2" placeholder="Estado, detalhes, centralização..."></textarea></div>
+          <div class="ff"><label>Preço (R$) *</label><input type="number" id="loja-carta-preco" step="0.01" min="0.01"></div>
+          <div class="ff"><label>Quantidade disponível</label><input type="number" id="loja-carta-qty" value="1" min="1"></div>
+          <button class="btn-add" onclick="publishLojaCarta()">✓ Adicionar Carta à Loja</button>
+          <div id="loja-carta-status" style="font-size:10px;color:var(--teal);font-family:'IBM Plex Mono',monospace;margin-top:8px"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-t">📦 Cadastrar Produto Selado</div>
+          <div class="ff"><label>Nome do produto *</label><input id="loja-selado-nome" placeholder="Ex: ETB Escuridão Absoluta"></div>
+          <div class="ff"><label>URL da imagem (opcional)</label><input id="loja-selado-img" placeholder="https://..."></div>
+          <div class="ff"><label>Descrição (opcional)</label><textarea id="loja-selado-desc" rows="2" placeholder="Detalhes do produto, lote, validade da promoção..."></textarea></div>
+          <div class="ff"><label>Preço (R$) *</label><input type="number" id="loja-selado-preco" step="0.01" min="0.01"></div>
+          <div class="ff"><label>Quantidade em estoque *</label><input type="number" id="loja-selado-qty" value="1" min="1"></div>
+          <button class="btn-add" onclick="publishLojaSelado()">✓ Adicionar Produto à Loja</button>
+          <div id="loja-selado-status" style="font-size:10px;color:var(--teal);font-family:'IBM Plex Mono',monospace;margin-top:8px"></div>
+        </div>
+      </div>
+
+      <div class="sec-title">📋 Itens Cadastrados</div>
+      <div id="loja-admin-items"></div>
+
+      <div class="sec-title">🧾 Reservas / Pedidos da Loja</div>
+      <div id="loja-admin-reservations"></div>
     </div>
   </div>
 
@@ -1256,6 +1338,7 @@
 <script defer src="lojas_fix_latest_price.js"></script>
 <script defer src="marketplace.js"></script>
 <script defer src="leilao.js"></script>
+<script defer src="loja.js"></script>
 <script defer src="positivo.js"></script>
 <script defer src="lojas_store_vespa.js"></script>
 <script defer src="lojas_store_coffeecat_fix.js"></script>
