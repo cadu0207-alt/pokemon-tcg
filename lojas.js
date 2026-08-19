@@ -639,7 +639,7 @@ function renderProductCard(term, history, featured, coupon, rules, dealScore) {
       )
     : '<div class="product-price">R$ ' + fmtBRLLoja(best.price) + '</div>';
   return (
-    '<a class="product-card' + (featured ? ' product-card-featured' : '') + '"' + collectionAttr + scoreAttr + ' href="' + linkUrl + '" target="_blank" rel="noopener' + (term.affiliate_url ? ' sponsored' : '') + '" onclick="if(typeof logProductClick===\'function\')logProductClick(' + term.id + ')">' +
+    '<a class="product-card' + (featured ? ' product-card-featured' : '') + '"' + collectionAttr + scoreAttr + ' href="' + linkUrl + '" target="_blank" rel="noopener' + (term.affiliate_url ? ' sponsored' : '') + '" onclick="if(typeof logProductRedirect===\'function\')logProductRedirect(' + term.id + ')">' +
       (featured ? '<div class="product-badge">🔥 OFERTA IMPERDÍVEL</div>' : '') +
       '<img class="product-img" src="' + imgSrc + '" alt="' + label + '">' +
       '<div class="product-info">' +

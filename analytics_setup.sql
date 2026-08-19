@@ -39,24 +39,30 @@ drop policy if exists "own_tab_visit_select" on tab_visits;
 create policy "own_tab_visit_select" on tab_visits
   for select using (auth.uid() = user_id);
 
--- 2) ml_product_clicks — 1 linha POR CLIQUE (sem upsert/dedupe — cada
--- clique no card do produto conta) em "ver oferta"/comprar de um
+-- 2) ml_product_redirects — 1 linha POR CLIQUE (sem upsert/dedupe —
+-- cada clique no card do produto conta) em "ver oferta"/comprar de um
 -- produto rastreado do Mercado Livre (lojas.js/renderProductCard).
-create table if not exists ml_product_clicks (
+-- RENOMEADA de ml_product_clicks em 19/08/2026: bloqueadores de
+-- anúncio/privacidade (uBlock, AdGuard, Brave Shields etc.) derrubam
+-- qualquer requisição de rede cuja URL contenha a palavra "click" —
+-- e o endpoint do Supabase é literalmente /rest/v1/ml_product_clicks,
+-- então o insert nem saía do navegador (0 cliques registrados mesmo
+-- com cliques reais). Ver rename_clicks_to_redirects.sql.
+create table if not exists ml_product_redirects (
   id bigint generated always as identity primary key,
   term_id bigint references ml_search_terms(id) on delete set null,
   user_id uuid references auth.users(id),
   created_at timestamptz not null default now()
 );
 
-alter table ml_product_clicks enable row level security;
+alter table ml_product_redirects enable row level security;
 
-drop policy if exists "own_product_click_insert" on ml_product_clicks;
-create policy "own_product_click_insert" on ml_product_clicks
+drop policy if exists "own_product_redirect_insert" on ml_product_redirects;
+create policy "own_product_redirect_insert" on ml_product_redirects
   for insert with check (auth.uid() = user_id);
 
-drop policy if exists "own_product_click_select" on ml_product_clicks;
-create policy "own_product_click_select" on ml_product_clicks
+drop policy if exists "own_product_redirect_select" on ml_product_redirects;
+create policy "own_product_redirect_select" on ml_product_redirects
   for select using (auth.uid() = user_id);
 
 -- 3) admin_tab_stats — ranking de abas mais acessadas (total e nos
@@ -92,10 +98,13 @@ $$;
 
 grant execute on function admin_tab_stats(int) to authenticated;
 
--- 4) admin_product_click_stats — ranking de produtos mais clicados
+-- 4) admin_product_redirect_stats — ranking de produtos mais clicados
 -- rumo ao Mercado Livre, + total geral de cliques (todos os produtos
 -- somados) e total nos últimos N dias.
-create or replace function admin_product_click_stats(days int default 30)
+-- RENOMEADA de admin_product_click_stats em 19/08/2026 (mesmo motivo
+-- do item 2 — a RPC também é chamada via URL /rest/v1/rpc/..., que
+-- também cai no filtro de bloqueadores por conter "click").
+create or replace function admin_product_redirect_stats(days int default 30)
 returns json
 language plpgsql
 security definer
@@ -109,8 +118,8 @@ begin
   end if;
 
   select json_build_object(
-    'total_clicks', (select count(*) from ml_product_clicks),
-    'total_clicks_recent', (select count(*) from ml_product_clicks where created_at > now() - (coalesce(days, 30) * interval '1 day')),
+    'total_clicks', (select count(*) from ml_product_redirects),
+    'total_clicks_recent', (select count(*) from ml_product_redirects where created_at > now() - (coalesce(days, 30) * interval '1 day')),
     'items', (
       select coalesce(json_agg(row_to_json(t) order by t.clicks desc), '[]'::json)
       from (
@@ -120,7 +129,7 @@ begin
           st.collection,
           count(*) as clicks,
           count(*) filter (where c.created_at > now() - (coalesce(days, 30) * interval '1 day')) as clicks_recent
-        from ml_product_clicks c
+        from ml_product_redirects c
         left join ml_search_terms st on st.id = c.term_id
         group by c.term_id, st.label, st.term, st.collection
       ) t
@@ -131,7 +140,7 @@ begin
 end;
 $$;
 
-grant execute on function admin_product_click_stats(int) to authenticated;
+grant execute on function admin_product_redirect_stats(int) to authenticated;
 
 -- 5) admin_list_users — lista de usuários com atividade (pra achar
 -- quem tá mais engajado, ou contas fantasmas que nunca voltaram).

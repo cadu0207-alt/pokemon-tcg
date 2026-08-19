@@ -158,6 +158,17 @@ function switchLeilaoSubtab(name){
   });
 }
 
+// Atalho do aviso "cadastre seu endereço" (mostrado quando falta
+// endereço/WhatsApp na hora de dar lance) — pula direto pra sub-aba
+// "Meus Arremates" e foca o primeiro campo do formulário.
+function goToLeilaoAddressForm(){
+  switchLeilaoSubtab('meus-arremates');
+  const pane=document.getElementById('leilao-sub-meus-arremates');
+  if(pane)pane.scrollIntoView({behavior:'smooth',block:'start'});
+  const el=document.getElementById('auc-addr-logradouro');
+  if(el)setTimeout(()=>el.focus(),300);
+}
+
 // ── ANÁLISES (KPIs simples pro leiloeiro) ─────────────────────────
 function renderLeilaoAnalises(){
   const wrap=document.getElementById('leilao-analises-kpis');
@@ -1169,9 +1180,13 @@ async function submitBid(auctionId,idSuffix){
 
   // Boa prática: exige endereço de entrega E WhatsApp cadastrados ANTES
   // de aceitar o lance — sem WhatsApp o leiloeiro não teria como chamar
-  // quem ganhou pra combinar pagamento/envio.
+  // quem ganhou pra combinar pagamento/envio. O formulário mora na
+  // sub-aba "Meus Arremates" (não mais em "Leilões"), então o aviso
+  // já leva pra lá em vez de só apontar "abaixo" — o botão nem
+  // aparecia mais na mesma tela desde que o endereço mudou de aba.
   if(!aucAddress||!aucAddress.cidade||!aucAddress.uf||!aucAddress.logradouro||!aucAddress.whatsapp){
-    if(statusEl)statusEl.innerHTML='Cadastre seu endereço de entrega e WhatsApp antes de dar lance (veja "📍 Meu Endereço de Entrega" abaixo).';
+    if(statusEl)statusEl.innerHTML='Cadastre seu endereço de entrega e WhatsApp antes de dar lance. '+
+      '<button type="button" class="cv-item-remove" style="font-size:9.5px;padding:2px 8px;margin-left:2px;color:var(--teal);border-color:var(--teal)" onclick="goToLeilaoAddressForm()">📍 Cadastrar agora</button>';
     return;
   }
 
