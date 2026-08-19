@@ -231,6 +231,7 @@ function renderLeilaoAnalises(){
   renderLeilaoAnalisesCountdown();
   renderLeilaoAnalisesPorLeiloeiro();
   renderLeilaoAnalisesChart();
+  renderLeilaoAnalisesUltimosLances();
 }
 
 // Rodada "atual" pra fins de contador/gráfico — entre as rodadas ainda
@@ -354,6 +355,41 @@ function aucLineChartSvg(points){
     <text x="${w-pad}" y="${h-8}" font-size="8" fill="var(--muted)" font-family="'Space Mono',monospace" text-anchor="end">${esc(fmtT(tEnd))}</text>
     <text x="${pad}" y="${(y(maxV)+9).toFixed(1)}" font-size="8" fill="var(--muted)" font-family="'Space Mono',monospace">R$ ${fmtR(maxV)}</text>
   </svg>`;
+}
+
+// Feed "por escrito" dos últimos 10 lances da rodada atual (todos os
+// lotes ativos, não só um) — nome do comprador, valor, carta e
+// data/hora. Usa a RPC admin auction_round_recent_bids_admin (nome
+// real via metadata/e-mail, igual auction_bid_log_admin já faz por
+// lote único; essa aqui junta a rodada inteira num só feed). 19/08/2026.
+async function renderLeilaoAnalisesUltimosLances(){
+  const wrap=document.getElementById('leilao-analises-ultimos-lances');
+  if(!wrap)return;
+  const round=aucCurrentRoundForAnalises();
+  if(!round){wrap.innerHTML=`<div class="cv-item-empty">Sem rodada ativa no momento.</div>`;return;}
+  wrap.innerHTML=`<div class="cv-item-empty">Carregando…</div>`;
+  const{data,error}=await sbClient.rpc('auction_round_recent_bids_admin',{p_round_id:round.id,p_limit:10});
+  if(error){console.error('[leilao] auction_round_recent_bids_admin',error);wrap.innerHTML=`<div class="cv-item-empty">Não deu pra carregar os últimos lances.</div>`;return;}
+  const bids=Array.isArray(data)?data:[];
+  if(!bids.length){wrap.innerHTML=`<div class="cv-item-empty">Ainda não teve lance nessa rodada.</div>`;return;}
+  wrap.innerHTML=`<div class="panel" style="padding:0;overflow:hidden">
+    <table style="width:100%;border-collapse:collapse;font-size:11.5px">
+      <thead><tr style="text-align:left;color:var(--muted);font-family:'Space Mono',monospace;font-size:9px">
+        <th style="padding:8px 10px">NOME</th>
+        <th style="padding:8px 10px">CARTA</th>
+        <th style="padding:8px 10px;text-align:right">VALOR</th>
+        <th style="padding:8px 10px;text-align:right">DATA/HORA</th>
+      </tr></thead>
+      <tbody>
+        ${bids.map(b=>`<tr style="border-top:1px solid var(--border)">
+          <td style="padding:8px 10px">${esc(b.bidder_name||b.bidder_email||'—')}</td>
+          <td style="padding:8px 10px;color:var(--muted)">${esc(b.card_name||('Lote #'+b.auction_id))}</td>
+          <td style="padding:8px 10px;text-align:right;color:var(--teal);font-weight:700">R$ ${fmtR(b.amount)}</td>
+          <td style="padding:8px 10px;text-align:right;color:var(--muted);white-space:nowrap">${new Date(b.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
 }
 
 // ── COMISSÃO MYDECK (mesmos termos combinados com o leiloeiro, baseados

@@ -1198,3 +1198,49 @@ alter table store_item_costs enable row level security;
 drop policy if exists "store_item_costs_admin_all" on store_item_costs;
 create policy "store_item_costs_admin_all" on store_item_costs
   for all using (is_auction_admin()) with check (is_auction_admin());
+
+-- ================================================================
+-- ÚLTIMOS LANCES DA RODADA (Análises) — 19/08/2026
+-- Feed "por escrito" dos últimos 10 lances de TODOS os lotes ativos
+-- da rodada atual: nome do comprador, valor, carta e data/hora. Só
+-- leiloeiro vê (usa nome/e-mail real, não iniciais como o log
+-- público auction_bid_log). Reaproveita a mesma lógica de nome de
+-- auction_bidder_initials (full_name/name do metadata, senão e-mail).
+-- ================================================================
+create or replace function auction_round_recent_bids_admin(p_round_id bigint, p_limit int default 10)
+returns table(
+  auction_id bigint,
+  card_name text,
+  bidder_id uuid,
+  bidder_name text,
+  bidder_email text,
+  amount numeric,
+  created_at timestamptz
+)
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+begin
+  if not is_auction_admin() then
+    raise exception 'Apenas leiloeiros podem ver o feed de lances.';
+  end if;
+  return query
+    select
+      b.auction_id,
+      a.card_name,
+      b.bidder_id,
+      nullif(trim(coalesce(u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name', '')), '') as bidder_name,
+      u.email as bidder_email,
+      b.amount,
+      b.created_at
+    from auction_bids b
+    join auctions a on a.id = b.auction_id
+    join auth.users u on u.id = b.bidder_id
+    where a.round_id = p_round_id
+    order by b.created_at desc
+    limit p_limit;
+end;
+$$;
+grant execute on function auction_round_recent_bids_admin(bigint, int) to authenticated;
