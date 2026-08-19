@@ -142,15 +142,21 @@ async function renderLeilaoTab(){
     renderRoundsAdminList();
     await loadAdminAuctionOrders();
     renderAdminOrders();
-    renderLeilaoAnalises();
     renderLeilaoArquivo();
     await loadAuctionCosts();
-    renderLeilaoFinanceiro();
     if(typeof loadAdminLojaReservations==='function'){
       renderLojaAdminItems();
       await loadAdminLojaReservations();
       renderLojaAdminReservations();
     }
+    if(typeof loadLojaItemCosts==='function')await loadLojaItemCosts();
+    // renderLeilaoAnalises() vem DEPOIS de tudo acima porque o card de
+    // "total geral" (leilão+loja) e a comissão da loja dependem de
+    // aucAdminOrders/lojaAdminReservations já estarem carregados.
+    renderLeilaoAnalises();
+    renderLeilaoFinanceiro();
+    if(typeof renderLojaAnalises==='function')renderLojaAnalises();
+    if(typeof renderLojaFinanceiro==='function')renderLojaFinanceiro();
   }
   if(typeof isAdminEditor==='function'&&isAdminEditor()){
     await loadLeiloeiros();

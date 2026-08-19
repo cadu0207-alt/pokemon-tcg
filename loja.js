@@ -452,3 +452,278 @@ async function cancelLojaReservationAdmin(id){
   await loadLojaItems();await loadAdminLojaReservations();
   renderLojaAdminItems();renderLojaAdminReservations();renderLojaGrid();
 }
+
+// ================================================================
+// INTEGRAÇÃO COM ANÁLISES E FINANCEIRO — 19/08/2026
+//
+// Reaproveita funções genéricas já existentes em leilao.js
+// (aucCommissionBreakdown, aucMonthKey, aucWeekKey, aucBarChartSvg,
+// aucLeiloeiroNome) — nenhuma delas é específica de leilão, todas
+// recebem os dados como parâmetro, então servem igual pra loja.
+//
+// Comissão da Loja é SEPARADA da comissão do Leilão (confirmado com o
+// Eduardo): cada uma tem sua própria progressão de faixas sobre o total
+// pago do MÊS. O painel de Análises mostra as duas comissões mais um
+// card de "total geral" que é só SOMA informativa das duas (não muda
+// a faixa de nenhuma).
+// ================================================================
+
+// ── CUSTO DE AQUISIÇÃO (privado, mesmo padrão de auction_costs) ────
+let lojaItemCosts={}; // {item_id: {cost_price, note}}
+
+async function loadLojaItemCosts(){
+  const{data,error}=await sbClient.from('store_item_costs').select('*');
+  if(error){console.error('[loja] loadLojaItemCosts',error);lojaItemCosts={};return;}
+  lojaItemCosts={};
+  (Array.isArray(data)?data:[]).forEach(c=>{lojaItemCosts[c.item_id]={cost_price:c.cost_price,note:c.note};});
+}
+
+// itemId = chave real no banco (o custo é por ITEM, não por reserva);
+// rowId = id da reserva que gerou essa linha na tabela, só pra achar o
+// input certo quando o MESMO item aparece em mais de uma linha (várias
+// unidades vendidas em reservas diferentes) — sem isso, dois <input>
+// com o mesmo id na página fariam getElementById só enxergar o primeiro.
+async function saveLojaCostPrice(itemId,rowId){
+  if(!aucIsLeilaoAdmin)return;
+  const input=document.getElementById(`loja-cost-${rowId}`);
+  const raw=input?.value;
+  if(raw===''||raw==null){setStatus('Informe o valor que você pagou pelo item','err');return;}
+  const val=parseFloat(raw);
+  if(isNaN(val)||val<0){setStatus('Valor de custo inválido','err');return;}
+  const{error}=await sbClient.from('store_item_costs')
+    .upsert({item_id:itemId,cost_price:val,created_by:uid(),updated_at:new Date().toISOString()},{onConflict:'item_id'});
+  if(error){console.error('[loja] saveLojaCostPrice',error);setStatus('Erro ao salvar custo. Verifique se rodou leilao_setup.sql atualizado.','err');return;}
+  lojaItemCosts[itemId]={...(lojaItemCosts[itemId]||{}),cost_price:val};
+  setStatus('Custo salvo','ok');
+  renderLojaFinanceiro();
+}
+
+// ── ANÁLISES: KPIs + itens ativos por leiloeiro ─────────────────
+function renderLojaAnalisesKpis(){
+  const wrap=document.getElementById('loja-analises-kpis');
+  if(!wrap)return;
+  const ativos=lojaItems.filter(i=>i.status==='ativo');
+  const vendidoTotal=lojaAdminReservations.filter(r=>['pago','enviado','concluido'].includes(r.status))
+    .reduce((s,r)=>s+ +r.unit_price*r.qty,0);
+  const aguardando=lojaAdminReservations.filter(r=>r.status==='reservado');
+  const totalAguardando=aguardando.reduce((s,r)=>s+ +r.unit_price*r.qty,0);
+
+  const kpi=(label,value,color)=>`<div class="panel" style="padding:16px">
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${label}</div>
+    <div style="font-size:22px;font-weight:700;color:${color||'var(--text)'}">${value}</div>
+  </div>`;
+  wrap.innerHTML=
+    kpi('ITENS ATIVOS NA LOJA',ativos.length)+
+    kpi('VENDIDO NA LOJA (total)',`R$ ${fmtR(vendidoTotal)}`,'var(--teal)')+
+    kpi('RESERVAS AGUARDANDO PAGAMENTO',`${aguardando.length} · R$ ${fmtR(totalAguardando)}`,'var(--gold)');
+}
+
+function renderLojaAnalisesPorLeiloeiro(){
+  const wrap=document.getElementById('loja-analises-por-leiloeiro');
+  if(!wrap)return;
+  const ativos=lojaItems.filter(i=>i.status==='ativo');
+  const porLeiloeiro={};
+  ativos.forEach(i=>{
+    const key=i.created_by||'—';
+    if(!porLeiloeiro[key])porLeiloeiro[key]={count:0,valor:0};
+    porLeiloeiro[key].count++;
+    porLeiloeiro[key].valor+=+(i.price||0)*lojaAvailableQty(i);
+  });
+  const keys=Object.keys(porLeiloeiro);
+  if(!keys.length){wrap.innerHTML=`<div class="cv-item-empty">Nenhum item ativo na loja no momento.</div>`;return;}
+  wrap.innerHTML=keys.map(k=>{
+    const d=porLeiloeiro[k];
+    return`<div class="panel" style="padding:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <b>${esc(aucLeiloeiroNome(k))}</b>
+      <span style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace">${d.count} ${d.count===1?'item ativo':'itens ativos'} · R$ ${fmtR(d.valor)} em estoque</span>
+    </div>`;
+  }).join('');
+}
+
+// ── ANÁLISES: comissão da Loja (progressão SEPARADA da do Leilão) ──
+function renderLojaComissao(){
+  const wrap=document.getElementById('loja-analises-comissao');
+  if(!wrap)return;
+  const now=new Date();
+  const inicioMes=new Date(now.getFullYear(),now.getMonth(),1);
+  const pagosMes=lojaAdminReservations.filter(r=>
+    ['pago','enviado','concluido'].includes(r.status)&&r.paid_at&&new Date(r.paid_at)>=inicioMes
+  );
+  const totalMes=pagosMes.reduce((s,r)=>s+ +r.unit_price*r.qty,0);
+  const{commission,rows,effectiveRate}=aucCommissionBreakdown(totalMes);
+  const liquido=totalMes-commission;
+  const mesLabel=now.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+
+  const kpi=(label,value,color)=>`<div class="panel" style="padding:16px">
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${label}</div>
+    <div style="font-size:22px;font-weight:700;color:${color||'var(--text)'}">${value}</div>
+  </div>`;
+
+  const tabelaFaixas=rows.length?`<table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:11px">
+    <thead><tr style="text-align:left;color:var(--muted);font-family:'Space Mono',monospace;font-size:9px">
+      <th style="padding:4px 6px">FAIXA</th><th style="padding:4px 6px">TAXA</th>
+      <th style="padding:4px 6px;text-align:right">VALOR NA FAIXA</th><th style="padding:4px 6px;text-align:right">COMISSÃO</th>
+    </tr></thead>
+    <tbody>
+      ${rows.map(r=>`<tr style="border-top:1px solid var(--border)">
+        <td style="padding:4px 6px">R$ ${fmtR(r.from)} – ${r.to===Infinity?'∞':'R$ '+fmtR(r.to)}</td>
+        <td style="padding:4px 6px">${(r.rate*100).toFixed(1).replace('.0','')}%</td>
+        <td style="padding:4px 6px;text-align:right">R$ ${fmtR(r.amount)}</td>
+        <td style="padding:4px 6px;text-align:right;color:var(--accent)">R$ ${fmtR(r.commission)}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`:`<div class="cv-item-empty">Nenhuma reserva paga ainda em ${esc(mesLabel)}.</div>`;
+
+  wrap.innerHTML=`<div class="kpi-grid" style="margin-bottom:10px">
+      ${kpi('VENDIDO NA LOJA NO MÊS ('+mesLabel.toUpperCase()+')',`R$ ${fmtR(totalMes)}`,'var(--teal)')}
+      ${kpi('TAXA EFETIVA VIGENTE',`${(effectiveRate*100).toFixed(2)}%`)}
+      ${kpi('COMISSÃO MYDECK (LOJA)',`R$ ${fmtR(commission)}`,'var(--accent)')}
+      ${kpi('LÍQUIDO P/ LEILOEIRO',`R$ ${fmtR(liquido)}`,'var(--gold)')}
+    </div>
+    <div class="panel" style="padding:14px">
+      <div style="font-size:10.5px;color:var(--muted);margin-bottom:4px">
+        Comissão da Loja é calculada SEPARADA da comissão do Leilão — cada uma com sua própria progressão
+        sobre o total pago do mês (mesmas faixas: 7% até R$10k · 6% até R$20k · 5% até R$30k · 4% até R$40k ·
+        3% até R$50k · 2,5% até R$60k · 2% até R$70k · 1,5% até R$80k · 1% acima de R$80k).
+      </div>
+      ${tabelaFaixas}
+    </div>`;
+
+  renderLojaComissaoTotalGeral(totalMes,commission);
+}
+
+// Card informativo só de SOMA (Leilão + Loja) — não altera a faixa de
+// nenhuma das duas comissões, é só o panorama geral do mês. Depende de
+// aucAdminOrders/aucCommissionBreakdown já carregados por leilao.js.
+function renderLojaComissaoTotalGeral(totalMesLoja,comissaoLoja){
+  const wrap=document.getElementById('loja-analises-comissao-total');
+  if(!wrap)return;
+  if(typeof aucAdminOrders==='undefined'||typeof aucCommissionBreakdown!=='function'){wrap.innerHTML='';return;}
+  const now=new Date();
+  const inicioMes=new Date(now.getFullYear(),now.getMonth(),1);
+  const pagosMesLeilao=aucAdminOrders.filter(o=>
+    ['pago','enviado','concluido'].includes(o.status)&&o.paid_at&&new Date(o.paid_at)>=inicioMes
+  );
+  const totalMesLeilao=pagosMesLeilao.reduce((s,o)=>s+ +o.amount,0);
+  const comissaoLeilao=aucCommissionBreakdown(totalMesLeilao).commission;
+
+  const totalGeral=totalMesLoja+totalMesLeilao;
+  const comissaoGeral=comissaoLoja+comissaoLeilao;
+  const liquidoGeral=totalGeral-comissaoGeral;
+
+  const kpi=(label,value,color)=>`<div class="panel" style="padding:16px">
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${label}</div>
+    <div style="font-size:22px;font-weight:700;color:${color||'var(--text)'}">${value}</div>
+  </div>`;
+  wrap.innerHTML=`<div style="font-size:10.5px;color:var(--muted);margin-bottom:8px">
+      Soma informativa Leilão + Loja no mês (cada uma manteve sua própria faixa calculada separadamente acima):
+    </div>
+    <div class="kpi-grid">
+      ${kpi('VENDIDO NO MÊS (GERAL)',`R$ ${fmtR(totalGeral)}`,'var(--teal)')}
+      ${kpi('COMISSÃO MYDECK (GERAL)',`R$ ${fmtR(comissaoGeral)}`,'var(--accent)')}
+      ${kpi('LÍQUIDO P/ LEILOEIRO (GERAL)',`R$ ${fmtR(liquidoGeral)}`,'var(--gold)')}
+    </div>`;
+}
+
+function renderLojaAnalises(){
+  renderLojaAnalisesKpis();
+  renderLojaAnalisesPorLeiloeiro();
+  renderLojaComissao();
+}
+
+// ── FINANCEIRO: custo/venda/lucro por venda da loja ─────────────
+// Mesmo raciocínio de aucComputeFinanceiroRows: comissão do mês é
+// rateada proporcionalmente entre as vendas daquele mês, só pra cada
+// linha fazer sentido sozinha — a comissão "de verdade" é sempre a
+// calculada por faixa em renderLojaComissao().
+function lojaComputeFinanceiroRows(){
+  const pagosPorMes={};
+  lojaAdminReservations.forEach(r=>{
+    if(['pago','enviado','concluido'].includes(r.status)&&r.paid_at){
+      const k=aucMonthKey(r.paid_at);
+      pagosPorMes[k]=(pagosPorMes[k]||0)+ +r.unit_price*r.qty;
+    }
+  });
+  const comissaoPorMes={};
+  Object.keys(pagosPorMes).forEach(k=>{comissaoPorMes[k]=aucCommissionBreakdown(pagosPorMes[k]).commission;});
+
+  const vendidas=lojaAdminReservations.filter(r=>['pago','enviado','concluido'].includes(r.status));
+  return vendidas.map(r=>{
+    const item=r.store_items||lojaItems.find(i=>i.id===r.item_id)||{};
+    const venda=+r.unit_price*r.qty;
+    const costEntry=lojaItemCosts[r.item_id];
+    const custoUnit=(costEntry&&costEntry.cost_price!=null)?+costEntry.cost_price:null;
+    const custo=custoUnit!=null?custoUnit*r.qty:null;
+    let comissao=null;
+    if(r.paid_at){
+      const k=aucMonthKey(r.paid_at);
+      const totalMes=pagosPorMes[k]||0;
+      comissao=totalMes>0?comissaoPorMes[k]*(venda/totalMes):0;
+    }
+    const lucro=(custo!=null&&comissao!=null)?(venda-custo-comissao):null;
+    return{r,item,venda,custo,custoUnit,comissao,lucro};
+  }).sort((x,y)=>new Date(y.r.paid_at)-new Date(x.r.paid_at));
+}
+
+function lojaAggregateByPeriod(rows,granularity){
+  const map={};
+  rows.forEach(row=>{
+    if(row.lucro==null||!row.r.paid_at)return;
+    const key=granularity==='month'?aucMonthKey(row.r.paid_at):aucWeekKey(row.r.paid_at);
+    map[key]=(map[key]||0)+row.lucro;
+  });
+  return Object.keys(map).sort().slice(-12).map(k=>({key:k,value:map[k]}));
+}
+
+function renderLojaFinanceiro(){
+  const kpiWrap=document.getElementById('loja-financeiro-kpis');
+  const listWrap=document.getElementById('loja-financeiro-list');
+  const chartSemanaWrap=document.getElementById('loja-financeiro-chart-semana');
+  const chartMesWrap=document.getElementById('loja-financeiro-chart-mes');
+  if(!kpiWrap||!listWrap)return;
+
+  const rows=lojaComputeFinanceiroRows();
+  const receitaTotal=rows.reduce((s,r)=>s+r.venda,0);
+  const comCusto=rows.filter(r=>r.custo!=null);
+  const custoTotal=comCusto.reduce((s,r)=>s+r.custo,0);
+  const comLucro=rows.filter(r=>r.lucro!=null);
+  const lucroTotal=comLucro.reduce((s,r)=>s+r.lucro,0);
+  const comissaoTotal=comLucro.reduce((s,r)=>s+(r.comissao||0),0);
+  const faltandoCusto=rows.length-comCusto.length;
+
+  const kpi=(label,value,color)=>`<div class="panel" style="padding:16px">
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${label}</div>
+    <div style="font-size:22px;font-weight:700;color:${color||'var(--text)'}">${value}</div>
+  </div>`;
+  kpiWrap.innerHTML=
+    kpi('RECEITA TOTAL (LOJA)',`R$ ${fmtR(receitaTotal)}`,'var(--teal)')+
+    kpi('CUSTO CADASTRADO',`R$ ${fmtR(custoTotal)}`)+
+    kpi('COMISSÃO MYDECK (rateada)',`R$ ${fmtR(comissaoTotal)}`,'var(--gold)')+
+    kpi('LUCRO LÍQUIDO (LOJA)',`R$ ${fmtR(lucroTotal)}`,lucroTotal>=0?'var(--teal)':'var(--accent)')+
+    kpi('FALTA CADASTRAR CUSTO',faltandoCusto,faltandoCusto?'var(--gold)':'var(--text)');
+
+  if(chartSemanaWrap)chartSemanaWrap.innerHTML=aucBarChartSvg(lojaAggregateByPeriod(rows,'week'));
+  if(chartMesWrap)chartMesWrap.innerHTML=aucBarChartSvg(lojaAggregateByPeriod(rows,'month'));
+
+  if(!rows.length){listWrap.innerHTML=`<div class="cv-item-empty">Nenhuma venda da loja ainda.</div>`;return;}
+  listWrap.innerHTML=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">
+    <thead><tr style="text-align:left;color:var(--muted);font-family:'Space Mono',monospace;font-size:9px">
+      <th style="padding:6px">ITEM</th><th style="padding:6px">COMPRADOR</th>
+      <th style="padding:6px;text-align:right">VENDA</th><th style="padding:6px">CUSTO (UNIT.)</th>
+      <th style="padding:6px;text-align:right">COMISSÃO</th><th style="padding:6px;text-align:right">LUCRO</th>
+    </tr></thead>
+    <tbody>
+      ${rows.map(row=>`<tr style="border-top:1px solid var(--border)">
+        <td style="padding:6px">${esc(row.item.title||('Item #'+row.r.item_id))}${row.r.qty>1?` ×${row.r.qty}`:''}</td>
+        <td style="padding:6px;color:var(--muted)">${esc(row.r.buyer_email||'—')}</td>
+        <td style="padding:6px;text-align:right;color:var(--teal)">R$ ${fmtR(row.venda)}</td>
+        <td style="padding:6px">
+          <input type="number" id="loja-cost-${row.r.id}" value="${row.custoUnit!=null?row.custoUnit:''}" placeholder="0,00" step="0.01" min="0" style="width:90px" class="cv-select">
+          <button class="cv-item-remove" style="padding:2px 8px;font-size:10px" onclick="saveLojaCostPrice(${row.r.item_id},${row.r.id})">💾</button>
+        </td>
+        <td style="padding:6px;text-align:right;color:var(--gold)">${row.comissao!=null?'R$ '+fmtR(row.comissao):'—'}</td>
+        <td style="padding:6px;text-align:right;font-weight:700;color:${row.lucro==null?'var(--muted)':(row.lucro>=0?'var(--teal)':'var(--accent)')}">${row.lucro!=null?'R$ '+fmtR(row.lucro):'—'}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}

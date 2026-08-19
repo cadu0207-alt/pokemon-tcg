@@ -1168,3 +1168,33 @@ as $$
   where status = 'reservado' and expires_at < now();
 $$;
 grant execute on function expire_store_reservations() to authenticated;
+
+-- ================================================================
+-- CUSTO DE AQUISIÇÃO DOS ITENS DA LOJA — integração com Financeiro
+-- (19/08/2026)
+--
+-- Mesmo padrão de auction_costs: tabela PRIVADA (só leiloeiro lê/escreve
+-- via is_auction_admin()), nunca exposta pro comprador. Não dá pra
+-- colocar custo direto em store_items porque essa tabela tem SELECT
+-- público (vitrine) — colocar lá vazaria o preço de custo pra qualquer
+-- visitante que olhasse a resposta da API.
+--
+-- Comissão da Loja fica SEPARADA da comissão do Leilão (confirmado com
+-- o Eduardo) — cada uma com sua própria progressão de faixas sobre o
+-- total pago do mês; o painel mostra as duas mais um card de total
+-- geral (só soma, não afeta a faixa de nenhuma das duas).
+-- ================================================================
+
+create table if not exists store_item_costs (
+  item_id     bigint primary key references store_items(id) on delete cascade,
+  cost_price  numeric,
+  note        text,
+  created_by  uuid references auth.users(id),
+  updated_at  timestamptz not null default now()
+);
+
+alter table store_item_costs enable row level security;
+
+drop policy if exists "store_item_costs_admin_all" on store_item_costs;
+create policy "store_item_costs_admin_all" on store_item_costs
+  for all using (is_auction_admin()) with check (is_auction_admin());
