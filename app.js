@@ -612,40 +612,82 @@ function getVerFromRar(rar){
 }
 
 // ── CARREGAR ──────────────────────────────────────────────────────
+// Busca todas as linhas de uma query paginando em blocos de 1000 (limite
+// padrão de "Max Rows" do PostgREST/Supabase) — sem isso, tabelas com mais
+// de 1000 registros (ex: collection de quem já coletou muitas cartas)
+// ficam travadas exatamente em 1000 linhas lidas, mesmo com mais no banco.
+async function fetchAllRows(queryFactory){
+  const pageSize=1000;let from=0;let all=[];
+  while(true){
+    const{data,error}=await queryFactory().range(from,from+pageSize-1);
+    if(error) return{data:null,error};
+    all=all.concat(data||[]);
+    if(!data||data.length<pageSize) break;
+    from+=pageSize;
+  }
+  return{data:all,error:null};
+}
 async function loadAll(){
   setStatus('Conectando...','warning');
   if(!uid()){setStatus('Faça login','warning');return;}
-  try{
-    const myUid=uid();
-    const[{data:p},{data:c},{data:col},{data:vh},{data:lst},{data:bo}]=await Promise.all([
-      sbClient.from('purchases').select('*').eq('user_id',myUid).order('date',{ascending:false}),
-      sbClient.from('pulled_cards').select('*').eq('user_id',myUid).order('id',{ascending:true}),
-      sbClient.from('collection').select('slot_key,quantity,origins').eq('user_id',myUid),
-      sbClient.from('value_history').select('date,total_value').eq('user_id',myUid).order('date',{ascending:true}),
-      sbClient.from('card_listings').select('*').eq('user_id',myUid).order('created_at',{ascending:false}),
-      sbClient.from('buy_orders').select('*').eq('buyer_id',myUid).order('created_at',{ascending:false})
-    ]);
-    purchases=Array.isArray(p)?p:[];
-    pulledCards=Array.isArray(c)?c:[];
-    collected=new Set((Array.isArray(col)?col:[]).map(r=>r.slot_key));
-    collectedQty=new Map((Array.isArray(col)?col:[]).map(r=>[r.slot_key,{qty:r.quantity||1,origins:r.origins||[]}]));
-    valueHistory=Array.isArray(vh)?vh:[];
-    cardListings=Array.isArray(lst)?lst:[];
-    buyOrders=Array.isArray(bo)?bo:[];
+  if(!sbClient){
+    // Cliente Supabase não inicializou (CDN do supabase-js não carregou pro
+    // usuário) — diferencia esse caso no console pra não confundir com
+    // instabilidade real do Supabase.
+    setStatus('Erro de conexão','error');
+    console.error('loadAll: sbClient é null — Supabase CDN não carregou');
+    return;
+  }
+  const myUid=uid();
+  // Promise.allSettled em vez de Promise.all: se o Supabase estiver
+  // instável e só 1 das 6 queries falhar, as outras 5 continuam sendo
+  // usadas — antes, qualquer falha isolada derrubava a dashboard inteira
+  // com "Erro de conexão", mesmo com o resto dos dados disponível.
+  const results=await Promise.allSettled([
+    sbClient.from('purchases').select('*').eq('user_id',myUid).order('date',{ascending:false}),
+    sbClient.from('pulled_cards').select('*').eq('user_id',myUid).order('id',{ascending:true}),
+    fetchAllRows(()=>sbClient.from('collection').select('slot_key,quantity,origins').eq('user_id',myUid)),
+    sbClient.from('value_history').select('date,total_value').eq('user_id',myUid).order('date',{ascending:true}),
+    sbClient.from('card_listings').select('*').eq('user_id',myUid).order('created_at',{ascending:false}),
+    sbClient.from('buy_orders').select('*').eq('buyer_id',myUid).order('created_at',{ascending:false})
+  ]);
+  const[rp,rc,rcol,rvh,rlst,rbo]=results;
+  const okData=r=>(r.status==='fulfilled'&&!r.value?.error)?(r.value.data||[]):null;
+  const failedCount=results.filter(r=>r.status==='rejected'||r.value?.error).length;
+  const dp=okData(rp),dc=okData(rc),dcol=okData(rcol),dvh=okData(rvh),dlst=okData(rlst),dbo=okData(rbo);
+  if(Array.isArray(dp))purchases=dp;
+  if(Array.isArray(dc))pulledCards=dc;
+  if(Array.isArray(dcol)){
+    collected=new Set(dcol.map(r=>r.slot_key));
+    collectedQty=new Map(dcol.map(r=>[r.slot_key,{qty:r.quantity||1,origins:r.origins||[]}]));
+  }
+  if(Array.isArray(dvh))valueHistory=dvh;
+  if(Array.isArray(dlst))cardListings=dlst;
+  if(Array.isArray(dbo))buyOrders=dbo;
+  if(failedCount===results.length){
+    // as 6 falharam — sem dados nenhum pra mostrar, aí sim é erro de conexão
+    setStatus('Erro de conexão','error');
+    console.error('loadAll: todas as queries falharam',results);
+    return;
+  }
+  if(failedCount>0){
+    setStatus('Conexão instável','warning');
+    console.warn('loadAll: '+failedCount+' de '+results.length+' queries falharam — mostrando dados parciais',results);
+  }else{
     setStatus('Online ✓','ok');
-    fetchCambio();  // atualiza USD_BRL e EUR_BRL para conversão de preços
-    renderAll();updateHomeStats();
-    loadCustomBinders();
-    renderTabs();
-    if(typeof initFichario==='function')initFichario();
-    // Carrega preços ao vivo para o set inicial
-    const{cards:_initCards}=getSetData();
-    fetchLivePrices(currentSet,_initCards);
-    // Se a URL já chegou com #aba (link compartilhado, recarregou a página,
-    // favorito etc.), navega pra ela agora que os dados terminaram de
-    // carregar — antes disso o fichário renderizaria sem a coleção do usuário.
-    routeFromHash();
-  }catch(e){setStatus('Erro de conexão','error');console.error(e);}
+  }
+  fetchCambio();  // atualiza USD_BRL e EUR_BRL para conversão de preços
+  renderAll();updateHomeStats();
+  loadCustomBinders();
+  renderTabs();
+  if(typeof initFichario==='function')initFichario();
+  // Carrega preços ao vivo para o set inicial
+  const{cards:_initCards}=getSetData();
+  fetchLivePrices(currentSet,_initCards);
+  // Se a URL já chegou com #aba (link compartilhado, recarregou a página,
+  // favorito etc.), navega pra ela agora que os dados terminaram de
+  // carregar — antes disso o fichário renderizaria sem a coleção do usuário.
+  routeFromHash();
 }
 function setStatus(txt,state){
   const el=document.getElementById('status-txt');if(el)el.textContent=txt;

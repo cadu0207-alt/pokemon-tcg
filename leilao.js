@@ -760,14 +760,28 @@ async function loadRoundsAndAuctions(){
     await sbClient.rpc('flag_overdue_bidders');
   }catch(e){console.error('[leilao] manutenção lazy',e);}
 
-  const[{data:rounds,error:e1},{data:auctions,error:e2}]=await Promise.all([
-    sbClient.from('auction_rounds').select('*').order('start_at',{ascending:false}),
-    sbClient.from('auctions').select('*').order('end_at',{ascending:true})
-  ]);
+  // try/catch: se a conexão cair no meio do Promise.all (Supabase
+  // instável), a promise rejeita em vez de resolver com {error} — sem
+  // isso a função quebrava sem tratamento e a lista de leilões parava de
+  // atualizar silenciosamente, sem nenhum aviso na tela. Em caso de falha,
+  // mantém a última lista carregada em vez de zerar (aucRounds/aucAuctions
+  // ficam como estavam, não em branco).
+  let res;
+  try{
+    res=await Promise.all([
+      sbClient.from('auction_rounds').select('*').order('start_at',{ascending:false}),
+      sbClient.from('auctions').select('*').order('end_at',{ascending:true})
+    ]);
+  }catch(e){
+    console.error('[leilao] loadRoundsAndAuctions — falha de conexão',e);
+    setStatus('Conexão instável — lista de leilões pode estar desatualizada','warning');
+    return;
+  }
+  const[{data:rounds,error:e1},{data:auctions,error:e2}]=res;
   if(e1)console.error('[leilao] load rounds',e1);
   if(e2)console.error('[leilao] load auctions',e2);
-  aucRounds=Array.isArray(rounds)?rounds:[];
-  aucAuctions=Array.isArray(auctions)?auctions:[];
+  aucRounds=Array.isArray(rounds)?rounds:(aucRounds||[]);
+  aucAuctions=Array.isArray(auctions)?auctions:(aucAuctions||[]);
 }
 
 async function loadMyAuctionOrders(){
@@ -1415,7 +1429,22 @@ async function submitBid(auctionId,idSuffix){
     return;
   }
 
-  const{error}=await sbClient.rpc('place_bid',{p_auction_id:auctionId,p_amount:amount});
+  // try/catch aqui é essencial: sbClient.rpc() não só retorna {error} pra
+  // erros de negócio (lance baixo, prazo vencido etc) — se a CONEXÃO cair
+  // no meio da chamada (Supabase instável, timeout, sem internet), a
+  // promise REJEITA em vez de resolver com {error}, e sem esse catch a
+  // função quebrava silenciosamente: o usuário clicava "dar lance", a tela
+  // não dava nenhum feedback, e ele não tinha como saber se o lance foi
+  // registrado ou não.
+  if(statusEl)statusEl.textContent='Enviando lance...';
+  let error;
+  try{
+    ({error}=await sbClient.rpc('place_bid',{p_auction_id:auctionId,p_amount:amount}));
+  }catch(e){
+    console.error('[leilao] submitBid — falha de conexão',e);
+    if(statusEl)statusEl.textContent='Falha de conexão ao enviar o lance — confira se ele foi registrado antes de tentar de novo.';
+    return;
+  }
   if(error){
     if(statusEl)statusEl.textContent=error.message||'Não foi possível registrar o lance.';
     return;
@@ -1424,9 +1453,15 @@ async function submitBid(auctionId,idSuffix){
   if(input)input.value='';
   setStatus('Lance registrado!','ok');
   aucMyBidAuctionIds.add(auctionId); // já entra na fileira "Seus leilões" sem esperar reload
-  await loadRoundsAndAuctions();
-  renderAuctionsList();
-  refreshOpenAuctionZoom();
+  try{
+    await loadRoundsAndAuctions();
+    renderAuctionsList();
+    refreshOpenAuctionZoom();
+  }catch(e){
+    // o lance já foi salvo (chegamos aqui só depois do rpc dar certo) —
+    // uma falha ao recarregar a lista não deve parecer que o lance falhou.
+    console.error('[leilao] submitBid — falha ao recarregar lista após lance',e);
+  }
 }
 
 // ── TELEFONE/WHATSAPP — máscara (xx) xxxxx-xxxx e extração de dígitos ──
