@@ -2359,39 +2359,50 @@ function renderTabs(){
     ✨ Meus <span class="ctab-n">Fichários</span></div>`;
   // Fichários personalizados fixados (22/07/2026) — aparecem como abas próprias,
   // igual as coleções normais, além de dentro de "Meus Fichários".
+  // 20/08/2026: cada iteração ganhou seu próprio try/catch — antes, se UM
+  // fichário fixado ou UM set desse erro (ex: dado incompleto por causa da
+  // instabilidade do Supabase, ou entrada sem "label" no catálogo), a
+  // exceção interrompia o forEach inteiro ANTES do `container.innerHTML=html`
+  // no final rodar — resultado: a barra de abas inteira ficava travada no
+  // que já estava na tela (só o set inicial), sem "Meus Fichários" nem os
+  // outros sets, mesmo os que não tinham nada de errado.
   pinnedBinders.forEach(pid=>{
-    const b=customBinders.find(x=>String(x.id)===pid);
-    if(!b)return;
-    const tabId='__cb__'+pid;
-    const isActive=cur===tabId;
-    const col=b.cover_color||'#a855f7';
-    html+=`<div class="ctab${isActive?' active':''}" id="fic-tab-cb-${pid}"
-      onclick="switchSet('${tabId}',this)"
-      style="${isActive?`border-bottom:2px solid ${col};color:${col}`:''}">
-      ${b.emoji||'📚'} ${b.name} <span class="ctab-n">${getBinderCards(b).length}</span></div>`;
+    try{
+      const b=customBinders.find(x=>String(x.id)===pid);
+      if(!b)return;
+      const tabId='__cb__'+pid;
+      const isActive=cur===tabId;
+      const col=b.cover_color||'#a855f7';
+      html+=`<div class="ctab${isActive?' active':''}" id="fic-tab-cb-${pid}"
+        onclick="switchSet('${tabId}',this)"
+        style="${isActive?`border-bottom:2px solid ${col};color:${col}`:''}">
+        ${b.emoji||'📚'} ${b.name} <span class="ctab-n">${getBinderCards(b).length}</span></div>`;
+    }catch(e){console.error('[renderTabs] falha ao montar aba do fichário fixado',pid,e);}
   });
   let lastSeries='';
   myCollections.forEach(id=>{
-    const s=SET_CATALOG.find(s=>s.id===id);
-    if(!s)return;
-    if(hasME&&hasSV&&lastSeries&&lastSeries!==s.series){
-      html+=`<div style="width:1px;background:var(--border);margin:4px 4px;flex-shrink:0"></div>`;
-    }
-    lastSeries=s.series;
-    const isActive=cur===id;
-    const lbl=id.toUpperCase().replace('SV8PT5','SV8.5').replace('SV6PT5','SV6.5')
-                .replace('SV4PT5','SV4.5').replace('SV3PT5','151');
-    // NOVO 02/08/2026 (relato de usuários: queriam o nome completo da coleção
-    // na aba, não só o código ME05/ME06/etc) — s.label já tinha o nome certo
-    // (ex "ME05(PBL) — Escuridão Absoluta"), só nunca era usado aqui. Pega só
-    // a parte depois do "—" (o nome bonito, sem repetir o código/sigla entre
-    // parênteses) e mostra ao lado do código, num span separado que não herda
-    // o uppercase do .ctab (nome próprio fica mais legível em minúsculas).
-    const niceName=(s.label.split('—')[1]||'').trim();
-    html+=`<div class="ctab${isActive?' active':''}" id="fic-tab-${id}"
-      onclick="switchSet('${id}',this)"
-      ${s.upcoming?'style="opacity:.7"':''}>
-      ${s.emoji} ${lbl}${niceName?` <span class="ctab-name">${niceName}</span>`:''} <span class="ctab-n">${s.upcoming?'breve':s.cards}</span></div>`;
+    try{
+      const s=SET_CATALOG.find(s=>s.id===id);
+      if(!s)return;
+      if(hasME&&hasSV&&lastSeries&&lastSeries!==s.series){
+        html+=`<div style="width:1px;background:var(--border);margin:4px 4px;flex-shrink:0"></div>`;
+      }
+      lastSeries=s.series;
+      const isActive=cur===id;
+      const lbl=id.toUpperCase().replace('SV8PT5','SV8.5').replace('SV6PT5','SV6.5')
+                  .replace('SV4PT5','SV4.5').replace('SV3PT5','151');
+      // NOVO 02/08/2026 (relato de usuários: queriam o nome completo da coleção
+      // na aba, não só o código ME05/ME06/etc) — s.label já tinha o nome certo
+      // (ex "ME05(PBL) — Escuridão Absoluta"), só nunca era usado aqui. Pega só
+      // a parte depois do "—" (o nome bonito, sem repetir o código/sigla entre
+      // parênteses) e mostra ao lado do código, num span separado que não herda
+      // o uppercase do .ctab (nome próprio fica mais legível em minúsculas).
+      const niceName=((s.label||'').split('—')[1]||'').trim();
+      html+=`<div class="ctab${isActive?' active':''}" id="fic-tab-${id}"
+        onclick="switchSet('${id}',this)"
+        ${s.upcoming?'style="opacity:.7"':''}>
+        ${s.emoji} ${lbl}${niceName?` <span class="ctab-name">${niceName}</span>`:''} <span class="ctab-n">${s.upcoming?'breve':s.cards}</span></div>`;
+    }catch(e){console.error('[renderTabs] falha ao montar aba do set',id,e);}
   });
   container.innerHTML=html;
   if(typeof updateHsub==='function')updateHsub();
@@ -3198,7 +3209,23 @@ function binderProgress(binder){
 // ── Supabase CRUD ─────────────────────────────────────────────────
 async function loadCustomBinders(){
   if(!uid())return;
-  const{data}=await sbClient.from('custom_binders').select('*').eq('user_id',uid()).order('created_at',{ascending:false});
+  // 20/08/2026: try/catch + retry — essa função é chamada sem await (fire-
+  // and-forget) lá em loadAll(), então se a query falhar por instabilidade
+  // do Supabase, a exceção não tinha tratamento nenhum: quebrava aqui e os
+  // dois re-renders do fim (que trazem "Meus Fichários"/fixados de volta
+  // pras abas) nunca aconteciam — abas ficavam faltando até um F5 com sorte.
+  let data,error;
+  for(let attempt=1;attempt<=3;attempt++){
+    try{
+      ({data,error}=await sbClient.from('custom_binders').select('*').eq('user_id',uid()).order('created_at',{ascending:false}));
+      break;
+    }catch(e){
+      console.error(`[loadCustomBinders] falha de conexão (tentativa ${attempt})`,e);
+      if(attempt===3)return; // desiste sem mexer em customBinders — mantém o que já tinha em vez de zerar
+      await new Promise(r=>setTimeout(r,attempt*1500));
+    }
+  }
+  if(error){console.error('[loadCustomBinders] erro',error);return;}
   customBinders=data||[];
   // CORRIGIDO 27/07/2026: no login inicial, loadCustomBinders() é chamado
   // sem await (fire-and-forget) — renderTabs()/updateDashProgress() já
