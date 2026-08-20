@@ -1491,11 +1491,11 @@ function renderCardsAll(){
     return;
   }
   wrap.innerHTML=slots.map(({c,sid,ver,key,qty,ligaPrice})=>{
-    const imgSrc=getBinderImg(c,sid);
+    const imgSrc=imgThumb(getBinderImg(c,sid));
     const col=VER_COLOR[ver]||'#888';
     const listed=cardListings.find(l=>l.slot_key===key);
     return`<div class="cv-item" onclick="openVendaModal('${sid}','${c.n}','${ver}')" title="Colocar à venda">
-      ${imgSrc?`<img class="cv-item-img" src="${imgSrc}" alt="${c.name}" onerror="this.style.display='none'">`:
+      ${imgSrc?`<img class="cv-item-img" src="${imgSrc}" loading="lazy" decoding="async" alt="${c.name}" onerror="this.style.display='none'">`:
         `<div class="cv-item-icon">🃏</div>`}
       <div class="cv-item-info">
         <div class="cv-item-name">${c.name}</div>
@@ -1525,13 +1525,13 @@ function renderCardsVenda(){
   wrap.innerHTML=list.map(l=>{
     const col=VER_COLOR[l.version]||'#888';
     const c=allCards.find(cc=>cc._setId===l.set_id&&cc.n===l.card_n);
-    const imgSrc=c?getBinderImg(c,l.set_id):null;
+    const imgSrc=c?imgThumb(getBinderImg(c,l.set_id)):null;
     const selIdx=_vendaSelected.indexOf(l.slot_key);
     const isSel=selIdx>-1;
     const clickAttr=_vendaSelectMode?`toggleVendaSelect('${l.slot_key}')`:`openVendaModal('${l.set_id}','${l.card_n}','${l.version}')`;
     return`<div class="cv-item${isSel?' cv-selected':''}" onclick="${clickAttr}" title="${_vendaSelectMode?'Selecionar para imagem':'Editar anúncio'}">
       ${_vendaSelectMode?`<div class="cv-select-badge">${isSel?(selIdx+1):''}</div>`:''}
-      ${imgSrc?`<img class="cv-item-img" src="${imgSrc}" alt="${l.card_name}" onerror="this.style.display='none'">`:
+      ${imgSrc?`<img class="cv-item-img" src="${imgSrc}" loading="lazy" decoding="async" alt="${l.card_name}" onerror="this.style.display='none'">`:
         `<div class="cv-item-icon">🏷️</div>`}
       <div class="cv-item-info">
         <div class="cv-item-name">${l.card_name}</div>
@@ -1599,9 +1599,9 @@ function renderCardsBuySearch(){
   }
   wrap.innerHTML=results.map(c=>{
     const sid=c._setId;
-    const imgSrc=getBinderImg(c,sid);
+    const imgSrc=imgThumb(getBinderImg(c,sid));
     return`<div class="cv-item" onclick="openBuyOrderModal('${sid}','${c.n}')" title="Registrar ordem de compra">
-      ${imgSrc?`<img class="cv-item-img" src="${imgSrc}" alt="${c.name}" onerror="this.style.display='none'">`:
+      ${imgSrc?`<img class="cv-item-img" src="${imgSrc}" loading="lazy" decoding="async" alt="${c.name}" onerror="this.style.display='none'">`:
         `<div class="cv-item-icon">🃏</div>`}
       <div class="cv-item-info">
         <div class="cv-item-name">${c.name}</div>
@@ -1626,9 +1626,9 @@ function renderMyBuyOrders(){
   wrap.innerHTML=list.map(o=>{
     const col=VER_COLOR[o.version]||'#888';
     const c=allCards.find(cc=>cc._setId===o.set_id&&cc.n===o.card_n);
-    const imgSrc=c?getBinderImg(c,o.set_id):null;
+    const imgSrc=c?imgThumb(getBinderImg(c,o.set_id)):null;
     return`<div class="cv-item" onclick="openBuyOrderModal('${o.set_id}','${o.card_n}')" title="Editar ordem">
-      ${imgSrc?`<img class="cv-item-img" src="${imgSrc}" alt="${o.card_name}" onerror="this.style.display='none'">`:
+      ${imgSrc?`<img class="cv-item-img" src="${imgSrc}" loading="lazy" decoding="async" alt="${o.card_name}" onerror="this.style.display='none'">`:
         `<div class="cv-item-icon">🎯</div>`}
       <div class="cv-item-info">
         <div class="cv-item-name">${o.card_name}</div>
@@ -2679,9 +2679,9 @@ function filterBoosterCards(q,boosterN,setId){
   if(!container)return;
   if(!filtered.length){container.innerHTML=q.length>1?'<div style="color:var(--muted);font-size:11px;padding:6px">Nenhuma carta encontrada</div>':'';return;}
   container.innerHTML=filtered.map(c=>{
-    const imgSrc=getBinderImg(c,setId);
+    const imgSrc=imgThumb(getBinderImg(c,setId));
     return`<div class="card-pick">
-      ${imgSrc?`<img class="card-pick-img" src="${imgSrc}" alt="${c.name}" onerror="this.style.display='none'">`:
+      ${imgSrc?`<img class="card-pick-img" src="${imgSrc}" loading="lazy" decoding="async" alt="${c.name}" onerror="this.style.display='none'">`:
         `<div style="width:36px;height:50px;background:var(--surface2);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px">${c.color?'🃏':'🃏'}</div>`}
       <div class="card-pick-info"><div class="card-pick-name">${c.name}</div><div class="card-pick-num">#${c.n} · ${c.rare||''}</div></div>
       <div class="card-pick-check" onclick='addToBooster(${safeJSON(c)},"${setId}",${boosterN})' title="Adicionar">＋</div>
@@ -3872,7 +3872,7 @@ async function initHomePrices(){/* desativada — ver renderHomeSets() */}
 
 function homeImg(setId,n){
   const legacy={me1:'meg',me2:'me02',me3:'me03',me4:'me04',me5:'me05',me6:'me06'};
-  return getBinderImg({n:String(n)},legacy[setId]||setId);
+  return imgThumb(getBinderImg({n:String(n)},legacy[setId]||setId));
 }
 
 function _topCards(id,k){
