@@ -611,6 +611,98 @@ function getVerFromRar(rar){
   return 'N';
 }
 
+// ── OUTBOX (backup local + auto-sync) — fichário ────────────────────
+// 20/08/2026. Quando marcar/desmarcar carta falha por QUEDA DE CONEXÃO
+// (não por erro de negócio do banco — RLS, validação etc, esse continua
+// revertendo e avisando na hora), guarda a intenção no localStorage em vez
+// de desfazer a marcação na tela. Assim que a conexão volta — evento
+// 'online' do navegador + retry a cada 20s como reforço, porque nem todo
+// navegador/rede dispara 'online' de forma confiável — tenta sincronizar
+// sozinho, na ordem em que foi guardado.
+// Por que é seguro pra esse caso específico: cada slot_key só tem 2 estados
+// (coletado / não coletado) e a gravação é upsert/delete por slot_key — não
+// duplica nem interessa em qual ordem várias tentativas cheguem, o
+// resultado final converge sempre pro mesmo estado. Esse padrão NÃO foi
+// usado no leilão (dar lance) de propósito: lance depende do valor mínimo
+// no momento exato e do prazo, guardar e reenviar depois daria uma falsa
+// sensação de "já dei o lance" quando ele pode chegar tarde ou inválido —
+// lá o certo é erro imediato e claro, como já está.
+const MD_OUTBOX_KEY='md_collection_outbox_v1';
+function mdOutboxRead(){
+  try{return JSON.parse(localStorage.getItem(MD_OUTBOX_KEY)||'{}');}catch(e){return{};}
+}
+function mdOutboxWrite(ob){
+  try{localStorage.setItem(MD_OUTBOX_KEY,JSON.stringify(ob));}catch(e){console.error('[outbox] falha ao salvar localStorage',e);}
+}
+function mdOutboxSet(slotKey,action){
+  const ob=mdOutboxRead();
+  ob[slotKey]={action,ts:Date.now()};
+  mdOutboxWrite(ob);
+}
+function mdOutboxClear(slotKey){
+  const ob=mdOutboxRead();
+  if(ob[slotKey]){delete ob[slotKey];mdOutboxWrite(ob);}
+}
+function mdOutboxCount(){return Object.keys(mdOutboxRead()).length;}
+// Reaplica sobre collected/collectedQty as pendências ainda não
+// sincronizadas — chamado logo depois de carregar os dados do servidor em
+// loadAll(), senão um card marcado offline "voltaria a desmarcar" na tela
+// assim que os dados do servidor (que ainda não têm essa gravação) chegam.
+function mdOutboxApplyToLocalState(){
+  const ob=mdOutboxRead();
+  for(const slotKey in ob){
+    if(ob[slotKey].action==='add'){collected.add(slotKey);if(!collectedQty.has(slotKey))collectedQty.set(slotKey,{qty:1,origins:[]});}
+    else{collected.delete(slotKey);collectedQty.delete(slotKey);}
+  }
+}
+let mdOutboxSyncing=false;
+async function mdOutboxSync(){
+  if(mdOutboxSyncing||!sbClient||!uid()) return;
+  const ob=mdOutboxRead();
+  const keys=Object.keys(ob);
+  if(!keys.length) return;
+  mdOutboxSyncing=true;
+  for(const slotKey of keys){
+    const entry=ob[slotKey];
+    try{
+      let error;
+      if(entry.action==='add'){
+        ({error}=await sbClient.from('collection').upsert({slot_key:slotKey,user_id:uid(),quantity:1},{onConflict:'user_id,slot_key'}));
+      }else{
+        ({error}=await sbClient.from('collection').delete().eq('slot_key',slotKey).eq('user_id',uid()));
+      }
+      if(error){
+        // chegou no servidor mas foi rejeitado (erro de negócio) — re-tentar
+        // sozinho não resolve, reverte o estado otimista e avisa.
+        console.error('[outbox] erro ao sincronizar',slotKey,error);
+        mdOutboxClear(slotKey);
+        if(entry.action==='add'){collected.delete(slotKey);collectedQty.delete(slotKey);}
+        else{collected.add(slotKey);collectedQty.set(slotKey,{qty:1,origins:[]});}
+        toast('Não foi possível sincronizar uma carta — revertida','error');
+      }else{
+        mdOutboxClear(slotKey);
+      }
+    }catch(e){
+      // ainda sem conexão — deixa na fila e para por aqui, tenta tudo de
+      // novo na próxima chamada (evento online ou o timer de 20s)
+      console.warn('[outbox] ainda sem conexão, mantendo na fila',slotKey,e);
+      mdOutboxSyncing=false;
+      return;
+    }
+  }
+  mdOutboxSyncing=false;
+  renderBinder();updateDashProgress();
+  const remaining=mdOutboxCount();
+  const dotClass=document.getElementById('status-dot')?.className||'';
+  if(remaining===0&&dotClass.includes('dot-warning')){
+    setStatus('Online ✓','ok'); // tudo sincronizado, tira o aviso de pendência
+  }else if(remaining>0){
+    setStatus(`Sincronizando ${remaining} pendência(s)...`,'warning');
+  }
+}
+window.addEventListener('online',()=>{mdOutboxSync();});
+setInterval(()=>{if(mdOutboxCount()>0)mdOutboxSync();},20000);
+
 // ── CARREGAR ──────────────────────────────────────────────────────
 // Busca todas as linhas de uma query paginando em blocos de 1000 (limite
 // padrão de "Max Rows" do PostgREST/Supabase) — sem isso, tabelas com mais
@@ -660,6 +752,10 @@ async function loadAll(){
   if(Array.isArray(dcol)){
     collected=new Set(dcol.map(r=>r.slot_key));
     collectedQty=new Map(dcol.map(r=>[r.slot_key,{qty:r.quantity||1,origins:r.origins||[]}]));
+    // reaplica marcações feitas offline nesta ou numa sessão anterior que
+    // ainda não confirmaram no servidor — senão elas "desapareceriam" da
+    // tela assim que os dados do servidor (desatualizados) chegam aqui.
+    mdOutboxApplyToLocalState();
   }
   if(Array.isArray(dvh))valueHistory=dvh;
   if(Array.isArray(dlst))cardListings=dlst;
@@ -681,6 +777,7 @@ async function loadAll(){
   loadCustomBinders();
   renderTabs();
   if(typeof initFichario==='function')initFichario();
+  mdOutboxSync(); // tenta sincronizar qualquer pendência de sessão anterior
   // Carrega preços ao vivo para o set inicial
   const{cards:_initCards}=getSetData();
   fetchLivePrices(currentSet,_initCards);
@@ -700,21 +797,42 @@ async function toggleSlot(key){
   const wasCollected=collected.has(key);
   const prevEntry=collectedQty.get(key);
   let error=null;
+  let networkFailure=false;
   if(wasCollected){
     collected.delete(key);
     collectedQty.delete(key);
-    ({error}=await sbClient.from('collection').delete().eq('slot_key',key).eq('user_id',uid()));
   }else{
     collected.add(key);
     collectedQty.set(key,{qty:1,origins:[]});
-    ({error}=await sbClient.from('collection').upsert({slot_key:key,user_id:uid(),quantity:1},{onConflict:'user_id,slot_key'}));
+  }
+  try{
+    if(wasCollected){
+      ({error}=await sbClient.from('collection').delete().eq('slot_key',key).eq('user_id',uid()));
+    }else{
+      ({error}=await sbClient.from('collection').upsert({slot_key:key,user_id:uid(),quantity:1},{onConflict:'user_id,slot_key'}));
+    }
+  }catch(e){
+    // queda de CONEXÃO (não erro de negócio) — guarda no outbox e mantém o
+    // estado otimista na tela em vez de reverter; sincroniza sozinho quando
+    // a conexão voltar (ver bloco OUTBOX acima de loadAll()).
+    console.warn('Sem conexão ao salvar coleção — guardando pra sincronizar depois:',e);
+    networkFailure=true;
+  }
+  if(networkFailure){
+    mdOutboxSet(key,wasCollected?'remove':'add');
+    setStatus('Salvando quando a conexão voltar...','warning');
+    renderBinder();updateDashProgress();
+    return;
   }
   if(error){
-    // reverte estado local — a gravação falhou, não deixar a UI mentir
+    // erro de negócio real (RLS, validação etc — chegou no servidor e foi
+    // rejeitado) — aqui sim reverte e avisa, re-tentar sozinho não resolve
     if(wasCollected){collected.add(key);collectedQty.set(key,prevEntry||{qty:1,origins:[]});}else{collected.delete(key);collectedQty.delete(key);}
     console.error('Erro ao salvar coleção:',error);
     setStatus('Erro ao salvar — tente novamente','error');
     alert('Não foi possível salvar essa carta no fichário. Verifique sua conexão e tente de novo.');
+  }else{
+    mdOutboxClear(key); // garante que não fica pendência velha desse slot
   }
   renderBinder();updateDashProgress();
 }
@@ -2618,14 +2736,28 @@ async function toggleVerCard(key,ver){
   if(!uid()) return;
   const isCol=collected.has(key);
   let error=null;
-  if(isCol){collected.delete(key);({error}=await sbClient.from('collection').delete().eq('slot_key',key).eq('user_id',uid()));}
-  else{collected.add(key);({error}=await sbClient.from('collection').upsert({slot_key:key,user_id:uid()},{onConflict:'user_id,slot_key'}));}
-  if(error){
+  let networkFailure=false;
+  if(isCol)collected.delete(key);else collected.add(key);
+  try{
+    if(isCol){({error}=await sbClient.from('collection').delete().eq('slot_key',key).eq('user_id',uid()));}
+    else{({error}=await sbClient.from('collection').upsert({slot_key:key,user_id:uid()},{onConflict:'user_id,slot_key'}));}
+  }catch(e){
+    // queda de conexão — mesma lógica de outbox do toggleSlot(), ver bloco
+    // OUTBOX acima de loadAll()
+    console.warn('Sem conexão ao salvar coleção — guardando pra sincronizar depois:',e);
+    networkFailure=true;
+  }
+  if(networkFailure){
+    mdOutboxSet(key,isCol?'remove':'add');
+    setStatus('Salvando quando a conexão voltar...','warning');
+  }else if(error){
     if(isCol)collected.add(key);else collected.delete(key);
     console.error('Erro ao salvar coleção:',error);
     setStatus('Erro ao salvar — tente novamente','error');
     alert('Não foi possível salvar essa carta no fichário. Verifique sua conexão e tente de novo.');
     return;
+  }else{
+    mdOutboxClear(key);
   }
   // Atualizar visual do card clicado
   const card=document.getElementById(`vcard-${ver}`);
