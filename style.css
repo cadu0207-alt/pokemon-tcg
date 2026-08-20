@@ -520,7 +520,14 @@ h1, .hlogo {
   font-family: 'Fraunces', sans-serif;
   font-size: clamp(26px, 4vw, 50px);
   letter-spacing: 3.5px;
-  line-height: .88;
+  /* 20/08/2026: era .88 — como a cor vem do gradiente "pintado" só dentro
+     da caixa da linha (background-clip:text), um line-height menor que 1
+     deixava a área de descendentes (o "rabinho" do y) fora dessa caixa,
+     então o gradiente não pintava ali e a letra parecia cortada. 1.05 dá
+     espaço de sobra sem alterar a altura visual do texto (compensado pela
+     margem negativa abaixo). */
+  line-height: 1.05;
+  margin-bottom: -4px;
   background: linear-gradient(135deg, #1c1f2e 40%, #5a6180 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

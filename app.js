@@ -612,25 +612,6 @@ function getVerFromRar(rar){
 }
 
 // ── CARREGAR ──────────────────────────────────────────────────────
-// Busca TODAS as linhas de uma query, ignorando o limite padrão de
-// "Max Rows" do PostgREST/Supabase (1000 por resposta) — sem isso,
-// coleções com mais de 1000 slots ficavam travadas nesse número porque
-// só a primeira página vinha na resposta. Pagina em blocos de 1000 via
-// .range() até a página vir incompleta (ou vazia).
-// queryFactory precisa devolver uma query NOVA a cada chamada (por isso
-// é uma função, não a query já montada) porque o builder do supabase-js
-// não pode ser reaproveitado com um .range() diferente.
-async function fetchAllRows(queryFactory){
-  const pageSize=1000;let from=0;let all=[];
-  while(true){
-    const{data,error}=await queryFactory().range(from,from+pageSize-1);
-    if(error) return{data:null,error};
-    all=all.concat(data||[]);
-    if(!data||data.length<pageSize) break;
-    from+=pageSize;
-  }
-  return{data:all,error:null};
-}
 async function loadAll(){
   setStatus('Conectando...','warning');
   if(!uid()){setStatus('Faça login','warning');return;}
@@ -639,7 +620,7 @@ async function loadAll(){
     const[{data:p},{data:c},{data:col},{data:vh},{data:lst},{data:bo}]=await Promise.all([
       sbClient.from('purchases').select('*').eq('user_id',myUid).order('date',{ascending:false}),
       sbClient.from('pulled_cards').select('*').eq('user_id',myUid).order('id',{ascending:true}),
-      fetchAllRows(()=>sbClient.from('collection').select('slot_key,quantity,origins').eq('user_id',myUid)),
+      sbClient.from('collection').select('slot_key,quantity,origins').eq('user_id',myUid),
       sbClient.from('value_history').select('date,total_value').eq('user_id',myUid).order('date',{ascending:true}),
       sbClient.from('card_listings').select('*').eq('user_id',myUid).order('created_at',{ascending:false}),
       sbClient.from('buy_orders').select('*').eq('buyer_id',myUid).order('created_at',{ascending:false})
@@ -4007,13 +3988,25 @@ function _buildRowCardsHtml(g){
 }
 
 // ── HEADER: subtítulo dinâmico ───────────────────────────────────
+// 20/08/2026: com muitas coleções marcadas essa linha ficava poluída
+// (sigla atrás de sigla sem fim antes de "MASTER SET TRACKER"). Agora
+// mostra só as primeiras MAX_HSUB_SETS e resume o resto em "+N" — a
+// lista completa continua acessível no title (tooltip ao passar o mouse).
+const MAX_HSUB_SETS=4;
 function updateHsub(){
   const el=document.getElementById('hsub-dyn');
   if(!el)return;
   const lbls=myCollections.map(id=>id.toUpperCase()
     .replace('SV8PT5','SV8.5').replace('SV6PT5','SV6.5')
     .replace('SV4PT5','SV4.5').replace('SV3PT5','151'));
-  el.textContent=(lbls.length?lbls.join(' · ')+'  /  ':'')+'MASTER SET TRACKER';
+  let setsTxt='';
+  if(lbls.length){
+    const visiveis=lbls.length>MAX_HSUB_SETS?lbls.slice(0,MAX_HSUB_SETS):lbls;
+    const resto=lbls.length-visiveis.length;
+    setsTxt=visiveis.join(' · ')+(resto>0?` +${resto}`:'')+'  /  ';
+  }
+  el.textContent=setsTxt+'MASTER SET TRACKER';
+  el.title=lbls.length?lbls.join(' · '):'';
 }
 
 // ── BUSCA GLOBAL (header) — todos os sets ────────────────────────
