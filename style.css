@@ -24,6 +24,13 @@
   --blue:     #0e7898;
   --purple:   #a855f7;
 
+  /* variantes RGB pra usar em rgba(var(--x-rgb), alpha) — fundos tintados
+     sem precisar de color-mix() (suporte melhor em navegadores mais velhos). */
+  --accent-rgb: 230,57,70;
+  --gold-rgb:   200,150,10;
+  --teal-rgb:   6,163,127;
+  --blue-rgb:   14,120,152;
+
   --text:     #1c1f2e;
   --text2:    #454b63;
   /* AJUSTADO 03/08/2026 (auditoria): #6b7288 dava 4.48:1 sobre --bg (#f7f7fa),
@@ -68,6 +75,11 @@
   --teal:     #06d6a0;
   --blue:     #3fb6dd;
   --purple:   #c084fc;
+
+  --accent-rgb: 255,77,90;
+  --gold-rgb:   255,209,102;
+  --teal-rgb:   6,214,160;
+  --blue-rgb:   63,182,221;
 
   --text:     #eef0fa;
   --text2:    #c3c8e0;
@@ -1874,31 +1886,136 @@ body.share-view .btn-add { display: none !important; }
 .ml-admin-hint a { color: var(--blue); }
 
 /* ─── ABA INICIANTES (FAQ) ─────────────────────────────────── */
-.faq-intro { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+/* REDESENHADO 19/08/2026: versão anterior era uma lista plana de acordeões
+   brancos com imagens pequenas (max-width:560px) sem nenhuma hierarquia —
+   Eduardo reportou "pouco receptiva, pouco profissional". Agora: hero com
+   contador de guias, pills de navegação por categoria, cards com ícone em
+   badge colorido por categoria, e imagens em moldura grande com lightbox. */
+
+.faq-hero {
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  background: linear-gradient(120deg, rgba(var(--accent-rgb),.10), rgba(var(--gold-rgb),.08));
+  border: 1px solid var(--border); border-radius: 18px;
+  padding: 22px 24px; margin-bottom: 20px;
+}
+.faq-hero-icon {
+  width: 56px; height: 56px; border-radius: 16px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 28px;
+  background: var(--surface); border: 1px solid var(--border);
+  box-shadow: 0 6px 16px rgba(0,0,0,.10);
+}
+.faq-hero-text { flex: 2; min-width: 240px; }
+.faq-hero-title {
+  font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 20px;
+  color: var(--text); margin-bottom: 5px;
+}
+.faq-intro { font-size: 13px; color: var(--muted); line-height: 1.55; max-width: 560px; }
+.faq-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+.faq-stat {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 9px 16px; text-align: center; min-width: 76px;
+}
+.faq-stat-n { font-family: 'Fraunces', sans-serif; font-size: 22px; color: var(--accent); line-height: 1; }
+.faq-stat-l { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 3px; }
+
+.faq-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 26px; }
+.faq-nav-pill {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+  padding: 9px 16px 9px 12px; font-size: 12.5px; font-weight: 600; color: var(--text2);
+  cursor: pointer; transition: all .15s ease; font-family: 'DM Sans', sans-serif;
+}
+.faq-nav-pill:hover {
+  border-color: rgba(var(--cat-rgb), .55); color: var(--text);
+  transform: translateY(-1px); box-shadow: 0 6px 16px rgba(var(--cat-rgb), .18);
+}
+.faq-nav-dot { width: 8px; height: 8px; border-radius: 50%; background: rgb(var(--cat-rgb)); flex-shrink: 0; }
+
+.faq-cat { margin-bottom: 32px; scroll-margin-top: 90px; }
+.faq-cat-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.faq-cat-icon {
+  width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center;
+  font-size: 18px; background: rgba(var(--cat-rgb), .16); border: 1px solid rgba(var(--cat-rgb), .38);
+  flex-shrink: 0;
+}
+.faq-cat-title { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 16px; color: var(--text); }
+.faq-cat-sub { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+.faq-cat-count {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: rgb(var(--cat-rgb));
+  margin-left: auto; background: rgba(var(--cat-rgb), .12); border-radius: 999px; padding: 4px 10px;
+  flex-shrink: 0;
+}
+
 .faq-list { display: flex; flex-direction: column; gap: 10px; }
 .faq-card {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; overflow: hidden;
+  border-radius: 14px; overflow: hidden;
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
+.faq-card:hover { border-color: rgba(var(--cat-rgb), .5); }
+.faq-card.faq-card-open { border-color: rgb(var(--cat-rgb)); box-shadow: 0 10px 28px rgba(var(--cat-rgb), .12); }
 .faq-q {
-  display: flex; align-items: center; gap: 12px;
-  padding: 14px 16px; cursor: pointer; user-select: none;
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 18px; cursor: pointer; user-select: none;
 }
 .faq-q:hover { background: var(--surface2); }
-.faq-icon { font-size: 20px; flex-shrink: 0; }
-.faq-q-text { flex: 1; font-weight: 600; font-size: 14px; color: var(--text); }
-.faq-arrow { color: var(--muted); font-size: 13px; flex-shrink: 0; transition: transform .15s ease; }
+.faq-icon {
+  font-size: 18px; flex-shrink: 0; width: 40px; height: 40px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(var(--cat-rgb), .14);
+}
+.faq-q-text { flex: 1; font-weight: 600; font-size: 14.5px; color: var(--text); line-height: 1.4; }
+.faq-arrow {
+  color: var(--muted); font-size: 13px; flex-shrink: 0; transition: transform .2s ease;
+  width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: var(--surface2);
+}
+.faq-card-open .faq-arrow { transform: rotate(180deg); color: rgb(var(--cat-rgb)); background: rgba(var(--cat-rgb), .14); }
 .faq-a {
   max-height: 0; overflow: hidden;
-  padding: 0 16px; font-size: 13px; line-height: 1.6; color: var(--text2);
-  transition: max-height .25s ease, padding .25s ease;
+  padding: 0 18px; font-size: 13.5px; line-height: 1.75; color: var(--text2);
+  transition: max-height .35s ease, padding .35s ease;
 }
-.faq-a.faq-a-open { max-height: 1300px; padding: 0 16px 16px; }
-.faq-a strong { color: var(--accent); }
-.faq-img-cap { font-size: 12px; color: var(--muted); margin-top: 14px; margin-bottom: 8px; }
+.faq-a.faq-a-open { max-height: 2400px; padding: 0 18px 22px 72px; }
+.faq-a strong { color: rgb(var(--cat-rgb)); }
+.faq-img-cap { font-size: 12.5px; color: var(--muted); margin-top: 18px; margin-bottom: 10px; font-weight: 600; }
+.faq-img-frame {
+  margin-top: 12px; border-radius: 14px; overflow: hidden; border: 1px solid var(--border);
+  box-shadow: 0 12px 32px rgba(0,0,0,.16); cursor: zoom-in; position: relative;
+  max-width: 100%; width: 100%; max-width: 720px;
+}
 .faq-img {
-  display: block; width: 100%; max-width: 560px; margin: 10px auto 0;
-  border-radius: 10px; border: 1px solid var(--border);
+  display: block; width: 100%; margin: 0; transition: transform .35s ease;
+}
+.faq-img-frame:hover .faq-img { transform: scale(1.035); }
+.faq-img-zoom {
+  position: absolute; right: 10px; bottom: 10px; width: 30px; height: 30px; border-radius: 9px;
+  background: rgba(0,0,0,.58); color: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; backdrop-filter: blur(4px); pointer-events: none;
+}
+
+/* Lightbox — clique na imagem abre em tamanho grande */
+.faq-lightbox {
+  position: fixed; inset: 0; background: rgba(3,3,3,.88); z-index: 9999;
+  display: none; align-items: center; justify-content: center; padding: 40px; cursor: zoom-out;
+}
+.faq-lightbox.open { display: flex; }
+.faq-lightbox img {
+  max-width: min(940px, 92vw); max-height: 88vh; border-radius: 16px;
+  box-shadow: 0 30px 80px rgba(0,0,0,.55); cursor: default;
+}
+.faq-lightbox-close {
+  position: absolute; top: 22px; right: 26px; width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(255,255,255,.12); color: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 18px; border: 1px solid rgba(255,255,255,.22); cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .faq-hero { padding: 16px; }
+  .faq-hero-icon { width: 46px; height: 46px; font-size: 22px; }
+  .faq-stats { width: 100%; }
+  .faq-a.faq-a-open { padding-left: 18px; }
+  .faq-cat-count { display: none; }
 }
 
 /* ─── MINI DASHBOARD ADMIN ─────────────────────────────────── */
