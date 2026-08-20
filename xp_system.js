@@ -189,9 +189,22 @@ function xpPulse(el) {
 // ── ESTADO ──────────────────────────────────────────────────────
 let xpState = { progress: null, achievements: [], allAchievements: [], progressByCode: {}, recentActivity: [], leaderboard: [], namesByUid: {}, myProfile: null, myRank: null, loaded: false };
 
+// Retry automático: se a busca falhar por instabilidade do Supabase
+// (comum agora com o Gateway deles degradado), tenta de novo antes de
+// desistir — sem isso, numa página recém-aberta sem estado anterior pra
+// cair de volta, o XP simplesmente parava de contar (xpState.progress
+// ficava null) até o próximo reload manual. Espera crescente: 1.5s, 3s.
 async function xpFetchAll() {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const ok = await xpFetchAllOnce();
+    if (ok) return;
+    if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1500));
+  }
+}
+
+async function xpFetchAllOnce() {
   const myUid = (typeof uid === 'function') ? uid() : null;
-  if (!myUid || !xpHasClient()) return;
+  if (!myUid || !xpHasClient()) return true; // nada a fazer, não é falha
   try {
     await xpEnsureName(myUid);
     const [{ data: prog }, { data: myAchv }, { data: allAchv }, { data: board }, progRes, actRes] = await Promise.all([
@@ -229,8 +242,10 @@ async function xpFetchAll() {
       .select('user_id', { count: 'exact', head: true })
       .gt('total_xp', xpState.progress.total_xp);
     xpState.myRank = (aheadCount || 0) + 1;
+    return true;
   } catch (e) {
     console.error('xp_system: falha ao buscar dados de XP', e);
+    return false;
   }
 }
 

@@ -731,21 +731,39 @@ async function loadAll(){
     return;
   }
   const myUid=uid();
+  // Cada "query" abaixo é uma fábrica (função que retorna a promise), não a
+  // promise já disparada — assim dá pra reexecutar só as que falharem, sem
+  // repetir as que já deram certo.
+  const queryFactories=[
+    ()=>sbClient.from('purchases').select('*').eq('user_id',myUid).order('date',{ascending:false}),
+    ()=>sbClient.from('pulled_cards').select('*').eq('user_id',myUid).order('id',{ascending:true}),
+    ()=>fetchAllRows(()=>sbClient.from('collection').select('slot_key,quantity,origins').eq('user_id',myUid)),
+    ()=>sbClient.from('value_history').select('date,total_value').eq('user_id',myUid).order('date',{ascending:true}),
+    ()=>sbClient.from('card_listings').select('*').eq('user_id',myUid).order('created_at',{ascending:false}),
+    ()=>sbClient.from('buy_orders').select('*').eq('buyer_id',myUid).order('created_at',{ascending:false})
+  ];
+  const okData=r=>(r.status==='fulfilled'&&!r.value?.error)?(r.value.data||[]):null;
+  const isFail=r=>r.status==='rejected'||r.value?.error;
   // Promise.allSettled em vez de Promise.all: se o Supabase estiver
   // instável e só 1 das 6 queries falhar, as outras 5 continuam sendo
   // usadas — antes, qualquer falha isolada derrubava a dashboard inteira
   // com "Erro de conexão", mesmo com o resto dos dados disponível.
-  const results=await Promise.allSettled([
-    sbClient.from('purchases').select('*').eq('user_id',myUid).order('date',{ascending:false}),
-    sbClient.from('pulled_cards').select('*').eq('user_id',myUid).order('id',{ascending:true}),
-    fetchAllRows(()=>sbClient.from('collection').select('slot_key,quantity,origins').eq('user_id',myUid)),
-    sbClient.from('value_history').select('date,total_value').eq('user_id',myUid).order('date',{ascending:true}),
-    sbClient.from('card_listings').select('*').eq('user_id',myUid).order('created_at',{ascending:false}),
-    sbClient.from('buy_orders').select('*').eq('buyer_id',myUid).order('created_at',{ascending:false})
-  ]);
+  let results=await Promise.allSettled(queryFactories.map(f=>f()));
+  // Retry automático: instabilidade do Supabase costuma ser passageira (1-2s),
+  // então antes de mostrar dado incompleto pro usuário (ex: "coleção sumiu"),
+  // tenta de novo só as queries que falharam, com espera crescente (1.5s,
+  // 3s). Assim o usuário só vê o resultado final, quase sempre correto, em
+  // vez de um número errado que depois "conserta sozinho" e assusta.
+  for(let attempt=1;attempt<=2;attempt++){
+    const failedIdx=results.map((r,i)=>isFail(r)?i:-1).filter(i=>i>=0);
+    if(!failedIdx.length) break;
+    setStatus(`Conectando... (tentativa ${attempt+1})`,'warning');
+    await new Promise(r=>setTimeout(r,attempt*1500));
+    const retried=await Promise.allSettled(failedIdx.map(i=>queryFactories[i]()));
+    failedIdx.forEach((origIdx,j)=>{results[origIdx]=retried[j];});
+  }
   const[rp,rc,rcol,rvh,rlst,rbo]=results;
-  const okData=r=>(r.status==='fulfilled'&&!r.value?.error)?(r.value.data||[]):null;
-  const failedCount=results.filter(r=>r.status==='rejected'||r.value?.error).length;
+  const failedCount=results.filter(isFail).length;
   const dp=okData(rp),dc=okData(rc),dcol=okData(rcol),dvh=okData(rvh),dlst=okData(rlst),dbo=okData(rbo);
   if(Array.isArray(dp))purchases=dp;
   if(Array.isArray(dc))pulledCards=dc;
