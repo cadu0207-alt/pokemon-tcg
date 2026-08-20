@@ -1,0 +1,29 @@
+name: Snapshot Diario de Preco por Carta
+
+on:
+  schedule:
+    # 03:10 UTC = 00:10 horario de Brasilia (UTC-3 fixo, sem horario de verao)
+    # 20min depois do snapshot de valor da colecao, pra nao disputar rate-limit
+    - cron: '10 3 * * *'
+  workflow_dispatch:
+    # Permite rodar manualmente pela aba Actions do GitHub
+
+jobs:
+  snapshot-card-prices:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (branch Rotower)
+        uses: actions/checkout@v4
+        with:
+          ref: Rotower
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Registrar snapshot de preco por carta
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/snapshot_card_prices.js
