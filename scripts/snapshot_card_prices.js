@@ -106,17 +106,31 @@ const SET_CARDS_MAP = {
   if (ls && ls.id && !SET_CARDS_MAP[ls.id]) SET_CARDS_MAP[ls.id] = ls.data || [];
 });
 
-// Espelho de getSlots() em app.js -- manter em sincronia se getSlots() mudar lá.
+// Espelho de getSlots() em app.js -- ATUALIZADO 20/08/2026 pra bater linha a
+// linha com o getSlots() real, que tem 2 fixes que este espelho não tinha:
+// isLegacySet (24/07/2026, "Rara" nos sets legados NÃO nasce holo, diferente
+// de ME/SV) e RARA_HOLO_UNICA_LEGADA (30/07/2026, raridades exclusivas dos
+// legados que são slot único SP, não N+RH). Sem isso o gráfico de preço de
+// qualquer carta legada com essas raridades mostraria uma versão errada.
+// Manter em sincronia se getSlots() mudar de novo no app.js.
+const LEGACY_SET_IDS = new Set((sandbox.LEGACY_SETS || []).map(function (ls) { return ls && ls.id; }));
+const RARA_HOLO_UNICA_LEGADA = [
+  'Rara Holo EX', 'Rara Holo GX', 'Rara Holo V', 'Rara Holo VMAX', 'Rara Holo VSTAR',
+  'Rara Holo LV.X', 'Rara BREAK', 'Rara Incrível', 'Rara Radiante', 'Rara Rainbow',
+  'Rara Secreta', 'Rara Shiny', 'Rara Shiny GX', 'Rara Shiny V', 'Rara Star', 'Rara Prime',
+];
 function getSlotsForSnapshot(c, setId) {
   const r = c.rare || '';
   if (!c.base) return [{ ver: 'SP', price: c.price }];
   if (r.includes('Dupla') || r.includes('RR')) return [{ ver: 'F', price: c.price }];
-  if (r === 'Rara' || (r.startsWith('Rara ') && !r.includes('Ultra'))) {
+  const isLegacySet = LEGACY_SET_IDS.has(setId);
+  if ((r === 'Rara' && !isLegacySet) || r === 'Rara Holo' || r === 'Rara Brilhante' || r === 'Rara Ilustrada' || r === 'Rara Ilustrada Especial') {
     return [
       { ver: 'F', price: c.priceF || c.price },
       { ver: 'RH', price: c.priceRH || (c.price ? +(c.price * 1.2).toFixed(2) : null) },
     ];
   }
+  if (RARA_HOLO_UNICA_LEGADA.includes(r)) return [{ ver: 'SP', price: c.price }];
   if (setId === 'mep' || setId === 'svp') return [{ ver: 'SP', price: c.price }];
   return [
     { ver: 'N', price: c.price },

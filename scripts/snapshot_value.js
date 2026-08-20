@@ -32,6 +32,24 @@
  * Reverse Holo (+20% / priceRH) e o priceF de cartas "Rara". Isso fazia a
  * "Evolução do Patrimônio" subvalorizar a coleção em relação ao KPI do
  * dashboard. Ver [[feedback_coding]].
+ *
+ * CORRIGIDO 20/08/2026 (pedido do Eduardo: "evolução de patrimônio completo
+ * abarcando tudo que fizemos") — dois problemas achados numa auditoria:
+ * (a) CARD_FILES/CONST_NAMES/SET_CARDS_MAP estavam desatualizados desde
+ * antes de 13/08 — faltavam cards_svp.js, cards_pgo.js, cards_me2pt5.js,
+ * cards_rsv10pt5.js e cards_zsv10pt5.js (5 coleções inteiras, ~800 cartas,
+ * de gente que colecionou Promos SV, Pokémon GO, Heróis Excelsos, Raio
+ * Preto/Fogo Branco — o valor delas nunca entrava no snapshot diário,
+ * então "Evolução do Patrimônio" subvalorizava quem tem essas coleções).
+ * (b) getSlotsForSnapshot() era um espelho ANTIGO de getSlots() (app.js) —
+ * não tinha o fix de 24/07/2026 (isLegacySet: "Rara" nos sets legados NÃO
+ * nasce holo, diferente de ME/SV) nem o de 30/07/2026 (RARA_HOLO_UNICA_LEGADA:
+ * raridades tipo "Rara Holo V"/"Rara Secreta"/"Rara Rainbow" dos sets legados
+ * são slot único SP, não N+RH) — sem isso o script calculava um preço por
+ * versão errado (às vezes inventando uma versão RH que não existe) pra
+ * qualquer carta legada com essas raridades. Corrigido copiando o
+ * getSlots() real de app.js linha a linha (incluindo a lista completa de
+ * legacySetIds vinda de window.LEGACY_SETS, igual o app faz).
  */
 
 const vm = require('vm');
@@ -52,11 +70,12 @@ if (!SERVICE_KEY) {
 
 const CARD_FILES = [
   'cards_me04.js', 'cards_me03.js', 'cards_me02.js', 'cards_meg.js',
-  'cards_me05.js', 'cards_me06.js', 'cards_mep.js',
+  'cards_me05.js', 'cards_me06.js', 'cards_me2pt5.js', 'cards_mep.js',
   'cards_sv1.js', 'cards_sv2.js', 'cards_sv3.js', 'cards_sv3pt5.js',
   'cards_sv4.js', 'cards_sv4pt5.js', 'cards_sv5.js', 'cards_sv6.js',
   'cards_sv6pt5.js', 'cards_sv7.js', 'cards_sv8.js', 'cards_sv8pt5.js',
-  'cards_sv9.js', 'cards_sv10.js',
+  'cards_sv9.js', 'cards_sv10.js', 'cards_svp.js',
+  'cards_rsv10pt5.js', 'cards_zsv10pt5.js', 'cards_pgo.js',
   'legacy_swsh.js', 'legacy_sm.js', 'legacy_xy.js', 'legacy_bw.js',
   'legacy_hgss.js', 'legacy_dp.js', 'legacy_ex.js', 'legacy_classic.js',
 ];
@@ -77,10 +96,10 @@ for (const file of CARD_FILES) {
 // de `window.X = ...`) -- por isso nao da pra ler sandbox.CARDS diretamente.
 // Precisamos avaliar uma expressao no mesmo contexto pra capturar os valores.
 const CONST_NAMES = [
-  'CARDS', 'CARDS_ME03', 'CARDS_ME02', 'CARDS_MEG', 'CARDS_ME05', 'CARDS_ME06', 'CARDS_MEP',
+  'CARDS', 'CARDS_ME03', 'CARDS_ME02', 'CARDS_MEG', 'CARDS_ME05', 'CARDS_ME06', 'CARDS_ME2PT5', 'CARDS_MEP',
   'CARDS_SV1', 'CARDS_SV2', 'CARDS_SV3', 'CARDS_SV3PT5', 'CARDS_SV4', 'CARDS_SV4PT5',
   'CARDS_SV5', 'CARDS_SV6', 'CARDS_SV6PT5', 'CARDS_SV7', 'CARDS_SV8', 'CARDS_SV8PT5',
-  'CARDS_SV9', 'CARDS_SV10',
+  'CARDS_SV9', 'CARDS_SV10', 'CARDS_SVP', 'CARDS_RSV10PT5', 'CARDS_ZSV10PT5', 'CARDS_PGO',
 ];
 const captureExpr = '({' + CONST_NAMES.map(function (n) {
   return n + ": typeof " + n + "!=='undefined'?" + n + ':[]';
@@ -90,12 +109,17 @@ const consts = vm.runInContext(captureExpr, sandbox);
 // Espelha SET_CARDS_MAP de app.js -- manter em sincronia se um set novo entrar la.
 const SET_CARDS_MAP = {
   me06: consts.CARDS_ME06,
+  me2pt5: consts.CARDS_ME2PT5,
   me05: consts.CARDS_ME05,
   me04: consts.CARDS,
   me03: consts.CARDS_ME03,
   me02: consts.CARDS_ME02,
   meg: consts.CARDS_MEG,
   mep: consts.CARDS_MEP,
+  svp: consts.CARDS_SVP,
+  rsv10pt5: consts.CARDS_RSV10PT5,
+  zsv10pt5: consts.CARDS_ZSV10PT5,
+  pgo: consts.CARDS_PGO,
   sv1: consts.CARDS_SV1,
   sv2: consts.CARDS_SV2,
   sv3: consts.CARDS_SV3,
@@ -118,19 +142,31 @@ const SET_CARDS_MAP = {
 });
 
 // Espelho de getSlots() em app.js -- o preco de um slot depende da versao
-// (N/F/RH/SP), NAO e sempre igual a c.price. Manter em sincronia se
-// getSlots() mudar no app.js.
+// (N/F/RH/SP), NAO e sempre igual a c.price. ATUALIZADO 20/08/2026 pra
+// bater linha a linha com getSlots() real (app.js), que ganhou 2 fixes
+// depois que este espelho foi escrito: isLegacySet (24/07/2026, "Rara" nos
+// sets legados NAO nasce holo) e RARA_HOLO_UNICA_LEGADA (30/07/2026, raridades
+// exclusivas dos legados que sao slot unico SP). Manter em sincronia se
+// getSlots() mudar de novo no app.js.
+const LEGACY_SET_IDS = new Set((sandbox.LEGACY_SETS || []).map(function (ls) { return ls && ls.id; }));
+const RARA_HOLO_UNICA_LEGADA = [
+  'Rara Holo EX', 'Rara Holo GX', 'Rara Holo V', 'Rara Holo VMAX', 'Rara Holo VSTAR',
+  'Rara Holo LV.X', 'Rara BREAK', 'Rara Incrível', 'Rara Radiante', 'Rara Rainbow',
+  'Rara Secreta', 'Rara Shiny', 'Rara Shiny GX', 'Rara Shiny V', 'Rara Star', 'Rara Prime',
+];
 function getSlotsForSnapshot(c, setId) {
   const r = c.rare || '';
   if (!c.base) return [{ ver: 'SP', price: c.price }];
   if (r.includes('Dupla') || r.includes('RR')) return [{ ver: 'F', price: c.price }];
-  if (r === 'Rara' || (r.startsWith('Rara ') && !r.includes('Ultra'))) {
+  const isLegacySet = LEGACY_SET_IDS.has(setId);
+  if ((r === 'Rara' && !isLegacySet) || r === 'Rara Holo' || r === 'Rara Brilhante' || r === 'Rara Ilustrada' || r === 'Rara Ilustrada Especial') {
     return [
       { ver: 'F', price: c.priceF || c.price },
       { ver: 'RH', price: c.priceRH || (c.price ? +(c.price * 1.2).toFixed(2) : null) },
     ];
   }
-  if (setId === 'mep') return [{ ver: 'SP', price: c.price }];
+  if (RARA_HOLO_UNICA_LEGADA.includes(r)) return [{ ver: 'SP', price: c.price }];
+  if (setId === 'mep' || setId === 'svp') return [{ ver: 'SP', price: c.price }];
   return [
     { ver: 'N', price: c.price },
     { ver: 'RH', price: c.priceRH || (c.price ? +(c.price * 1.2).toFixed(2) : null) },
