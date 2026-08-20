@@ -66,7 +66,7 @@
   pointer-events: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   padding: 4px 0;
 }
 #app-mosaic::after {
@@ -78,14 +78,14 @@
 }
 .amrow {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   flex-shrink: 0;
   will-change: transform;
 }
 .amrow img {
-  height: 72px;
+  height: 44px;
   width: auto;
-  border-radius: 5px;
+  border-radius: 4px;
   flex-shrink: 0;
   opacity: 0.55;
   filter: saturate(0.8);
@@ -1254,7 +1254,7 @@
     const div=document.createElement('div');
     div.style.cssText=`border-radius:10px;overflow:hidden;aspect-ratio:2.5/3.5;animation:cardFloat ${dur}s ease-in-out ${delay}s infinite alternate;`;
     const img=document.createElement('img');
-    img.src=`https://images.scrydex.com/pokemon/${card}/large`;
+    img.src=`https://images.scrydex.com/pokemon/${card}/small`;
     img.loading='lazy';
     img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;';
     img.onerror=function(){this.parentElement.style.background='#0d0f1a';this.remove();};
@@ -1275,8 +1275,13 @@
     ['me4',1,50],   ['me3',1,50],   ['me2',1,50],
     ['me4',51,99],  ['me3',51,99],
   ];
-  const NUM_ROWS=8;
-  const SPEEDS=[28,24,32,22,30,26,34,20]; // segundos por ciclo
+  // MELHORIA 20/08/2026: linhas cobrindo a tela inteira (antes eram 8 fixas,
+  // que só preenchiam uma faixa no topo). Calculado a partir da altura real
+  // da viewport — reaproveita os mesmos pools de cartas via SETS[si%SETS.length],
+  // não busca cards novos, só repete o padrão em mais linhas.
+  const ROW_UNIT = 44 + 4; // altura da carta (.amrow img) + gap do container
+  const NUM_ROWS = Math.max(8, Math.ceil(window.innerHeight / ROW_UNIT) + 2);
+  const SPEEDS_BASE=[28,24,32,22,30,26,34,20]; // segundos por ciclo, cicla via módulo
   const PAUSE_DISTANCE=120; // px — distância do mouse para pausar
 
   function makePool(si){
@@ -1293,7 +1298,7 @@
     row.className='amrow';
     row.dataset.row=i;
     const goRight=(i%2===0);
-    row.style.animation=`${goRight?'scrollRight':'scrollLeft'} ${SPEEDS[i]}s linear infinite`;
+    row.style.animation=`${goRight?'scrollRight':'scrollLeft'} ${SPEEDS_BASE[i%SPEEDS_BASE.length]}s linear infinite`;
     // Para scrollLeft a tira começa em posição 0→-50%, então não precisa offset inicial
     // Para scrollRight começa em -50%→0, também sem offset extra (o keyframe cuida)
 
@@ -1302,7 +1307,7 @@
     const imgs=[...pool,...pool];
     imgs.forEach(card=>{
       const img=document.createElement('img');
-      img.src=`https://images.scrydex.com/pokemon/${card}/large`;
+      img.src=`https://images.scrydex.com/pokemon/${card}/small`;
       img.loading='lazy';
       img.onerror=function(){this.remove();};
       row.appendChild(img);
