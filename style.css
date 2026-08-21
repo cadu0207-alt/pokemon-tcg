@@ -1824,6 +1824,7 @@ body.share-view .btn-add { display: none !important; }
 @media (min-width: 1024px) { .auc-grid { grid-template-columns: 1fr 1fr 1fr; } }
 .auc-hot-card { border-color: var(--gold) !important; box-shadow: 0 0 0 1px var(--gold) inset; }
 .auc-mine-card { border-color: var(--teal) !important; box-shadow: 0 0 0 1px var(--teal) inset; }
+.auc-cheap-card { border-color: var(--blue) !important; box-shadow: 0 0 0 1px var(--blue) inset; }
 .auc-empty-filtered { grid-column: 1 / -1; }
 
 /* ─── LEILÃO/LOJA — visão "Por Leiloeiro" (21/08/2026): acordeão de

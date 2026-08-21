@@ -984,6 +984,29 @@ function aucComputeHotCards(allCards,n){
     .slice(0,n||3);
 }
 
+// Embaralha no lugar (Fisher-Yates) — usado só pra desempatar preço igual
+// em aucComputeCheapCards() de forma aleatória a cada render (não é
+// critério de negócio nenhum, só evita que empate sempre saia na mesma
+// ordem, ex: sempre por id).
+function aucShuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+// Top N leilões ativos mais baratos (lance atual, ou preço inicial se
+// ainda sem lance) — embaralha ANTES de ordenar por preço: sort() é
+// estável, então empate de preço sai na ordem embaralhada em vez de
+// sempre na mesma (21/08/2026, pedido do Eduardo).
+function aucComputeCheapCards(allCards,n){
+  const ativos=aucShuffle(allCards.filter(a=>a.status==='ativo').slice());
+  return ativos
+    .sort((x,y)=>(+(x.current_bid||x.starting_price||0))-(+(y.current_bid||y.starting_price||0)))
+    .slice(0,n||10);
+}
+
 function renderAuctionsList(){
   const wrap=document.getElementById('leilao-list');
   const hotWrap=document.getElementById('leilao-hot-list');
@@ -999,17 +1022,14 @@ function renderAuctionsList(){
 
   const allCards=visibleRounds.flatMap(r=>aucAuctions.filter(a=>a.round_id===r.id&&a.status!=='cancelado'));
   aucRenderFilterBar(allCards);
+  const noFiltro=!aucHasActiveSearchOrFilter();
 
-  // Com busca/filtro ativo esconde as fileiras de destaque — misturar
-  // "seus leilões"/"mais movimentados" (fora do filtro) com o resultado
-  // filtrado só confundiria quem tá procurando uma carta específica.
+  // "Seus leilões em andamento"/"Mais movimentados" em #leilao-hot-list:
+  // na visão Por Rodada isso tudo passou a entrar DENTRO de #leilao-list,
+  // na ordem pedida (resumo → seus leilões → HOT → mais baratas) — ver
+  // bloco abaixo. Aqui só continua sendo usado pela visão Por Leiloeiro.
   if(hotWrap){
-    if(aucHasActiveSearchOrFilter()){
-      hotWrap.innerHTML='';
-    }else{
-      // "Seus leilões em andamento" sempre entra ANTES dos destaques —
-      // são os leilões em que você já deu lance (aucMyBidAuctionIds,
-      // ver loadMyBidAuctionIds), ainda ativos.
+    if(aucListView!=='rodada'&&noFiltro){
       const mine=allCards.filter(a=>a.status==='ativo'&&aucMyBidAuctionIds.has(a.id));
       const mineHtml=mine.length?`<div class="sec-title" style="margin-top:0;font-size:13px">🎯 Seus leilões em andamento</div>
         <div class="auc-grid" style="margin-bottom:22px">${mine.map(a=>aucCardHtml(a,'mine')).join('')}</div>`:'';
@@ -1017,6 +1037,8 @@ function renderAuctionsList(){
       const hotHtml=hot.length?`<div class="sec-title" style="margin-top:0;font-size:13px">🔥 Mais movimentados</div>
         <div class="auc-grid" style="margin-bottom:22px">${hot.map(a=>aucCardHtml(a,'hot')).join('')}</div>`:'';
       hotWrap.innerHTML=mineHtml+hotHtml;
+    }else{
+      hotWrap.innerHTML='';
     }
   }
 
@@ -1028,22 +1050,26 @@ function renderAuctionsList(){
   if(aucListView==='leiloeiro'){
     mainHtml=aucLeiloeiroViewHtml(allCards);
   }else{
-    const roundsHtml=visibleRounds.map(r=>{
-      const cards=aucAuctions.filter(a=>a.round_id===r.id&&a.status!=='cancelado')
-        .filter(a=>aucCardMatchesSearch(a)&&aucCardMatchesFilters(a));
-      if(!cards.length)return'';
-      return`<div id="leilao-round-sec-${r.id}" class="sec-title" style="margin-top:20px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center">
-        <span>🗓️ ${esc(r.title)}
-          <span style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;font-weight:400;margin-left:8px">
-            Lances até ${new Date(r.end_at).toLocaleString('pt-BR')} · Pagamento até ${new Date(r.payment_due_at).toLocaleString('pt-BR')}
-          </span>
-        </span>
-        ${aucIsLeilaoAdmin?`<button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal);font-size:10px" onclick="shareRoundText(${r.id})">📤 Compartilhar rodada</button>`:''}
-        </div>
-        ${r.shipping_note?`<div class="mkt-note" style="margin-bottom:14px">🚚 ${esc(r.shipping_note)}</div>`:''}
-        <div class="auc-grid">${cards.map(a=>aucCardHtml(a)).join('')}</div>`;
-    }).filter(Boolean).join('');
-    mainHtml=roundsHtml||`<div class="cv-item-empty">Nenhum leilão encontrado com esse filtro.</div>`;
+    const resumoHtml=aucRoundSummaryViewHtml(visibleRounds);
+
+    // "Seus leilões", HOT (top 10 por lances) e Mais Baratas (top 10,
+    // empate desfeito aleatoriamente) — nessa ordem, sempre DEPOIS do
+    // resumo por rodada/leiloeiro (pedido 21/08/2026). Somem durante
+    // busca/filtro ativo, igual sempre foi (misturar destaque com
+    // resultado filtrado só confunde quem tá procurando algo específico).
+    const mine=noFiltro?allCards.filter(a=>a.status==='ativo'&&aucMyBidAuctionIds.has(a.id)):[];
+    const mineHtml=mine.length?`<div class="sec-title" style="margin-top:26px;font-size:13px">🎯 Seus leilões em andamento</div>
+      <div class="auc-grid" style="margin-bottom:4px">${mine.map(a=>aucCardHtml(a,'mine')).join('')}</div>`:'';
+
+    const hot=noFiltro?aucComputeHotCards(allCards,10):[];
+    const hotHtml=hot.length?`<div class="sec-title" style="margin-top:26px">🔥 Cartas HOT — mais lances</div>
+      <div class="auc-grid" style="margin-bottom:4px">${hot.map(a=>aucCardHtml(a,'hot')).join('')}</div>`:'';
+
+    const cheap=noFiltro?aucComputeCheapCards(allCards,10):[];
+    const cheapHtml=cheap.length?`<div class="sec-title" style="margin-top:26px">💸 Mais Baratas</div>
+      <div class="auc-grid" style="margin-bottom:4px">${cheap.map(a=>aucCardHtml(a,'cheap')).join('')}</div>`:'';
+
+    mainHtml=resumoHtml+mineHtml+hotHtml+cheapHtml;
   }
 
   wrap.innerHTML=blockedNote+mainHtml;
@@ -1121,6 +1147,82 @@ function aucToggleLeiloeiroSection(key){
   renderAuctionsList();
 }
 
+// ── RESUMO "RODADA × LEILOEIRO" (visão Por Rodada, 21/08/2026) ────────
+// Cada rodada pode ter lotes de mais de um leiloeiro (agora que dá pra
+// ter vários) — em vez de uma grade só por rodada misturando todo mundo,
+// isso quebra em um card por combinação (rodada, leiloeiro), fechado por
+// padrão, igual a visão Por Leiloeiro. aucExpandedRoundLeiloeiro guarda
+// as combinações abertas — chave composta "roundId::leiloeiroUid",
+// separada de aucExpandedLeiloeiros (Por Leiloeiro) de propósito, pra uma
+// visão não interferir na outra.
+let aucExpandedRoundLeiloeiro=new Set();
+
+const AUC_ROUND_STATUS_LBL={
+  agendado:{txt:'Agendada',color:'var(--gold)'},
+  ativo:{txt:'Aberta',color:'var(--accent)'},
+  encerrado:{txt:'Encerrada',color:'var(--muted)'}
+};
+
+function aucRoundSummaryViewHtml(visibleRounds){
+  let out='';
+  visibleRounds.forEach(r=>{
+    const cards=aucAuctions.filter(a=>a.round_id===r.id&&a.status!=='cancelado')
+      .filter(a=>aucCardMatchesSearch(a)&&aucCardMatchesFilters(a));
+    // Âncora sempre presente (mesmo sem carta passando no filtro), pra
+    // scrollToSharedRound() (link ?leilao_rodada=<id>) continuar achando
+    // o elemento certo mesmo com busca ativa.
+    out+=`<div id="leilao-round-sec-${r.id}"></div>`;
+    if(!cards.length)return;
+    const byLeiloeiro={};
+    cards.forEach(a=>{
+      const key=a.created_by||'—';
+      (byLeiloeiro[key]=byLeiloeiro[key]||[]).push(a);
+    });
+    const keys=Object.keys(byLeiloeiro).sort((x,y)=>aucLeiloeiroNome(x).localeCompare(aucLeiloeiroNome(y)));
+    const showHeader=aucIsLeilaoAdmin||r.shipping_note;
+    if(showHeader){
+      out+=`<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center;margin:${out.length>60?'20px':'0'} 0 6px">
+        ${r.shipping_note?`<span style="font-size:10.5px;color:var(--muted)">🚚 ${esc(r.shipping_note)}</span>`:'<span></span>'}
+        ${aucIsLeilaoAdmin?`<button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal);font-size:10px" onclick="shareRoundText(${r.id})">📤 Compartilhar rodada</button>`:''}
+      </div>`;
+    }
+    out+=keys.map(k=>aucRoundLeiloeiroTileHtml(r,k,byLeiloeiro[k])).join('');
+  });
+  return out||`<div class="cv-item-empty">Nenhum leilão encontrado com esse filtro.</div>`;
+}
+
+function aucRoundLeiloeiroTileHtml(round,key,cards){
+  const tileKey=round.id+'::'+key;
+  const open=aucExpandedRoundLeiloeiro.has(tileKey);
+  const st=AUC_ROUND_STATUS_LBL[round.status]||{txt:round.status,color:'var(--muted)'};
+  const isPrincipal=key===(typeof ADMIN_UID!=='undefined'?ADMIN_UID:null);
+  return`<div class="panel auc-leiloeiro-card${open?' open':''}" style="padding:0;margin-bottom:12px">
+    <div class="auc-leiloeiro-head" onclick="aucToggleRoundLeiloeiroTile('${tileKey}')">
+      <div class="auc-leiloeiro-avatar" style="background:${aucAvatarColor(key)}">${esc(aucAvatarInitial(key))}</div>
+      <div class="auc-leiloeiro-info">
+        <div class="auc-leiloeiro-name">🗓️ ${esc(round.title)} · ${esc(aucLeiloeiroNome(key))}${isPrincipal?' <span class="auc-leiloeiro-badge">LEILOEIRO PRINCIPAL</span>':''}
+          <span style="font-size:9px;font-family:'Space Mono',monospace;color:${st.color};border:1px solid ${st.color};border-radius:20px;padding:1px 9px">${st.txt}</span>
+        </div>
+        <div class="auc-leiloeiro-meta">
+          <span>${cards.length} lote${cards.length===1?'':'s'}</span>
+          <span>Lances até ${new Date(round.end_at).toLocaleString('pt-BR')}</span>
+          <span>Pagamento até ${new Date(round.payment_due_at).toLocaleString('pt-BR')}</span>
+        </div>
+      </div>
+      <div class="auc-leiloeiro-chevron">▾</div>
+    </div>
+    <div class="auc-leiloeiro-body">
+      <div class="auc-grid">${cards.map(a=>aucCardHtml(a,'porleiloeiro')).join('')}</div>
+    </div>
+  </div>`;
+}
+
+function aucToggleRoundLeiloeiroTile(tileKey){
+  if(aucExpandedRoundLeiloeiro.has(tileKey))aucExpandedRoundLeiloeiro.delete(tileKey);
+  else aucExpandedRoundLeiloeiro.add(tileKey);
+  renderAuctionsList();
+}
+
 // idSuffix diferencia os ids de input/status quando a MESMA carta aparece
 // duas vezes na tela ao mesmo tempo (card na lista + zoom aberto) — sem
 // isso os dois formulários de lance colidiriam no mesmo id.
@@ -1176,7 +1278,7 @@ function aucInfoBlockHtml(a,idSuffix){
 function aucCardHtml(a,kind){
   const img=aucImgFor(a);
   const idSuffix=kind?'-'+kind:'';
-  return`<div class="panel${kind==='hot'?' auc-hot-card':''}${kind==='mine'?' auc-mine-card':''}">
+  return`<div class="panel${kind==='hot'?' auc-hot-card':''}${kind==='mine'?' auc-mine-card':''}${kind==='cheap'?' auc-cheap-card':''}">
     <div style="display:flex;gap:14px;flex-wrap:wrap">
       ${img?`<img src="${img}" alt="${esc(a.card_name)}" title="Clique pra ampliar" style="width:100px;border-radius:8px;object-fit:contain;background:var(--surface2);cursor:zoom-in" onclick="openAuctionZoom(${a.id})" onerror="this.style.display='none'">`:''}
       <div style="flex:1;min-width:220px">
@@ -1185,6 +1287,7 @@ function aucCardHtml(a,kind){
     </div>
     ${kind==='hot'?`<div style="margin-top:8px;font-size:9.5px;color:var(--gold);font-family:'Space Mono',monospace">🔥 ${a.bid_count||0} lances — um dos mais disputados</div>`:''}
     ${kind==='mine'?`<div style="margin-top:8px;font-size:9.5px;color:var(--teal);font-family:'Space Mono',monospace">🎯 Você já deu lance nesse</div>`:''}
+    ${kind==='cheap'?`<div style="margin-top:8px;font-size:9.5px;color:var(--blue);font-family:'Space Mono',monospace">💸 Uma das mais baratas agora</div>`:''}
   </div>`;
 }
 
