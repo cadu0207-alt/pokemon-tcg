@@ -641,7 +641,7 @@ function renderProductCard(term, history, featured, coupon, rules, dealScore) {
   return (
     '<a class="product-card' + (featured ? ' product-card-featured' : '') + '"' + collectionAttr + scoreAttr + ' href="' + linkUrl + '" target="_blank" rel="noopener' + (term.affiliate_url ? ' sponsored' : '') + '" onclick="if(typeof logProductRedirect===\'function\')logProductRedirect(' + term.id + ')">' +
       (featured ? '<div class="product-badge">🔥 OFERTA IMPERDÍVEL</div>' : '') +
-      '<img class="product-img" src="' + imgSrc + '" alt="' + label + '">' +
+      '<img class="product-img" src="' + imgSrc + '" alt="' + label + '" loading="lazy" decoding="async">' +
       '<div class="product-info">' +
         '<div class="product-name">' + label + '</div>' +
         priceHtml +
