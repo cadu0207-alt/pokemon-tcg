@@ -11,6 +11,17 @@ if(!window.supabase){
 const sbClient=window.supabase ? window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY) : null;
 let currentUser=null;
 
+// 21/08/2026 — movida pro topo do arquivo (era declarada perto de updateHsub(),
+// lá embaixo). updateHsub() é chamada logo no carregamento da home (init()
+// roda imediatamente, antes do script terminar de rodar até aquele ponto) —
+// como MAX_HSUB_SETS era `const` declarada bem mais abaixo, toda chamada
+// inicial de updateHsub() (e também as chamadas via renderTabs() depois)
+// caía num "Cannot access 'MAX_HSUB_SETS' before initialization" (temporal
+// dead zone do JS) e quebrava silenciosamente. Isso travava updateHsub() —
+// a função que decide quais sets aparecem disponíveis vs "Em Breve" na
+// home — sempre no estado padrão, mesmo com os dados certos disponíveis.
+const MAX_HSUB_SETS=4;
+
 // Escapa texto livre digitado pelo usuário (ex: nome de produto em compras)
 // antes de injetar em innerHTML — evita XSS caso o campo contenha <script>,
 // onerror=, etc. Usar sempre que um campo de texto livre for renderizado.
@@ -4211,7 +4222,9 @@ function _buildRowCardsHtml(g){
 // (sigla atrás de sigla sem fim antes de "MASTER SET TRACKER"). Agora
 // mostra só as primeiras MAX_HSUB_SETS e resume o resto em "+N" — a
 // lista completa continua acessível no title (tooltip ao passar o mouse).
-const MAX_HSUB_SETS=4;
+// (MAX_HSUB_SETS foi movida pro topo do arquivo em 21/08/2026 — declará-la
+// aqui embaixo causava "Cannot access before initialization" toda vez que
+// updateHsub() era chamada no carregamento inicial da página.)
 function updateHsub(){
   const el=document.getElementById('hsub-dyn');
   if(!el)return;
