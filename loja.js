@@ -132,7 +132,7 @@ function lojaLeiloeiroViewHtml(visiveis){
     (byLeiloeiro[key]=byLeiloeiro[key]||[]).push(i);
   });
   const keys=Object.keys(byLeiloeiro).sort((x,y)=>aucLeiloeiroNome(x).localeCompare(aucLeiloeiroNome(y)));
-  if(!lojaExpandedLeiloeiros.size&&keys.length)lojaExpandedLeiloeiros.add(keys[0]);
+  // Sem auto-expandir — começa só com os nomes; clicar é que abre os itens.
   return keys.map(k=>lojaLeiloeiroSectionHtml(k,byLeiloeiro[k])).join('');
 }
 

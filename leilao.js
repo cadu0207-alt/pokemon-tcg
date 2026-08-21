@@ -1081,10 +1081,8 @@ function aucLeiloeiroViewHtml(allCards){
     if(ay!==ax)return ay-ax;
     return aucLeiloeiroNome(x).localeCompare(aucLeiloeiroNome(y));
   });
-  // Primeira vez que alguém troca pra essa visão (nenhuma seção ainda foi
-  // aberta/fechada manualmente): abre o mais movimentado sozinho, pra não
-  // cair numa tela de acordeões todos fechados sem nada visível.
-  if(!aucExpandedLeiloeiros.size&&keys.length)aucExpandedLeiloeiros.add(keys[0]);
+  // Sem auto-expandir nada — a visão sempre começa só com os nomes dos
+  // leiloeiros (fechados); clicar num nome é que abre as cartas dele.
   return keys.map(k=>aucLeiloeiroSectionHtml(k,byLeiloeiro[k])).join('');
 }
 
