@@ -108,7 +108,7 @@ async function submitTrustedStore(){
 
 // ── LISTAS ──────────────────────────────────────────────────────
 function mktStoreCard(s,{pending}={}){
-  const canEdit=typeof isAdminEditor==='function'&&isAdminEditor();
+  const canEdit=typeof hasPerm==='function'&&hasPerm('marketplace');
   return`<div class="mkt-store-card">
     <div class="mkt-store-top">
       <div class="mkt-store-name">${s.nome_fantasia}</div>
@@ -148,14 +148,14 @@ function renderStoreLists(){
 }
 
 async function approveStore(id){
-  if(typeof isAdminEditor!=='function'||!isAdminEditor())return;
+  if(typeof hasPerm!=='function'||!hasPerm('marketplace'))return;
   const{error}=await sbClient.from('trusted_stores').update({status:'ativa',updated_at:new Date().toISOString()}).eq('id',id);
   if(error){console.error('[trusted_stores approve]',error);alert('Não foi possível aprovar.');return;}
   await loadMarketplaceData();renderStoreLists();
 }
 
 async function rejectStore(id){
-  if(typeof isAdminEditor!=='function'||!isAdminEditor())return;
+  if(typeof hasPerm!=='function'||!hasPerm('marketplace'))return;
   const{error}=await sbClient.from('trusted_stores').update({status:'rejeitada',updated_at:new Date().toISOString()}).eq('id',id);
   if(error){console.error('[trusted_stores reject]',error);alert('Não foi possível rejeitar.');return;}
   await loadMarketplaceData();renderStoreLists();

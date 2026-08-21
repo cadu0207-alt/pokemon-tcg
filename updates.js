@@ -48,7 +48,7 @@ async function renderUpdatesLog() {
 function renderUpdatesAdminForm() {
   const holder = document.getElementById('admin-updates-wrap');
   if (!holder) return;
-  if (typeof isAdminEditor !== 'function' || !isAdminEditor()) { holder.innerHTML = ''; return; }
+  if (typeof hasPerm !== 'function' || !hasPerm('updates')) { holder.innerHTML = ''; return; }
 
   holder.innerHTML =
     '<div class="sec-title" style="margin-top:28px">📢 Admin · Publicar Atualização</div>' +
@@ -107,7 +107,7 @@ async function loadUpdatesList() {
 }
 
 async function publishUpdate() {
-  if (typeof isAdminEditor !== 'function' || !isAdminEditor()) return;
+  if (typeof hasPerm !== 'function' || !hasPerm('updates')) return;
   const titleInput = document.getElementById('update-title-input');
   const msgInput = document.getElementById('update-msg-input');
   const btn = document.getElementById('update-publish-btn');

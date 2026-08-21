@@ -969,6 +969,7 @@
        marketplace.js, positivo.js, lojas.js/lojas_admin_collapse.js). -->
   <div id="admin" class="pane">
     <div class="sec-title" style="margin-top:0">🔐 Painel Admin</div>
+    <div id="staff-access-wrap"></div>
     <div id="admin-stats-wrap"></div>
     <div id="admin-tab-analytics-wrap"></div>
     <div id="admin-product-redirects-wrap"></div>
@@ -1367,6 +1368,12 @@
 <script defer src="import_ligapokemon.js"></script>
 <script defer src="ev_calculator.js"></script>
 <script defer src="lojas.js"></script>
+<!-- staff_access.js (21/08/2026): tabela/telinha de acesso da equipe (view-only
+     por padrão + permissões granulares por área) — precisa carregar depois de
+     lojas.js (isAdmin/isAdminEditor/uid) e antes de qualquer arquivo que chame
+     hasPerm() em resposta a clique (marketplace.js, positivo.js, feedback.js,
+     updates.js, admin_panel.js). Ver staff_access_setup.sql pro back-end. -->
+<script defer src="staff_access.js"></script>
 <script defer src="lojas_fix_latest_price.js"></script>
 <script defer src="marketplace.js"></script>
 <!-- price_history.js (19/08/2026): gráfico de histórico de preço + book de compra/venda

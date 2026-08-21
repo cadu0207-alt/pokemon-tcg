@@ -252,7 +252,7 @@ function positiveCompanyCard(c, { pending } = {}) {
     ${pending && c.contato_dono ? `<div class="mkt-store-meta">Contato do dono: ${c.contato_dono}</div>` : ''}
     ${links ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${links}</div>` : ''}
     ${!pending ? pcReviewsBlock(c) : ''}
-    ${pending && typeof isAdminEditor === 'function' && isAdminEditor() ? `<div style="display:flex;gap:8px;margin-top:10px">
+    ${pending && typeof hasPerm === 'function' && hasPerm('positivo') ? `<div style="display:flex;gap:8px;margin-top:10px">
       <button class="btn-add" style="padding:5px 10px;font-size:10px" onclick="approvePositiveCompany('${c.id}')">✓ Aprovar</button>
       <button class="cv-item-remove" onclick="rejectPositiveCompany('${c.id}')">Rejeitar</button>
     </div>` : ''}
@@ -322,7 +322,7 @@ async function submitPositiveCompany() {
 
 // ── APROVAÇÃO (admin) ───────────────────────────────────────────
 async function approvePositiveCompany(id) {
-  if (typeof isAdminEditor !== 'function' || !isAdminEditor()) return;
+  if (typeof hasPerm !== 'function' || !hasPerm('positivo')) return;
   const { error } = await sbClient.from('positive_companies')
     .update({ status: 'ativa', updated_at: new Date().toISOString() }).eq('id', id);
   if (error) { console.error('[positive_companies approve]', error); alert('Não foi possível aprovar.'); return; }
@@ -330,7 +330,7 @@ async function approvePositiveCompany(id) {
 }
 
 async function rejectPositiveCompany(id) {
-  if (typeof isAdminEditor !== 'function' || !isAdminEditor()) return;
+  if (typeof hasPerm !== 'function' || !hasPerm('positivo')) return;
   const { error } = await sbClient.from('positive_companies')
     .update({ status: 'rejeitada', updated_at: new Date().toISOString() }).eq('id', id);
   if (error) { console.error('[positive_companies reject]', error); alert('Não foi possível rejeitar.'); return; }
