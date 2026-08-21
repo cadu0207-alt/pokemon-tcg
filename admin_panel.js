@@ -50,11 +50,13 @@ async function renderAdminTab() {
     // os containers ficam vazios pra quem não é o Eduardo.
     ['admin-stats-wrap', 'admin-tab-analytics-wrap', 'admin-product-redirects-wrap',
      'admin-set-distribution-wrap', 'admin-userlist-wrap', 'admin-feedback-wrap',
-     'admin-updates-wrap', 'lojas-admin', 'mkt-pending-list', 'pc-pending-list']
+     'admin-updates-wrap', 'lojas-admin', 'mkt-pending-list', 'pc-pending-list',
+     'staff-access-wrap']
       .forEach(function (id) { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
     return;
   }
 
+  if (typeof renderStaffAccessPanel === 'function') renderStaffAccessPanel();
   if (typeof renderAdminStats === 'function') renderAdminStats();
   if (typeof renderAdminTabStats === 'function') renderAdminTabStats();
   if (typeof renderAdminProductRedirects === 'function') renderAdminProductRedirects();

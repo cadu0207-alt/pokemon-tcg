@@ -34,7 +34,7 @@ async function renderFeedbackBar() {
 
   holder.innerHTML =
     '<div class="feedback-bar">' +
-      '<span class="feedback-bar-text">🚧 Site em construção — queremos sua opinião!</span>' +
+      '<span class="feedback-bar-text">💬 Fale com o MyDeck — queremos sua opinião</span>' +
       '<input id="feedback-input" class="feedback-input" placeholder="Digite sua sugestão, dúvida ou problema..." maxlength="500">' +
       '<button class="feedback-send-btn" id="feedback-send-btn" onclick="sendFeedback()" title="Enviar mensagem">📨</button>' +
     '</div>';
@@ -115,7 +115,7 @@ async function renderAdminFeedback() {
 }
 
 async function sendFeedbackReply(id) {
-  if (typeof isAdminEditor !== 'function' || !isAdminEditor()) return;
+  if (typeof hasPerm !== 'function' || !hasPerm('feedback')) return;
   const input = document.getElementById('reply-input-' + id);
   if (!input) return;
   const replyText = input.value.trim();

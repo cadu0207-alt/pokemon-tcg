@@ -1824,7 +1824,44 @@ body.share-view .btn-add { display: none !important; }
 @media (min-width: 1024px) { .auc-grid { grid-template-columns: 1fr 1fr 1fr; } }
 .auc-hot-card { border-color: var(--gold) !important; box-shadow: 0 0 0 1px var(--gold) inset; }
 .auc-mine-card { border-color: var(--teal) !important; box-shadow: 0 0 0 1px var(--teal) inset; }
+.auc-cheap-card { border-color: var(--blue) !important; box-shadow: 0 0 0 1px var(--blue) inset; }
 .auc-empty-filtered { grid-column: 1 / -1; }
+
+/* ─── LEILÃO/LOJA — visão "Por Leiloeiro" (21/08/2026): acordeão de
+   seções, uma por leiloeiro, cada uma com contadores e a grade de
+   lotes dele. Reaproveita .panel (mesmo recorte de canto do resto do
+   site) — só adiciona o cabeçalho clicável e o corpo colapsável. ─── */
+.auc-leiloeiro-card { overflow: hidden; }
+.auc-leiloeiro-head {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 20px; cursor: pointer; user-select: none;
+}
+.auc-leiloeiro-head:hover { background: var(--surface2); }
+.auc-leiloeiro-avatar {
+  width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Bebas Neue', sans-serif; font-size: 17px; color: #04120e;
+}
+.auc-leiloeiro-info { flex: 1; min-width: 0; }
+.auc-leiloeiro-name {
+  font-weight: 700; font-size: 14px; color: var(--text);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.auc-leiloeiro-badge {
+  font-family: 'Space Mono', monospace; font-size: 8.5px; font-weight: 700;
+  color: var(--gold); border: 1px solid var(--gold); border-radius: 20px;
+  padding: 1px 8px; letter-spacing: .3px;
+}
+.auc-leiloeiro-meta {
+  font-size: 10.5px; color: var(--muted); font-family: 'Space Mono', monospace;
+  margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap;
+}
+.auc-leiloeiro-live { color: var(--accent); }
+.auc-leiloeiro-chevron { color: var(--muted); font-size: 12px; transition: transform .2s; flex-shrink: 0; }
+.auc-leiloeiro-card.open .auc-leiloeiro-chevron { transform: rotate(180deg); }
+.auc-leiloeiro-body { display: none; border-top: 1px solid var(--border); padding: 16px 20px 20px; }
+.auc-leiloeiro-card.open .auc-leiloeiro-body { display: block; }
+.auc-leiloeiro-body .auc-grid { margin-bottom: 0; }
 .product-card {
   position: relative;
   display: block;
@@ -1862,6 +1899,10 @@ body.share-view .btn-add { display: none !important; }
 .ml-coupon-row input[type=text], .ml-coupon-row input:not([type]) { flex: 1; min-width: 140px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 12px; }
 .ml-coupon-row input[type=number] { width: 80px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 12px; }
 .ml-coupon-row select { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 12px; }
+/* staff_access.js (21/08/2026) — telinha "Equipe" na aba Admin */
+.staff-perm-grid { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; }
+.staff-perm-check { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text); cursor: pointer; }
+.staff-perm-check input[type=checkbox] { cursor: pointer; }
 .product-note { font-size: 10px; color: var(--muted); margin-top: 3px; }
 .product-note-warn { font-size: 10px; color: #a16207; background: #fef3c7; border-radius: 6px; padding: 4px 8px; margin-top: 6px; line-height: 1.4; }
 .product-stats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }

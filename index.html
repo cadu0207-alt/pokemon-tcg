@@ -127,8 +127,8 @@
     <div class="home-particles" id="particles"></div>
     <div class="home-content">
       <div class="home-badge">MyDeck • Pokémon TCG 🇧🇷</div>
-      <img class="home-logo-img home-logo-light" src="logo-mydeck.png" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil" width="1800" height="572">
-      <img class="home-logo-img home-logo-dark" src="logo-mydeck-dark.png" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil" width="1800" height="572">
+      <img class="home-logo-img home-logo-light" src="logo-mydeck.webp" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil" width="1800" height="572">
+      <img class="home-logo-img home-logo-dark" src="logo-mydeck-dark.webp" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil" width="1800" height="572">
       <h1 class="home-title sr-only">MyDeck</h1>
       <p class="home-sub sr-only">Master Set Tracker · Pokémon TCG Brasil</p>
       <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
@@ -736,6 +736,13 @@
       <div style="margin-bottom:14px">
         <input type="text" id="leilao-search" placeholder="🔍 Buscar por carta, set ou nº..." class="cv-select" style="width:100%;max-width:420px" oninput="aucApplySearchFilter()">
         <div id="leilao-filter-bar" class="collection-filter-bar" style="margin-top:10px"></div>
+        <!-- Visão por rodada (padrão, como sempre foi) ou agrupada por leiloeiro
+             (21/08/2026, pensado pra quando tiver mais de um leiloeiro ativo ao
+             mesmo tempo) — ver aucSwitchListView() em leilao.js. -->
+        <div id="leilao-view-toggle" style="display:flex;gap:8px;margin-top:10px">
+          <button type="button" class="filter-chip filter-chip-active" data-view="rodada" onclick="aucSwitchListView('rodada')">🗓️ Por Rodada</button>
+          <button type="button" class="filter-chip" data-view="leiloeiro" onclick="aucSwitchListView('leiloeiro')">👤 Por Leiloeiro</button>
+        </div>
       </div>
       <div id="leilao-hot-list"></div>
       <div id="leilao-list"></div>
@@ -798,6 +805,11 @@
       <div style="margin-bottom:14px">
         <input type="text" id="loja-search" placeholder="🔍 Buscar na loja..." class="cv-select" style="width:100%;max-width:420px" oninput="renderLojaGrid()">
         <div id="loja-filter-bar" class="collection-filter-bar" style="margin-top:10px"></div>
+        <!-- Mesmo padrão da aba Leilões — ver lojaSwitchListView() em loja.js. -->
+        <div id="loja-view-toggle" style="display:flex;gap:8px;margin-top:10px">
+          <button type="button" class="filter-chip filter-chip-active" data-view="grade" onclick="lojaSwitchListView('grade')">🗂️ Todos os Itens</button>
+          <button type="button" class="filter-chip" data-view="leiloeiro" onclick="lojaSwitchListView('leiloeiro')">👤 Por Leiloeiro</button>
+        </div>
       </div>
       <div id="loja-grid"></div>
 
@@ -969,6 +981,7 @@
        marketplace.js, positivo.js, lojas.js/lojas_admin_collapse.js). -->
   <div id="admin" class="pane">
     <div class="sec-title" style="margin-top:0">🔐 Painel Admin</div>
+    <div id="staff-access-wrap"></div>
     <div id="admin-stats-wrap"></div>
     <div id="admin-tab-analytics-wrap"></div>
     <div id="admin-product-redirects-wrap"></div>
@@ -1367,6 +1380,12 @@
 <script defer src="import_ligapokemon.js"></script>
 <script defer src="ev_calculator.js"></script>
 <script defer src="lojas.js"></script>
+<!-- staff_access.js (21/08/2026): tabela/telinha de acesso da equipe (view-only
+     por padrão + permissões granulares por área) — precisa carregar depois de
+     lojas.js (isAdmin/isAdminEditor/uid) e antes de qualquer arquivo que chame
+     hasPerm() em resposta a clique (marketplace.js, positivo.js, feedback.js,
+     updates.js, admin_panel.js). Ver staff_access_setup.sql pro back-end. -->
+<script defer src="staff_access.js"></script>
 <script defer src="lojas_fix_latest_price.js"></script>
 <script defer src="marketplace.js"></script>
 <!-- price_history.js (19/08/2026): gráfico de histórico de preço + book de compra/venda

@@ -232,6 +232,14 @@ if(sbClient){
     _updateUserChip(currentUser);
     if(currentUser){
       _showAuth(false);
+      // TOKEN_REFRESHED (20/08/2026): o Supabase renova o JWT sozinho de tempo
+      // em tempo (a cada ~1h de sessão aberta) e dispara esse mesmo evento —
+      // sem isso, loadAll() rodava de novo a cada renovação e re-renderizava
+      // a tela inteira (Dashboard, Fichário, gráficos...) do nada, mesmo sem
+      // nenhum dado ter mudado no Supabase. Parecia a página "atualizando
+      // sozinha" enquanto o usuário só estava com a aba aberta. Só recarrega
+      // dados em eventos que de fato significam login novo/trocado.
+      if(_event==='TOKEN_REFRESHED') return;
       // Só carrega dados se o DOM estiver pronto
       if(document.readyState==='complete'||document.readyState==='interactive'){
         loadAll();
