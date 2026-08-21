@@ -736,6 +736,13 @@
       <div style="margin-bottom:14px">
         <input type="text" id="leilao-search" placeholder="🔍 Buscar por carta, set ou nº..." class="cv-select" style="width:100%;max-width:420px" oninput="aucApplySearchFilter()">
         <div id="leilao-filter-bar" class="collection-filter-bar" style="margin-top:10px"></div>
+        <!-- Visão por rodada (padrão, como sempre foi) ou agrupada por leiloeiro
+             (21/08/2026, pensado pra quando tiver mais de um leiloeiro ativo ao
+             mesmo tempo) — ver aucSwitchListView() em leilao.js. -->
+        <div id="leilao-view-toggle" style="display:flex;gap:8px;margin-top:10px">
+          <button type="button" class="filter-chip filter-chip-active" data-view="rodada" onclick="aucSwitchListView('rodada')">🗓️ Por Rodada</button>
+          <button type="button" class="filter-chip" data-view="leiloeiro" onclick="aucSwitchListView('leiloeiro')">👤 Por Leiloeiro</button>
+        </div>
       </div>
       <div id="leilao-hot-list"></div>
       <div id="leilao-list"></div>
@@ -798,6 +805,11 @@
       <div style="margin-bottom:14px">
         <input type="text" id="loja-search" placeholder="🔍 Buscar na loja..." class="cv-select" style="width:100%;max-width:420px" oninput="renderLojaGrid()">
         <div id="loja-filter-bar" class="collection-filter-bar" style="margin-top:10px"></div>
+        <!-- Mesmo padrão da aba Leilões — ver lojaSwitchListView() em loja.js. -->
+        <div id="loja-view-toggle" style="display:flex;gap:8px;margin-top:10px">
+          <button type="button" class="filter-chip filter-chip-active" data-view="grade" onclick="lojaSwitchListView('grade')">🗂️ Todos os Itens</button>
+          <button type="button" class="filter-chip" data-view="leiloeiro" onclick="lojaSwitchListView('leiloeiro')">👤 Por Leiloeiro</button>
+        </div>
       </div>
       <div id="loja-grid"></div>
 

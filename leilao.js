@@ -907,6 +907,24 @@ function aucIsOverdue(o){return o.status==='aguardando_pagamento'&&o.payment_due
 let aucSearchTerm='';
 let aucActiveFilters={};
 
+// Visão "Por Rodada" (padrão, como sempre foi) x "Por Leiloeiro" (21/08/2026 —
+// pensado pra quando tiver mais de um leiloeiro com leilão ao vivo ao mesmo
+// tempo, pra não misturar tudo numa lista só). aucExpandedLeiloeiros guarda
+// quais seções estão abertas — precisa persistir entre re-renders (a lista
+// inteira é redesenhada toda vez que alguém dá lance, filtra, etc.), senão
+// a seção fecharia sozinha a cada atualização.
+let aucListView='rodada'; // 'rodada' | 'leiloeiro'
+let aucExpandedLeiloeiros=new Set();
+
+function aucSwitchListView(view){
+  if(aucListView===view)return;
+  aucListView=view;
+  document.querySelectorAll('#leilao-view-toggle .filter-chip').forEach(b=>{
+    b.classList.toggle('filter-chip-active',b.dataset.view===view);
+  });
+  renderAuctionsList();
+}
+
 function aucNormalize(s){
   return(s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 }
@@ -1006,24 +1024,103 @@ function renderAuctionsList(){
       🚫 Você está temporariamente bloqueado de dar lances: ${esc(aucBlockedReason||'pagamento pendente de uma rodada anterior')}. Fale com o leiloeiro pra liberar.
     </div>`:'';
 
-  const roundsHtml=visibleRounds.map(r=>{
-    const cards=aucAuctions.filter(a=>a.round_id===r.id&&a.status!=='cancelado')
-      .filter(a=>aucCardMatchesSearch(a)&&aucCardMatchesFilters(a));
-    if(!cards.length)return'';
-    return`<div id="leilao-round-sec-${r.id}" class="sec-title" style="margin-top:20px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center">
-      <span>🗓️ ${esc(r.title)}
-        <span style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;font-weight:400;margin-left:8px">
-          Lances até ${new Date(r.end_at).toLocaleString('pt-BR')} · Pagamento até ${new Date(r.payment_due_at).toLocaleString('pt-BR')}
+  let mainHtml;
+  if(aucListView==='leiloeiro'){
+    mainHtml=aucLeiloeiroViewHtml(allCards);
+  }else{
+    const roundsHtml=visibleRounds.map(r=>{
+      const cards=aucAuctions.filter(a=>a.round_id===r.id&&a.status!=='cancelado')
+        .filter(a=>aucCardMatchesSearch(a)&&aucCardMatchesFilters(a));
+      if(!cards.length)return'';
+      return`<div id="leilao-round-sec-${r.id}" class="sec-title" style="margin-top:20px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center">
+        <span>🗓️ ${esc(r.title)}
+          <span style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;font-weight:400;margin-left:8px">
+            Lances até ${new Date(r.end_at).toLocaleString('pt-BR')} · Pagamento até ${new Date(r.payment_due_at).toLocaleString('pt-BR')}
+          </span>
         </span>
-      </span>
-      ${aucIsLeilaoAdmin?`<button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal);font-size:10px" onclick="shareRoundText(${r.id})">📤 Compartilhar rodada</button>`:''}
-      </div>
-      ${r.shipping_note?`<div class="mkt-note" style="margin-bottom:14px">🚚 ${esc(r.shipping_note)}</div>`:''}
-      <div class="auc-grid">${cards.map(a=>aucCardHtml(a)).join('')}</div>`;
-  }).filter(Boolean).join('');
+        ${aucIsLeilaoAdmin?`<button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal);font-size:10px" onclick="shareRoundText(${r.id})">📤 Compartilhar rodada</button>`:''}
+        </div>
+        ${r.shipping_note?`<div class="mkt-note" style="margin-bottom:14px">🚚 ${esc(r.shipping_note)}</div>`:''}
+        <div class="auc-grid">${cards.map(a=>aucCardHtml(a)).join('')}</div>`;
+    }).filter(Boolean).join('');
+    mainHtml=roundsHtml||`<div class="cv-item-empty">Nenhum leilão encontrado com esse filtro.</div>`;
+  }
 
-  wrap.innerHTML=blockedNote+(roundsHtml||`<div class="cv-item-empty">Nenhum leilão encontrado com esse filtro.</div>`);
+  wrap.innerHTML=blockedNote+mainHtml;
   refreshOpenAuctionZoom();
+}
+
+// ── VISÃO "POR LEILOEIRO" (21/08/2026) ────────────────────────────
+// Mesmas cartas de sempre (allCards, já passou pela busca/filtro em quem
+// chamou), só reagrupadas por quem cadastrou (a.created_by) em vez de por
+// rodada. Cada seção é um acordeão — ver aucToggleLeiloeiroSection().
+const AUC_AVATAR_COLORS=['var(--accent)','var(--teal)','var(--gold)','var(--blue)','var(--purple)'];
+function aucAvatarColor(key){
+  let h=0;
+  const s=String(key);
+  for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;
+  return AUC_AVATAR_COLORS[h%AUC_AVATAR_COLORS.length];
+}
+function aucAvatarInitial(key){
+  return(aucLeiloeiroNome(key)||'?').trim().charAt(0).toUpperCase();
+}
+
+function aucLeiloeiroViewHtml(allCards){
+  const filtered=allCards.filter(a=>aucCardMatchesSearch(a)&&aucCardMatchesFilters(a));
+  if(!filtered.length)return`<div class="cv-item-empty">Nenhum leilão encontrado com esse filtro.</div>`;
+  const byLeiloeiro={};
+  filtered.forEach(a=>{
+    const key=a.created_by||'—';
+    (byLeiloeiro[key]=byLeiloeiro[key]||[]).push(a);
+  });
+  // Quem tem mais lote "ativo" agora aparece primeiro — é quem tem mais
+  // disputa rolando; empate resolvido por nome, pra ordem não ficar aleatória.
+  const keys=Object.keys(byLeiloeiro).sort((x,y)=>{
+    const ax=byLeiloeiro[x].filter(a=>a.status==='ativo').length;
+    const ay=byLeiloeiro[y].filter(a=>a.status==='ativo').length;
+    if(ay!==ax)return ay-ax;
+    return aucLeiloeiroNome(x).localeCompare(aucLeiloeiroNome(y));
+  });
+  // Primeira vez que alguém troca pra essa visão (nenhuma seção ainda foi
+  // aberta/fechada manualmente): abre o mais movimentado sozinho, pra não
+  // cair numa tela de acordeões todos fechados sem nada visível.
+  if(!aucExpandedLeiloeiros.size&&keys.length)aucExpandedLeiloeiros.add(keys[0]);
+  return keys.map(k=>aucLeiloeiroSectionHtml(k,byLeiloeiro[k])).join('');
+}
+
+function aucLeiloeiroSectionHtml(key,cards){
+  const open=aucExpandedLeiloeiros.has(key);
+  // Contadores olham TODO aucAuctions daquele leiloeiro (não só os lotes que
+  // passaram no filtro de busca acima) — "3 leilões realizados" precisa
+  // continuar certo mesmo se a pessoa tiver digitado algo na busca.
+  const todosDele=aucAuctions.filter(a=>(a.created_by||'—')===key&&a.status!=='cancelado');
+  const ativos=todosDele.filter(a=>a.status==='ativo').length;
+  const agendados=todosDele.filter(a=>a.status==='agendado').length;
+  const realizados=todosDele.filter(a=>a.status==='encerrado').length;
+  const isPrincipal=key===(typeof ADMIN_UID!=='undefined'?ADMIN_UID:null);
+  return`<div class="panel auc-leiloeiro-card${open?' open':''}" style="padding:0;margin-bottom:12px">
+    <div class="auc-leiloeiro-head" onclick="aucToggleLeiloeiroSection('${key}')">
+      <div class="auc-leiloeiro-avatar" style="background:${aucAvatarColor(key)}">${esc(aucAvatarInitial(key))}</div>
+      <div class="auc-leiloeiro-info">
+        <div class="auc-leiloeiro-name">${esc(aucLeiloeiroNome(key))}${isPrincipal?' <span class="auc-leiloeiro-badge">LEILOEIRO PRINCIPAL</span>':''}</div>
+        <div class="auc-leiloeiro-meta">
+          <span${ativos?' class="auc-leiloeiro-live"':''}>${ativos} ao vivo</span>
+          ${agendados?`<span>${agendados} agendado${agendados===1?'':'s'}</span>`:''}
+          <span>${realizados} leilão${realizados===1?'':'ões'} realizado${realizados===1?'':'s'}</span>
+        </div>
+      </div>
+      <div class="auc-leiloeiro-chevron">▾</div>
+    </div>
+    <div class="auc-leiloeiro-body">
+      ${cards.length?`<div class="auc-grid">${cards.map(a=>aucCardHtml(a,'porleiloeiro')).join('')}</div>`:`<div class="cv-item-empty">Nenhum lote desse leiloeiro com esse filtro.</div>`}
+    </div>
+  </div>`;
+}
+
+function aucToggleLeiloeiroSection(key){
+  if(aucExpandedLeiloeiros.has(key))aucExpandedLeiloeiros.delete(key);
+  else aucExpandedLeiloeiros.add(key);
+  renderAuctionsList();
 }
 
 // idSuffix diferencia os ids de input/status quando a MESMA carta aparece

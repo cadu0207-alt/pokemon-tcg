@@ -22,6 +22,23 @@ let lojaAdminReservations=[];
 let lojaSelectedCard=null; // carta escolhida na busca do catálogo (Cadastrar Carta)
 let lojaActiveFilters={};
 
+// Mesmo padrão da aba Leilões (aucListView/aucExpandedLeiloeiros em
+// leilao.js, 21/08/2026) — "Todos os Itens" (grade única, como sempre foi)
+// x "Por Leiloeiro" (acordeão por quem cadastrou). Reaproveita
+// aucAvatarColor()/aucAvatarInitial() de leilao.js (carregado antes, ver
+// cabeçalho do arquivo).
+let lojaListView='grade'; // 'grade' | 'leiloeiro'
+let lojaExpandedLeiloeiros=new Set();
+
+function lojaSwitchListView(view){
+  if(lojaListView===view)return;
+  lojaListView=view;
+  document.querySelectorAll('#loja-view-toggle .filter-chip').forEach(b=>{
+    b.classList.toggle('filter-chip-active',b.dataset.view===view);
+  });
+  renderLojaGrid();
+}
+
 // ── CARREGAR ────────────────────────────────────────────────────
 // Sem filtro de status no select — a RLS já cuida disso sozinha:
 // quem não é leiloeiro só recebe linhas com status <> 'removido';
@@ -102,7 +119,50 @@ function renderLojaGrid(){
   const visiveis=lojaItems.filter(i=>['ativo','esgotado'].includes(i.status))
     .filter(i=>lojaMatchesSearch(i)&&lojaMatchesFilters(i));
   if(!visiveis.length){wrap.innerHTML=`<div class="cv-item-empty">Nenhum item na loja no momento.</div>`;return;}
-  wrap.innerHTML=`<div class="auc-grid">${visiveis.map(i=>lojaItemCardHtml(i)).join('')}</div>`;
+  wrap.innerHTML=lojaListView==='leiloeiro'
+    ?lojaLeiloeiroViewHtml(visiveis)
+    :`<div class="auc-grid">${visiveis.map(i=>lojaItemCardHtml(i)).join('')}</div>`;
+}
+
+// ── VISÃO "POR LEILOEIRO" (21/08/2026) — mesmo espírito da aba Leilões ──
+function lojaLeiloeiroViewHtml(visiveis){
+  const byLeiloeiro={};
+  visiveis.forEach(i=>{
+    const key=i.created_by||'—';
+    (byLeiloeiro[key]=byLeiloeiro[key]||[]).push(i);
+  });
+  const keys=Object.keys(byLeiloeiro).sort((x,y)=>aucLeiloeiroNome(x).localeCompare(aucLeiloeiroNome(y)));
+  if(!lojaExpandedLeiloeiros.size&&keys.length)lojaExpandedLeiloeiros.add(keys[0]);
+  return keys.map(k=>lojaLeiloeiroSectionHtml(k,byLeiloeiro[k])).join('');
+}
+
+function lojaLeiloeiroSectionHtml(key,items){
+  const open=lojaExpandedLeiloeiros.has(key);
+  const disponiveis=items.filter(i=>i.status==='ativo'&&lojaAvailableQty(i)>0).length;
+  const esgotados=items.length-disponiveis;
+  const isPrincipal=key===(typeof ADMIN_UID!=='undefined'?ADMIN_UID:null);
+  return`<div class="panel auc-leiloeiro-card${open?' open':''}" style="padding:0;margin-bottom:12px">
+    <div class="auc-leiloeiro-head" onclick="lojaToggleLeiloeiroSection('${key}')">
+      <div class="auc-leiloeiro-avatar" style="background:${aucAvatarColor(key)}">${esc(aucAvatarInitial(key))}</div>
+      <div class="auc-leiloeiro-info">
+        <div class="auc-leiloeiro-name">${esc(aucLeiloeiroNome(key))}${isPrincipal?' <span class="auc-leiloeiro-badge">LEILOEIRO PRINCIPAL</span>':''}</div>
+        <div class="auc-leiloeiro-meta">
+          <span>${disponiveis} ${disponiveis===1?'item':'itens'} à venda</span>
+          ${esgotados?`<span>${esgotados} esgotado${esgotados===1?'':'s'}</span>`:''}
+        </div>
+      </div>
+      <div class="auc-leiloeiro-chevron">▾</div>
+    </div>
+    <div class="auc-leiloeiro-body">
+      <div class="auc-grid">${items.map(i=>lojaItemCardHtml(i)).join('')}</div>
+    </div>
+  </div>`;
+}
+
+function lojaToggleLeiloeiroSection(key){
+  if(lojaExpandedLeiloeiros.has(key))lojaExpandedLeiloeiros.delete(key);
+  else lojaExpandedLeiloeiros.add(key);
+  renderLojaGrid();
 }
 
 function lojaItemCardHtml(item){
