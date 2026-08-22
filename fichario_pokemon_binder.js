@@ -373,4 +373,49 @@ window.fmPkmnSave = async function(){
   if (typeof renderCustomBindersHome === 'function') renderCustomBindersHome();
 };
 
+// ── getBinderCards: resolve 'pokemon' a partir de b.pages (posição exata) ──
+// Mesmo padrão de fichario_masterdex.js pro type:'masterdex' — getBinderCards
+// original só entende 'manual'/'preset' (filter_config), então qualquer outro
+// consumidor genérico que chame getBinderCards() num fichário de Pokémon
+// (contador na aba fixada, exportar lista, etc.) precisa desse desvio.
+if (typeof window.getBinderCards === 'function') {
+  const _pkOrigGetBinderCards = window.getBinderCards;
+  window.getBinderCards = function(binder){
+    const cfg = (binder && binder.filter_config) || {};
+    if (cfg.type === 'pokemon') {
+      const out = [];
+      (binder.pages || []).forEach(page => {
+        (page || []).forEach(slot => {
+          if (!slot) return;
+          const cards = (typeof SET_CARDS_MAP !== 'undefined' && SET_CARDS_MAP[slot.set]) ? (SET_CARDS_MAP[slot.set]() || []) : [];
+          const card = cards.find(c => String(c.n) === String(slot.n));
+          if (card) out.push({ ...card, _setId: slot.set, _ver: slot.ver });
+        });
+      });
+      return out;
+    }
+    return _pkOrigGetBinderCards.apply(this, arguments);
+  };
+}
+
+// ── openCustomBinderView: desvia fichário de Pokémon pro builder próprio ───
+// BUG relatado pelo Eduardo ao vivo (22/08): fichário fixado na barra de
+// abas abria a grade genérica (openCustomBinderView → getBinderCards →
+// [] pra type 'pokemon') e mostrava "Nenhuma carta encontrada". Aba fixada
+// e switchSet(pid) chamam openCustomBinderView(binder) DIRETO — não passam
+// pelo fmBinderCardHtml() da Home (que já tinha o desvio certo). Precisa
+// interceptar aqui também, senão qualquer entrada que não seja o clique no
+// tile da Home cai na grade genérica.
+if (typeof window.openCustomBinderView === 'function') {
+  const _pkOrigOpenCBV = window.openCustomBinderView;
+  window.openCustomBinderView = function(binder){
+    if (typeof binder === 'string') binder = JSON.parse(binder);
+    if (binder && binder.filter_config && binder.filter_config.type === 'pokemon') {
+      fmPkmnOpenBuilder(binder.id);
+      return;
+    }
+    return _pkOrigOpenCBV.apply(this, arguments);
+  };
+}
+
 })();

@@ -393,17 +393,16 @@ async function renderLeilaoAnalisesUltimosLances(){
   </div>`;
 }
 
-// ── COMISSÃO MYDECK (mesmos termos combinados com o leiloeiro, baseados
-// na tabela de comissão decrescente da MYP Cards): 7% padrão em cima da
-// soma de pedidos PAGOS no mês, caindo por faixa conforme essa soma
-// mensal sobe — 6% a partir de R$10k, 5% a partir de R$20k, 4% a partir
-// de R$30k, 3% a partir de R$40k, 2,5% a partir de R$50k, 2% a partir de
-// R$60k, 1,5% a partir de R$70k, 1% a partir de R$80k. Aplicado por
-// FAIXA (progressivo, como imposto por tramo) sobre o total pago no mês
-// — não retroage sobre pedidos já pagos em meses anteriores.
+// ── COMISSÃO MYDECK — LEILÃO (própria do leilão, separada da Loja, ver
+// LOJA_COMMISSION_TIERS em loja.js) — sobre a soma de pedidos PAGOS no
+// mês, caindo por faixa conforme essa soma mensal sobe. Reduzida em
+// 22/08/2026 (pedido do Eduardo: baixar a faixa inicial de 7% pra 5%):
+// as antigas faixas de 0-10k(7%)/10k-20k(6%)/20k-30k(5%) viraram uma
+// faixa única de 0-30k a 5%, resto da escada (4%/3%/2,5%/2%/1,5%/1%)
+// inalterado. Aplicado por FAIXA (progressivo, como imposto por tramo)
+// sobre o total pago no mês — não retroage sobre pedidos já pagos em
+// meses anteriores.
 const AUC_COMMISSION_TIERS=[
-  {upTo:10000, rate:0.07},
-  {upTo:20000, rate:0.06},
   {upTo:30000, rate:0.05},
   {upTo:40000, rate:0.04},
   {upTo:50000, rate:0.03},
@@ -476,7 +475,7 @@ function renderLeilaoComissao(){
     <div class="panel" style="padding:14px">
       <div style="font-size:10.5px;color:var(--muted);margin-bottom:4px">
         Comissão decrescente por faixa de soma de pedidos pagos no mês (mesmos termos combinados com o leiloeiro):
-        7% até R$10k · 6% até R$20k · 5% até R$30k · 4% até R$40k · 3% até R$50k · 2,5% até R$60k · 2% até R$70k · 1,5% até R$80k · 1% acima de R$80k.
+        5% até R$30k · 4% até R$40k · 3% até R$50k · 2,5% até R$60k · 2% até R$70k · 1,5% até R$80k · 1% acima de R$80k.
       </div>
       ${tabelaFaixas}
     </div>`;
