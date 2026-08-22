@@ -211,7 +211,12 @@ window.fmPkmnPickSpecies = function(dex, name){
 function pkRenderCardList(){
   const box = document.getElementById('pkb-card-list');
   if (!box) return;
-  const all = getAllCardsWithSet();
+  // TODO catálogo, não só as coleções ativas (myCollections) — Eduardo
+  // confirmou isso explicitamente na 1ª pergunta feita antes de construir
+  // essa feature. getAllCardsWithSet() filtra por coleção ativa (é o que
+  // o resto do Fichário usa); getAllCatalogCards() varre TODO SET_CARDS_MAP,
+  // que é o que esse picker precisa (mesmo padrão usado no Compra/Venda).
+  const all = (typeof getAllCatalogCards === 'function') ? getAllCatalogCards() : getAllCardsWithSet();
   const matches = all.filter(c => (typeof fmDexOf === 'function' ? fmDexOf(c) : c.dex) === _pk.dex);
   if (!matches.length) {
     box.innerHTML = `<div class="pkb-empty">Nenhuma carta desse Pokémon no catálogo ainda.</div>`;
