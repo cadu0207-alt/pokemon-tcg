@@ -3984,7 +3984,7 @@ async function cbConfirmSave(editId){
    HOME PAGE — CARD ROTATION (top 3 por preço de cada coleção)
    ═══════════════════════════════════════════════════════════════ */
 (function initHomeRotation(){
-  const INTERVAL = 3800; // ms entre cada card
+  const INTERVAL = 30000; // ms entre cada card (30s — antes 3.8s, ajustado a pedido do Eduardo em 22/08)
 
   // Formata preço BR
   function fmtPriceBR(p){
