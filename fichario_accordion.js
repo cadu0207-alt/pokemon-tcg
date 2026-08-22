@@ -179,12 +179,17 @@ function fmBinderCardHtml(b){
   </div>`;
 }
 
-window.fmToggleAccordion=function(key){
+// ADICIONADO 22/08/2026 (pedido do Eduardo): 2º parâmetro opcional pra
+// suportar seções que minimizam mas não são grid (ex: "MINHAS COLEÇÕES",
+// que quando aberta usa display:block, não display:grid como as categorias
+// de fichário).
+window.fmToggleAccordion=function(key,openDisplay){
+  openDisplay=openDisplay||'grid';
   const panel=document.getElementById('fm-acc-'+key);
   const icon=document.getElementById('fm-acc-ic-'+key);
   if(!panel)return;
   const open=panel.style.display!=='none';
-  panel.style.display=open?'none':'grid';
+  panel.style.display=open?'none':openDisplay;
   if(icon)icon.textContent=open?'▸':'▾';
 };
 
@@ -358,14 +363,20 @@ window.renderCustomBindersHome=function(){
         onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">+ NOVO FICHÁRIO</button>
     </div>
 
-    <!-- ── Seletor de Coleções ─────────────────────────────────── -->
+    <!-- ── Seletor de Coleções (minimizável — pedido do Eduardo 22/08/2026,
+         igual já existia pras categorias de fichário abaixo) ───────────── -->
     <div style="margin-bottom:28px">
-      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);
-                  letter-spacing:2px;margin-bottom:12px;padding-bottom:8px;
-                  border-bottom:1px solid var(--border)">
-        MINHAS COLEÇÕES — TOQUE PARA ATIVAR NAS ABAS
+      <div onclick="fmToggleAccordion('collections','block')"
+        style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+               font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);
+               letter-spacing:2px;margin-bottom:12px;padding-bottom:8px;
+               border-bottom:1px solid var(--border)">
+        <span>MINHAS COLEÇÕES — TOQUE PARA ATIVAR NAS ABAS</span>
+        <span id="fm-acc-ic-collections" style="font-size:11px;color:var(--muted)">▾</span>
       </div>
-      ${seriesSections}
+      <div id="fm-acc-collections" style="display:block">
+        ${seriesSections}
+      </div>
     </div>
 
     ${pokemonHtml}
