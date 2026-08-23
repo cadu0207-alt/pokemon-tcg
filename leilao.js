@@ -781,6 +781,36 @@ async function loadRoundsAndAuctions(){
   if(e2)console.error('[leilao] load auctions',e2);
   aucRounds=Array.isArray(rounds)?rounds:(aucRounds||[]);
   aucAuctions=Array.isArray(auctions)?auctions:(aucAuctions||[]);
+  xpCelebrateNewLeilaoWins(); // XP (23/08/2026) — ver função abaixo
+}
+
+// XP (23/08/2026): close_round() já rodou (chamado via
+// close_all_expired_rounds logo acima) e já creditou XP/conquista de
+// vitória no banco (xp_events_migration_23ago2026.sql) pra quem
+// venceu — só que isso roda "de graça" pra QUALQUER usuário que abrir
+// a aba Leilão (é lazy, sem cron), não só pro vencedor. Por isso a
+// festa (som/confete/toast) só pode acontecer no client de quem
+// realmente ganhou, e só uma vez por leilão — daí o controle em
+// localStorage (mesmo padrão de xp_intro_seen em xp_system.js), pra
+// não repetir o toast toda vez que a pessoa reabrir a aba.
+function xpCelebrateNewLeilaoWins(){
+  if(!uid())return;
+  let seen;
+  try{seen=new Set(JSON.parse(localStorage.getItem('xp_seen_leilao_wins')||'[]'));}catch(e){seen=new Set();}
+  const novos=(aucAuctions||[]).filter(a=>a.status==='encerrado'&&a.winner_id===uid()&&!seen.has(a.id));
+  if(!novos.length)return;
+  novos.forEach(a=>seen.add(a.id));
+  try{localStorage.setItem('xp_seen_leilao_wins',JSON.stringify([...seen]));}catch(e){}
+  if(typeof xpFetchAll==='function'){
+    xpFetchAll().then(()=>{
+      if(typeof xpRenderBadge==='function'&&typeof currentUser!=='undefined')xpRenderBadge(currentUser);
+      if(document.getElementById('dash')?.classList.contains('active')&&typeof xpRenderDashPanel==='function')xpRenderDashPanel();
+    });
+  }
+  novos.forEach((a,i)=>setTimeout(()=>{
+    if(typeof xpPlaySound==='function')xpPlaySound('achievement');
+    if(typeof xpToast==='function')xpToast(`🏆 Você arrematou "${a.card_name||'uma carta'}"! +70 XP`);
+  },i*900));
 }
 
 async function loadMyAuctionOrders(){
@@ -1650,6 +1680,15 @@ async function submitBid(auctionId,idSuffix){
   if(input)input.value='';
   setStatus('Lance registrado!','ok');
   aucMyBidAuctionIds.add(auctionId); // já entra na fileira "Seus leilões" sem esperar reload
+  // XP (23/08/2026): place_bid() no banco já credita XP/conquista de
+  // "primeiro lance" se for o caso (ver xp_events_migration_23ago2026.sql)
+  // — aqui só refletimos isso na tela, mesmo padrão de toggleSlot() no Fichário.
+  if(typeof xpFetchAll==='function'){
+    xpFetchAll().then(()=>{
+      if(typeof xpRenderBadge==='function'&&typeof currentUser!=='undefined')xpRenderBadge(currentUser);
+      if(document.getElementById('dash')?.classList.contains('active')&&typeof xpRenderDashPanel==='function')xpRenderDashPanel();
+    });
+  }
   try{
     await loadRoundsAndAuctions();
     renderAuctionsList();

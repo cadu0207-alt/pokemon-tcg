@@ -326,6 +326,13 @@
     wpSaveJSON(WP_STORAGE_BALLS, wpBalls);
   }
 
+  // Usada só pela reconciliação local↔nuvem em wpSyncFromCloud() (linha
+  // ~397) pra não perder progresso de quem já jogava antes da migração
+  // pra RPC — não é mais chamada na hora de capturar (isso agora é
+  // catch_wild_pokemon(), ver wpThrowBall/wpResolveCatch acima e
+  // xp_events_migration_23ago2026.sql). Escrever aqui NÃO concede XP —
+  // a concessão de XP só acontece dentro da RPC, então nem editar
+  // wild_catches manualmente pelo console dá pra farmar XP.
   function wpDbUpsertCatch(mon) {
     if (!wpHasClient() || !wpUid()) return;
     const rec = wpCatches[mon.s];
@@ -797,14 +804,23 @@
   }
 
   // ── Arremesso + suspense (treme e resolve) ──────────────────
+  // MIGRAÇÃO 23/08/2026: quem decide se capturou não é mais o
+  // Math.random() daqui do client — é o servidor (RPC
+  // catch_wild_pokemon, ver xp_events_migration_23ago2026.sql). Isso
+  // fecha o mesmo buraco que o comentário do topo deste arquivo (e do
+  // wild_pokemon_setup.sql) já avisava: sem isso, dava pra abrir o
+  // console e forçar sucesso/XP à vontade. O client só toca a
+  // animação de suspense (bola tremendo) — o resultado que ela revela
+  // no fim já veio pronto do banco. A RPC também é quem debita a
+  // pokébola agora (não mais escrita direta em wild_balls daqui).
   function wpThrowBall(tier, mon, el) {
     if (el !== wpActiveEl || mon !== wpActiveMon) return; // já sumiu/mudou
     clearTimeout(wpActiveTimeoutId);
     wpActiveEl = null; // trava novo spawn enquanto resolve
 
+    // Feedback visual otimista (bola sumindo do inventário) — o saldo
+    // real e definitivo vem no retorno da RPC, mais abaixo.
     wpBalls[tier] = Math.max(0, (wpBalls[tier] || 0) - 1);
-    wpSaveBalls();
-    wpDbSaveBalls();
     wpUpdateBadge();
     wpSoundBall();
 
@@ -821,8 +837,26 @@
       ballEl.style.top = `${rect.top + rect.height / 2 - 8}px`;
     });
 
-    const chance = WP_CATCH_RATES[tier][mon.r];
-    const success = Math.random() < chance;
+    // Dispara a RPC já de cara (em paralelo com a animação de
+    // suspense) — na maioria das vezes a resposta já está pronta
+    // quando os tremores acabam. Sem login (visitante) ou sem client,
+    // cai num sorteio local só decorativo — não persiste nada, não dá XP.
+    let resultPromise;
+    if (wpHasClient() && wpUid()) {
+      resultPromise = sbClient.rpc('catch_wild_pokemon', {
+        p_pokemon_slug: mon.s, p_dex: mon.d, p_rarity: mon.r, p_tier: tier,
+      }).then(({ data, error }) => {
+        if (error) { console.warn('[wp] catch_wild_pokemon falhou:', error.message); return { error: error.message }; }
+        return data; // { success, balls, count, total_xp, level }
+      }).catch(e => {
+        console.warn('[wp] catch_wild_pokemon — falha de conexão:', e);
+        return { error: 'conexão' };
+      });
+    } else {
+      const chance = WP_CATCH_RATES[tier][mon.r];
+      resultPromise = Promise.resolve({ success: Math.random() < chance, balls: null });
+    }
+
     const wobbles = tier === 'masterball' ? 1 : WP_BALL_META[tier].wobbles;
 
     el.classList.remove('wp-peek', 'wp-shy');
@@ -837,26 +871,59 @@
       if (i < wobbles) {
         setTimeout(wobbleStep, 420);
       } else {
-        setTimeout(() => wpResolveCatch(success, mon, el, ballEl, tier), 420);
+        setTimeout(async () => {
+          const result = await resultPromise;
+          wpResolveCatch(result, mon, el, ballEl, tier);
+        }, 420);
       }
     };
     setTimeout(wobbleStep, 500);
   }
 
-  function wpResolveCatch(success, mon, el, ballEl, tier) {
+  function wpResolveCatch(result, mon, el, ballEl, tier) {
     ballEl.remove();
-    if (success) {
+
+    if (result.error) {
+      // Não deu pra confirmar com o servidor (rede caiu no meio) — não
+      // creditamos nada às cegas. Devolve a bola visualmente (o
+      // decremento otimista foi só de tela, a RPC não chegou a debitar
+      // de verdade nesse caso) e avisa, sem fingir captura nem fuga.
+      wpBalls[tier] = (wpBalls[tier] || 0) + 1;
+      wpUpdateBadge();
+      el.classList.remove('wp-fled', 'wp-caught');
+      wpToastRaw('⚠️', 'Não deu pra confirmar agora — sua bola não foi gasta, tente de novo.', false);
+      wpActiveMon = null;
+      return;
+    }
+
+    // Saldo real de bolas, direto do servidor (substitui o otimista).
+    if (result.balls) {
+      wpBalls = result.balls;
+      wpSaveBalls();
+    }
+    wpUpdateBadge();
+
+    if (result.success) {
       wpCatches[mon.s] = wpCatches[mon.s] || { count: 0 };
-      wpCatches[mon.s].count++;
+      wpCatches[mon.s].count = result.count || (wpCatches[mon.s].count + 1);
       wpCatches[mon.s].firstCaughtAt = wpCatches[mon.s].firstCaughtAt || Date.now();
       wpSaveCatches();
-      wpDbUpsertCatch(mon);
 
       el.classList.add('wp-caught');
       setTimeout(() => el.remove(), 500);
       wpSoundCatch();
       wpToastCatch(mon, true);
-      wpUpdateBadge();
+
+      // Reflete XP/nível/conquistas novas no painel do Dashboard e no
+      // badge do header, do mesmo jeito que toggleSlot() já faz hoje
+      // pro Fichário — xp_system.js carrega antes deste arquivo
+      // (ver index.html), então essas funções já existem em window.
+      if (typeof xpFetchAll === 'function') {
+        xpFetchAll().then(() => {
+          if (typeof xpRenderBadge === 'function' && typeof currentUser !== 'undefined') xpRenderBadge(currentUser);
+          if (document.getElementById('dash')?.classList.contains('active') && typeof xpRenderDashPanel === 'function') xpRenderDashPanel();
+        });
+      }
     } else {
       el.classList.add('wp-fled');
       setTimeout(() => el.remove(), 550);
