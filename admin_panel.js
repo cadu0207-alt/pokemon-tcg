@@ -44,13 +44,71 @@ function updateAdminTabVisibility() {
   }
 }
 
+// ================================================================
+// Seções colapsáveis da aba Admin (23/08/2026)
+// Pedido do Eduardo: cada bloco poder minimizar. Generaliza o mesmo
+// padrão de header clicável + corpo escondido que lojas_admin_collapse.js
+// já usa nos cards de produto — aqui aplicado à seção inteira (ver
+// os wrappers .admin-section no index.html).
+//
+// Regra de abertura ao entrar na aba: se o Eduardo já decidiu manualmente
+// pra essa seção (tem valor salvo no localStorage), respeita a escolha
+// dele. Senão, abre sozinha só quem tiver pendência (badge > 0) — o
+// resto nasce fechado. Os módulos que carregam pendências (feedback.js,
+// marketplace.js, positivo.js) expõem a contagem em window.__adminXxx
+// antes de renderAdminTab() chegar em applyAdminSectionStates().
+// ================================================================
+
+const ADMIN_SECTION_PENDING_VAR = {
+  feedback: '__adminFeedbackUnread',
+  marketplace: '__adminMktPending',
+  positivo: '__adminPositivoPending'
+};
+
+function adminSectionStorageKey(key) { return 'admin_sec_open_' + key; }
+
+function toggleAdminSection(key) {
+  const el = document.getElementById('asec-' + key);
+  if (!el) return;
+  const open = !el.classList.contains('admin-sec-open');
+  el.classList.toggle('admin-sec-open', open);
+  try { localStorage.setItem(adminSectionStorageKey(key), open ? '1' : '0'); } catch (e) { /* localStorage indisponível — ignora */ }
+}
+window.toggleAdminSection = toggleAdminSection;
+
+function setAdminSectionBadge(key, count) {
+  const el = document.getElementById('asec-badge-' + key);
+  if (!el) return;
+  if (count > 0) {
+    el.textContent = count;
+    el.style.display = 'flex';
+  } else {
+    el.textContent = '';
+    el.style.display = 'none';
+  }
+}
+
+function applyAdminSectionStates() {
+  document.querySelectorAll('.admin-section').forEach(function (el) {
+    const key = el.id.replace(/^asec-/, '');
+    const pendingVar = ADMIN_SECTION_PENDING_VAR[key];
+    const pendingCount = pendingVar ? (window[pendingVar] || 0) : 0;
+    setAdminSectionBadge(key, pendingCount);
+
+    let stored = null;
+    try { stored = localStorage.getItem(adminSectionStorageKey(key)); } catch (e) { /* ignora */ }
+    const open = stored !== null ? stored === '1' : pendingCount > 0;
+    el.classList.toggle('admin-sec-open', open);
+  });
+}
+
 async function renderAdminTab() {
   if (typeof isAdmin !== 'function' || !isAdmin()) {
     // Segurança extra: mesmo que alguém force go('admin', ...) via console,
     // os containers ficam vazios pra quem não é o Eduardo.
     ['admin-stats-wrap', 'admin-tab-analytics-wrap', 'admin-product-redirects-wrap',
      'admin-set-distribution-wrap', 'admin-userlist-wrap', 'admin-feedback-wrap',
-     'admin-updates-wrap', 'lojas-admin', 'mkt-pending-list', 'pc-pending-list',
+     'admin-updates-wrap', 'home-content-admin-wrap', 'lojas-admin', 'mkt-pending-list', 'pc-pending-list',
      'staff-access-wrap']
       .forEach(function (id) { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
     return;
@@ -64,6 +122,7 @@ async function renderAdminTab() {
   if (typeof renderAdminUserList === 'function') renderAdminUserList();
   if (typeof renderAdminFeedback === 'function') renderAdminFeedback();
   if (typeof renderUpdatesAdminForm === 'function') renderUpdatesAdminForm();
+  if (typeof renderHomeContentAdmin === 'function') renderHomeContentAdmin();
 
   if (typeof loadMarketplaceData === 'function' && typeof renderStoreLists === 'function') {
     try { await loadMarketplaceData(); renderStoreLists(); } catch (e) { console.error('[admin] lojas confiáveis', e); }
@@ -76,6 +135,8 @@ async function renderAdminTab() {
     } catch (e) { console.error('[admin] cadastro positivo', e); }
   }
   if (typeof renderAdminPanel === 'function') renderAdminPanel();
+
+  applyAdminSectionStates();
 }
 
 (function hookAdminTabVisibility() {

@@ -195,6 +195,10 @@
        sem duplicar nada. syncDesktopNav() (app.js) espelha o estado 'active'
        aqui a cada navegação, venha ela de onde vier. -->
   <nav class="tdesk" aria-label="Seções do site (desktop)">
+    <!-- INÍCIO 23/08/2026: página inicial da coleção, primeiro item do menu —
+         ver inicio.js. Fica sozinho (não dentro de um dropdown) igual
+         "iniciantes", só que na frente de tudo. -->
+    <button type="button" class="tdesk-link active" data-tab="inicio" onclick="goToTab('inicio')">🏠 INÍCIO</button>
     <div class="tdrop">
       <button type="button" class="tdrop-btn" data-group="mydeck">MYDECK
         <svg class="tdrop-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
@@ -236,7 +240,10 @@
        desktop essa barra fica escondida mas ainda existe no DOM como fonte de
        verdade pro goToTab()/go(), ver comentário acima. -->
   <nav class="tabs" aria-label="Seções do site">
-    <button type="button" class="tab active" id="nav-tab-dash" onclick="go('dash',this)">📊 Dashboard</button>
+    <!-- INÍCIO 23/08/2026: nova página inicial da coleção — ver inicio.js.
+         Vira a aba padrão (active) no lugar do Dashboard. -->
+    <button type="button" class="tab active" id="nav-tab-inicio" onclick="go('inicio',this)">🏠 Início</button>
+    <button type="button" class="tab" id="nav-tab-dash" onclick="go('dash',this)">📊 Dashboard</button>
     <button type="button" class="tab" id="nav-tab-fichario" onclick="go('fichario',this)">📚 Fichário</button>
     <button type="button" class="tab" id="nav-tab-gastos" onclick="go('gastos',this)">💸 Gastos</button>
     <button type="button" class="tab" id="nav-tab-cartas" onclick="go('cartas',this)">📈 Compra/Venda</button>
@@ -258,7 +265,31 @@
     <button type="button" class="tab" onclick="window.open('simulador.html','_blank')" style="background:linear-gradient(90deg,#7b2ff744,#f107a322);color:#c084fc">🎰 Simulador</button>
   </nav>
 
-  <div id="dash" class="pane active">
+  <!-- INÍCIO 23/08/2026: nova página inicial da coleção — ver inicio.js.
+       Novidades reaproveita site_updates (mesma tabela do updates-log-wrap
+       do Dashboard, mostrada aqui numa vitrine simples); Notícias/Vídeos/
+       Links/Revista são conteúdo novo, publicado só pela aba Admin
+       (hasPerm('inicio'), home_content_admin.js). -->
+  <div id="inicio" class="pane active">
+    <div id="inicio-hero-wrap"></div>
+
+    <div class="sec-title" style="margin-top:0">📢 Novidades do MyDeck</div>
+    <div id="inicio-updates-wrap"></div>
+
+    <div class="sec-title">📰 Notícias do Mundo Pokémon</div>
+    <div id="inicio-news-wrap"></div>
+
+    <div class="sec-title">🎥 Vídeos da Comunidade</div>
+    <div id="inicio-videos-wrap"></div>
+
+    <div class="sec-title">🔗 Links Úteis</div>
+    <div id="inicio-links-wrap"></div>
+
+    <div class="sec-title">📖 Revista MyDeck</div>
+    <div id="inicio-revista-wrap"></div>
+  </div>
+
+  <div id="dash" class="pane">
     <div id="updates-log-wrap" class="updates-log-panel"></div>
     <div class="kpi-grid" id="kpi-dash"></div>
     <div class="sec-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 5a2 2 0 0 1 2-2h11a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2Z"/><path d="M4 5v14a2 2 0 0 0 2 2h11"/></svg> Progresso Master Set</div>
@@ -981,26 +1012,87 @@
        marketplace.js, positivo.js, lojas.js/lojas_admin_collapse.js). -->
   <div id="admin" class="pane">
     <div class="sec-title" style="margin-top:0">🔐 Painel Admin</div>
-    <div id="staff-access-wrap"></div>
-    <div id="admin-stats-wrap"></div>
-    <div id="admin-tab-analytics-wrap"></div>
-    <div id="admin-product-redirects-wrap"></div>
-    <div id="admin-set-distribution-wrap"></div>
-    <div id="admin-userlist-wrap"></div>
-    <div id="admin-feedback-wrap"></div>
-    <div id="admin-updates-wrap"></div>
 
-    <div class="sec-title" style="margin-top:28px">🏪 Lojas Confiáveis — Aprovações Pendentes</div>
-    <div id="mkt-pending-wrap" style="display:none;margin-top:8px">
-      <div id="mkt-pending-list" class="mkt-store-list"></div>
+    <!-- SEÇÕES COLAPSÁVEIS (23/08/2026) — ver admin_panel.js/toggleAdminSection.
+         Cada bloco nasce fechado, exceto os que tiverem pendência (badge > 0);
+         o estado que o Eduardo escolher manualmente fica salvo em localStorage. -->
+    <div class="admin-section" id="asec-staff">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('staff')">
+        <span class="admin-section-hdr-left"><span class="admin-section-caret">▶</span>👥 Equipe — Acesso Admin</span>
+        <span class="admin-section-badge" id="asec-badge-staff"></span>
+      </div>
+      <div class="admin-section-body"><div id="staff-access-wrap"></div></div>
     </div>
 
-    <div class="sec-title" style="margin-top:28px">✅ Cadastro Positivo — Indicações Pendentes</div>
-    <div id="pc-pending-wrap" style="display:none;margin-top:8px">
-      <div id="pc-pending-list" class="mkt-store-list"></div>
+    <div class="admin-section" id="asec-stats">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('stats')">
+        <span class="admin-section-hdr-left"><span class="admin-section-caret">▶</span>📊 Estatísticas do Site</span>
+        <span class="admin-section-badge" id="asec-badge-stats"></span>
+      </div>
+      <div class="admin-section-body">
+        <div id="admin-stats-wrap"></div>
+        <div id="admin-tab-analytics-wrap"></div>
+        <div id="admin-product-redirects-wrap"></div>
+        <div id="admin-set-distribution-wrap"></div>
+        <div id="admin-userlist-wrap"></div>
+      </div>
     </div>
 
-    <div id="lojas-admin"></div>
+    <div class="admin-section" id="asec-feedback">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('feedback')">
+        <span class="admin-section-hdr-left"><span class="admin-section-caret">▶</span>💬 Mensagens de Usuários</span>
+        <span class="admin-section-badge" id="asec-badge-feedback"></span>
+      </div>
+      <div class="admin-section-body"><div id="admin-feedback-wrap"></div></div>
+    </div>
+
+    <div class="admin-section" id="asec-updates">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('updates')">
+        <span class="admin-section-hdr-left"><span class="admin-section-caret">▶</span>📢 Publicar Atualização</span>
+        <span class="admin-section-badge" id="asec-badge-updates"></span>
+      </div>
+      <div class="admin-section-body"><div id="admin-updates-wrap"></div></div>
+    </div>
+
+    <div class="admin-section" id="asec-inicio">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('inicio')">
+        <span class="admin-section-hdr-left"><span class="admin-section-caret">▶</span>📰 Conteúdo da Início</span>
+        <span class="admin-section-badge" id="asec-badge-inicio"></span>
+      </div>
+      <div class="admin-section-body"><div id="home-content-admin-wrap"></div></div>
+    </div>
+
+    <div class="admin-section" id="asec-marketplace">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('marketplace')">
+        <span class="admin-section-hdr-left"><span class="admin-section-caret">▶</span>🏪 Lojas Confiáveis — Aprovações Pendentes</span>
+        <span class="admin-section-badge" id="asec-badge-marketplace"></span>
+      </div>
+      <div class="admin-section-body">
+        <div id="mkt-pending-wrap" style="display:none;margin-top:8px">
+          <div id="mkt-pending-list" class="mkt-store-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-section" id="asec-positivo">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('positivo')">
+        <span class="admin-section-hdr-left"><span class="admin-section-caret">▶</span>✅ Cadastro Positivo — Indicações Pendentes</span>
+        <span class="admin-section-badge" id="asec-badge-positivo"></span>
+      </div>
+      <div class="admin-section-body">
+        <div id="pc-pending-wrap" style="display:none;margin-top:8px">
+          <div id="pc-pending-list" class="mkt-store-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-section" id="asec-produtos">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('produtos')">
+        <span class="admin-section-hdr-left"><span class="admin-section-caret">▶</span>🎟️ Cupons &amp; Produtos Rastreados</span>
+        <span class="admin-section-badge" id="asec-badge-produtos"></span>
+      </div>
+      <div class="admin-section-body"><div id="lojas-admin"></div></div>
+    </div>
   </div>
 
 </div><!-- /pg-app -->
@@ -1407,6 +1499,8 @@
 <script defer src="admin_stats.js"></script>
 <script defer src="feedback.js"></script>
 <script defer src="updates.js"></script>
+<script defer src="inicio.js"></script>
+<script defer src="home_content_admin.js"></script>
 <script defer src="analytics.js"></script>
 <script defer src="admin_panel.js"></script>
 <script defer src="xp_system.js"></script>

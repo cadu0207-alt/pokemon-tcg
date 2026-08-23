@@ -919,6 +919,7 @@ function go(id,el){
     if(currentSet==='__custom__') renderCustomBindersHome();
     else renderBinder();
   }
+  if(id==='inicio'){if(typeof renderInicio==='function')renderInicio();}
   if(id==='dash'){renderDash();updateDashProgress();}
   if(id==='cartas'){renderCartas();}
   if(id==='gastos'){renderGastos();}
