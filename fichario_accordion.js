@@ -343,15 +343,30 @@ window.renderCustomBindersHome=function(){
         ${s.upcoming?'breve':s.cards+' cartas'}</div>
     </div>`;
   }
+  // ADICIONADO 22/08/2026 (pedido do Eduardo): cada série dentro de "MINHAS
+  // COLEÇÕES" agora também minimiza (mesmo fmToggleAccordion de sempre, com
+  // chave 'series-<SR>' pra não colidir com 'pokemon'/'artist'/'own'/
+  // 'collections'). Só a série atual (ME — Mega Evoluções) começa aberta;
+  // todas as outras começam retraídas, já que são séries antigas/já fechadas.
   const seriesSections=Object.keys(SERIES_META)
     .map(sr=>({sr,sets:SET_CATALOG.filter(s=>s.series===sr)}))
     .filter(x=>x.sets.length)
-    .map(x=>`
-      <div style="font-size:9px;font-family:'Space Mono',monospace;color:var(--muted);
-                  text-transform:uppercase;letter-spacing:.08em;margin:14px 0 8px">${(SERIES_META[x.sr]||{}).sub||x.sr}</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
+    .map(x=>{
+      const isOpen=x.sr==='ME';
+      const label=(SERIES_META[x.sr]||{}).sub||x.sr;
+      return`
+      <div onclick="fmToggleAccordion('series-${x.sr}','grid')"
+        style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+               font-size:9px;font-family:'Space Mono',monospace;color:var(--muted);
+               text-transform:uppercase;letter-spacing:.08em;margin:14px 0 8px">
+        <span>${label}</span>
+        <span id="fm-acc-ic-series-${x.sr}" style="font-size:11px;color:var(--muted)">${isOpen?'▾':'▸'}</span>
+      </div>
+      <div id="fm-acc-series-${x.sr}" style="display:${isOpen?'grid':'none'};
+           grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
         ${x.sets.map(setCard).join('')}
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
   document.getElementById('bwrap').innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">

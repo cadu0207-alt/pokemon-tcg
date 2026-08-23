@@ -1297,7 +1297,7 @@ const SET_CATALOG=[
 
 // ── SÉRIES (ordem de exibição na home e no gerenciador) ─────────
 const SERIES_META={
-  ME:    {t:'⚡ MEGA EVOLUÇÃO — SÉRIE ATUAL',           sub:'🇧🇷 Exclusivos BR'},
+  ME:    {t:'⚡ MEGA EVOLUÇÃO — SÉRIE ATUAL',           sub:'⚡ Mega Evoluções'},
   SV:    {t:'🌋 ESCARLATE & VIOLETA (2023–2025)',       sub:'⚔️ Escarlate & Violeta (2023–2025)'},
   SWSH:  {t:'⚔️ ESPADA & ESCUDO (2020–2022)',           sub:'⚔️ Espada & Escudo (2020–2022)'},
   SM:    {t:'🌙 SOL & LUA (2017–2019)',                 sub:'🌙 Sol & Lua (2017–2019)'},
