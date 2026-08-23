@@ -118,13 +118,13 @@ const CARDS_SV1 = [
   {n:'112',dex:447,artist:"Naoyo Kimura",name:'Riolu',type:'Lutador',color:'#FF9800',rare:'Comum',price:0.10,base:true},
   {n:'113',dex:447,artist:"chibi",name:'Riolu',type:'Lutador',color:'#FF9800',rare:'Comum',price:0.29,base:true},
   {n:'114',dex:448,artist:"Nurikabe",name:'Lucario',type:'Lutador',color:'#FF9800',rare:'Incomum',price:0.39,base:true},
-  {n:'115',dex:551,artist:"Tomokazu Komiya",name:'Sandile',type:'Lutador',color:'#FF9800',rare:'Comum',price:0.20,base:true},
+  {n:'115',dex:551,artist:"Tomokazu Komiya",name:'Sandile',type:'Lutador',color:'#FF9800',rare:'Comum',price:0.25,base:true},
   {n:'116',dex:552,artist:"kantaro",name:'Krokorok',type:'Lutador',color:'#FF9800',rare:'Comum',price:0.25,base:true},
   {n:'117',dex:553,artist:"Misa Tsutsui",name:'Krookodile',type:'Lutador',color:'#FF9800',rare:'Incomum',price:0.35,base:true},
   {n:'118',dex:701,artist:"GOSSAN",name:'Hawlucha',type:'Lutador',color:'#FF9800',rare:'Rara',price:0.30,base:true},
   {n:'119',dex:843,artist:"Kouki Saitou",name:'Silicobra',type:'Lutador',color:'#FF9800',rare:'Comum',price:0.20,base:true},
   {n:'120',dex:844,artist:"Yuya Oka",name:'Sandaconda',type:'Lutador',color:'#FF9800',rare:'Incomum',price:0.17,base:true},
-  {n:'121',dex:874,artist:"Yuka Morii",name:'Stonjourner',type:'Lutador',color:'#FF9800',rare:'Incomum',price:0.10,base:true},
+  {n:'121',dex:874,artist:"Yuka Morii",name:'Stonjourner',type:'Lutador',color:'#FF9800',rare:'Incomum',price:0.29,base:true},
   {n:'122',dex:950,artist:"nagimiso",name:'Klawf',type:'Lutador',color:'#FF9800',rare:'Rara',price:0.25,base:true},
   {n:'123',dex:984,artist:"5ban Graphics",name:'Great Tusk ex',type:'Lutador',color:'#FF9800',rare:'Rara Dupla',price:2.88,base:true},
   {n:'124',dex:1007,artist:"Kouki Saitou",name:'Koraidon',type:'Lutador',color:'#FF9800',rare:'Rara',price:0.20,base:true},
@@ -214,7 +214,7 @@ const CARDS_SV1 = [
   {n:'208',dex:417,artist:"zig",name:'Pachirisu',type:'Raio',color:'#FFEB3B',rare:'Rara Ilustrada',price:55.90,base:false,important:true},
   {n:'209',dex:922,artist:"Kouki Saitou",name:'Pawmot',type:'Raio',color:'#FFEB3B',rare:'Rara Ilustrada',price:119.99,base:false,important:true},
   {n:'210',dex:96,artist:"Tomokazu Komiya",name:'Drowzee',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:119.90,base:false,important:true},
-  {n:'211',dex:280,artist:"Jiro Sasumo",name:'Ralts',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:105.00,base:false,important:true},
+  {n:'211',dex:280,artist:"Jiro Sasumo",name:'Ralts',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:100.00,base:false,important:true},
   {n:'212',dex:281,artist:"Jiro Sasumo",name:'Kirlia',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:99.90,base:false,important:true},
   {n:'213',dex:926,artist:"Tika Matsuno",name:'Fidough',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:159.90,base:false,important:true},
   {n:'214',dex:971,artist:"sowsow",name:'Greavard',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:49.90,base:false,important:true},
@@ -226,13 +226,13 @@ const CARDS_SV1 = [
   {n:'220',dex:983,artist:"Shin Nagasawa",name:'Kingambit',type:'Sombrio',color:'#607D8B',rare:'Rara Ilustrada',price:22.00,base:false,important:true},
   {n:'221',dex:396,artist:"saino misaki",name:'Starly',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada',price:35.00,base:false,important:true},
   {n:'222',dex:819,artist:"Teeziro",name:'Skwovet',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada',price:19.90,base:false},
-  {n:'223',dex:918,artist:"takuyoa",name:'Spidops ex',type:'Planta',color:'#4CAF50',rare:'Ultra Rara',price:5.50,base:false},
+  {n:'223',dex:918,artist:"takuyoa",name:'Spidops ex',type:'Planta',color:'#4CAF50',rare:'Ultra Rara',price:4.13,base:false},
   {n:'224',dex:59,artist:"5ban Graphics",name:'Arcanine ex',type:'Fogo',color:'#F44336',rare:'Ultra Rara',price:38.00,base:false,important:true},
   {n:'225',dex:130,artist:"5ban Graphics",name:'Gyarados ex',type:'Aquático',color:'#2196F3',rare:'Ultra Rara',price:49.99,base:false,important:true},
   {n:'226',dex:462,artist:"PLANETA Tsuji",name:'Magnezone ex',type:'Raio',color:'#FFEB3B',rare:'Ultra Rara',price:8.99,base:false},
   {n:'227',dex:1008,artist:"5ban Graphics",name:'Miraidon ex',type:'Raio',color:'#FFEB3B',rare:'Ultra Rara',price:16.00,base:false},
-  {n:'228',dex:282,artist:"N-DESIGN Inc.",name:'Gardevoir ex',type:'Psíquico',color:'#9C27B0',rare:'Ultra Rara',price:29.90,base:false},
-  {n:'229',dex:354,artist:"PLANETA Mochizuki",name:'Banette ex',type:'Psíquico',color:'#9C27B0',rare:'Ultra Rara',price:14.00,base:false},
+  {n:'228',dex:282,artist:"N-DESIGN Inc.",name:'Gardevoir ex',type:'Psíquico',color:'#9C27B0',rare:'Ultra Rara',price:26.93,base:false},
+  {n:'229',dex:354,artist:"PLANETA Mochizuki",name:'Banette ex',type:'Psíquico',color:'#9C27B0',rare:'Ultra Rara',price:11.21,base:false},
   {n:'230',dex:984,artist:"5ban Graphics",name:'Great Tusk ex',type:'Lutador',color:'#FF9800',rare:'Ultra Rara',price:6.99,base:false},
   {n:'231',dex:1007,artist:"aky CG Works",name:'Koraidon ex',type:'Lutador',color:'#FF9800',rare:'Ultra Rara',price:6.89,base:false},
   {n:'232',dex:454,artist:"PLANETA Hiiragi",name:'Toxicroak ex',type:'Sombrio',color:'#607D8B',rare:'Ultra Rara',price:11.50,base:false},
@@ -244,7 +244,7 @@ const CARDS_SV1 = [
   {n:'238',artist:"Sanosuke Sakuma",name:'Miriam',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:24.90,base:false},
   {n:'239',artist:"yuu",name:'Penny',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:19.90,base:false},
   {n:'240',artist:"kirisAki",name:'Professor\'s Research (Professor Sada)',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:19.90,base:false},
-  {n:'241',artist:"kirisAki",name:'Professor\'s Research (Professor Turo)',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:11.99,base:false},
+  {n:'241',artist:"kirisAki",name:'Professor\'s Research (Professor Turo)',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:10.00,base:false},
   {n:'242',artist:"nagimiso",name:'Team Star Grunt',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:11.50,base:false},
   {n:'243',dex:918,artist:"Miki Tanaka",name:'Spidops ex',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada Especial',price:24.90,base:false,important:true},
   {n:'244',dex:1008,artist:"kantaro",name:'Miraidon ex',type:'Raio',color:'#FFEB3B',rare:'Rara Ilustrada Especial',price:89.99,base:false,important:true},
@@ -252,7 +252,7 @@ const CARDS_SV1 = [
   {n:'246',dex:984,artist:"Pani Kobayashi",name:'Great Tusk ex',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada Especial',price:25.00,base:false,important:true},
   {n:'247',dex:1007,artist:"Ryota Murayama",name:'Koraidon ex',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada Especial',price:59.90,base:false,important:true},
   {n:'248',dex:990,artist:"KEIICHIRO ITO",name:'Iron Treads ex',type:'Metal',color:'#78909C',rare:'Rara Ilustrada Especial',price:15.00,base:false},
-  {n:'249',artist:"kantaro",name:'Arven',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:40.84,base:false},
+  {n:'249',artist:"kantaro",name:'Arven',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:42.99,base:false},
   {n:'250',artist:"Oswaldo KATO",name:'Jacq',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:24.90,base:false},
   // Cartas 251-258 completadas em 15/jul/2026 (generate_set.js tinha pageSize=250 sem
   // paginação — perdia o final do set). Preços via api.pokemontcg.io, USD/BRL 5.8.
@@ -263,7 +263,7 @@ const CARDS_SV1 = [
   {n:'255',artist:"Toyste Beach",name:'Nest Ball',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:23.90,base:false},
   {n:'256',artist:"Studio Bora Inc.",name:'Rare Candy',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:40.00,base:false},
   {n:'257',name:'Basic Lightning Energy',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:28.99,base:false},
-  {n:'258',name:'Basic Fighting Energy',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:24.90,base:false}
+  {n:'258',name:'Basic Fighting Energy',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:49.99,base:false}
 ];
 
 // Exporta para uso global
