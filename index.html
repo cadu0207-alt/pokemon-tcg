@@ -634,6 +634,11 @@
           <div id="leilao-admin-search-results" class="cv-list" style="max-height:220px;overflow:auto;margin-bottom:10px"></div>
           <div id="leilao-admin-preview" style="display:none;gap:10px;align-items:center;margin-bottom:10px"></div>
 
+          <div class="ff"><label>Ou tire/envie foto(s) reais do item (até 4) — pra produto fora do catálogo, ou pra mostrar o estado real do exemplar. A 1ª foto vira a capa e substitui a do catálogo.</label>
+            <input type="file" id="leilao-admin-foto" accept="image/*" capture="environment" multiple onchange="handleAuctionPhotoPick(event)">
+          </div>
+          <div id="leilao-admin-foto-preview" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>
+
           <div class="ff"><label>Nome da carta *</label><input id="leilao-admin-nome" placeholder="Ex: Charizard SAR"></div>
           <div class="ff"><label>Condição</label>
             <select id="leilao-admin-cond">

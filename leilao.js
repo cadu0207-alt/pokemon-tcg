@@ -39,6 +39,9 @@ let aucAddress=null;
 let aucBlocked=false;
 let aucBlockedReason='';
 let aucSelectedCard=null;
+let aucCustomPhotoFiles=[]; // File[] — foto(s) reais escolhidas no cadastro (ver handleAuctionPhotoPick), sobrepõem a foto do catálogo ao publicar
+const AUC_PHOTO_MAX=4;
+const AUC_PHOTO_MAX_INPUT_MB=15; // recusa arquivo bruto maior que isso ANTES de tentar decodificar — foto de celular pode chegar em 20-40MB
 let aucLeiloeiros=[];
 let aucLeiloeiroNames={}; // {user_id: nome de exibição} — todo participante vê, ver loadLeiloeiroNames()
 let aucMyBidAuctionIds=new Set(); // leilões em que eu já dei lance (ver loadMyBidAuctionIds)
@@ -919,6 +922,14 @@ function aucImgFor(a){
   return c&&typeof getBinderImg==='function'?getBinderImg(c,a.set_id):null;
 }
 
+// Galeria completa do item (fotos reais enviadas no cadastro) — quando não
+// tem nenhuma foto real, cai pra capa única de sempre (aucImgFor).
+function aucPhotosFor(a){
+  if(Array.isArray(a.photo_urls)&&a.photo_urls.length)return a.photo_urls;
+  const img=aucImgFor(a);
+  return img?[img]:[];
+}
+
 const AUC_COND_LBL={M:'Mint',NM:'Quase Nova (NM)',MP:'Levemente Jogada (MP)',D:'Danificada (D)'};
 const AUC_LANG_LBL={'pt-BR':'🇧🇷 Português','en':'🇺🇸 Inglês','ja':'🇯🇵 Japonês'};
 const AUC_ORDER_LBL={aguardando_pagamento:'Aguardando pagamento',pago:'Pago',enviado:'Enviado',concluido:'Concluído',cancelado:'Cancelado'};
@@ -1322,23 +1333,35 @@ function aucCardHtml(a,kind){
 
 // ── ZOOM (clicar na foto abre a carta ampliada no meio da tela) ──
 let aucZoomAuctionId=null;
+let aucZoomPhotoIdx=0; // qual foto da galeria está em destaque no zoom (ver aucPhotosFor)
 
 function openAuctionZoom(auctionId){
   const a=aucAuctions.find(x=>x.id===auctionId);
   if(!a)return;
   aucZoomAuctionId=auctionId;
+  aucZoomPhotoIdx=0;
   renderAuctionZoomContent(a);
   if(typeof openModal==='function')openModal('leilao-zoom-ov');
+}
+
+function setAuctionZoomPhoto(idx){
+  aucZoomPhotoIdx=idx;
+  const a=aucAuctions.find(x=>x.id===aucZoomAuctionId);
+  if(a)renderAuctionZoomContent(a);
 }
 
 function renderAuctionZoomContent(a){
   const box=document.getElementById('leilao-zoom-content');
   if(!box)return;
-  const img=aucImgFor(a);
+  const photos=aucPhotosFor(a);
+  const img=photos[aucZoomPhotoIdx]||photos[0]||null;
   box.innerHTML=`<div style="display:flex;flex-wrap:wrap">
-    <div style="flex:1;min-width:240px;background:var(--surface2);display:flex;align-items:center;justify-content:center;padding:24px">
+    <div style="flex:1;min-width:240px;background:var(--surface2);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:10px">
       ${img?`<img src="${img}" alt="${esc(a.card_name)}" style="max-width:100%;max-height:60vh;object-fit:contain;border-radius:10px" onerror="this.style.display='none'">`
         :`<div style="font-size:60px">🃏</div>`}
+      ${photos.length>1?`<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
+        ${photos.map((p,i)=>`<img src="${p}" onclick="setAuctionZoomPhoto(${i})" style="width:44px;height:44px;border-radius:6px;object-fit:cover;cursor:pointer;opacity:${i===aucZoomPhotoIdx?1:.55};border:2px solid ${i===aucZoomPhotoIdx?'var(--accent)':'transparent'}">`).join('')}
+      </div>`:''}
     </div>
     <div style="flex:1;min-width:260px;padding:24px">
       ${aucInfoBlockHtml(a,'-zoom')}
@@ -2198,6 +2221,92 @@ async function cancelAuctionRound(roundId){
   renderRoundSelect();renderAuctionsList();renderRoundsAdminList();
 }
 
+// ── FOTO REAL DO ITEM (tirar/enviar, alternativa à busca no catálogo) ──
+function handleAuctionPhotoPick(ev){
+  const picked=Array.from(ev.target?.files||[]);
+  if(!picked.length)return;
+  const statusEl=document.getElementById('leilao-admin-status');
+  for(const file of picked){
+    if(!file.type.startsWith('image/')){if(statusEl)statusEl.textContent=`"${file.name}" não é uma imagem — ignorado.`;continue;}
+    if(file.size>AUC_PHOTO_MAX_INPUT_MB*1024*1024){if(statusEl)statusEl.textContent=`"${file.name}" passa de ${AUC_PHOTO_MAX_INPUT_MB}MB — ignorado.`;continue;}
+    if(aucCustomPhotoFiles.length>=AUC_PHOTO_MAX){if(statusEl)statusEl.textContent=`Máximo de ${AUC_PHOTO_MAX} fotos por item.`;break;}
+    aucCustomPhotoFiles.push(file);
+  }
+  ev.target.value=''; // limpa o input pra poder escolher o mesmo arquivo de novo depois de remover
+  renderAuctionPhotoPreview();
+}
+
+function removeAuctionPhotoPick(idx){
+  aucCustomPhotoFiles.splice(idx,1);
+  renderAuctionPhotoPreview();
+}
+
+function clearAuctionPhotoPick(){
+  aucCustomPhotoFiles=[];
+  const input=document.getElementById('leilao-admin-foto');
+  if(input)input.value='';
+  renderAuctionPhotoPreview();
+}
+
+function renderAuctionPhotoPreview(){
+  const preview=document.getElementById('leilao-admin-foto-preview');
+  if(!preview)return;
+  if(!aucCustomPhotoFiles.length){preview.style.display='none';preview.innerHTML='';return;}
+  preview.style.display='flex';
+  const thumbs=aucCustomPhotoFiles.map((file,idx)=>{
+    const url=URL.createObjectURL(file);
+    return`<div style="position:relative">
+      <img src="${url}" style="width:70px;height:70px;border-radius:6px;object-fit:cover;background:var(--surface2)">
+      ${idx===0?`<span style="position:absolute;bottom:2px;left:2px;font-size:8px;background:var(--accent);color:#fff;padding:1px 4px;border-radius:4px">capa</span>`:''}
+      <button type="button" onclick="removeAuctionPhotoPick(${idx})" title="Remover" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:none;background:var(--surface2);color:var(--muted);cursor:pointer;line-height:1;font-size:11px">✕</button>
+    </div>`;
+  }).join('');
+  const note=`<div style="font-size:9.5px;color:var(--muted);width:100%">${aucCustomPhotoFiles.length}/${AUC_PHOTO_MAX} foto(s) — comprimidas automaticamente ao publicar</div>`;
+  preview.innerHTML=thumbs+note;
+}
+
+// Redimensiona/comprime a foto no navegador antes de subir — cartas de
+// leilão não precisam de resolução gigante, e isso evita estourar o
+// storage do Supabase com fotos de celular em 4-20MB. Alvo: 1000px no
+// lado maior, JPEG qualidade 0.82 (fica normalmente entre 80-250KB).
+function compressAuctionPhoto(file){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const maxSide=1000;
+      const scale=Math.min(1,maxSide/Math.max(img.width,img.height));
+      const w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale));
+      const canvas=document.createElement('canvas');
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      canvas.toBlob(blob=>{
+        URL.revokeObjectURL(url);
+        blob?resolve(blob):reject(new Error('Falha ao comprimir imagem'));
+      },'image/jpeg',0.82);
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Falha ao carregar imagem'));};
+    img.src=url;
+  });
+}
+
+async function uploadAuctionPhoto(file){
+  const blob=await compressAuctionPhoto(file);
+  const path=`admin/${Date.now()}_${Math.random().toString(36).slice(2,8)}.jpg`;
+  const{error}=await sbClient.storage.from('leilao-fotos').upload(path,blob,{contentType:'image/jpeg',upsert:false});
+  if(error)throw error;
+  const{data}=sbClient.storage.from('leilao-fotos').getPublicUrl(path);
+  return data?.publicUrl||null;
+}
+
+// Sobe as fotos em sequência (não em paralelo, pra não engasgar em rede de
+// celular) — devolve as URLs públicas na mesma ordem da seleção.
+async function uploadAuctionPhotos(files){
+  const urls=[];
+  for(const file of files)urls.push(await uploadAuctionPhoto(file));
+  return urls.filter(Boolean);
+}
+
 // ── CADASTRAR CARTA (dentro de uma rodada) ────────────────────
 function searchAuctionCards(){
   const q=(document.getElementById('leilao-admin-search')?.value||'').trim().toLowerCase();
@@ -2266,7 +2375,22 @@ async function publishAuction(){
 
   const all=typeof getAllCatalogCards==='function'?getAllCatalogCards():[];
   const matchedCard=aucSelectedCard?all.find(cc=>cc._setId===aucSelectedCard.setId&&cc.n===aucSelectedCard.n):null;
-  const imageUrl=matchedCard&&typeof getBinderImg==='function'?getBinderImg(matchedCard,aucSelectedCard.setId):null;
+  let imageUrl=matchedCard&&typeof getBinderImg==='function'?getBinderImg(matchedCard,aucSelectedCard.setId):null;
+  let photoUrls=null;
+
+  // Foto(s) real(is) enviada(s) tem prioridade sobre a foto do catálogo —
+  // a 1ª vira a capa (image_url, usado em toda a UI já existente).
+  if(aucCustomPhotoFiles.length){
+    if(statusEl)statusEl.textContent=`Enviando ${aucCustomPhotoFiles.length} foto(s)...`;
+    try{
+      photoUrls=await uploadAuctionPhotos(aucCustomPhotoFiles);
+      if(photoUrls.length)imageUrl=photoUrls[0];
+    }catch(e){
+      console.error('[leilao] uploadAuctionPhotos',e);
+      if(statusEl)statusEl.textContent='Erro ao enviar as fotos. Verifique se rodou leilao_fotos_storage_setup.sql no Supabase, e tente de novo.';
+      return;
+    }
+  }
 
   // A carta herda o prazo da rodada — todas fecham juntas, como no fluxo real.
   const payload={
@@ -2276,6 +2400,7 @@ async function publishAuction(){
     card_n:aucSelectedCard?.n||null,
     version:versao||null,
     image_url:imageUrl||null,
+    photo_urls:photoUrls,
     condition,language,
     description:description||null,
     starting_price:startingPrice,
@@ -2291,6 +2416,7 @@ async function publishAuction(){
 
   if(statusEl)statusEl.textContent='✓ Carta adicionada à rodada!';
   clearAuctionCardSelection();
+  clearAuctionPhotoPick();
   ['leilao-admin-desc','leilao-admin-preco','leilao-admin-reserva']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const versaoEl=document.getElementById('leilao-admin-versao');if(versaoEl)versaoEl.value='';
