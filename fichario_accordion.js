@@ -111,19 +111,33 @@ window.renderTabs=function(){
 // e reinserida depois. Meter Master Set dentro do accordion genérico
 // duplicaria/quebraria essa UI própria sem necessidade — o problema real
 // (grid plano demais) só existia mesmo pra 'artist' e 'manual'/'preset'.
+// ADICIONADO 21/08/2026: 3ª categoria — fichários "de um Pokémon" (posição
+// exata de cada carta na grade, não só filtro — ver fichario_pokemon_binder.js,
+// que declara window.fmPkmnOpenView/fmPkmnOpenBuilder usados abaixo). 'own'
+// precisou passar a excluir também esse tipo (antes só excluía 'artist').
 const FM_CATS=[
   {key:'artist', emoji:'🎨',label:'Por artista',   color:'#a855f7',
    test:b=>b.filter_config&&b.filter_config.type==='artist'},
+  {key:'pokemon',emoji:'📍',label:'Fichários de Pokémon',color:'#3b82f6',
+   test:b=>b.filter_config&&b.filter_config.type==='pokemon'},
   {key:'own',    emoji:'✨',label:'Meus fichários',color:'#06a37f',
-   test:b=>!b.filter_config||b.filter_config.type!=='artist'},
+   test:b=>!b.filter_config||(b.filter_config.type!=='artist'&&b.filter_config.type!=='pokemon')},
 ];
 
 function fmBinderCardHtml(b){
-  const cards=getBinderCards(b);
-  const pct=binderProgress(b);
-  const col=b.cover_color||'#a855f7';
+  const isPkmn=b.filter_config&&b.filter_config.type==='pokemon';
+  // Fichário de Pokémon guarda posição exata em b.pages — getBinderCards()/
+  // binderProgress() são pensados pro filtro genérico ('manual'/'preset'),
+  // então aqui conta direto de b.pages em vez de forçar esses dois pelo tipo
+  // novo (getBinderCards não sabe interpretar 'pokemon').
+  const pkmnFilled=isPkmn?(b.pages||[]).flat().filter(Boolean).length:0;
+  const pkmnTotal=isPkmn?(b.pages||[]).flat().length:0;
+  const cards=isPkmn?[]:getBinderCards(b);
+  const pct=isPkmn?(pkmnTotal?Math.round(pkmnFilled/pkmnTotal*100):0):binderProgress(b);
+  const col=b.cover_color||(isPkmn?'#3b82f6':'#a855f7');
   const pinned=isBinderPinned(b.id);
-  return`<div onclick="openCustomBinderView(${safeJSON(b)})"
+  const openCall=isPkmn?`fmPkmnOpenView('${b.id}')`:`openCustomBinderView(${safeJSON(b)})`;
+  return`<div onclick="${openCall}"
     style="padding:16px;border-radius:10px;cursor:pointer;transition:all .2s;
            border:1px solid var(--border);background:var(--surface2);position:relative;
            border-left:3px solid ${col}"
@@ -141,13 +155,13 @@ function fmBinderCardHtml(b){
       <div style="font-size:26px">${b.emoji||'📚'}</div>
     </div>
     <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;word-break:break-word;line-height:1.3">${b.name}</div>
-    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:8px">${cards.length} cartas${pinned?' · 📌 fixado':''}</div>
+    <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:8px">${isPkmn?`${pkmnFilled}/${pkmnTotal} vagas`:`${cards.length} cartas`}${pinned?' · 📌 fixado':''}</div>
     <div style="height:3px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-bottom:4px">
       <div style="height:100%;width:${pct}%;background:${col};border-radius:2px"></div>
     </div>
-    <div style="font-size:9px;color:${col};font-family:'Space Mono',monospace">${pct}% coletado</div>
+    <div style="font-size:9px;color:${col};font-family:'Space Mono',monospace">${pct}% ${isPkmn?'preenchido':'coletado'}</div>
     <div style="position:absolute;top:6px;right:6px;display:flex;gap:4px">
-      <button onclick="event.stopPropagation();openCreateBinderModal(${safeJSON(b)})"
+      <button onclick="event.stopPropagation();${isPkmn?`fmPkmnOpenBuilder('${b.id}')`:`openCreateBinderModal(${safeJSON(b)})`}"
         style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px;
                opacity:.5;transition:opacity .15s" title="Editar"
         onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.5'">✏️</button>
@@ -165,12 +179,17 @@ function fmBinderCardHtml(b){
   </div>`;
 }
 
-window.fmToggleAccordion=function(key){
+// ADICIONADO 22/08/2026 (pedido do Eduardo): 2º parâmetro opcional pra
+// suportar seções que minimizam mas não são grid (ex: "MINHAS COLEÇÕES",
+// que quando aberta usa display:block, não display:grid como as categorias
+// de fichário).
+window.fmToggleAccordion=function(key,openDisplay){
+  openDisplay=openDisplay||'grid';
   const panel=document.getElementById('fm-acc-'+key);
   const icon=document.getElementById('fm-acc-ic-'+key);
   if(!panel)return;
   const open=panel.style.display!=='none';
-  panel.style.display=open?'none':'grid';
+  panel.style.display=open?'none':openDisplay;
   if(icon)icon.textContent=open?'▸':'▾';
 };
 
@@ -208,7 +227,7 @@ window.renderCustomBindersHome=function(){
         Você ainda não criou nenhum fichário.<br>
         <span style="color:var(--accent)">Use os presets abaixo ou crie o seu próprio ✨</span>
       </div>`
-    :FM_CATS.map(cat=>{
+    :FM_CATS.filter(c=>c.key!=='pokemon').map(cat=>{
         const items=customBinders.filter(cat.test);
         if(!items.length)return'';
         const isOpen=cat.key===defaultOpenKey;
@@ -229,6 +248,41 @@ window.renderCustomBindersHome=function(){
           </div>
         </div>`;
       }).join('');
+
+  // ADICIONADO 21/08/2026: categoria "Fichários de Pokémon" fica FORA do
+  // ternário acima (sempre visível, mesmo com 0 fichários no total) —
+  // diferente de 'artist'/'own', que só aparecem quando já existe pelo menos
+  // 1 fichário qualquer. Sem isso não haveria como descobrir/criar o
+  // primeiro fichário de Pokémon.
+  const pkmnCat=FM_CATS.find(c=>c.key==='pokemon');
+  const pkmnItems=customBinders.filter(pkmnCat.test);
+  const pkmnOpen=pkmnCat.key===defaultOpenKey||pkmnItems.length===0;
+  const pokemonHtml=`<div style="margin-bottom:8px">
+    <div onclick="fmToggleAccordion('pokemon')"
+      style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+             padding:10px 12px;background:var(--surface2);border-radius:8px;
+             border-left:3px solid ${pkmnCat.color};margin-bottom:6px">
+      <span style="font-size:12px;font-weight:700;color:var(--text)">${pkmnCat.emoji} ${pkmnCat.label}</span>
+      <span style="display:flex;align-items:center;gap:8px">
+        <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)">${pkmnItems.length}</span>
+        <span id="fm-acc-ic-pokemon" style="font-size:11px;color:var(--muted)">${pkmnOpen?'▾':'▸'}</span>
+      </span>
+    </div>
+    <div id="fm-acc-pokemon" style="display:${pkmnOpen?'grid':'none'};
+         grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px">
+      ${pkmnItems.map(fmBinderCardHtml).join('')}
+      <div onclick="fmPkmnOpenCreate()"
+        style="padding:16px;border-radius:10px;cursor:pointer;transition:all .2s;
+               border:1.5px dashed var(--border2);background:transparent;
+               display:flex;flex-direction:column;align-items:center;justify-content:center;
+               gap:6px;min-height:112px;color:var(--muted)"
+        onmouseover="this.style.borderColor='${pkmnCat.color}';this.style.color='${pkmnCat.color}'"
+        onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--muted)'">
+        <span style="font-size:22px">+</span>
+        <span style="font-size:10px;font-family:'Space Mono',monospace;text-align:center">Novo fichário<br>de Pokémon</span>
+      </div>
+    </div>
+  </div>`;
 
   const presetsHtml=BINDER_PRESETS.map(p=>{
     const count=all.filter(p.filter).length;
@@ -289,15 +343,30 @@ window.renderCustomBindersHome=function(){
         ${s.upcoming?'breve':s.cards+' cartas'}</div>
     </div>`;
   }
+  // ADICIONADO 22/08/2026 (pedido do Eduardo): cada série dentro de "MINHAS
+  // COLEÇÕES" agora também minimiza (mesmo fmToggleAccordion de sempre, com
+  // chave 'series-<SR>' pra não colidir com 'pokemon'/'artist'/'own'/
+  // 'collections'). Só a série atual (ME — Mega Evoluções) começa aberta;
+  // todas as outras começam retraídas, já que são séries antigas/já fechadas.
   const seriesSections=Object.keys(SERIES_META)
     .map(sr=>({sr,sets:SET_CATALOG.filter(s=>s.series===sr)}))
     .filter(x=>x.sets.length)
-    .map(x=>`
-      <div style="font-size:9px;font-family:'Space Mono',monospace;color:var(--muted);
-                  text-transform:uppercase;letter-spacing:.08em;margin:14px 0 8px">${(SERIES_META[x.sr]||{}).sub||x.sr}</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
+    .map(x=>{
+      const isOpen=x.sr==='ME';
+      const label=(SERIES_META[x.sr]||{}).sub||x.sr;
+      return`
+      <div onclick="fmToggleAccordion('series-${x.sr}','grid')"
+        style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+               font-size:9px;font-family:'Space Mono',monospace;color:var(--muted);
+               text-transform:uppercase;letter-spacing:.08em;margin:14px 0 8px">
+        <span>${label}</span>
+        <span id="fm-acc-ic-series-${x.sr}" style="font-size:11px;color:var(--muted)">${isOpen?'▾':'▸'}</span>
+      </div>
+      <div id="fm-acc-series-${x.sr}" style="display:${isOpen?'grid':'none'};
+           grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
         ${x.sets.map(setCard).join('')}
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
   document.getElementById('bwrap').innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
@@ -309,16 +378,23 @@ window.renderCustomBindersHome=function(){
         onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">+ NOVO FICHÁRIO</button>
     </div>
 
-    <!-- ── Seletor de Coleções ─────────────────────────────────── -->
+    <!-- ── Seletor de Coleções (minimizável — pedido do Eduardo 22/08/2026,
+         igual já existia pras categorias de fichário abaixo) ───────────── -->
     <div style="margin-bottom:28px">
-      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);
-                  letter-spacing:2px;margin-bottom:12px;padding-bottom:8px;
-                  border-bottom:1px solid var(--border)">
-        MINHAS COLEÇÕES — TOQUE PARA ATIVAR NAS ABAS
+      <div onclick="fmToggleAccordion('collections','block')"
+        style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+               font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);
+               letter-spacing:2px;margin-bottom:12px;padding-bottom:8px;
+               border-bottom:1px solid var(--border)">
+        <span>MINHAS COLEÇÕES — TOQUE PARA ATIVAR NAS ABAS</span>
+        <span id="fm-acc-ic-collections" style="font-size:11px;color:var(--muted)">▾</span>
       </div>
-      ${seriesSections}
+      <div id="fm-acc-collections" style="display:block">
+        ${seriesSections}
+      </div>
     </div>
 
+    ${pokemonHtml}
     ${myHtml}
     <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;
                 margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)">

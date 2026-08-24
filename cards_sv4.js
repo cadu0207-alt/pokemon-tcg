@@ -203,7 +203,11 @@ const CARDS_SV4 = [
   {n:'197',dex:956,artist:"AKIRA EGAWA",name:'Espathra',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:29.99,base:false},
   {n:'198',dex:999,artist:"Akira Komayama",name:'Gimmighoul',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:43.90,base:false,important:true},
   {n:'199',dex:383,artist:"Nurikabe",name:'Groudon',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada',price:123.41,base:false,important:true},
+<<<<<<< HEAD
   {n:'200',dex:620,artist:"Taira Akitsu",name:'Mienshao',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada',price:39.99,base:false,important:true},
+=======
+  {n:'200',dex:620,artist:"Taira Akitsu",name:'Mienshao',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada',price:29.24,base:false,important:true},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'201',dex:774,artist:"0313",name:'Minior',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada',price:89.93,base:false,important:true},
   {n:'202',dex:934,artist:"kodama",name:'Garganacl',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada',price:24.90,base:false},
   {n:'203',dex:988,artist:"Takeshi Nakamura",name:'Slither Wing',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada',price:28.50,base:false},

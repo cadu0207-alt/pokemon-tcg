@@ -919,6 +919,7 @@ function go(id,el){
     if(currentSet==='__custom__') renderCustomBindersHome();
     else renderBinder();
   }
+  if(id==='inicio'){if(typeof renderInicio==='function')renderInicio();}
   if(id==='dash'){renderDash();updateDashProgress();}
   if(id==='cartas'){renderCartas();}
   if(id==='gastos'){renderGastos();}
@@ -1297,7 +1298,7 @@ const SET_CATALOG=[
 
 // ── SÉRIES (ordem de exibição na home e no gerenciador) ─────────
 const SERIES_META={
-  ME:    {t:'⚡ MEGA EVOLUÇÃO — SÉRIE ATUAL',           sub:'🇧🇷 Exclusivos BR'},
+  ME:    {t:'⚡ MEGA EVOLUÇÃO — SÉRIE ATUAL',           sub:'⚡ Mega Evoluções'},
   SV:    {t:'🌋 ESCARLATE & VIOLETA (2023–2025)',       sub:'⚔️ Escarlate & Violeta (2023–2025)'},
   SWSH:  {t:'⚔️ ESPADA & ESCUDO (2020–2022)',           sub:'⚔️ Espada & Escudo (2020–2022)'},
   SM:    {t:'🌙 SOL & LUA (2017–2019)',                 sub:'🌙 Sol & Lua (2017–2019)'},
@@ -3984,7 +3985,7 @@ async function cbConfirmSave(editId){
    HOME PAGE — CARD ROTATION (top 3 por preço de cada coleção)
    ═══════════════════════════════════════════════════════════════ */
 (function initHomeRotation(){
-  const INTERVAL = 3800; // ms entre cada card
+  const INTERVAL = 30000; // ms entre cada card (30s — antes 3.8s, ajustado a pedido do Eduardo em 22/08)
 
   // Formata preço BR
   function fmtPriceBR(p){

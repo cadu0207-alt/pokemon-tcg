@@ -39,7 +39,11 @@ const CARDS_SV8 = [
   {n:'033',dex:935,dex:935,name:'Charcadet',type:'Fogo',color:'#F44336',rare:'Comum',price:0.20,base:true},
   {n:'034',dex:936,dex:936,name:'Armarouge',type:'Fogo',color:'#F44336',rare:'Incomum',price:0.20,base:true},
   {n:'035',dex:937,dex:937,name:'Ceruledge',type:'Fogo',color:'#F44336',rare:'Incomum',price:0.25,base:true},
+<<<<<<< HEAD
   {n:'036',dex:937,dex:937,name:'Ceruledge ex',type:'Fogo',color:'#F44336',rare:'Rara Dupla',price:15.92,base:true},
+=======
+  {n:'036',dex:937,dex:937,name:'Ceruledge ex',type:'Fogo',color:'#F44336',rare:'Rara Dupla',price:17.00,base:true},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'037',dex:952,dex:952,name:'Scovillain ex',type:'Fogo',color:'#F44336',rare:'Rara Dupla',price:4.75,base:true},
   {n:'038',dex:1020,dex:1020,name:'Gouging Fire',type:'Fogo',color:'#F44336',rare:'Rara',price:0.30,base:true},
   {n:'039',dex:128,dex:128,name:'Paldean Tauros',type:'Aquático',color:'#2196F3',rare:'Incomum',price:0.25,base:true},
@@ -78,8 +82,13 @@ const CARDS_SV8 = [
   {n:'072',dex:468,dex:468,name:'Togekiss',type:'Psíquico',color:'#9C27B0',rare:'Rara',price:0.35,base:true},
   {n:'073',dex:183,dex:183,name:'Marill',type:'Psíquico',color:'#9C27B0',rare:'Comum',price:0.15,base:true},
   {n:'074',dex:184,dex:184,name:'Azumarill',type:'Psíquico',color:'#9C27B0',rare:'Incomum',price:0.25,base:true},
+<<<<<<< HEAD
   {n:'075',dex:238,dex:238,name:'Smoochum',type:'Psíquico',color:'#9C27B0',rare:'Comum',price:1.00,base:true},
   {n:'076',dex:380,dex:380,name:'Latias ex',type:'Psíquico',color:'#9C27B0',rare:'Rara Dupla',price:49.99,base:true},
+=======
+  {n:'075',dex:238,dex:238,name:'Smoochum',type:'Psíquico',color:'#9C27B0',rare:'Comum',price:0.50,base:true},
+  {n:'076',dex:380,dex:380,name:'Latias ex',type:'Psíquico',color:'#9C27B0',rare:'Rara Dupla',price:68.00,base:true},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'077',dex:381,dex:381,name:'Latios',type:'Psíquico',color:'#9C27B0',rare:'Incomum',price:0.20,base:true},
   {n:'078',dex:480,dex:480,name:'Uxie',type:'Psíquico',color:'#9C27B0',rare:'Comum',price:0.20,base:true},
   {n:'079',dex:481,dex:481,name:'Mesprit',type:'Psíquico',color:'#9C27B0',rare:'Comum',price:0.30,base:true},
@@ -161,19 +170,31 @@ const CARDS_SV8 = [
   {n:'155',dex:695,dex:695,name:'Heliolisk',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.15,base:true},
   {n:'156',dex:765,dex:765,name:'Oranguru',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.20,base:true},
   {n:'157',dex:924,dex:924,name:'Tandemaus',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.15,base:true},
+<<<<<<< HEAD
   {n:'158',dex:925,dex:925,name:'Maushold',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.25,base:true},
+=======
+  {n:'158',dex:925,dex:925,name:'Maushold',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.20,base:true},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'159',dex:967,dex:967,name:'Cyclizar ex',type:'Incolor',color:'#9E9E9E',rare:'Rara Dupla',price:4.50,base:true},
   {n:'160',dex:973,dex:973,name:'Flamigo ex',type:'Incolor',color:'#9E9E9E',rare:'Rara Dupla',price:3.80,base:true},
   {n:'161',dex:1024,dex:1024,name:'Terapagos',type:'Incolor',color:'#9E9E9E',rare:'Rara',price:0.20,base:true},
   {n:'162',name:'Amulet of Hope',type:'Incolor',color:'#9E9E9E',rare:'ACE SPEC',price:4.50,base:false},
   {n:'163',name:'Babiri Berry',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.09,base:true},
+<<<<<<< HEAD
   {n:'164',name:'Brilliant Blender',type:'Incolor',color:'#9E9E9E',rare:'ACE SPEC',price:10.00,base:false},
+=======
+  {n:'164',name:'Brilliant Blender',type:'Incolor',color:'#9E9E9E',rare:'ACE SPEC',price:22.00,base:false},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'165',name:'Call Bell',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.11,base:true},
   {n:'166',name:'Chill Teaser Toy',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.10,base:true},
   {n:'167',name:'Clemont\'s Quick Wit',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.17,base:true},
   {n:'168',name:'Colbur Berry',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.12,base:true},
   {n:'169',name:'Counter Gain',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.18,base:true},
+<<<<<<< HEAD
   {n:'170',name:'Cyrano',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:5.90,base:true},
+=======
+  {n:'170',name:'Cyrano',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:6.00,base:true},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'171',name:'Deduction Kit',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.17,base:true},
   {n:'172',name:'Dragon Elixir',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.12,base:true},
   {n:'173',name:'Drasna',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.16,base:true},
@@ -194,7 +215,11 @@ const CARDS_SV8 = [
   {n:'188',name:'Technical Machine: Fluorite',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.10,base:true},
   {n:'189',name:'Tera Orb',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.24,base:true},
   {n:'190',name:'Tyme',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.15,base:true},
+<<<<<<< HEAD
   {n:'191',name:'Enriching Energy',type:'Incolor',color:'#9E9E9E',rare:'ACE SPEC',price:77.90,base:false},
+=======
+  {n:'191',name:'Enriching Energy',type:'Incolor',color:'#9E9E9E',rare:'ACE SPEC',price:77.89,base:false},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'192',dex:102,dex:102,name:'Exeggcute',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada',price:69.90,base:false},
   {n:'193',dex:666,dex:666,name:'Vivillon',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada',price:25.00,base:false},
   {n:'194',dex:756,dex:756,name:'Shiinotic',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada',price:14.90,base:false},
@@ -223,16 +248,27 @@ const CARDS_SV8 = [
   {n:'217',dex:350,dex:350,name:'Milotic ex',type:'Aquático',color:'#2196F3',rare:'Ultra Rara',price:15.00,base:false},
   {n:'218',dex:646,dex:646,name:'Black Kyurem ex',type:'Aquático',color:'#2196F3',rare:'Ultra Rara',price:14.50,base:false},
   {n:'219',dex:25,dex:25,name:'Pikachu ex',type:'Raio',color:'#FFEB3B',rare:'Ultra Rara',price:77.60,base:false,important:true},
+<<<<<<< HEAD
   {n:'220',dex:380,dex:380,name:'Latias ex',type:'Psíquico',color:'#9C27B0',rare:'Ultra Rara',price:40.00,base:false},
   {n:'221',dex:770,dex:770,name:'Palossand ex',type:'Psíquico',color:'#9C27B0',rare:'Ultra Rara',price:9.00,base:false},
   {n:'222',dex:330,dex:330,name:'Flygon ex',type:'Lutador',color:'#FF9800',rare:'Ultra Rara',price:11.70,base:false},
   {n:'223',dex:635,dex:635,name:'Hydreigon ex',type:'Sombrio',color:'#607D8B',rare:'Ultra Rara',price:17.90,base:false},
+=======
+  {n:'220',dex:380,dex:380,name:'Latias ex',type:'Psíquico',color:'#9C27B0',rare:'Ultra Rara',price:84.00,base:false},
+  {n:'221',dex:770,dex:770,name:'Palossand ex',type:'Psíquico',color:'#9C27B0',rare:'Ultra Rara',price:9.00,base:false},
+  {n:'222',dex:330,dex:330,name:'Flygon ex',type:'Lutador',color:'#FF9800',rare:'Ultra Rara',price:11.70,base:false},
+  {n:'223',dex:635,dex:635,name:'Hydreigon ex',type:'Sombrio',color:'#607D8B',rare:'Ultra Rara',price:20.99,base:false},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'224',dex:1018,dex:1018,name:'Archaludon ex',type:'Metal',color:'#78909C',rare:'Ultra Rara',price:12.90,base:false},
   {n:'225',dex:103,dex:103,name:'Alolan Exeggutor ex',type:'Dragão',color:'#3F51B5',rare:'Ultra Rara',price:10.50,base:false},
   {n:'226',dex:978,dex:978,name:'Tatsugiri ex',type:'Dragão',color:'#3F51B5',rare:'Ultra Rara',price:7.50,base:false},
   {n:'227',dex:289,dex:289,name:'Slaking ex',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:7.80,base:false},
   {n:'228',dex:967,dex:967,name:'Cyclizar ex',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:8.00,base:false},
+<<<<<<< HEAD
   {n:'229',name:'Clemont\'s Quick Wit',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:14.38,base:false},
+=======
+  {n:'229',name:'Clemont\'s Quick Wit',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:7.19,base:false},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'230',name:'Cyrano',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:44.10,base:false},
   {n:'231',name:'Drasna',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:8.00,base:false},
   {n:'232',name:'Drayton',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:12.00,base:false},
@@ -249,7 +285,11 @@ const CARDS_SV8 = [
   {n:'243',name:'Clemont\'s Quick Wit',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:50.00,base:false,important:true},
   {n:'244',name:'Drayton',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:49.90,base:false},
   {n:'245',name:'Jasmine\'s Gaze',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:69.90,base:false,important:true},
+<<<<<<< HEAD
   {n:'246',name:'Lisia\'s Appeal',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:269.90,base:false,important:true},
+=======
+  {n:'246',name:'Lisia\'s Appeal',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:270.00,base:false,important:true},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'247',dex:25,dex:25,name:'Pikachu ex',type:'Raio',color:'#FFEB3B',rare:'Hiper Rara',price:399.90,base:false,important:true},
   {n:'248',dex:103,dex:103,name:'Alolan Exeggutor ex',type:'Dragão',color:'#3F51B5',rare:'Hiper Rara',price:60.00,base:false,important:true},
   {n:'249',name:'Counter Gain',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:24.90,base:false},

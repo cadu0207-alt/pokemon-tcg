@@ -62,10 +62,18 @@ function xpDisplayName(userId, rawName) {
   return 'Treinador #' + String(userId || '').slice(-4).toUpperCase();
 }
 const XP_ACHV_CATEGORY_LABEL = {
+  wild_catch: '🐾 Pokémon Selvagens', leilao: '🔨 Leilão', loja: '🛍️ Loja do Leiloeiro',
   set_complete: '📦 Sets Completos', master_set: '👑 Master Sets',
   volume: '🗂️ Marcos de Volume', master_volume: '🏆 Marcos de Master Set', geral: '⭐ Gerais',
 };
+// MIGRAÇÃO 23/08/2026: categorias novas ligadas às ações reais do
+// site (captura no minigame, leilão, loja) em vez de marcar carta no
+// Fichário — ver xp_events_migration_23ago2026.sql. category vem
+// direto da coluna `achievements.category` pra essas.
 function xpAchievementCategory(code, meta) {
+  if (meta && meta.category === 'wild_catch') return 'wild_catch';
+  if (meta && meta.category === 'leilao') return 'leilao';
+  if (meta && meta.category === 'loja') return 'loja';
   if (meta && meta.category === 'set_complete') return 'set_complete';
   if (meta && meta.category === 'master_set') return 'master_set';
   if (/^cards_/.test(code)) return 'volume';
@@ -325,7 +333,7 @@ function xpRenderDashPanel() {
     const cat = xpAchievementCategory(a.code, a);
     (groups[cat] = groups[cat] || []).push(a);
   });
-  const catOrder = ['set_complete', 'master_set', 'volume', 'master_volume', 'geral'];
+  const catOrder = ['wild_catch', 'leilao', 'loja', 'set_complete', 'master_set', 'volume', 'master_volume', 'geral'];
   let gallery = '';
   catOrder.forEach(cat => {
     const items = groups[cat]; if (!items || !items.length) return;

@@ -46,7 +46,6 @@ async function renderAdminStats() {
   }).join('');
 
   holder.innerHTML =
-    '<div class="sec-title" style="margin-top:0">Admin - Visao Geral do Site</div>' +
     '<div class="admin-stats-grid">' + cardsHtml + '</div>' +
     '<div class="admin-stats-lastrow">' +
       '<span>Ultimo cadastro: <strong>' + fmtStatDate(s.last_signup_at) + '</strong></span>' +

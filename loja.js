@@ -517,16 +517,57 @@ async function cancelLojaReservationAdmin(id){
 // INTEGRAÇÃO COM ANÁLISES E FINANCEIRO — 19/08/2026
 //
 // Reaproveita funções genéricas já existentes em leilao.js
-// (aucCommissionBreakdown, aucMonthKey, aucWeekKey, aucBarChartSvg,
-// aucLeiloeiroNome) — nenhuma delas é específica de leilão, todas
-// recebem os dados como parâmetro, então servem igual pra loja.
+// (aucMonthKey, aucWeekKey, aucBarChartSvg, aucLeiloeiroNome) —
+// nenhuma delas é específica de leilão, todas recebem os dados como
+// parâmetro, então servem igual pra loja. A comissão em si NÃO é mais
+// compartilhada (ver LOJA_COMMISSION_TIERS/lojaCommissionBreakdown
+// abaixo, 22/08/2026), só a soma informativa em
+// renderLojaComissaoTotalGeral() ainda usa a aucCommissionBreakdown()
+// do leilão (pra pegar a parte que é DO leilão, de propósito).
 //
 // Comissão da Loja é SEPARADA da comissão do Leilão (confirmado com o
 // Eduardo): cada uma tem sua própria progressão de faixas sobre o total
 // pago do MÊS. O painel de Análises mostra as duas comissões mais um
 // card de "total geral" que é só SOMA informativa das duas (não muda
 // a faixa de nenhuma).
+//
+// 22/08/2026: o leilão baixou a faixa inicial de 7%→5% (AUC_COMMISSION_
+// TIERS em leilao.js), mas a Loja NÃO — a pedido do Eduardo, a Loja
+// mantém a escada antiga (7%/6%/5%/4%/3%/2,5%/2%/1,5%/1%). Por isso a
+// Loja ganhou sua própria tabela (LOJA_COMMISSION_TIERS) e sua própria
+// função (lojaCommissionBreakdown), em vez de continuar usando a
+// aucCommissionBreakdown() genérica do leilão.
 // ================================================================
+
+const LOJA_COMMISSION_TIERS=[
+  {upTo:10000, rate:0.07},
+  {upTo:20000, rate:0.06},
+  {upTo:30000, rate:0.05},
+  {upTo:40000, rate:0.04},
+  {upTo:50000, rate:0.03},
+  {upTo:60000, rate:0.025},
+  {upTo:70000, rate:0.02},
+  {upTo:80000, rate:0.015},
+  {upTo:Infinity, rate:0.01}
+];
+
+function lojaCommissionBreakdown(total){
+  let remaining=total, prevLimit=0, commission=0;
+  const rows=[];
+  for(const tier of LOJA_COMMISSION_TIERS){
+    if(remaining<=0)break;
+    const tierSize=tier.upTo-prevLimit;
+    const amountInTier=Math.min(remaining,tierSize);
+    if(amountInTier>0){
+      const tierCommission=amountInTier*tier.rate;
+      commission+=tierCommission;
+      rows.push({from:prevLimit,to:tier.upTo,rate:tier.rate,amount:amountInTier,commission:tierCommission});
+    }
+    remaining-=amountInTier;
+    prevLimit=tier.upTo;
+  }
+  return{commission,rows,effectiveRate:total>0?commission/total:LOJA_COMMISSION_TIERS[0].rate};
+}
 
 // ── CUSTO DE AQUISIÇÃO (privado, mesmo padrão de auction_costs) ────
 let lojaItemCosts={}; // {item_id: {cost_price, note}}
@@ -610,7 +651,7 @@ function renderLojaComissao(){
     ['pago','enviado','concluido'].includes(r.status)&&r.paid_at&&new Date(r.paid_at)>=inicioMes
   );
   const totalMes=pagosMes.reduce((s,r)=>s+ +r.unit_price*r.qty,0);
-  const{commission,rows,effectiveRate}=aucCommissionBreakdown(totalMes);
+  const{commission,rows,effectiveRate}=lojaCommissionBreakdown(totalMes);
   const liquido=totalMes-commission;
   const mesLabel=now.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
 
@@ -643,7 +684,7 @@ function renderLojaComissao(){
     <div class="panel" style="padding:14px">
       <div style="font-size:10.5px;color:var(--muted);margin-bottom:4px">
         Comissão da Loja é calculada SEPARADA da comissão do Leilão — cada uma com sua própria progressão
-        sobre o total pago do mês (mesmas faixas: 7% até R$10k · 6% até R$20k · 5% até R$30k · 4% até R$40k ·
+        sobre o total pago do mês (faixas da Loja: 7% até R$10k · 6% até R$20k · 5% até R$30k · 4% até R$40k ·
         3% até R$50k · 2,5% até R$60k · 2% até R$70k · 1,5% até R$80k · 1% acima de R$80k).
       </div>
       ${tabelaFaixas}
@@ -705,7 +746,7 @@ function lojaComputeFinanceiroRows(){
     }
   });
   const comissaoPorMes={};
-  Object.keys(pagosPorMes).forEach(k=>{comissaoPorMes[k]=aucCommissionBreakdown(pagosPorMes[k]).commission;});
+  Object.keys(pagosPorMes).forEach(k=>{comissaoPorMes[k]=lojaCommissionBreakdown(pagosPorMes[k]).commission;});
 
   const vendidas=lojaAdminReservations.filter(r=>['pago','enviado','concluido'].includes(r.status));
   return vendidas.map(r=>{

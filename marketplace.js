@@ -139,6 +139,8 @@ function renderStoreLists(){
   // os botões de aprovar/rejeitar só aparecem pra isAdminEditor() (mktStoreCard).
   const admin=typeof isAdmin==='function'&&isAdmin();
   const pending=trustedStores.filter(s=>s.status==='pendente');
+  // Badge de pendência na seção da aba Admin (admin_panel.js/applyAdminSectionStates)
+  window.__adminMktPending=pending.length;
   if(admin&&pending.length){
     pendingWrap.style.display='block';
     pendingList.innerHTML=pending.map(s=>mktStoreCard(s,{pending:true})).join('');

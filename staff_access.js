@@ -14,8 +14,8 @@
 // remove_staff_member + policies adicionais nas tabelas de cada área).
 //
 // Áreas com permissão granular hoje: lojas, feedback, marketplace,
-// positivo, updates. "leilao" fica de fora de propósito (mexe com
-// lances/pagamentos reais — precisa de revisão própria antes).
+// positivo, updates, inicio. "leilao" fica de fora de propósito (mexe
+// com lances/pagamentos reais — precisa de revisão própria antes).
 // ================================================================
 
 window.__staffPerms = [];
@@ -26,7 +26,8 @@ const STAFF_AREAS = [
   { key: 'feedback', label: '💬 Feedback', hint: 'responder mensagens de usuários' },
   { key: 'marketplace', label: '🏪 Lojas Confiáveis', hint: 'aprovar/rejeitar cadastro de lojas (não edita CNPJ/comissão)' },
   { key: 'positivo', label: '✅ Cadastro Positivo', hint: 'aprovar/rejeitar indicações de lojas' },
-  { key: 'updates', label: '📢 Atualizações', hint: 'publicar no mural de novidades (apagar continua só do Eduardo)' }
+  { key: 'updates', label: '📢 Atualizações', hint: 'publicar no mural de novidades (apagar continua só do Eduardo)' },
+  { key: 'inicio', label: '🏠 Início', hint: 'publicar notícias, vídeos da comunidade, links úteis e artigos da Revista MyDeck na aba Início' }
 ];
 
 async function loadMyStaffAccess() {
@@ -69,7 +70,6 @@ async function renderStaffAccessPanel() {
 
   if (error) {
     holder.innerHTML =
-      '<div class="sec-title" style="margin-top:0">👥 Equipe — Acesso Admin</div>' +
       '<div class="admin-stats-loading">Erro ao carregar — rodou o staff_access_setup.sql no Supabase? (' + error.message + ')</div>';
     return;
   }
@@ -101,7 +101,6 @@ async function renderStaffAccessPanel() {
   }).join('');
 
   holder.innerHTML =
-    '<div class="sec-title" style="margin-top:0">👥 Equipe — Acesso Admin</div>' +
     '<div class="ml-add-hint">Adicione pelo e-mail que a pessoa usa pra logar no site (Google) — ela precisa ter feito login pelo menos uma vez antes. Por padrão ela só VISUALIZA a aba Admin; marque as caixinhas abaixo pra liberar ações específicas.</div>' +
     '<div class="ml-add-term">' +
       '<input id="staff-add-email" placeholder="email@exemplo.com">' +

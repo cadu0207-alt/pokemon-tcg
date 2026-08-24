@@ -117,7 +117,11 @@ const CARDS_SV1 = [
   {n:'111',dex:308,artist:"Jerky",name:'Medicham',type:'Lutador',color:'#FF9800',rare:'Incomum',price:0.13,base:true},
   {n:'112',dex:447,artist:"Naoyo Kimura",name:'Riolu',type:'Lutador',color:'#FF9800',rare:'Comum',price:0.10,base:true},
   {n:'113',dex:447,artist:"chibi",name:'Riolu',type:'Lutador',color:'#FF9800',rare:'Comum',price:0.29,base:true},
+<<<<<<< HEAD
   {n:'114',dex:448,artist:"Nurikabe",name:'Lucario',type:'Lutador',color:'#FF9800',rare:'Incomum',price:0.50,base:true},
+=======
+  {n:'114',dex:448,artist:"Nurikabe",name:'Lucario',type:'Lutador',color:'#FF9800',rare:'Incomum',price:0.39,base:true},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'115',dex:551,artist:"Tomokazu Komiya",name:'Sandile',type:'Lutador',color:'#FF9800',rare:'Comum',price:0.25,base:true},
   {n:'116',dex:552,artist:"kantaro",name:'Krokorok',type:'Lutador',color:'#FF9800',rare:'Comum',price:0.25,base:true},
   {n:'117',dex:553,artist:"Misa Tsutsui",name:'Krookodile',type:'Lutador',color:'#FF9800',rare:'Incomum',price:0.35,base:true},
@@ -203,7 +207,11 @@ const CARDS_SV1 = [
   {n:'197',artist:"Studio Bora Inc.",name:'Vitality Band',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.20,base:true},
   {n:'198',artist:"Hitoshi Ariga",name:'Youngster',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.08,base:true},
   {n:'199',dex:917,artist:"Miki Tanaka",name:'Tarountula',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada',price:39.90,base:false,important:true},
+<<<<<<< HEAD
   {n:'200',dex:929,artist:"Oswaldo KATO",name:'Dolliv',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada',price:29.00,base:false},
+=======
+  {n:'200',dex:929,artist:"Oswaldo KATO",name:'Dolliv',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada',price:22.90,base:false},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'201',dex:948,artist:"Akira Komayama",name:'Toedscool',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada',price:19.00,base:false},
   {n:'202',dex:952,artist:"KIYOTAKA OSHIYAMA",name:'Scovillain',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada',price:24.90,base:false},
   {n:'203',dex:936,artist:"nagimiso",name:'Armarouge',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada',price:44.99,base:false,important:true},
@@ -212,7 +220,11 @@ const CARDS_SV1 = [
   {n:'206',dex:960,artist:"You Iribi",name:'Wiglett',type:'Aquático',color:'#2196F3',rare:'Rara Ilustrada',price:40.00,base:false,important:true},
   {n:'207',dex:977,artist:"AKIRA EGAWA",name:'Dondozo',type:'Aquático',color:'#2196F3',rare:'Rara Ilustrada',price:59.99,base:false,important:true},
   {n:'208',dex:417,artist:"zig",name:'Pachirisu',type:'Raio',color:'#FFEB3B',rare:'Rara Ilustrada',price:55.90,base:false,important:true},
+<<<<<<< HEAD
   {n:'209',dex:922,artist:"Kouki Saitou",name:'Pawmot',type:'Raio',color:'#FFEB3B',rare:'Rara Ilustrada',price:119.90,base:false,important:true},
+=======
+  {n:'209',dex:922,artist:"Kouki Saitou",name:'Pawmot',type:'Raio',color:'#FFEB3B',rare:'Rara Ilustrada',price:119.99,base:false,important:true},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'210',dex:96,artist:"Tomokazu Komiya",name:'Drowzee',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:119.90,base:false,important:true},
   {n:'211',dex:280,artist:"Jiro Sasumo",name:'Ralts',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:100.00,base:false,important:true},
   {n:'212',dex:281,artist:"Jiro Sasumo",name:'Kirlia',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:99.90,base:false,important:true},
@@ -253,7 +265,11 @@ const CARDS_SV1 = [
   {n:'247',dex:1007,artist:"Ryota Murayama",name:'Koraidon ex',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada Especial',price:59.90,base:false,important:true},
   {n:'248',dex:990,artist:"KEIICHIRO ITO",name:'Iron Treads ex',type:'Metal',color:'#78909C',rare:'Rara Ilustrada Especial',price:15.00,base:false},
   {n:'249',artist:"kantaro",name:'Arven',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:42.99,base:false},
+<<<<<<< HEAD
   {n:'250',artist:"Oswaldo KATO",name:'Jacq',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:21.90,base:false},
+=======
+  {n:'250',artist:"Oswaldo KATO",name:'Jacq',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:24.90,base:false},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   // Cartas 251-258 completadas em 15/jul/2026 (generate_set.js tinha pageSize=250 sem
   // paginação — perdia o final do set). Preços via api.pokemontcg.io, USD/BRL 5.8.
   {n:'251',artist:"Akira Komayama",name:'Miriam',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:39.90,base:false,important:true},

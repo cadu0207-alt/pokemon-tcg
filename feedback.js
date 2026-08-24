@@ -81,10 +81,11 @@ async function renderAdminFeedback() {
   }
 
   const list = data || [];
+  // Badge de pendência na seção da aba Admin (admin_panel.js/applyAdminSectionStates)
+  window.__adminFeedbackUnread = list.filter(function (m) { return !m.reply; }).length;
+
   if (!list.length) {
-    holder.innerHTML =
-      '<div class="sec-title" style="margin-top:28px">💬 Admin · Mensagens de Usuários</div>' +
-      '<div class="admin-stats-loading">Nenhuma mensagem recebida ainda.</div>';
+    holder.innerHTML = '<div class="admin-stats-loading">Nenhuma mensagem recebida ainda.</div>';
     return;
   }
 
@@ -109,9 +110,7 @@ async function renderAdminFeedback() {
     );
   }).join('');
 
-  holder.innerHTML =
-    '<div class="sec-title" style="margin-top:28px">💬 Admin · Mensagens de Usuários</div>' +
-    '<div class="feedback-msg-list">' + itemsHtml + '</div>';
+  holder.innerHTML = '<div class="feedback-msg-list">' + itemsHtml + '</div>';
 }
 
 async function sendFeedbackReply(id) {

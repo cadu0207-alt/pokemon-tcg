@@ -5,7 +5,7 @@ const CARDS_ME02 = [
   {n:'001',dex:43,artist:"MINAMINAMI Take",name:'Oddish',type:'Grama',color:'#4CAF50',rare:'Comum',price:0.05,base:true},
   {n:'002',dex:44,artist:"Yoriyuki Ikegami",name:'Gloom',type:'Grama',color:'#4CAF50',rare:'Comum',price:0.10,base:true},
   {n:'003',dex:45,artist:"Shibuzoh.",name:'Vileplume',type:'Grama',color:'#4CAF50',rare:'Rara Holo',price:0.15,base:true},
-  {n:'004',dex:214,artist:"5ban Graphics",name:'Mega Heracross ex',type:'Grama',color:'#4CAF50',rare:'Rara Dupla',price:3.30,base:true},
+  {n:'004',dex:214,artist:"5ban Graphics",name:'Mega Heracross ex',type:'Grama',color:'#4CAF50',rare:'Rara Dupla',price:3.25,base:true},
   {n:'005',dex:270,artist:"Wintr Wandr",name:'Lotad',type:'Grama',color:'#4CAF50',rare:'Comum',price:0.10,base:true},
   {n:'006',dex:271,artist:"Shigenori Negishi",name:'Lombre',type:'Grama',color:'#4CAF50',rare:'Comum',price:0.06,base:true},
   {n:'007',dex:272,artist:"Anesaki Dynamic",name:'Ludicolo',type:'Grama',color:'#4CAF50',rare:'Incomum',price:0.10,base:true},
@@ -33,7 +33,7 @@ const CARDS_ME02 = [
   {n:'027',dex:393,artist:"Hideki Ishikawa",name:'Piplup',type:'Aquático',color:'#2196F3',rare:'Comum',price:0.10,base:true},
   {n:'028',dex:394,artist:"Atsuya Uki",name:'Prinplup',type:'Aquático',color:'#2196F3',rare:'Comum',price:0.10,base:true},
   // RAIO
-  {n:'029',dex:479,artist:"5ban Graphics",name:'Rotom ex',type:'Raio',color:'#FFEB3B',rare:'Rara Dupla',price:1.90,base:true},
+  {n:'029',dex:479,artist:"5ban Graphics",name:'Rotom ex',type:'Raio',color:'#FFEB3B',rare:'Rara Dupla',price:2.00,base:true},
   {n:'030',dex:835,artist:"Ayako Ozaki",name:'Yamper',type:'Raio',color:'#FFEB3B',rare:'Comum',price:0.04,base:true},
   {n:'031',dex:836,artist:"Orca",name:'Boltund',type:'Raio',color:'#FFEB3B',rare:'Comum',price:0.08,base:true},
   {n:'032',dex:921,artist:"Shimaris Yukichi",name:'Pawmi',type:'Raio',color:'#FFEB3B',rare:'Comum',price:0.05,base:true},
@@ -116,7 +116,11 @@ const CARDS_ME02 = [
   {n:'101',dex:330,artist:"Ryota Murayama",name:'Flygon (IR)',type:'Lutador',color:'#FF9800',rare:'Ilustr. Rara',price:14.00,base:false},
   {n:'102',dex:194,artist:"OKACHEKE",name:'Paldean Wooper (IR)',type:'Água',color:'#2196F3',rare:'Ilustr. Rara',price:12.90,base:false},
   {n:'103',dex:849,artist:"Terada Tera",name:'Toxtricity (IR)',type:'Escuridão',color:'#607D8B',rare:'Ilustr. Rara',price:15.90,base:false},
+<<<<<<< HEAD
   {n:'104',dex:777,artist:"Orca",name:'Togedemaru (IR)',type:'Metal',color:'#9E9E9E',rare:'Ilustr. Rara',price:11.50,base:false},
+=======
+  {n:'104',dex:777,artist:"Orca",name:'Togedemaru (IR)',type:'Metal',color:'#9E9E9E',rare:'Ilustr. Rara',price:10.00,base:false},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'105',dex:40,artist:"REND",name:'Wigglytuff (IR)',type:'Incolor',color:'#78909C',rare:'Ilustr. Rara',price:22.00,base:false},
   {n:'106',dex:52,artist:"Uninori",name:'Aurora (IR)',type:'Suporte',color:'#E91E63',rare:'Ilustr. Rara',price:81.00,base:false},
   {n:'107',dex:424,artist:"Shigenori Negishi",name:'Movimento do Grimsley (IR)',type:'Suporte',color:'#E91E63',rare:'Ilustr. Rara',price:10.90,base:false},
@@ -133,11 +137,19 @@ const CARDS_ME02 = [
   {n:'117',artist:"Toyste Beach",name:'Empoleon ex (UR)',type:'Metal',color:'#9E9E9E',rare:'Rara Ultra',price:5.00,base:false},
   {n:'118',artist:"Yuu Nishida",name:'Aurora (UR)',type:'Suporte',color:'#E91E63',rare:'Rara Ultra',price:39.99,base:false},
   {n:'119',artist:"Naoki Saito",name:'Piromaníaco (UR)',type:'Suporte',color:'#E91E63',rare:'Rara Ultra',price:5.90,base:false},
+<<<<<<< HEAD
   {n:'120',artist:"GIDORA",name:'Movimento do Grimsley (UR)',type:'Suporte',color:'#E91E63',rare:'Rara Ultra',price:11.50,base:false},
   {n:'121',artist:"Studio Bora Inc.",name:'Wondrous Patch (UR)',type:'Item',color:'#5C6BC0',rare:'Rara Ultra',price:7.80,base:false},
   {n:'122',artist:"Toyste Beach",name:'Sorvetão Jumbo (UR)',type:'Item',color:'#5C6BC0',rare:'Rara Ultra',price:4.90,base:false},
   {n:'123',artist:"Studio Bora Inc.",name:'Capacete Punk (UR)',type:'Item Ferramenta',color:'#5C6BC0',rare:'Rara Ultra',price:12.00,base:false},
   {n:'124',name:'Gaiola de Batalha (UR)',type:'Estádio',color:'#795548',rare:'Rara Ultra',price:19.99,base:false},
+=======
+  {n:'120',artist:"GIDORA",name:'Movimento do Grimsley (UR)',type:'Suporte',color:'#E91E63',rare:'Rara Ultra',price:11.00,base:false},
+  {n:'121',artist:"Studio Bora Inc.",name:'Wondrous Patch (UR)',type:'Item',color:'#5C6BC0',rare:'Rara Ultra',price:7.80,base:false},
+  {n:'122',artist:"Toyste Beach",name:'Sorvetão Jumbo (UR)',type:'Item',color:'#5C6BC0',rare:'Rara Ultra',price:4.90,base:false},
+  {n:'123',artist:"Studio Bora Inc.",name:'Capacete Punk (UR)',type:'Item Ferramenta',color:'#5C6BC0',rare:'Rara Ultra',price:12.00,base:false},
+  {n:'124',name:'Gaiola de Batalha (UR)',type:'Estádio',color:'#795548',rare:'Rara Ultra',price:19.90,base:false},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   // Ilustração Rara Especial (SAR) 125–129
   {n:'125',dex:6,artist:"danciao",name:'Mega Charizard X ex (SAR)',type:'Fogo',color:'#F44336',rare:'Ilustr. Esp. Rara',price:1799.00,base:false},
   {n:'126',dex:479,artist:"Yoshimi Miyoshi",name:'Mega Gengar ex (SAR)',type:'Escuridão',color:'#607D8B',rare:'Ilustr. Esp. Rara',price:75.00,base:false},

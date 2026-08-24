@@ -272,6 +272,8 @@ function renderPositiveLists() {
 
   const admin = typeof isAdmin === 'function' && isAdmin();
   const pending = positiveCompanies.filter(c => c.status === 'pendente');
+  // Badge de pendência na seção da aba Admin (admin_panel.js/applyAdminSectionStates)
+  window.__adminPositivoPending = pending.length;
   if (admin && pending.length) {
     pendingWrap.style.display = 'block';
     pendingList.innerHTML = pending.map(c => positiveCompanyCard(c, { pending: true })).join('');

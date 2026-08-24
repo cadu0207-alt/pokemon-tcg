@@ -5,7 +5,11 @@
 // ATENÇÃO: nomes em inglês — traduza para português conforme necessário
 const CARDS_SV6PT5 = [
   {n:'001',dex:595,dex:595,name:'Joltik',type:'Planta',color:'#4CAF50',rare:'Comum',price:0.15,base:true},
+<<<<<<< HEAD
   {n:'002',dex:596,dex:596,name:'Galvantula',type:'Planta',color:'#4CAF50',rare:'Incomum',price:0.24,base:true},
+=======
+  {n:'002',dex:596,dex:596,name:'Galvantula',type:'Planta',color:'#4CAF50',rare:'Incomum',price:0.20,base:true},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'003',dex:722,dex:722,name:'Rowlet',type:'Planta',color:'#4CAF50',rare:'Comum',price:0.24,base:true},
   {n:'004',dex:723,dex:723,name:'Dartrix',type:'Planta',color:'#4CAF50',rare:'Comum',price:0.17,base:true},
   {n:'005',dex:724,dex:724,name:'Decidueye',type:'Planta',color:'#4CAF50',rare:'Incomum',price:0.15,base:true},
@@ -23,7 +27,11 @@ const CARDS_SV6PT5 = [
   {n:'017',dex:97,dex:97,name:'Hypno',type:'Psíquico',color:'#9C27B0',rare:'Incomum',price:0.15,base:true},
   {n:'018',dex:355,dex:355,name:'Duskull',type:'Psíquico',color:'#9C27B0',rare:'Comum',price:0.25,base:true},
   {n:'019',dex:356,dex:356,name:'Dusclops',type:'Psíquico',color:'#9C27B0',rare:'Comum',price:0.25,base:true},
+<<<<<<< HEAD
   {n:'020',dex:477,dex:477,name:'Dusknoir',type:'Psíquico',color:'#9C27B0',rare:'Rara',price:2.90,base:true},
+=======
+  {n:'020',dex:477,dex:477,name:'Dusknoir',type:'Psíquico',color:'#9C27B0',rare:'Rara',price:2.00,base:true},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'021',dex:488,dex:488,name:'Cresselia',type:'Psíquico',color:'#9C27B0',rare:'Rara',price:0.35,base:true},
   {n:'022',dex:700,dex:700,name:'Sylveon',type:'Psíquico',color:'#9C27B0',rare:'Incomum',price:0.47,base:true},
   {n:'023',dex:453,dex:453,name:'Croagunk',type:'Lutador',color:'#FF9800',rare:'Comum',price:0.10,base:true},
@@ -63,19 +71,34 @@ const CARDS_SV6PT5 = [
   {n:'057',name:'Colress\'s Tenacity',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.38,base:true},
   {n:'058',name:'Dangerous Laser',type:'Incolor',color:'#9E9E9E',rare:'ACE SPEC',price:6.50,base:false},
   {n:'059',name:'Janine\'s Secret Art',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.18,base:true},
+<<<<<<< HEAD
   {n:'060',name:'Neutralization Zone',type:'Incolor',color:'#9E9E9E',rare:'ACE SPEC',price:14.00,base:false},
   {n:'061',name:'Night Stretcher',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.10,base:true},
   {n:'062',name:'Poké Vital A',type:'Incolor',color:'#9E9E9E',rare:'ACE SPEC',price:4.70,base:false},
+=======
+  {n:'060',name:'Neutralization Zone',type:'Incolor',color:'#9E9E9E',rare:'ACE SPEC',price:13.30,base:false},
+  {n:'061',name:'Night Stretcher',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.99,base:true},
+  {n:'062',name:'Poké Vital A',type:'Incolor',color:'#9E9E9E',rare:'ACE SPEC',price:4.75,base:false},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'063',name:'Powerglass',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.10,base:true},
   {n:'064',name:'Xerosic\'s Machinations',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:3.75,base:true},
   {n:'065',name:'Tapu Bulu',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada',price:34.90,base:false,important:true},
   {n:'066',dex:229,dex:229,name:'Houndoom',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada',price:70.00,base:false,important:true},
+<<<<<<< HEAD
   {n:'067',dex:116,dex:116,name:'Horsea',type:'Aquático',color:'#2196F3',rare:'Rara Ilustrada',price:160.00,base:false,important:true},
   {n:'068',dex:355,dex:355,name:'Duskull',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:129.80,base:false,important:true},
   {n:'069',dex:356,dex:356,name:'Dusclops',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:69.99,base:false,important:true},
   {n:'070',dex:477,dex:477,name:'Dusknoir',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:99.90,base:false,important:true},
   {n:'071',dex:488,dex:488,name:'Cresselia',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:55.00,base:false,important:true},
   {n:'072',name:'Munkidori',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:129.90,base:false,important:true},
+=======
+  {n:'067',dex:116,dex:116,name:'Horsea',type:'Aquático',color:'#2196F3',rare:'Rara Ilustrada',price:98.90,base:false,important:true},
+  {n:'068',dex:355,dex:355,name:'Duskull',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:133.99,base:false,important:true},
+  {n:'069',dex:356,dex:356,name:'Dusclops',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:69.99,base:false,important:true},
+  {n:'070',dex:477,dex:477,name:'Dusknoir',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:99.90,base:false,important:true},
+  {n:'071',dex:488,dex:488,name:'Cresselia',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:55.00,base:false,important:true},
+  {n:'072',name:'Munkidori',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:112.46,base:false,important:true},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'073',name:'Fezandipiti',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:29.90,base:false,important:true},
   {n:'074',name:'Okidogi',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada',price:64.89,base:false,important:true},
   {n:'075',dex:570,dex:570,name:'Zorua',type:'Sombrio',color:'#607D8B',rare:'Rara Ilustrada',price:200.00,base:false,important:true},

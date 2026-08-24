@@ -65,7 +65,11 @@ const CARDS_MEG = [
   {n:'057',dex:124,dex:124,name:'Jynx',type:'Psíquico',color:'#9C27B0',rare:'Comum',price:0.08,base:true},
   {n:'058',dex:280,dex:280,name:'Ralts',type:'Psíquico',color:'#9C27B0',rare:'Comum',price:0.10,base:true},
   {n:'059',dex:281,dex:281,name:'Kirlia',type:'Psíquico',color:'#9C27B0',rare:'Comum',price:0.20,base:true},
+<<<<<<< HEAD
   {n:'060',dex:282,dex:282,name:'Mega Gardevoir ex',type:'Psíquico',color:'#9C27B0',rare:'Rara Dupla',price:3.00,base:true},
+=======
+  {n:'060',dex:282,dex:282,name:'Mega Gardevoir ex',type:'Psíquico',color:'#9C27B0',rare:'Rara Dupla',price:3.80,base:true},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'061',dex:292,dex:292,name:'Shedinja',type:'Psíquico',color:'#9C27B0',rare:'Incomum',price:0.10,base:true},
   {n:'062',dex:325,dex:325,name:'Spoink',type:'Psíquico',color:'#9C27B0',rare:'Comum',price:0.10,base:true},
   {n:'063',dex:326,dex:326,name:'Grumpig',type:'Psíquico',color:'#9C27B0',rare:'Incomum',price:0.07,base:true},
@@ -144,7 +148,7 @@ const CARDS_MEG = [
   {n:'129',name:'Energia Escuridão',type:'Energia',color:'#607D8B',rare:'Comum',price:0.10,base:true},
   {n:'130',name:'Energia Metal',type:'Energia',color:'#9E9E9E',rare:'Comum',price:0.13,base:true},
   {n:'131',name:'Energia Dupla Turbo',type:'Energia',color:'#78909C',rare:'Incomum',price:0.15,base:true},
-  {n:'132',name:'Energia Turbo Escuridão',type:'Energia',color:'#607D8B',rare:'Incomum',price:0.25,base:true},
+  {n:'132',name:'Energia Turbo Escuridão',type:'Energia',color:'#607D8B',rare:'Incomum',price:0.20,base:true},
   // ── SECRETAS 133–188 ──────────────────────────────────────────────────────
   // Ilustração Rara (IR) 133–154
   {n:'133',dex:1,dex:1,name:'Bulbasaur (IR)',type:'Grama',color:'#4CAF50',rare:'Ilustr. Rara',price:39.90,base:false},
@@ -157,7 +161,11 @@ const CARDS_MEG = [
   {n:'140',dex:459,dex:459,name:'Snover (IR)',type:'Aquático',color:'#2196F3',rare:'Ilustr. Rara',price:8.79,base:false,important:true},
   {n:'141',dex:693,dex:693,name:'Mega Manectric ex (IR)',type:'Raio',color:'#FFEB3B',rare:'Ilustr. Rara',price:8.00,base:false},
   {n:'142',dex:818,dex:818,name:'Mega Gardevoir ex (IR)',type:'Psíquico',color:'#9C27B0',rare:'Ilustr. Rara',price:13.00,base:false},
+<<<<<<< HEAD
   {n:'143',dex:694,dex:694,name:'Xerneas (IR)',type:'Psíquico',color:'#9C27B0',rare:'Ilustr. Rara',price:12.71,base:false},
+=======
+  {n:'143',dex:694,dex:694,name:'Xerneas (IR)',type:'Psíquico',color:'#9C27B0',rare:'Ilustr. Rara',price:11.90,base:false},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'144',dex:292,dex:292,name:'Hariyama (IR)',type:'Lutador',color:'#FF9800',rare:'Ilustr. Rara',price:7.50,base:false},
   {n:'145',dex:972,dex:972,name:'Mega Lucario ex (IR)',type:'Lutador',color:'#FF9800',rare:'Ilustr. Rara',price:12.99,base:false},
   {n:'146',dex:802,dex:802,name:'Marshadow (IR)',type:'Lutador',color:'#FF9800',rare:'Ilustr. Rara',price:42.00,base:false},
@@ -165,7 +173,7 @@ const CARDS_MEG = [
   {n:'148',dex:442,dex:442,name:'Yveltal (IR)',type:'Escuridão',color:'#607D8B',rare:'Ilustr. Rara',price:11.00,base:false},
   {n:'149',dex:944,dex:944,name:'Mega Mawile ex (IR)',type:'Metal',color:'#9E9E9E',rare:'Ilustr. Rara',price:7.00,base:false},
   {n:'150',dex:208,dex:208,name:'Gholdengo (IR)',type:'Metal',color:'#9E9E9E',rare:'Ilustr. Rara',price:18.00,base:false},
-  {n:'151',dex:21,dex:21,name:'Mega Latias ex (IR)',type:'Dragão',color:'#00BCD4',rare:'Ilustr. Rara',price:26.00,base:false},
+  {n:'151',dex:21,dex:21,name:'Mega Latias ex (IR)',type:'Dragão',color:'#00BCD4',rare:'Ilustr. Rara',price:25.00,base:false},
   {n:'152',dex:225,dex:225,name:'Mega Kangaskhan ex (IR)',type:'Incolor',color:'#78909C',rare:'Ilustr. Rara',price:9.49,base:false},
   {n:'153',dex:735,dex:735,name:'Determinação da Lillie (IR)',type:'Suporte',color:'#E91E63',rare:'Ilustr. Rara',price:13.90,base:false},
   {n:'154',dex:759,dex:759,name:'Travessura da Acerola (IR)',type:'Suporte',color:'#E91E63',rare:'Ilustr. Rara',price:16.90,base:false},
@@ -174,7 +182,11 @@ const CARDS_MEG = [
   {n:'156',dex:323,dex:323,name:'Mega Camerupt ex (UR)',type:'Fogo',color:'#F44336',rare:'Rara Ultra',price:19.50,base:false},
   {n:'157',dex:460,dex:460,name:'Mega Abomasnow ex (UR)',type:'Aquático',color:'#2196F3',rare:'Rara Ultra',price:19.89,base:false},
   {n:'158',dex:310,dex:310,name:'Mega Manectric ex (UR)',type:'Raio',color:'#FFEB3B',rare:'Rara Ultra',price:16.00,base:false},
+<<<<<<< HEAD
   {n:'159',dex:282,dex:282,name:'Mega Gardevoir ex (UR)',type:'Psíquico',color:'#9C27B0',rare:'Rara Ultra',price:14.32,base:false},
+=======
+  {n:'159',dex:282,dex:282,name:'Mega Gardevoir ex (UR)',type:'Psíquico',color:'#9C27B0',rare:'Rara Ultra',price:14.99,base:false},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'160',dex:448,dex:448,name:'Mega Lucario ex (UR)',type:'Lutador',color:'#FF9800',rare:'Rara Ultra',price:43.00,base:false},
   {n:'161',dex:359,dex:359,name:'Mega Absol ex (UR)',type:'Escuridão',color:'#607D8B',rare:'Rara Ultra',price:24.90,base:false},
   {n:'162',dex:303,dex:303,name:'Mega Mawile ex (UR)',type:'Metal',color:'#9E9E9E',rare:'Rara Ultra',price:19.90,base:false},
@@ -184,7 +196,11 @@ const CARDS_MEG = [
   {n:'166',name:'Determinação da Lillie (UR)',type:'Suporte',color:'#E91E63',rare:'Rara Ultra',price:10.99,base:false},
   {n:'167',name:'Barganha do Cel. Marte (UR)',type:'Suporte',color:'#E91E63',rare:'Rara Ultra',price:30.00,base:false},
   {n:'168',name:'Travessura da Acerola (UR)',type:'Suporte',color:'#E91E63',rare:'Rara Ultra',price:16.90,base:false},
+<<<<<<< HEAD
   {n:'169',name:'Faixa de Vitalidade (UR)',type:'Item',color:'#5C6BC0',rare:'Rara Ultra',price:127.46,base:false},
+=======
+  {n:'169',name:'Faixa de Vitalidade (UR)',type:'Item',color:'#5C6BC0',rare:'Rara Ultra',price:119.00,base:false},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'170',name:'Troca de Energia (UR)',type:'Item',color:'#5C6BC0',rare:'Rara Ultra',price:10.00,base:false},
   {n:'171',name:'Super Poção (UR)',type:'Item',color:'#5C6BC0',rare:'Rara Ultra',price:8.00,base:false},
   {n:'172',name:'Mega Poção (UR)',type:'Item',color:'#5C6BC0',rare:'Rara Ultra',price:8.90,base:false},

@@ -51,7 +51,6 @@ function renderUpdatesAdminForm() {
   if (typeof hasPerm !== 'function' || !hasPerm('updates')) { holder.innerHTML = ''; return; }
 
   holder.innerHTML =
-    '<div class="sec-title" style="margin-top:28px">📢 Admin · Publicar Atualização</div>' +
     '<div class="update-admin-form">' +
       '<input id="update-title-input" placeholder="Título (ex: Nova feature)" maxlength="80">' +
       '<textarea id="update-msg-input" placeholder="O que mudou..." maxlength="400"></textarea>' +

@@ -159,7 +159,11 @@ const CARDS_SV7 = [
   {n:'153',dex:307,dex:307,name:'Meditite',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada',price:20.00,base:false,important:true},
   {n:'154',dex:316,dex:316,name:'Gulpin',type:'Sombrio',color:'#607D8B',rare:'Rara Ilustrada',price:19.80,base:false,important:true},
   {n:'155',name:'Archaludon',type:'Metal',color:'#78909C',rare:'Rara Ilustrada',price:23.50,base:false},
+<<<<<<< HEAD
   {n:'156',name:'Hydrapple ex',type:'Planta',color:'#4CAF50',rare:'Ultra Rara',price:19.90,base:false},
+=======
+  {n:'156',name:'Hydrapple ex',type:'Planta',color:'#4CAF50',rare:'Ultra Rara',price:24.90,base:false},
+>>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'157',dex:815,dex:815,name:'Cinderace ex',type:'Fogo',color:'#F44336',rare:'Ultra Rara',price:15.00,base:false},
   {n:'158',dex:131,dex:131,name:'Lapras ex',type:'Aquático',color:'#2196F3',rare:'Ultra Rara',price:14.90,base:false},
   {n:'159',dex:596,dex:596,name:'Galvantula ex',type:'Raio',color:'#FFEB3B',rare:'Ultra Rara',price:10.00,base:false},
