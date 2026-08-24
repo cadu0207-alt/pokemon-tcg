@@ -5,9 +5,31 @@
 // pra quem tem hasPerm('inicio') (staff_access.js — hoje: Eduardo,
 // e quem for marcado com essa área depois que o SQL rodar).
 //
+// REVISADO 24/08/2026 (pedido do Eduardo):
+// - Notícia agora tem título (obrigatório) e subtítulo (opcional) além
+//   do texto — vira "matéria" de verdade em vez de um textarea solto.
+//   Ver home_content_news_title_24ago2026.sql (colunas novas em
+//   pokemon_news) e a tela de leitura em inicio.js (openInicioArticle).
+// - Escape de HTML (hcEsc) em todo texto exibido nas listas deste painel
+//   — mesmo problema de XSS corrigido em inicio.js, aplicado aqui também
+//   por consistência (o painel é só-admin, mas o texto pode ter vindo de
+//   um valor colado com HTML).
+//
 // Depende de sbClient/currentUser (app.js) e hasPerm() (staff_access.js)
-// — carrega depois dos dois. Back-end: home_content_setup.sql.
+// — carrega depois dos dois. Back-end: home_content_setup.sql +
+// home_content_news_title_24ago2026.sql.
 // ================================================================
+
+// Duplicado de inicioEsc() (inicio.js) de propósito — este arquivo não deve
+// depender da ordem de carregamento de inicio.js pra funcionar sozinho.
+function hcEsc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 function renderHomeContentAdmin() {
   const holder = document.getElementById('home-content-admin-wrap');
@@ -17,13 +39,15 @@ function renderHomeContentAdmin() {
   holder.innerHTML =
     '<div class="hc-block">' +
       '<div class="hc-block-title">Notícia do mundo Pokémon</div>' +
-      '<div class="hc-block-hint">Registro simples — sem título obrigatório. Imagem ou vídeo são opcionais.</div>' +
-      '<textarea id="hc-news-body" placeholder="Texto da notícia..." maxlength="1000"></textarea>' +
+      '<div class="hc-block-hint">Título obrigatório, subtítulo opcional — vira a matéria que abre no feed. Imagem ou vídeo (YouTube/TikTok tocam embutidos) são opcionais.</div>' +
+      '<input id="hc-news-title" placeholder="Título da matéria" maxlength="140">' +
+      '<input id="hc-news-subtitle" placeholder="Subtítulo (opcional)" maxlength="200">' +
+      '<textarea id="hc-news-body" placeholder="Texto da notícia..." maxlength="4000"></textarea>' +
       '<div class="hc-row">' +
         '<select id="hc-news-media-type" onchange="hcToggleNewsMediaInput()">' +
           '<option value="none">Sem mídia</option>' +
           '<option value="image">Imagem (URL)</option>' +
-          '<option value="video">Vídeo (URL)</option>' +
+          '<option value="video">Vídeo (URL — YouTube/TikTok tocam embutidos, outros só linkam)</option>' +
         '</select>' +
         '<input id="hc-news-media-url" placeholder="URL da imagem/vídeo" style="display:none">' +
         '<button class="btn-mini" onclick="hcPublishNews()">📨 Publicar notícia</button>' +
@@ -89,21 +113,26 @@ window.hcToggleNewsMediaInput = hcToggleNewsMediaInput;
 // ── NOTÍCIAS ─────────────────────────────────────────────────────────
 async function hcPublishNews() {
   if (!hasPerm('inicio')) return;
+  const titleEl = document.getElementById('hc-news-title');
+  const subEl = document.getElementById('hc-news-subtitle');
   const bodyEl = document.getElementById('hc-news-body');
   const typeEl = document.getElementById('hc-news-media-type');
   const urlEl = document.getElementById('hc-news-media-url');
+  const title = titleEl.value.trim();
   const body = bodyEl.value.trim();
+  if (!title) { alert('Escreva o título da matéria.'); return; }
   if (!body) { alert('Escreva o texto da notícia.'); return; }
 
   const mediaType = typeEl.value;
   const mediaUrl = mediaType === 'none' ? null : urlEl.value.trim() || null;
 
   const { error } = await sbClient.from('pokemon_news').insert({
-    body: body, media_type: mediaType, media_url: mediaUrl, author_uid: uid()
+    title: title, subtitle: subEl.value.trim() || null, body: body,
+    media_type: mediaType, media_url: mediaUrl, author_uid: uid()
   });
   if (error) { alert('Erro ao publicar: ' + error.message); return; }
 
-  bodyEl.value = ''; urlEl.value = ''; typeEl.value = 'none'; hcToggleNewsMediaInput();
+  titleEl.value = ''; subEl.value = ''; bodyEl.value = ''; urlEl.value = ''; typeEl.value = 'none'; hcToggleNewsMediaInput();
   hcLoadNewsList();
 }
 window.hcPublishNews = hcPublishNews;
@@ -115,11 +144,11 @@ async function hcLoadNewsList() {
 
   const { data, error } = await sbClient
     .from('pokemon_news')
-    .select('id,body,media_type,published_at')
+    .select('id,title,body,media_type,published_at')
     .order('published_at', { ascending: false })
     .limit(30);
 
-  if (error) { holder.innerHTML = '<div class="admin-stats-loading">Erro: ' + error.message + '</div>'; return; }
+  if (error) { holder.innerHTML = '<div class="admin-stats-loading">Erro: ' + hcEsc(error.message) + '</div>'; return; }
   const rows = data || [];
   if (!rows.length) { holder.innerHTML = '<div class="admin-stats-loading">Nenhuma notícia publicada.</div>'; return; }
 
@@ -138,7 +167,7 @@ async function hcLoadNewsList() {
 
   holder.innerHTML = rows.map(function (n) {
     const dt = n.published_at ? new Date(n.published_at).toLocaleDateString('pt-BR') : '';
-    const snippet = (n.body || '').slice(0, 90) + ((n.body || '').length > 90 ? '...' : '');
+    const snippet = n.title ? hcEsc(n.title) : (hcEsc((n.body || '').slice(0, 90)) + ((n.body || '').length > 90 ? '...' : ''));
     return (
       '<div class="hc-list-item">' +
         '<div class="hc-list-main">' +
@@ -187,15 +216,15 @@ async function hcLoadVideoList() {
   holder.innerHTML = '<div class="admin-stats-loading">Carregando...</div>';
 
   const { data, error } = await sbClient.from('community_videos').select('id,platform,title,handle').order('created_at', { ascending: false }).limit(30);
-  if (error) { holder.innerHTML = '<div class="admin-stats-loading">Erro: ' + error.message + '</div>'; return; }
+  if (error) { holder.innerHTML = '<div class="admin-stats-loading">Erro: ' + hcEsc(error.message) + '</div>'; return; }
   const rows = data || [];
   if (!rows.length) { holder.innerHTML = '<div class="admin-stats-loading">Nenhum vídeo linkado.</div>'; return; }
 
   holder.innerHTML = rows.map(function (v) {
     return (
       '<div class="hc-list-item">' +
-        '<div class="hc-list-main"><div class="hc-list-snippet">' + (v.platform === 'tiktok' ? 'TikTok' : 'YouTube') + ' — ' + v.title + '</div>' +
-        '<div class="hc-list-meta">' + (v.handle || '') + '</div></div>' +
+        '<div class="hc-list-main"><div class="hc-list-snippet">' + (v.platform === 'tiktok' ? 'TikTok' : 'YouTube') + ' — ' + hcEsc(v.title) + '</div>' +
+        '<div class="hc-list-meta">' + hcEsc(v.handle || '') + '</div></div>' +
         '<button class="update-item-del" title="Apagar" onclick="hcDeleteVideo(\'' + v.id + '\')">✕</button>' +
       '</div>'
     );
@@ -238,15 +267,15 @@ async function hcLoadLinkList() {
   holder.innerHTML = '<div class="admin-stats-loading">Carregando...</div>';
 
   const { data, error } = await sbClient.from('community_links').select('id,title,category,icon').order('created_at', { ascending: false }).limit(50);
-  if (error) { holder.innerHTML = '<div class="admin-stats-loading">Erro: ' + error.message + '</div>'; return; }
+  if (error) { holder.innerHTML = '<div class="admin-stats-loading">Erro: ' + hcEsc(error.message) + '</div>'; return; }
   const rows = data || [];
   if (!rows.length) { holder.innerHTML = '<div class="admin-stats-loading">Nenhum link ainda.</div>'; return; }
 
   holder.innerHTML = rows.map(function (l) {
     return (
       '<div class="hc-list-item">' +
-        '<div class="hc-list-main"><div class="hc-list-snippet">' + (l.icon || '🔗') + ' ' + l.title + '</div>' +
-        '<div class="hc-list-meta">' + (l.category || '') + '</div></div>' +
+        '<div class="hc-list-main"><div class="hc-list-snippet">' + hcEsc(l.icon || '🔗') + ' ' + hcEsc(l.title) + '</div>' +
+        '<div class="hc-list-meta">' + hcEsc(l.category || '') + '</div></div>' +
         '<button class="update-item-del" title="Apagar" onclick="hcDeleteLink(\'' + l.id + '\')">✕</button>' +
       '</div>'
     );
@@ -296,7 +325,7 @@ async function hcLoadArticleList() {
   holder.innerHTML = '<div class="admin-stats-loading">Carregando...</div>';
 
   const { data, error } = await sbClient.from('magazine_articles').select('id,title,tag,is_featured,published_at').order('published_at', { ascending: false }).limit(30);
-  if (error) { holder.innerHTML = '<div class="admin-stats-loading">Erro: ' + error.message + '</div>'; return; }
+  if (error) { holder.innerHTML = '<div class="admin-stats-loading">Erro: ' + hcEsc(error.message) + '</div>'; return; }
   const rows = data || [];
   if (!rows.length) { holder.innerHTML = '<div class="admin-stats-loading">Nenhum artigo publicado.</div>'; return; }
 
@@ -304,8 +333,8 @@ async function hcLoadArticleList() {
     const dt = a.published_at ? new Date(a.published_at).toLocaleDateString('pt-BR') : '';
     return (
       '<div class="hc-list-item">' +
-        '<div class="hc-list-main"><div class="hc-list-snippet">' + (a.is_featured ? '⭐ ' : '') + a.title + '</div>' +
-        '<div class="hc-list-meta">' + (a.tag || '') + ' · ' + dt + '</div></div>' +
+        '<div class="hc-list-main"><div class="hc-list-snippet">' + (a.is_featured ? '⭐ ' : '') + hcEsc(a.title) + '</div>' +
+        '<div class="hc-list-meta">' + hcEsc(a.tag || '') + ' · ' + dt + '</div></div>' +
         '<button class="update-item-del" title="Apagar" onclick="hcDeleteArticle(\'' + a.id + '\')">✕</button>' +
       '</div>'
     );

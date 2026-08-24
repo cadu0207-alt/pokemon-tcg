@@ -289,6 +289,11 @@
     <div id="inicio-revista-wrap"></div>
   </div>
 
+  <!-- MODAL DE MATÉRIA 24/08/2026: leitura completa da notícia + comentários
+       (ver openInicioArticle() em inicio.js). Fica fora do fluxo normal do
+       .pane, controlado só por display:none/'' via JS. -->
+  <div id="inicio-article-modal" class="inicio-modal" style="display:none"></div>
+
   <div id="dash" class="pane">
     <div id="updates-log-wrap" class="updates-log-panel"></div>
     <div class="kpi-grid" id="kpi-dash"></div>
@@ -925,18 +930,6 @@
     <div class="modal modal-wide" style="padding:0;overflow:hidden">
       <button class="mc-btn" onclick="closeModal('leilao-zoom-ov')">✕</button>
       <div id="leilao-zoom-content"></div>
-    </div>
-  </div>
-
-  <!-- EDITAR LEILÃO (24/08/2026): botão "✏️ Editar" só aparece pro
-       leiloeiro (aucIsLeilaoAdmin) no card/zoom de cada item já publicado
-       — deixa mudar preço/reserva/condição/descrição/fotos sem precisar
-       excluir e recadastrar. Conteúdo montado em openAuctionEdit()
-       (leilao.js). -->
-  <div class="ov" id="leilao-edit-ov" onclick="if(event.target===this)closeModal('leilao-edit-ov')">
-    <div class="modal">
-      <button class="mc-btn" onclick="closeModal('leilao-edit-ov')">✕</button>
-      <div id="leilao-edit-content"></div>
     </div>
   </div>
 
