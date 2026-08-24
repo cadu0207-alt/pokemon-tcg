@@ -30,6 +30,15 @@ function hcEsc(s) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+// Corta no espaço mais próximo, não no meio da palavra (mesmo ajuste de
+// inicioTruncate em inicio.js, 24/08/2026).
+function hcTruncate(s, max) {
+  const str = String(s == null ? '' : s);
+  if (str.length <= max) return str;
+  const cut = str.slice(0, max);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut) + '…';
+}
 
 function renderHomeContentAdmin() {
   const holder = document.getElementById('home-content-admin-wrap');
@@ -167,7 +176,7 @@ async function hcLoadNewsList() {
 
   holder.innerHTML = rows.map(function (n) {
     const dt = n.published_at ? new Date(n.published_at).toLocaleDateString('pt-BR') : '';
-    const snippet = n.title ? hcEsc(n.title) : (hcEsc((n.body || '').slice(0, 90)) + ((n.body || '').length > 90 ? '...' : ''));
+    const snippet = n.title ? hcEsc(n.title) : hcEsc(hcTruncate(n.body, 90));
     return (
       '<div class="hc-list-item">' +
         '<div class="hc-list-main">' +

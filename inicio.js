@@ -58,6 +58,16 @@ function inicioSafeUrl(u) {
   const s = String(u == null ? '' : u).trim();
   return /^https?:\/\//i.test(s) ? s : '#';
 }
+// Corta no espaço mais próximo (não no meio da palavra) — corrigido 24/08/2026,
+// o Eduardo reparou "prepa…"/"Reinad…" feio nos cards de notícia antiga (sem
+// título — cai no fallback que usa o começo do corpo).
+function inicioTruncate(s, max) {
+  const str = String(s == null ? '' : s);
+  if (str.length <= max) return str;
+  const cut = str.slice(0, max);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut) + '…';
+}
 
 // ── VÍDEO EMBUTIDO — extrai ID do YouTube/TikTok pra tocar no site ──
 function inicioYoutubeId(url) {
@@ -206,14 +216,14 @@ async function loadInicioNews() {
       ? '<img class="inicio-news-media" src="' + inicioSafeUrl(n.media_url) + '" alt="" loading="lazy">'
       : '';
     const commentN = commentCounts[n.id] || 0;
-    const title = n.title ? inicioEsc(n.title) : (inicioEsc((n.body || '').slice(0, 70)) + ((n.body || '').length > 70 ? '…' : ''));
+    const title = n.title ? inicioEsc(n.title) : inicioEsc(inicioTruncate(n.body, 70));
     return (
       '<div class="inicio-news-card" data-news-id="' + n.id + '" onclick="openInicioArticle(\'' + n.id + '\')" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\')openInicioArticle(\'' + n.id + '\')">' +
         (mediaTag ? '<div class="inicio-news-tag">' + mediaTag + '</div>' : '') +
         thumbBlock +
         '<div class="inicio-news-title">' + title + '</div>' +
         (n.subtitle ? '<div class="inicio-news-sub">' + inicioEsc(n.subtitle) + '</div>' : '') +
-        (n.title ? '<div class="inicio-news-snippet">' + inicioEsc((n.body || '').slice(0, 110)) + ((n.body || '').length > 110 ? '…' : '') + '</div>' : '') +
+        (n.title ? '<div class="inicio-news-snippet">' + inicioEsc(inicioTruncate(n.body, 110)) + '</div>' : '') +
         '<div class="inicio-news-foot">' +
           '<span class="inicio-news-date">' + dt + '</span>' +
           '<span class="inicio-news-comment-toggle">💬 ' + commentN + ' comentário' + (commentN === 1 ? '' : 's') + '</span>' +

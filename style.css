@@ -3207,7 +3207,11 @@ body.inicio-modal-open { overflow: hidden; }
 }
 .inicio-comment-form .btn-mini { align-self: flex-end; }
 
-.inicio-video-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+/* CORRIGIDO 24/08/2026: minmax(...,1fr) deixava um vídeo sozinho esticar até
+   a largura inteira do conteúdo (gigante, desproporcional às outras seções)
+   — o Eduardo reparou no primeiro vídeo publicado. Teto de 360px por card
+   resolve pra 1 vídeo sem prejudicar o grid com vários. */
+.inicio-video-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 360px)); gap: 14px; }
 .inicio-video-card {
   display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
   padding: 14px; color: var(--text);
