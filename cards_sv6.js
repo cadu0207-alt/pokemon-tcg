@@ -28,13 +28,8 @@ const CARDS_SV6 = [
   {n:'022',artist:"Kouki Saitou",name:'Sinistcha',type:'Planta',color:'#4CAF50',rare:'Rara',price:0.30,base:true},
   {n:'023',artist:"aky CG Works",name:'Sinistcha ex',type:'Planta',color:'#4CAF50',rare:'Rara Dupla',price:3.50,base:true},
   {n:'024',artist:"Sanosuke Sakuma",name:'Teal Mask Ogerpon',type:'Planta',color:'#4CAF50',rare:'Rara',price:0.09,base:true},
-<<<<<<< HEAD
   {n:'025',artist:"5ban Graphics",name:'Teal Mask Ogerpon ex',type:'Planta',color:'#4CAF50',rare:'Rara Dupla',price:25.00,base:true},
   {n:'026',dex:37,artist:"sowsow",name:'Vulpix',type:'Fogo',color:'#F44336',rare:'Comum',price:0.25,base:true},
-=======
-  {n:'025',artist:"5ban Graphics",name:'Teal Mask Ogerpon ex',type:'Planta',color:'#4CAF50',rare:'Rara Dupla',price:28.00,base:true},
-  {n:'026',dex:37,artist:"sowsow",name:'Vulpix',type:'Fogo',color:'#F44336',rare:'Comum',price:0.23,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'027',dex:38,artist:"KEIICHIRO ITO",name:'Ninetales',type:'Fogo',color:'#F44336',rare:'Comum',price:0.22,base:true},
   {n:'028',dex:218,artist:"Gapao",name:'Slugma',type:'Fogo',color:'#F44336',rare:'Comum',price:0.19,base:true},
   {n:'029',dex:219,artist:"PLANETA Mochizuki",name:'Magcargo ex',type:'Fogo',color:'#F44336',rare:'Rara Dupla',price:1.81,base:true},
@@ -166,11 +161,7 @@ const CARDS_SV6 = [
   {n:'155',artist:"Atsushi Furusawa",name:'Lana\'s Aid',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.30,base:true},
   {n:'156',artist:"Studio Bora Inc.",name:'Love Ball',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.20,base:true},
   {n:'157',artist:"hncl",name:'Lucian',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.25,base:true},
-<<<<<<< HEAD
   {n:'158',artist:"Studio Bora Inc.",name:'Lucky Helmet',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:7.99,base:true},
-=======
-  {n:'158',artist:"Studio Bora Inc.",name:'Lucky Helmet',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:12.99,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'159',artist:"5ban Graphics",name:'Ogre\'s Mask',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.10,base:true},
   {n:'160',artist:"Naoki Saito",name:'Perrin',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.16,base:true},
   {n:'161',artist:"hncl",name:'Raifort',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.17,base:true},

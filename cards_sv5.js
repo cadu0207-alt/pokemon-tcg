@@ -175,11 +175,7 @@ const CARDS_SV5 = [
   {n:'169',dex:737,artist:"Mina Nakai",name:'Charjabug',type:'Raio',color:'#FFEB3B',rare:'Rara Ilustrada',price:29.99,base:false,important:true},
   {n:'170',dex:436,artist:"sowsow",name:'Bronzor',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:38.00,base:false,important:true},
   {n:'171',dex:579,artist:"Atsushi Furusawa",name:'Reuniclus',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:48.99,base:false,important:true},
-<<<<<<< HEAD
   {n:'172',dex:742,artist:"REND",name:'Cutiefly',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:57.80,base:false,important:true},
-=======
-  {n:'172',dex:742,artist:"REND",name:'Cutiefly',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:69.90,base:false,important:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'173',dex:369,artist:"Mitsuhiro Arita",name:'Relicanth',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada',price:37.00,base:false,important:true},
   {n:'174',dex:530,artist:"Saboteri",name:'Excadrill',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada',price:64.99,base:false,important:true},
   {n:'175',dex:750,artist:"MINAMINAMI Take",name:'Mudsdale',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada',price:19.25,base:false,important:true},
@@ -187,11 +183,7 @@ const CARDS_SV5 = [
   {n:'177',dex:92,artist:"Mousho",name:'Gastly',type:'Sombrio',color:'#607D8B',rare:'Rara Ilustrada',price:239.90,base:false,important:true},
   {n:'178',dex:376,artist:"Katsunori Sato",name:'Metagross',type:'Metal',color:'#78909C',rare:'Rara Ilustrada',price:59.99,base:false,important:true},
   {n:'179',dex:808,artist:"Masa",name:'Meltan',type:'Metal',color:'#78909C',rare:'Rara Ilustrada',price:30.86,base:false},
-<<<<<<< HEAD
   {n:'180',dex:108,artist:"Orca",name:'Lickitung',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada',price:191.50,base:false,important:true},
-=======
-  {n:'180',dex:108,artist:"Orca",name:'Lickitung',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada',price:168.30,base:false,important:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'181',dex:441,artist:"Scav",name:'Chatot',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada',price:39.90,base:false,important:true},
   {n:'182',dex:572,artist:"Shibuzoh.",name:'Minccino',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada',price:64.90,base:false,important:true},
   {n:'183',dex:573,artist:"Shibuzoh.",name:'Cinccino',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada',price:129.90,base:false,important:true},

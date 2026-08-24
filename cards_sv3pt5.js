@@ -33,11 +33,7 @@ const CARDS_SV3PT5 = [
   {n:'027',dex:27,artist:"kodama",name:'Sandshrew',type:'Lutador',color:'#FF9800',rare:'Comum',price:0.25,base:true},
   {n:'028',dex:28,artist:"kodama",name:'Sandslash',type:'Lutador',color:'#FF9800',rare:'Incomum',price:0.32,base:true},
   {n:'029',dex:29,artist:"Teeziro",name:'Nidoran ♀',type:'Sombrio',color:'#607D8B',rare:'Comum',price:2.70,base:true},
-<<<<<<< HEAD
   {n:'030',dex:30,artist:"Teeziro",name:'Nidorina',type:'Sombrio',color:'#607D8B',rare:'Incomum',price:0.67,base:true},
-=======
-  {n:'030',dex:30,artist:"Teeziro",name:'Nidorina',type:'Sombrio',color:'#607D8B',rare:'Incomum',price:0.45,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'031',dex:31,artist:"Teeziro",name:'Nidoqueen',type:'Sombrio',color:'#607D8B',rare:'Incomum',price:0.80,base:true},
   {n:'032',dex:32,artist:"Shiburingaru",name:'Nidoran ♂',type:'Sombrio',color:'#607D8B',rare:'Comum',price:0.90,base:true},
   {n:'033',dex:33,artist:"Shiburingaru",name:'Nidorino',type:'Sombrio',color:'#607D8B',rare:'Incomum',price:0.90,base:true},
@@ -67,11 +63,7 @@ const CARDS_SV3PT5 = [
   {n:'057',dex:57,artist:"Mina Nakai",name:'Primeape',type:'Lutador',color:'#FF9800',rare:'Incomum',price:0.49,base:true},
   {n:'058',dex:58,artist:"Atsushi Furusawa",name:'Growlithe',type:'Fogo',color:'#F44336',rare:'Comum',price:0.30,base:true},
   {n:'059',dex:59,artist:"Atsushi Furusawa",name:'Arcanine',type:'Fogo',color:'#F44336',rare:'Incomum',price:1.00,base:true},
-<<<<<<< HEAD
   {n:'060',dex:60,artist:"Kurata So",name:'Poliwag',type:'Aquático',color:'#2196F3',rare:'Comum',price:0.40,base:true},
-=======
-  {n:'060',dex:60,artist:"Kurata So",name:'Poliwag',type:'Aquático',color:'#2196F3',rare:'Comum',price:0.30,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'061',dex:61,artist:"Kurata So",name:'Poliwhirl',type:'Aquático',color:'#2196F3',rare:'Comum',price:1.00,base:true},
   {n:'062',dex:62,artist:"Kurata So",name:'Poliwrath',type:'Aquático',color:'#2196F3',rare:'Incomum',price:0.70,base:true},
   {n:'063',dex:63,artist:"Mitsuhiro Arita",name:'Abra',type:'Psíquico',color:'#9C27B0',rare:'Comum',price:0.40,base:true},
@@ -92,15 +84,9 @@ const CARDS_SV3PT5 = [
   {n:'078',dex:78,artist:"Nurikabe",name:'Rapidash',type:'Fogo',color:'#F44336',rare:'Incomum',price:0.25,base:true},
   {n:'079',dex:79,artist:"OKACHEKE",name:'Slowpoke',type:'Psíquico',color:'#9C27B0',rare:'Comum',price:0.32,base:true},
   {n:'080',dex:80,artist:"OKACHEKE",name:'Slowbro',type:'Psíquico',color:'#9C27B0',rare:'Incomum',price:0.70,base:true},
-<<<<<<< HEAD
   {n:'081',dex:81,artist:"Yuka Morii",name:'Magnemite',type:'Raio',color:'#FFEB3B',rare:'Comum',price:0.32,base:true},
   {n:'082',dex:82,artist:"Yuka Morii",name:'Magneton',type:'Raio',color:'#FFEB3B',rare:'Incomum',price:0.67,base:true},
   {n:'083',dex:83,artist:"KG-2000",name:'Farfetch\'d',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.45,base:true},
-=======
-  {n:'081',dex:81,artist:"Yuka Morii",name:'Magnemite',type:'Raio',color:'#FFEB3B',rare:'Comum',price:0.30,base:true},
-  {n:'082',dex:82,artist:"Yuka Morii",name:'Magneton',type:'Raio',color:'#FFEB3B',rare:'Incomum',price:0.67,base:true},
-  {n:'083',dex:83,artist:"KG-2000",name:'Farfetch\'d',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.30,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'084',dex:84,artist:"Anesaki Dynamic",name:'Doduo',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.25,base:true},
   {n:'085',dex:85,artist:"Anesaki Dynamic",name:'Dodrio',type:'Incolor',color:'#9E9E9E',rare:'Rara',price:3.99,base:true},
   {n:'086',dex:86,artist:"aoki",name:'Seel',type:'Aquático',color:'#2196F3',rare:'Comum',price:0.20,base:true},
@@ -152,11 +138,7 @@ const CARDS_SV3PT5 = [
   {n:'132',dex:132,artist:"KIYOTAKA OSHIYAMA",name:'Ditto',type:'Incolor',color:'#9E9E9E',rare:'Rara',price:6.50,base:true},
   {n:'133',dex:133,artist:"Narumi Sato",name:'Eevee',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:1.00,base:true},
   {n:'134',dex:134,artist:"kirisAki",name:'Vaporeon',type:'Aquático',color:'#2196F3',rare:'Rara',price:2.99,base:true},
-<<<<<<< HEAD
   {n:'135',dex:135,artist:"sui",name:'Jolteon',type:'Raio',color:'#FFEB3B',rare:'Rara',price:4.80,base:true},
-=======
-  {n:'135',dex:135,artist:"sui",name:'Jolteon',type:'Raio',color:'#FFEB3B',rare:'Rara',price:3.71,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'136',dex:136,artist:"Ryota Murayama",name:'Flareon',type:'Fogo',color:'#F44336',rare:'Rara',price:1.00,base:true},
   {n:'137',dex:137,artist:"5ban Graphics",name:'Porygon',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.25,base:true},
   {n:'138',dex:138,artist:"Akira Komayama",name:'Omanyte',type:'Aquático',color:'#2196F3',rare:'Incomum',price:0.32,base:true},
@@ -174,11 +156,7 @@ const CARDS_SV3PT5 = [
   {n:'150',dex:150,artist:"AKIRA EGAWA",name:'Mewtwo',type:'Psíquico',color:'#9C27B0',rare:'Rara',price:10.20,base:true},
   {n:'151',dex:151,artist:"aky CG Works",name:'Mew ex',type:'Psíquico',color:'#9C27B0',rare:'Rara Dupla',price:29.90,base:true},
   {n:'152',artist:"AYUMI ODASHIMA",name:'Antique Dome Fossil',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.23,base:true},
-<<<<<<< HEAD
   {n:'153',artist:"AYUMI ODASHIMA",name:'Antique Helix Fossil',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.23,base:true},
-=======
-  {n:'153',artist:"AYUMI ODASHIMA",name:'Antique Helix Fossil',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.20,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'154',artist:"AYUMI ODASHIMA",name:'Antique Old Amber',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.20,base:true},
   {n:'155',artist:"Toyste Beach",name:'Big Air Balloon',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.20,base:true},
   {n:'156',artist:"GIDORA",name:'Bill\'s Transfer',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.25,base:true},
@@ -220,11 +198,7 @@ const CARDS_SV3PT5 = [
   {n:'192',dex:145,artist:"takuyoa",name:'Zapdos ex',type:'Raio',color:'#FFEB3B',rare:'Ultra Rara',price:80.00,base:false,important:true},
   {n:'193',dex:151,artist:"aky CG Works",name:'Mew ex',type:'Psíquico',color:'#9C27B0',rare:'Ultra Rara',price:185.00,base:false,important:true},
   {n:'194',artist:"GIDORA",name:'Bill\'s Transfer',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:19.90,base:false},
-<<<<<<< HEAD
   {n:'195',artist:"Fumie Kittaka",name:'Daisy\'s Help',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:28.90,base:false},
-=======
-  {n:'195',artist:"Fumie Kittaka",name:'Daisy\'s Help',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:24.90,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'196',artist:"saino misaki",name:'Erika\'s Invitation',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:69.90,base:false,important:true},
   {n:'197',artist:"hncl",name:'Giovanni\'s Charisma',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:34.50,base:false},
   {n:'198',dex:3,artist:"Yoriyuki Ikegami",name:'Venusaur ex',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada Especial',price:700.00,base:false,important:true},

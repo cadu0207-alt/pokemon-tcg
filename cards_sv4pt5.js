@@ -162,11 +162,7 @@ const CARDS_SV4PT5 = [
   {n:'156',dex:426,artist:"otumami",name:'Drifblim',type:'Psíquico',color:'#9C27B0',rare:'Rara Brilhante',price:21.99,base:false},
   {n:'157',dex:439,artist:"Saya Tsuruta",name:'Mime Jr.',type:'Psíquico',color:'#9C27B0',rare:'Rara Brilhante',price:6.90,base:false},
   {n:'158',dex:442,artist:"MAHOU",name:'Spiritomb',type:'Psíquico',color:'#9C27B0',rare:'Rara Brilhante',price:40.00,base:false},
-<<<<<<< HEAD
   {n:'159',dex:707,artist:"yuu",name:'Klefki',type:'Psíquico',color:'#9C27B0',rare:'Rara Brilhante',price:39.50,base:false},
-=======
-  {n:'159',dex:707,artist:"yuu",name:'Klefki',type:'Psíquico',color:'#9C27B0',rare:'Rara Brilhante',price:16.43,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'160',dex:778,artist:"Nelnal",name:'Mimikyu',type:'Psíquico',color:'#9C27B0',rare:'Rara Brilhante',price:149.90,base:false,important:true},
   {n:'161',dex:927,artist:"Sanosuke Sakuma",name:'Dachsbun',type:'Psíquico',color:'#9C27B0',rare:'Rara Brilhante',price:50.00,base:false,important:true},
   {n:'162',dex:937,artist:"Kouki Saitou",name:'Ceruledge',type:'Psíquico',color:'#9C27B0',rare:'Rara Brilhante',price:85.41,base:false,important:true},
@@ -239,13 +235,8 @@ const CARDS_SV4PT5 = [
   {n:'229',artist:"Sanosuke Sakuma",name:'Nemona',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:6.00,base:false},
   {n:'230',artist:"Cona Nitanda",name:'Paldean Student',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:3.90,base:false},
   {n:'231',artist:"Naoki Saito",name:'Paldean Student',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:4.90,base:false},
-<<<<<<< HEAD
   {n:'232',dex:151,artist:"USGMEN",name:'Mew ex',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada Especial',price:1199.00,base:false,important:true},
   {n:'233',dex:282,artist:"Kuroimori",name:'Gardevoir ex',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada Especial',price:329.00,base:false,important:true},
-=======
-  {n:'232',dex:151,artist:"USGMEN",name:'Mew ex',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada Especial',price:1799.00,base:false,important:true},
-  {n:'233',dex:282,artist:"Kuroimori",name:'Gardevoir ex',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada Especial',price:329.90,base:false,important:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'234',dex:6,artist:"AKIRA EGAWA",name:'Charizard ex',type:'Sombrio',color:'#607D8B',rare:'Rara Ilustrada Especial',price:499.99,base:false,important:true},
   {n:'235',artist:"aspara",name:'Arven',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:34.43,base:false,important:true},
   {n:'236',artist:"Taiga Kayama",name:'Clive',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:109.00,base:false,important:true},

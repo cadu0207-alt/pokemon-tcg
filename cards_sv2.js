@@ -252,11 +252,7 @@ const CARDS_SV2 = [
   {n:'246',dex:715,artist:"Eske Yoshinob",name:'Noivern ex',type:'Dragão',color:'#3F51B5',rare:'Ultra Rara',price:9.00,base:false},
   {n:'247',dex:931,artist:"PLANETA Mochizuki",name:'Squawkabilly ex',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:8.75,base:false},
   {n:'248',artist:"Hideki Ishikawa",name:'Boss\'s Orders (Ghetsis)',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:90.00,base:false,important:true},
-<<<<<<< HEAD
   {n:'249',artist:"Sanosuke Sakuma",name:'Clavell',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:9.00,base:false},
-=======
-  {n:'249',artist:"Sanosuke Sakuma",name:'Clavell',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:8.00,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'250',artist:"yuu",name:'Dendra',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:11.90,base:false},
   // Cartas 251-279 completadas em 15/jul/2026 (generate_set.js tinha pageSize=250 sem
   // paginação — perdia o final do set, incluindo várias Special Illustration Rare).

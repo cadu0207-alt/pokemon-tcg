@@ -15,11 +15,7 @@ const CARDS_ME03 = [
   {n:'009',dex:666,dex:666,name:'Vivillon',          type:'Grama',    color:'#4CAF50',rare:'Incomum',    price:0.15, base:true},
   {n:'010',dex:722,dex:722,name:'Rowlet',            type:'Grama',    color:'#4CAF50',rare:'Comum',      price:0.10, base:true},
   {n:'011',dex:723,dex:723,name:'Dartrix',           type:'Grama',    color:'#4CAF50',rare:'Comum',      price:0.13, base:true},
-<<<<<<< HEAD
   {n:'012',dex:724,dex:724,name:'Decidueye ex',      type:'Grama',    color:'#4CAF50',rare:'Rara Dupla', price:3.80, base:true},
-=======
-  {n:'012',dex:724,dex:724,name:'Decidueye ex',      type:'Grama',    color:'#4CAF50',rare:'Rara Dupla', price:3.83, base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'013',dex:662,dex:662,name:'Fletchinder',       type:'Fogo',     color:'#F44336',rare:'Comum',      price:0.12, base:true},
   {n:'014',dex:663,dex:663,name:'Talonflame',        type:'Fogo',     color:'#F44336',rare:'Incomum',    price:0.11, base:true},
   {n:'015',dex:757,dex:757,name:'Salandit',          type:'Fogo',     color:'#F44336',rare:'Comum',      price:0.13, base:true},
@@ -28,11 +24,7 @@ const CARDS_ME03 = [
   {n:'018',dex:86,dex:86,name:'Seel',              type:'Aquático', color:'#2196F3',rare:'Comum',      price:0.15, base:true},
   {n:'019',dex:87,dex:87,name:'Dewgong',           type:'Aquático', color:'#2196F3',rare:'Rara',       price:0.22, base:true},
   {n:'020',dex:120,dex:120,name:'Staryu',            type:'Aquático', color:'#2196F3',rare:'Comum',      price:0.13, base:true},
-<<<<<<< HEAD
   {n:'021',dex:121,dex:121,name:'Mega Starmie ex',   type:'Aquático', color:'#2196F3',rare:'Rara Dupla', price:5.70, base:true,important:true},
-=======
-  {n:'021',dex:121,dex:121,name:'Mega Starmie ex',   type:'Aquático', color:'#2196F3',rare:'Rara Dupla', price:6.38, base:true,important:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'022',dex:131,dex:131,name:'Lapras ex',         type:'Aquático', color:'#2196F3',rare:'Rara Dupla', price:4.00, base:true},
   {n:'023',dex:698,dex:698,name:'Amaura',            type:'Aquático', color:'#2196F3',rare:'Comum',      price:0.15, base:true},
   {n:'024',dex:699,dex:699,name:'Aurorus',           type:'Aquático', color:'#2196F3',rare:'Rara',       price:0.20, base:true},
@@ -58,11 +50,7 @@ const CARDS_ME03 = [
   {n:'044',dex:696,dex:696,name:'Tyrunt',            type:'Lutador',  color:'#FF9800',rare:'Comum',      price:0.13, base:true},
   {n:'045',dex:697,dex:697,name:'Tyrantrum',         type:'Lutador',  color:'#FF9800',rare:'Rara',       price:0.20, base:true},
   {n:'046',dex:701,dex:701,name:'Hawlucha',          type:'Lutador',  color:'#FF9800',rare:'Comum',      price:0.10, base:true},
-<<<<<<< HEAD
   {n:'047',dex:718,dex:718,name:'Mega Zygarde ex',   type:'Lutador',  color:'#FF9800',rare:'Rara Dupla', price:3.90, base:true,important:true},
-=======
-  {n:'047',dex:718,dex:718,name:'Mega Zygarde ex',   type:'Lutador',  color:'#FF9800',rare:'Rara Dupla', price:3.83, base:true,important:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'048',dex:92,dex:92,name:'Gastly',            type:'Psíquico', color:'#9C27B0',rare:'Comum',      price:0.10, base:true},
   {n:'049',dex:93,dex:93,name:'Haunter',           type:'Psíquico', color:'#9C27B0',rare:'Comum',      price:0.14, base:true},
   {n:'050',dex:94,dex:94,name:'Gengar',            type:'Psíquico', color:'#9C27B0',rare:'Rara',       price:0.28, base:true},
@@ -70,11 +58,7 @@ const CARDS_ME03 = [
   {n:'052',dex:452,dex:452,name:'Drapion',           type:'Escuridão',color:'#607D8B',rare:'Incomum',    price:0.15, base:true},
   {n:'053',dex:717,dex:717,name:'Yveltal ex',        type:'Escuridão',color:'#607D8B',rare:'Rara Dupla', price:2.80, base:true},
   {n:'054',dex:1002,dex:1002,name:'Chien-Pao',         type:'Aquático', color:'#2196F3',rare:'Rara',       price:0.17, base:true},
-<<<<<<< HEAD
   {n:'055',dex:227,dex:227,name:'Mega Skarmory ex',  type:'Metal',    color:'#9E9E9E',rare:'Rara Dupla', price:2.47, base:true,important:true},
-=======
-  {n:'055',dex:227,dex:227,name:'Mega Skarmory ex',  type:'Metal',    color:'#9E9E9E',rare:'Rara Dupla', price:2.13, base:true,important:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'056',dex:679,dex:679,name:'Honedge',           type:'Metal',    color:'#9E9E9E',rare:'Comum',      price:0.15, base:true},
   {n:'057',dex:680,dex:680,name:'Doublade',          type:'Metal',    color:'#9E9E9E',rare:'Comum',      price:0.11, base:true},
   {n:'058',dex:681,dex:681,name:'Aegislash',         type:'Metal',    color:'#9E9E9E',rare:'Incomum',    price:0.10, base:true},
@@ -89,11 +73,7 @@ const CARDS_ME03 = [
   {n:'067',dex:676,dex:676,name:'Furfrou',           type:'Incolor',  color:'#78909C',rare:'Comum',      price:0.10, base:true},
   {n:'068',name:'Fossil Maxilar',    type:'Item',     color:'#5C6BC0',rare:'Comum',      price:0.10, base:true},
   {n:'069',name:'Fossil Vela',       type:'Item',     color:'#5C6BC0',rare:'Comum',      price:0.13, base:true},
-<<<<<<< HEAD
   {n:'070',name:'Memória Essencial', type:'Item',     color:'#5C6BC0',rare:'Incomum',    price:0.11, base:true},
-=======
-  {n:'070',name:'Memória Essencial', type:'Item',     color:'#5C6BC0',rare:'Incomum',    price:0.10, base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'071',name:'Martelo Esmagador', type:'Item',     color:'#5C6BC0',rare:'Comum',      price:0.10, base:true},
   {n:'072',name:'Busca de Energia',  type:'Item',     color:'#5C6BC0',rare:'Comum',      price:0.10, base:true},
   {n:'073',name:'Repelente de Energia',type:'Item',   color:'#5C6BC0',rare:'Incomum',    price:0.07, base:true},
@@ -116,7 +96,6 @@ const CARDS_ME03 = [
   {n:'089',dex:665,dex:665,name:'Spewpa',            type:'Grama',    color:'#4CAF50',rare:'Ilustr. Rara',price:10.59, base:false},
   {n:'090',dex:722,dex:722,name:'Rowlet',            type:'Grama',    color:'#4CAF50',rare:'Ilustr. Rara',price:26.89, base:false},
   {n:'091',dex:663,dex:663,name:'Talonflame',        type:'Fogo',     color:'#F44336',rare:'Ilustr. Rara',price:16.99, base:false},
-<<<<<<< HEAD
   {n:'092',dex:699,dex:699,name:'Aurorus',           type:'Aquático', color:'#2196F3',rare:'Ilustr. Rara',price:14.90, base:false},
   {n:'093',dex:702,dex:702,name:'Dedenne',           type:'Raio',     color:'#FFEB3B',rare:'Ilustr. Rara',price:28.00, base:false},
   {n:'094',dex:35,dex:35,name:'Clefairy',          type:'Psíquico', color:'#9C27B0',rare:'Ilustr. Rara',price:89.93,base:false,important:true},
@@ -135,37 +114,12 @@ const CARDS_ME03 = [
   {n:'106',dex:227,dex:227,name:'Mega Skarmory ex',  type:'Metal',    color:'#9E9E9E',rare:'Rara Ultra', price:16.15, base:false},
   {n:'107',dex:52,dex:52,name:'Meowth ex',         type:'Incolor',  color:'#78909C',rare:'Rara Ultra', price:95.00,base:false,important:true},
   {n:'108',name:'Reciclador de Energia',type:'Item',  color:'#5C6BC0',rare:'Rara Ultra', price:17.90, base:false},
-=======
-  {n:'092',dex:699,dex:699,name:'Aurorus',           type:'Aquático', color:'#2196F3',rare:'Ilustr. Rara',price:14.45, base:false},
-  {n:'093',dex:702,dex:702,name:'Dedenne',           type:'Raio',     color:'#FFEB3B',rare:'Ilustr. Rara',price:28.00, base:false},
-  {n:'094',dex:35,dex:35,name:'Clefairy',          type:'Psíquico', color:'#9C27B0',rare:'Ilustr. Rara',price:85.00,base:false,important:true},
-  {n:'095',dex:677,dex:677,name:'Espurr',            type:'Psíquico', color:'#9C27B0',rare:'Ilustr. Rara',price:19.99, base:false},
-  {n:'096',dex:476,dex:476,name:'Probopass',         type:'Metal',    color:'#9E9E9E',rare:'Ilustr. Rara',price:5.43,  base:false},
-  {n:'097',dex:452,dex:452,name:'Drapion',           type:'Escuridão',color:'#607D8B',rare:'Ilustr. Rara',price:7.90, base:false},
-  {n:'098',dex:680,dex:680,name:'Doublade',          type:'Metal',    color:'#9E9E9E',rare:'Ilustr. Rara',price:9.90, base:false},
-  {n:'099',dex:20,dex:20,name:'Raticate',          type:'Incolor',  color:'#78909C',rare:'Ilustr. Rara',price:19.90, base:false},
-  // ── RARAS ULTRA 100–117 ───────────────────────────────────────
-  {n:'100',dex:724,dex:724,name:'Decidueye ex',      type:'Grama',    color:'#4CAF50',rare:'Rara Ultra', price:13.30, base:false},
-  {n:'101',dex:758,dex:758,name:'Salazzle ex',       type:'Fogo',     color:'#F44336',rare:'Rara Ultra', price:7.68, base:false},
-  {n:'102',dex:121,dex:121,name:'Mega Starmie ex',   type:'Aquático', color:'#2196F3',rare:'Rara Ultra', price:22.95, base:false},
-  {n:'103',dex:36,dex:36,name:'Mega Clefable ex',  type:'Psíquico', color:'#9C27B0',rare:'Rara Ultra', price:20.90, base:false},
-  {n:'104',dex:718,dex:718,name:'Mega Zygarde ex',   type:'Lutador',  color:'#FF9800',rare:'Rara Ultra', price:29.89, base:false},
-  {n:'105',dex:717,dex:717,name:'Yveltal ex',        type:'Escuridão',color:'#607D8B',rare:'Rara Ultra', price:18.65, base:false},
-  {n:'106',dex:227,dex:227,name:'Mega Skarmory ex',  type:'Metal',    color:'#9E9E9E',rare:'Rara Ultra', price:16.15, base:false},
-  {n:'107',dex:52,dex:52,name:'Meowth ex',         type:'Incolor',  color:'#78909C',rare:'Rara Ultra', price:95.00,base:false,important:true},
-  {n:'108',name:'Reciclador de Energia',type:'Item',  color:'#5C6BC0',rare:'Rara Ultra', price:18.00, base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'109',name:'Floresta da Vitalidade',type:'Estadio',color:'#795548',rare:'Rara Ultra',price:24.99,base:false},
   {n:'110',name:'Jacinthe',          type:'Suporte',  color:'#E91E63',rare:'Rara Ultra', price:21.50, base:false},
   {n:'111',name:'Cidade Lumiose',    type:'Estadio',  color:'#795548',rare:'Rara Ultra', price:0.49, base:false},
   {n:'112',name:'Naveen',            type:'Suporte',  color:'#E91E63',rare:'Rara Ultra', price:14.85, base:false},
-<<<<<<< HEAD
   {n:'113',name:'Poke Pad',          type:'Item',     color:'#5C6BC0',rare:'Rara Ultra', price:83.90,base:false,important:true},
   {n:'114',name:'Estimulo da Rosa',  type:'Suporte',  color:'#E91E63',rare:'Rara Ultra', price:43.75, base:false},
-=======
-  {n:'113',name:'Poke Pad',          type:'Item',     color:'#5C6BC0',rare:'Rara Ultra', price:84.99,base:false,important:true},
-  {n:'114',name:'Estimulo da Rosa',  type:'Suporte',  color:'#E91E63',rare:'Rara Ultra', price:45.00, base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'115',name:'Cinzas Sagradas',   type:'Item',     color:'#5C6BC0',rare:'Rara Ultra', price:19.08, base:false},
   {n:'116',name:'Tarragon',          type:'Suporte',  color:'#E91E63',rare:'Rara Ultra', price:14.67, base:false},
   {n:'117',name:'Curativo Maravilhoso',type:'Item',   color:'#5C6BC0',rare:'Rara Ultra', price:19.89, base:false},
@@ -177,9 +131,5 @@ const CARDS_ME03 = [
   {n:'122',name:'Jacinthe',          type:'Suporte',  color:'#E91E63',rare:'Ilustr. Esp. Rara',price:96.59, base:false},
   {n:'123',name:'Estimulo da Rosa',  type:'Suporte',  color:'#E91E63',rare:'Ilustr. Esp. Rara',price:224.03, base:false},
   // ── MEGA HYPER RARE 124 ──────────────────────────────────────
-<<<<<<< HEAD
   {n:'124',dex:718,dex:718,name:'Mega Zygarde ex Gold',type:'Lutador', color:'#FF9800',rare:'Mega Attack Rare',price:619.90,base:false,important:true},
-=======
-  {n:'124',dex:718,dex:718,name:'Mega Zygarde ex Gold',type:'Lutador', color:'#FF9800',rare:'Mega Attack Rare',price:619.00,base:false,important:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
 ];

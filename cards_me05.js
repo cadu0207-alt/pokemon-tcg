@@ -60,11 +60,7 @@ const CARDS_ME05 = [
   {n:'028',dex:1008,artist:'5ban Graphics',name:'Miraidon',type:'Eletrico',color:'#FFC107',rare:'Rara',price:0.15,base:true},
   {n:'029',dex:79,artist:'mashu',name:'Slowpoke',type:'Psiquico',color:'#9C27B0',rare:'Comum',price:0.13,base:true},
   {n:'030',dex:80,artist:'Nelnal',name:'Slowbro',type:'Psiquico',color:'#9C27B0',rare:'Incomum',price:0.10,base:true},
-<<<<<<< HEAD
   {n:'031',dex:80,name:'Mega Slowbro ex',type:'Psiquico',color:'#9C27B0',rare:'Rara Dupla',price:3.79,base:true},
-=======
-  {n:'031',dex:80,name:'Mega Slowbro ex',type:'Psiquico',color:'#9C27B0',rare:'Rara Dupla',price:4.49,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'032',dex:124,artist:'CHORISO',name:'Jynx',type:'Psiquico',color:'#9C27B0',rare:'Comum',price:0.10,base:true},
   {n:'033',dex:353,artist:'5ban Graphics',name:'Shuppet',type:'Trevas',color:'#212121',rare:'Comum',price:0.14,base:true},
   {n:'034',dex:354,artist:'Yoshimoto Yoshimon',name:'Banette',type:'Trevas',color:'#212121',rare:'Incomum',price:0.14,base:true},
@@ -126,7 +122,6 @@ const CARDS_ME05 = [
   // cards_me03.js, cards_meg.js pras cartas UR/Ilustr./Gold, que usam
   // base:false). Sem essa correção o master set do ME05 pedia 2 versões de
   // 37 cartas que só existem numa versão — 74 slots fantasmas. Ver [[project_pokemon_tcg]].
-<<<<<<< HEAD
   {n:'085',dex:753,artist:'inose yukie',name:'Fomantis',type:'Grama',color:'#4CAF50',rare:'Rara Ilustrada',price:11.20,base:false},
   {n:'086',dex:936,name:'Armarouge',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada',price:19.00,base:false},
   {n:'087',dex:118,name:'Goldeen',type:'Agua',color:'#2196F3',rare:'Rara Ilustrada',price:54.80,base:false},
@@ -158,46 +153,9 @@ const CARDS_ME05 = [
   {n:'113',name:'Splendid Bomb',type:'Treinador',color:'#607D8B',rare:'Ultra Rara',price:11.99,base:false},
   {n:'114',dex:807,artist:'Teeziro',name:'Mega Zeraora ex',type:'Eletrico',color:'#FFC107',rare:'Rara Ilustrada Especial',price:224.00,base:false},
   {n:'115',dex:609,artist:'inose yukie',name:'Mega Chandelure ex',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada Especial',price:185.00,base:false},
-=======
-  {n:'085',dex:753,artist:'inose yukie',name:'Fomantis',type:'Grama',color:'#4CAF50',rare:'Rara Ilustrada',price:9.90,base:false},
-  {n:'086',dex:936,name:'Armarouge',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada',price:19.79,base:false},
-  {n:'087',dex:118,name:'Goldeen',type:'Agua',color:'#2196F3',rare:'Rara Ilustrada',price:53.99,base:false},
-  {n:'088',dex:730,artist:'Jiro Sasumo',name:'Primarina',type:'Agua',color:'#2196F3',rare:'Rara Ilustrada',price:16.90,base:false},
-  {n:'089',dex:310,artist:'Iwamoto05',name:'Manectric',type:'Eletrico',color:'#FFC107',rare:'Rara Ilustrada',price:12.00,base:false},
-  {n:'090',dex:80,artist:'Gemi',name:'Slowbro',type:'Psiquico',color:'#9C27B0',rare:'Rara Ilustrada',price:48.98,base:false},
-  {n:'091',dex:781,artist:'satoma',name:'Dhelmise',type:'Grama',color:'#4CAF50',rare:'Rara Ilustrada',price:23.99,base:false},
-  {n:'092',dex:828,artist:'HICO KIM',name:'Thievul',type:'Trevas',color:'#212121',rare:'Rara Ilustrada',price:7.90,base:false},
-  {n:'093',dex:411,artist:'Nakamura Ippan',name:'Bastiodon',type:'Metal',color:'#607D8B',rare:'Rara Ilustrada',price:12.50,base:false},
-  {n:'094',dex:733,artist:'Jerky',name:'Toucannon',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada',price:22.90,base:false},
-  {n:'095',dex:773,artist:'Yoriyuki Ikegami',name:'Silvally',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada',price:14.90,base:false},
-  {n:'096',dex:754,artist:'miki kudo',name:'Lurantis ex',type:'Grama',color:'#4CAF50',rare:'Ultra Rara',price:9.90,base:false},
-  {n:'097',dex:321,artist:'DOM',name:'Wailord ex',type:'Agua',color:'#2196F3',rare:'Ultra Rara',price:15.29,base:false},
-  {n:'098',dex:807,artist:'5ban Graphics',name:'Mega Zeraora ex',type:'Eletrico',color:'#FFC107',rare:'Ultra Rara',price:21.89,base:false},
-  {n:'099',dex:609,artist:'5ban Graphics',name:'Mega Chandelure ex',type:'Fogo',color:'#F44336',rare:'Ultra Rara',price:34.65,base:false},
-  {n:'100',dex:409,artist:'5ban Graphics',name:'Rampardos ex',type:'Luta',color:'#FF6B35',rare:'Ultra Rara',price:14.90,base:false},
-  {n:'101',dex:491,artist:'5ban Graphics',name:'Mega Darkrai ex',type:'Trevas',color:'#212121',rare:'Ultra Rara',price:48.00,base:false},
-  {n:'102',dex:877,artist:'5ban Graphics',name:'Morpeko ex',type:'Eletrico',color:'#FFC107',rare:'Ultra Rara',price:4.99,base:false},
-  {n:'103',dex:530,artist:'5ban Graphics',name:'Mega Excadrill ex',type:'Luta',color:'#FF6B35',rare:'Ultra Rara',price:32.00,base:false},
-  {n:'104',name:'Bracelete Bravio',type:'Treinador',color:'#607D8B',rare:'Ultra Rara',price:25.00,base:false},
-  {n:'105',artist:'Toyste Beach',name:'Martelo Esmagador',type:'Treinador',color:'#607D8B',rare:'Ultra Rara',price:18.20,base:false},
-  {n:'106',artist:'Ayaka Yoshida',name:'Dark Bell',type:'Treinador',color:'#607D8B',rare:'Ultra Rara',price:12.85,base:false},
-  {n:'107',artist:'Keisuke Azuma',name:'Substituicao de Energia',type:'Treinador',color:'#607D8B',rare:'Ultra Rara',price:15.99,base:false},
-  {n:'108',artist:'nagimiso',name:"Gladion's Showdown",type:'Treinador',color:'#607D8B',rare:'Ultra Rara',price:23.99,base:false},
-  {n:'109',artist:'En Morikura',name:'Gwynn',type:'Treinador',color:'#607D8B',rare:'Ultra Rara',price:53.80,base:false},
-  {n:'110',artist:'5ban Graphics',name:'Defensor Ferreo',type:'Treinador',color:'#607D8B',rare:'Ultra Rara',price:7.00,base:false},
-  {n:'111',artist:'akagi',name:"Misty's Spirit (Energia da Misty)",type:'Treinador',color:'#607D8B',rare:'Ultra Rara',price:110.00,base:false},
-  {n:'112',artist:'Studio Bora Inc.',name:'Rust Syndicate Grunt',type:'Treinador',color:'#607D8B',rare:'Ultra Rara',price:11.40,base:false},
-  {n:'113',name:'Splendid Bomb',type:'Treinador',color:'#607D8B',rare:'Ultra Rara',price:11.99,base:false},
-  {n:'114',dex:807,artist:'Teeziro',name:'Mega Zeraora ex',type:'Eletrico',color:'#FFC107',rare:'Rara Ilustrada Especial',price:218.99,base:false},
-  {n:'115',dex:609,artist:'inose yukie',name:'Mega Chandelure ex',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada Especial',price:174.90,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'116',dex:491,artist:'GIDORA',name:'Mega Darkrai ex',type:'Trevas',color:'#212121',rare:'Rara Ilustrada Especial',price:699.90,base:false},
   {n:'117',dex:877,name:'Morpeko ex',type:'Eletrico',color:'#FFC107',rare:'Rara Ilustrada Especial',price:229.90,base:false},
   {n:'118',artist:'AKIRA EGAWA',name:"Gladion's Showdown",type:'Treinador',color:'#607D8B',rare:'Rara Ilustrada Especial',price:134.90,base:false},
   {n:'119',artist:'NG Empire',name:'Gwynn',type:'Treinador',color:'#607D8B',rare:'Rara Ilustrada Especial',price:160.00,base:false},
-<<<<<<< HEAD
   {n:'120',dex:491,artist:'DOM',name:'Mega Darkrai ex Gold',type:'Trevas',color:'#212121',rare:'Hiper Rara Mega',price:824.99,base:false},
-=======
-  {n:'120',dex:491,artist:'DOM',name:'Mega Darkrai ex Gold',type:'Trevas',color:'#212121',rare:'Hiper Rara Mega',price:798.90,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
 ];

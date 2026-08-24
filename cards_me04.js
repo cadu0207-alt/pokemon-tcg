@@ -41,11 +41,7 @@ const CARDS = [
   {n:'038',dex:708,artist:"Taiga Kasai",name:'Phantump',type:'Psíquico',color:'#9C27B0',rare:'Comum',price:0.08,base:true},
   {n:'039',dex:709,artist:"Uninori",name:'Trevenant',type:'Psíquico',color:'#9C27B0',rare:'Rara',price:0.19,base:true},
   {n:'040',dex:710,artist:"Jerky",name:'Pumpkaboo',type:'Psíquico',color:'#9C27B0',rare:'Comum',price:0.10,base:true},
-<<<<<<< HEAD
   {n:'041',dex:711,artist:"5ban Graphics",name:'Gourgeist ex',type:'Psíquico',color:'#9C27B0',rare:'Rara Dupla',price:2.00,base:true},
-=======
-  {n:'041',dex:711,artist:"5ban Graphics",name:'Gourgeist ex',type:'Psíquico',color:'#9C27B0',rare:'Rara Dupla',price:2.40,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'042',dex:716,artist:"KEIICHIRO ITO",name:'Xerneas',type:'Psíquico',color:'#9C27B0',rare:'Rara',price:0.10,base:true},
   {n:'043',dex:185,artist:"GOTO minori",name:'Sudowoodo',type:'Lutador',color:'#FF9800',rare:'Incomum',price:0.14,base:true},
   {n:'044',dex:231,artist:"Akino Fukuji",name:'Phanpy',type:'Lutador',color:'#FF9800',rare:'Comum',price:0.10,base:true},
@@ -77,11 +73,7 @@ const CARDS = [
   {n:'070',dex:504,artist:"Souichirou Gunjima",name:'Patrat',type:'Incolor',color:'#78909C',rare:'Comum',price:0.10,base:true},
   {n:'071',dex:505,artist:"Kouki Saitou",name:'Watchog',type:'Incolor',color:'#78909C',rare:'Comum',price:0.08,base:true},
   {n:'072',dex:572,artist:"ryoma uratsuka",name:'Minccino',type:'Incolor',color:'#78909C',rare:'Comum',price:0.08,base:true},
-<<<<<<< HEAD
   {n:'073',dex:573,artist:"5ban Graphics",name:'Cinccino ex',type:'Incolor',color:'#78909C',rare:'Rara Dupla',price:4.00,base:true},
-=======
-  {n:'073',dex:573,artist:"5ban Graphics",name:'Cinccino ex',type:'Incolor',color:'#78909C',rare:'Rara Dupla',price:3.90,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'074',artist:"Ayaka Yoshida",name:'Apólice de Adversidade',type:'Item',color:'#5C6BC0',rare:'Incomum',price:0.14,base:true},
   {n:'075',artist:"MARINA Chikazawa",name:'Floette Ange',type:'Item',color:'#5C6BC0',rare:'Incomum',price:0.10,base:true},
   {n:'076',artist:"GIDORA",name:'Tranquilidade do AZ',type:'Suporte',color:'#E91E63',rare:'Incomum',price:0.15,base:true},
@@ -97,7 +89,6 @@ const CARDS = [
   {n:'086',name:'Energia Nitro Fogo (F)',type:'Energia',color:'#FF5722',rare:'Rara',price:0.25,base:true},
   // SECRETAS
   {n:'087',dex:650,artist:"Atsushi Furusawa",name:'Chespin (IR)',type:'Grama',color:'#4CAF50',rare:'Ilustr. Rara',price:19.90,base:false},
-<<<<<<< HEAD
   {n:'088',dex:656,artist:"Susumu Maeya",name:'Froakie (IR)',type:'Aquático',color:'#2196F3',rare:'Ilustr. Rara',price:44.89,base:false},
   {n:'089',dex:657,artist:"Susumu Maeya",name:'Frogadier (IR)',type:'Aquático',color:'#2196F3',rare:'Ilustr. Rara',price:33.66,base:false},
   {n:'090',dex:181,artist:"saino misaki",name:'Ampharos (IR)',type:'Raio',color:'#FFEB3B',rare:'Ilustr. Rara',price:24.90,base:false},
@@ -107,26 +98,11 @@ const CARDS = [
   {n:'094',dex:375,artist:"Kurata So",name:'Metang (IR)',type:'Metal',color:'#9E9E9E',rare:'Ilustr. Rara',price:14.79,base:false},
   {n:'095',dex:705,artist:"aspara",name:'Sliggoo (IR)',type:'Dragão',color:'#00BCD4',rare:'Ilustr. Rara',price:10.50,base:false},
   {n:'096',dex:128,artist:"Tsuyoshi Nagano",name:'Tauros (SAR)',type:'Incolor',color:'#78909C',rare:'Ilustr. Esp. Rara',price:27.60,base:false,important:true},
-=======
-  {n:'088',dex:656,artist:"Susumu Maeya",name:'Froakie (IR)',type:'Aquático',color:'#2196F3',rare:'Ilustr. Rara',price:39.90,base:false},
-  {n:'089',dex:657,artist:"Susumu Maeya",name:'Frogadier (IR)',type:'Aquático',color:'#2196F3',rare:'Ilustr. Rara',price:33.90,base:false},
-  {n:'090',dex:181,artist:"saino misaki",name:'Ampharos (IR)',type:'Raio',color:'#FFEB3B',rare:'Ilustr. Rara',price:24.90,base:false},
-  {n:'091',dex:716,artist:"YASHIRO Nanaco",name:'Xerneas (IR)',type:'Psíquico',color:'#9C27B0',rare:'Ilustr. Rara',price:24.00,base:false},
-  {n:'092',dex:344,artist:"matazo",name:'Claydol (IR)',type:'Lutador',color:'#FF9800',rare:'Ilustr. Rara',price:9.00,base:false},
-  {n:'093',dex:169,artist:"Kazuhisa Uragami",name:'Crobat (IR)',type:'Escuridão',color:'#607D8B',rare:'Ilustr. Rara',price:13.00,base:false},
-  {n:'094',dex:375,artist:"Kurata So",name:'Metang (IR)',type:'Metal',color:'#9E9E9E',rare:'Ilustr. Rara',price:14.79,base:false},
-  {n:'095',dex:705,artist:"aspara",name:'Sliggoo (IR)',type:'Dragão',color:'#00BCD4',rare:'Ilustr. Rara',price:10.50,base:false},
-  {n:'096',dex:128,artist:"Tsuyoshi Nagano",name:'Tauros (SAR)',type:'Incolor',color:'#78909C',rare:'Ilustr. Esp. Rara',price:28.90,base:false,important:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'097',dex:505,artist:"MARINA Chikazawa",name:'Watchog (IR)',type:'Incolor',color:'#78909C',rare:'Ilustr. Rara',price:8.00,base:false},
   {n:'098',dex:15,artist:"5ban Graphics",name:'Beedrill ex (UR)',type:'Grama',color:'#4CAF50',rare:'Rara Ultra',price:22.00,base:false},
   {n:'099',dex:668,artist:"Keisuke Azuma",name:'Mega Pyroar ex (UR)',type:'Fogo',color:'#F44336',rare:'Rara Ultra',price:9.90,base:false},
   {n:'100',dex:658,artist:"takuyoa",name:'Mega Greninja ex (UR)',type:'Aquático',color:'#2196F3',rare:'Rara Ultra',price:63.89,base:false},
-<<<<<<< HEAD
   {n:'101',dex:670,artist:"aky CG Works",name:'Mega Floette ex (UR)',type:'Psíquico',color:'#9C27B0',rare:'Rara Ultra',price:15.00,base:false},
-=======
-  {n:'101',dex:670,artist:"aky CG Works",name:'Mega Floette ex (UR)',type:'Psíquico',color:'#9C27B0',rare:'Rara Ultra',price:15.90,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'102',dex:711,artist:"5ban Graphics",name:'Gourgeist ex (UR)',type:'Psíquico',color:'#9C27B0',rare:'Rara Ultra',price:7.50,base:false},
   {n:'103',dex:638,artist:"5ban Graphics",name:'Cobalion ex (UR)',type:'Metal',color:'#9E9E9E',rare:'Rara Ultra',price:9.75,base:false},
   {n:'104',dex:691,artist:"5ban Graphics",name:'Mega Dragalge ex (UR)',type:'Dragão',color:'#00BCD4',rare:'Rara Ultra',price:20.99,base:false},
@@ -138,7 +114,6 @@ const CARDS = [
   {n:'110',artist:"Souichirou Gunjima",name:'Philippe (UR)',type:'Suporte',color:'#E91E63',rare:'Rara Ultra',price:9.90,base:false},
   {n:'111',artist:"MARINA Chikazawa",name:'Torre Prisma (UR)',type:'Estádio',color:'#795548',rare:'Rara Ultra',price:16.50,base:false},
   {n:'112',artist:"Nobusawa/Mochipuyo",name:'Show da Roxie (UR)',type:'Suporte',color:'#E91E63',rare:'Rara Ultra',price:19.90,base:false},
-<<<<<<< HEAD
   {n:'113',artist:"Studio Bora Inc.",name:'Cartão Vermelho Esp. (UR)',type:'Item',color:'#5C6BC0',rare:'Rara Ultra',price:33.66,base:false},
   {n:'114',artist:"AYUMI ODASHIMA",name:'Praia de Surfista (UR)',type:'Estádio',color:'#795548',rare:'Rara Ultra',price:19.92,base:false},
   {n:'115',artist:"Studio Bora Inc.",name:'Sucateador de Ferr. (UR)',type:'Item',color:'#5C6BC0',rare:'Rara Ultra',price:9.94,base:false},
@@ -148,17 +123,6 @@ const CARDS = [
   {n:'119',dex:573,artist:"Keisin",name:'Cinccino ex (SAR)',type:'Incolor',color:'#78909C',rare:'Ilustr. Esp. Rara',price:180.00,base:false},
   {n:'120',artist:"OKACHEKE",name:'Tranquilidade do AZ (SAR)',type:'Suporte',color:'#E91E63',rare:'Ilustr. Esp. Rara',price:144.90,base:false},
   {n:'121',artist:"Tomowaka",name:'Show da Roxie (SAR)',type:'Suporte',color:'#E91E63',rare:'Ilustr. Esp. Rara',price:120.00,base:false},
-=======
-  {n:'113',artist:"Studio Bora Inc.",name:'Cartão Vermelho Esp. (UR)',type:'Item',color:'#5C6BC0',rare:'Rara Ultra',price:34.00,base:false},
-  {n:'114',artist:"AYUMI ODASHIMA",name:'Praia de Surfista (UR)',type:'Estádio',color:'#795548',rare:'Rara Ultra',price:23.90,base:false},
-  {n:'115',artist:"Studio Bora Inc.",name:'Sucateador de Ferr. (UR)',type:'Item',color:'#5C6BC0',rare:'Rara Ultra',price:9.94,base:false},
-  {n:'116',dex:658,artist:"Susumu Maeya",name:'Mega Greninja ex (SAR)',type:'Aquático',color:'#2196F3',rare:'Ilustr. Esp. Rara',price:599.67,base:false},
-  {n:'117',dex:670,artist:"Teeziro",name:'Mega Floette ex (SAR)',type:'Psíquico',color:'#9C27B0',rare:'Ilustr. Esp. Rara',price:108.00,base:false},
-  {n:'118',dex:691,artist:"Kazumasa Yasukunio",name:'Mega Dragalge ex (SAR)',type:'Dragão',color:'#00BCD4',rare:'Ilustr. Esp. Rara',price:125.00,base:false},
-  {n:'119',dex:573,artist:"Keisin",name:'Cinccino ex (SAR)',type:'Incolor',color:'#78909C',rare:'Ilustr. Esp. Rara',price:176.90,base:false},
-  {n:'120',artist:"OKACHEKE",name:'Tranquilidade do AZ (SAR)',type:'Suporte',color:'#E91E63',rare:'Ilustr. Esp. Rara',price:144.90,base:false},
-  {n:'121',artist:"Tomowaka",name:'Show da Roxie (SAR)',type:'Suporte',color:'#E91E63',rare:'Ilustr. Esp. Rara',price:119.89,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'122',dex:658,artist:"takuyoa",name:'Mega Greninja ex GOLD',type:'Aquático',color:'#FFD700',rare:'Mega Attack Rare',price:799.50,base:false},
 
 ];

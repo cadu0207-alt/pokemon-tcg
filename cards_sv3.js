@@ -132,20 +132,12 @@ const CARDS_SV3 = [
   {n:'126',dex:194,artist:"Shibuzoh.",name:'Paldean Wooper',type:'Sombrio',color:'#607D8B',rare:'Comum',price:0.20,base:true},
   {n:'127',dex:194,artist:"Pani Kobayashi",name:'Paldean Wooper',type:'Sombrio',color:'#607D8B',rare:'Comum',price:0.15,base:true},
   {n:'128',dex:980,artist:"Kouki Saitou",name:'Paldean Clodsire',type:'Sombrio',color:'#607D8B',rare:'Incomum',price:0.49,base:true},
-<<<<<<< HEAD
   {n:'129',dex:980,artist:"Shin Nagasawa",name:'Paldean Clodsire',type:'Sombrio',color:'#607D8B',rare:'Incomum',price:0.57,base:true},
-=======
-  {n:'129',dex:980,artist:"Shin Nagasawa",name:'Paldean Clodsire',type:'Sombrio',color:'#607D8B',rare:'Incomum',price:0.50,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'130',dex:197,artist:"rika",name:'Umbreon',type:'Sombrio',color:'#607D8B',rare:'Incomum',price:3.99,base:true},
   {n:'131',dex:228,artist:"Scav",name:'Houndour',type:'Sombrio',color:'#607D8B',rare:'Comum',price:0.18,base:true},
   {n:'132',dex:228,artist:"Kurata So",name:'Houndour',type:'Sombrio',color:'#607D8B',rare:'Comum',price:0.15,base:true},
   {n:'133',dex:229,artist:"Haru Akasaka",name:'Houndoom',type:'Sombrio',color:'#607D8B',rare:'Incomum',price:0.18,base:true},
-<<<<<<< HEAD
   {n:'134',dex:229,artist:"PLANETA Tsuji",name:'Houndoom ex',type:'Sombrio',color:'#607D8B',rare:'Rara Dupla',price:2.90,base:true},
-=======
-  {n:'134',dex:229,artist:"PLANETA Tsuji",name:'Houndoom ex',type:'Sombrio',color:'#607D8B',rare:'Rara Dupla',price:3.00,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'135',dex:359,artist:"Nisota Niso",name:'Absol ex',type:'Sombrio',color:'#607D8B',rare:'Rara Dupla',price:4.99,base:true},
   {n:'136',dex:491,artist:"Bun Toujo",name:'Darkrai',type:'Sombrio',color:'#607D8B',rare:'Rara',price:0.35,base:true},
   {n:'137',dex:686,artist:"Kedamahadaitai Yawarakai",name:'Inkay',type:'Sombrio',color:'#607D8B',rare:'Comum',price:0.20,base:true},
@@ -170,11 +162,7 @@ const CARDS_SV3 = [
   {n:'156',dex:966,artist:"takuyoa",name:'Revavroom ex',type:'Metal',color:'#78909C',rare:'Rara Dupla',price:4.90,base:true},
   {n:'157',dex:147,artist:"satoma",name:'Dratini',type:'Dragão',color:'#3F51B5',rare:'Comum',price:0.40,base:true},
   {n:'158',dex:148,artist:"Misa Tsutsui",name:'Dragonair',type:'Dragão',color:'#3F51B5',rare:'Incomum',price:0.30,base:true},
-<<<<<<< HEAD
   {n:'159',dex:149,artist:"5ban Graphics",name:'Dragonite ex',type:'Dragão',color:'#3F51B5',rare:'Rara Dupla',price:14.90,base:true},
-=======
-  {n:'159',dex:149,artist:"5ban Graphics",name:'Dragonite ex',type:'Dragão',color:'#3F51B5',rare:'Rara Dupla',price:9.90,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'160',dex:334,artist:"kurumitsu",name:'Altaria',type:'Dragão',color:'#3F51B5',rare:'Incomum',price:0.25,base:true},
   {n:'161',dex:780,artist:"hatachu",name:'Drampa',type:'Dragão',color:'#3F51B5',rare:'Incomum',price:0.25,base:true},
   {n:'162',dex:16,artist:"Naoyo Kimura",name:'Pidgey',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.25,base:true},
@@ -230,11 +218,7 @@ const CARDS_SV3 = [
   {n:'212',dex:416,artist:"5ban Graphics",name:'Vespiquen ex',type:'Psíquico',color:'#9C27B0',rare:'Ultra Rara',price:9.00,base:false},
   {n:'213',dex:970,artist:"5ban Graphics",name:'Glimmora ex',type:'Lutador',color:'#FF9800',rare:'Ultra Rara',price:6.00,base:false},
   {n:'214',dex:359,artist:"PLANETA Mochizuki",name:'Absol ex',type:'Sombrio',color:'#607D8B',rare:'Ultra Rara',price:15.00,base:false},
-<<<<<<< HEAD
   {n:'215',dex:6,artist:"5ban Graphics",name:'Charizard ex',type:'Sombrio',color:'#607D8B',rare:'Ultra Rara',price:45.00,base:false,important:true},
-=======
-  {n:'215',dex:6,artist:"5ban Graphics",name:'Charizard ex',type:'Sombrio',color:'#607D8B',rare:'Ultra Rara',price:48.90,base:false,important:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'216',dex:966,artist:"takuyoa",name:'Revavroom ex',type:'Metal',color:'#78909C',rare:'Ultra Rara',price:4.90,base:false},
   {n:'217',dex:18,artist:"takuyoa",name:'Pidgeot ex',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:8.50,base:false},
   {n:'218',artist:"kirisAki",name:'Geeta',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:7.90,base:false},

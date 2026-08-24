@@ -11,11 +11,7 @@
 const CARDS_PGO = [
   {n:'001',dex:1,name:'Bulbasaur',artist:'sowsow',type:'Planta',color:'#4CAF50',rare:'Comum',price:1.00,base:true},
   {n:'002',dex:2,name:'Ivysaur',artist:'zig',type:'Planta',color:'#4CAF50',rare:'Incomum',price:1.90,base:true},
-<<<<<<< HEAD
   {n:'003',dex:3,name:'Venusaur',artist:'KEIICHIRO ITO',type:'Planta',color:'#4CAF50',rare:'Rara Holo',price:19.99,base:true},
-=======
-  {n:'003',dex:3,name:'Venusaur',artist:'KEIICHIRO ITO',type:'Planta',color:'#4CAF50',rare:'Rara Holo',price:19.90,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'004',dex:3,name:'Radiant Venusaur',artist:'Misa Tsutsui',type:'Planta',color:'#4CAF50',rare:'Rara Radiante',price:41.95,base:true},
   {n:'005',dex:103,name:'Alolan Exeggutor V',artist:'MUGENUP',type:'Planta',color:'#4CAF50',rare:'Rara Holo V',price:5.95,base:true},
   {n:'006',dex:167,name:'Spinarak',artist:'Yuka Morii',type:'Planta',color:'#4CAF50',rare:'Comum',price:0.25,base:true},
@@ -25,11 +21,7 @@ const CARDS_PGO = [
   {n:'010',dex:6,name:'Charizard',artist:'N-DESIGN Inc.',type:'Fogo',color:'#F44336',rare:'Rara Holo',price:19.00,base:true},
   {n:'011',dex:6,name:'Radiant Charizard',artist:'Shigenori Negishi',type:'Fogo',color:'#F44336',rare:'Rara Radiante',price:120.00,base:true},
   {n:'012',dex:146,name:'Moltres',artist:'Pani Kobayashi',type:'Fogo',color:'#F44336',rare:'Rara Holo',price:1.50,base:true},
-<<<<<<< HEAD
   {n:'013',dex:322,name:'Numel',artist:'Shibuzoh.',type:'Fogo',color:'#F44336',rare:'Comum',price:0.23,base:true},
-=======
-  {n:'013',dex:322,name:'Numel',artist:'Shibuzoh.',type:'Fogo',color:'#F44336',rare:'Comum',price:0.21,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'014',dex:323,name:'Camerupt',artist:'yuu',type:'Fogo',color:'#F44336',rare:'Incomum',price:0.25,base:true},
   {n:'015',dex:7,name:'Squirtle',artist:'sowsow',type:'Aquático',color:'#2196F3',rare:'Comum',price:3.90,base:true},
   {n:'016',dex:8,name:'Wartortle',artist:'kurumitsu',type:'Aquático',color:'#2196F3',rare:'Incomum',price:5.00,base:true},
@@ -53,11 +45,7 @@ const CARDS_PGO = [
   {n:'034',dex:337,name:'Lunatone',artist:'miki kudo',type:'Psíquico',color:'#9C27B0',rare:'Incomum',price:0.13,base:true},
   {n:'035',dex:700,name:'Sylveon',artist:'Atsushi Furusawa',type:'Psíquico',color:'#9C27B0',rare:'Rara Holo',price:9.50,base:true},
   {n:'036',dex:95,name:'Onix',artist:'Mitsuhiro Arita',type:'Lutador',color:'#FF9800',rare:'Comum',price:0.25,base:true},
-<<<<<<< HEAD
   {n:'037',dex:246,name:'Larvitar',artist:'sui',type:'Lutador',color:'#FF9800',rare:'Comum',price:0.20,base:true},
-=======
-  {n:'037',dex:246,name:'Larvitar',artist:'sui',type:'Lutador',color:'#FF9800',rare:'Comum',price:0.18,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'038',dex:247,name:'Pupitar',artist:'Sumiyoshi Kizuki',type:'Lutador',color:'#FF9800',rare:'Incomum',price:0.25,base:true},
   {n:'039',dex:338,name:'Solrock',artist:'Sekio',type:'Lutador',color:'#FF9800',rare:'Incomum',price:0.21,base:true},
   {n:'040',dex:534,name:'Conkeldurr V',artist:'Ayaka Yoshida',type:'Lutador',color:'#FF9800',rare:'Rara Holo V',price:4.50,base:true},

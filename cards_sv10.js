@@ -68,11 +68,7 @@ const CARDS_SV10 = [
   {n:'062',dex:846,artist:"OKUBO",name:'Arrokuda',type:'Aquático',color:'#2196F3',rare:'Comum',price:0.17,base:true},
   {n:'063',dex:847,artist:"Kyoko Umemoto",name:'Barraskewda',type:'Aquático',color:'#2196F3',rare:'Incomum',price:0.15,base:true},
   {n:'064',dex:974,artist:"sui",name:'Cetoddle',type:'Aquático',color:'#2196F3',rare:'Comum',price:0.10,base:true},
-<<<<<<< HEAD
   {n:'065',dex:975,artist:"kawayoo",name:'Cetitan ex',type:'Aquático',color:'#2196F3',rare:'Rara Dupla',price:3.70,base:true},
-=======
-  {n:'065',dex:975,artist:"kawayoo",name:'Cetitan ex',type:'Aquático',color:'#2196F3',rare:'Rara Dupla',price:3.33,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'066',dex:977,artist:"N-DESIGN Inc.",name:'Dondozo ex',type:'Aquático',color:'#2196F3',rare:'Rara Dupla',price:2.90,base:true},
   {n:'067',dex:1017,artist:"rika",name:'Wellspring Mask Ogerpon',type:'Aquático',color:'#2196F3',rare:'Incomum',price:0.13,base:true},
   {n:'068',dex:125,artist:"Amelicart",name:'Electabuzz',type:'Raio',color:'#FFEB3B',rare:'Comum',price:0.10,base:true},
@@ -146,11 +142,7 @@ const CARDS_SV10 = [
   {n:'136',dex:861,artist:"PLANETA Mochizuki",name:'Marnie\'s Grimmsnarl ex',type:'Sombrio',color:'#607D8B',rare:'Rara Dupla',price:6.00,base:true},
   {n:'137',dex:877,artist:"Mina Nakai",name:'Marnie\'s Morpeko',type:'Sombrio',color:'#607D8B',rare:'Comum',price:0.15,base:true},
   {n:'138',dex:942,artist:"Mina Nakai",name:'Arven\'s Maschiff',type:'Sombrio',color:'#607D8B',rare:'Comum',price:0.15,base:true},
-<<<<<<< HEAD
   {n:'139',dex:943,artist:"akagi",name:'Arven\'s Mabosstiff ex',type:'Sombrio',color:'#607D8B',rare:'Rara Dupla',price:2.00,base:true},
-=======
-  {n:'139',dex:943,artist:"akagi",name:'Arven\'s Mabosstiff ex',type:'Sombrio',color:'#607D8B',rare:'Rara Dupla',price:2.99,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'140',dex:205,artist:"Wintr Wandr",name:'Forretress',type:'Metal',color:'#78909C',rare:'Incomum',price:0.15,base:true},
   {n:'141',dex:227,artist:"Shin Nagasawa",name:'Skarmory',type:'Metal',color:'#78909C',rare:'Comum',price:0.13,base:true},
   {n:'142',dex:227,artist:"Nisota Niso",name:'Steven\'s Skarmory',type:'Metal',color:'#78909C',rare:'Comum',price:0.10,base:true},
@@ -198,11 +190,7 @@ const CARDS_SV10 = [
   {n:'184',dex:407,artist:"rika",name:'Cynthia\'s Roserade',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada',price:67.43,base:false,important:true},
   {n:'185',dex:492,artist:"Heisuke Kitazawa",name:'Shaymin',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada',price:84.50,base:false,important:true},
   {n:'186',dex:558,artist:"Takumi Wada",name:'Crustle',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada',price:19.15,base:false},
-<<<<<<< HEAD
   {n:'187',dex:918,artist:"NC Empire",name:'Team Rocket\'s Spidops',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada',price:41.58,base:false},
-=======
-  {n:'187',dex:918,artist:"NC Empire",name:'Team Rocket\'s Spidops',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada',price:42.00,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'188',dex:1019,artist:"Jerky",name:'Hydrapple',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada',price:18.90,base:false},
   {n:'189',dex:78,artist:"Rond",name:'Rapidash',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada',price:44.90,base:false,important:true},
   {n:'190',dex:157,artist:"GIDORA",name:'Ethan\'s Typhlosion',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada',price:105.90,base:false,important:true},
@@ -213,11 +201,7 @@ const CARDS_SV10 = [
   {n:'195',dex:366,artist:"Mori Yuu",name:'Clamperl',type:'Aquático',color:'#2196F3',rare:'Rara Ilustrada',price:24.90,base:false},
   {n:'196',dex:309,artist:"Nakamura Ippan",name:'Electrike',type:'Raio',color:'#FFEB3B',rare:'Rara Ilustrada',price:22.00,base:false},
   {n:'197',dex:479,artist:"Taiga Kayama",name:'Rotom',type:'Raio',color:'#FFEB3B',rare:'Rara Ilustrada',price:18.50,base:false},
-<<<<<<< HEAD
   {n:'198',dex:826,artist:"HYOGONOSUKE",name:'Team Rocket\'s Orbeetle',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:16.90,base:false},
-=======
-  {n:'198',dex:826,artist:"HYOGONOSUKE",name:'Team Rocket\'s Orbeetle',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:14.99,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'199',dex:110,artist:"Yukihiro Tada",name:'Team Rocket\'s Weezing',type:'Sombrio',color:'#607D8B',rare:'Rara Ilustrada',price:65.00,base:false,important:true},
   {n:'200',dex:198,artist:"Akira Komayama",name:'Team Rocket\'s Murkrow',type:'Sombrio',color:'#607D8B',rare:'Rara Ilustrada',price:49.90,base:false,important:true},
   {n:'201',dex:889,artist:"Takumi Wada",name:'Zamazenta',type:'Metal',color:'#78909C',rare:'Rara Ilustrada',price:26.90,base:false},
@@ -228,11 +212,7 @@ const CARDS_SV10 = [
   {n:'206',dex:469,artist:"takuyoa",name:'Yanmega ex',type:'Planta',color:'#4CAF50',rare:'Ultra Rara',price:11.99,base:false},
   {n:'207',dex:930,artist:"PLANETA Tsuji",name:'Arboliva ex',type:'Planta',color:'#4CAF50',rare:'Ultra Rara',price:24.00,base:false},
   {n:'208',dex:146,artist:"5ban Graphics",name:'Team Rocket\'s Moltres ex',type:'Fogo',color:'#F44336',rare:'Ultra Rara',price:32.00,base:false},
-<<<<<<< HEAD
   {n:'209',dex:250,artist:"aky CG Works",name:'Ethan\'s Ho-Oh ex',type:'Fogo',color:'#F44336',rare:'Ultra Rara',price:34.65,base:false},
-=======
-  {n:'209',dex:250,artist:"aky CG Works",name:'Ethan\'s Ho-Oh ex',type:'Fogo',color:'#F44336',rare:'Ultra Rara',price:34.89,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'210',dex:975,artist:"PLANETA Tsuji",name:'Cetitan ex',type:'Aquático',color:'#2196F3',rare:'Ultra Rara',price:9.70,base:false},
   {n:'211',dex:977,artist:"N-DESIGN Inc.",name:'Dondozo ex',type:'Aquático',color:'#2196F3',rare:'Ultra Rara',price:8.00,base:false},
   {n:'212',dex:466,artist:"PLANETA Mochizuki",name:'Electivire ex',type:'Raio',color:'#FFEB3B',rare:'Ultra Rara',price:8.50,base:false},
@@ -247,11 +227,7 @@ const CARDS_SV10 = [
   {n:'221',artist:"Iori Suzuki",name:'Ethan\'s Adventure',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:34.90,base:false},
   {n:'222',artist:"kantaro",name:'Judge',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:19.90,base:false},
   {n:'223',artist:"Hideki Ishikawa",name:'Team Rocket\'s Archer',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:29.90,base:false},
-<<<<<<< HEAD
   {n:'224',artist:"hncl",name:'Team Rocket\'s Ariana',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:48.02,base:false},
-=======
-  {n:'224',artist:"hncl",name:'Team Rocket\'s Ariana',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:48.90,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'225',artist:"akagi",name:'Team Rocket\'s Giovanni',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:69.99,base:false},
   {n:'226',artist:"GOSSAN",name:'Team Rocket\'s Petrel',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:89.99,base:false,important:true},
   {n:'227',artist:"Naoki Saito",name:'Team Rocket\'s Proton',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:31.90,base:false},
@@ -259,11 +235,7 @@ const CARDS_SV10 = [
   {n:'229',dex:146,artist:"AKIRA EGAWA",name:'Team Rocket\'s Moltres ex',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada Especial',price:299.90,base:false,important:true},
   {n:'230',dex:250,artist:"Atsushi Furusawa",name:'Ethan\'s Ho-Oh ex',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada Especial',price:499.90,base:false,important:true},
   {n:'231',dex:150,artist:"Iwamoto05",name:'Team Rocket\'s Mewtwo ex',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada Especial',price:1390.00,base:false,important:true},
-<<<<<<< HEAD
   {n:'232',dex:445,artist:"HICO KIM",name:'Cynthia\'s Garchomp ex',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada Especial',price:958.00,base:false,important:true},
-=======
-  {n:'232',dex:445,artist:"HICO KIM",name:'Cynthia\'s Garchomp ex',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada Especial',price:959.00,base:false,important:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'233',dex:34,artist:"Uninori",name:'Team Rocket\'s Nidoking ex',type:'Sombrio',color:'#607D8B',rare:'Rara Ilustrada Especial',price:349.90,base:false,important:true},
   {n:'234',dex:169,artist:"cochi8i",name:'Team Rocket\'s Crobat ex',type:'Sombrio',color:'#607D8B',rare:'Rara Ilustrada Especial',price:369.90,base:false,important:true},
   {n:'235',dex:943,artist:"Yuriko Akase",name:'Arven\'s Mabosstiff ex',type:'Sombrio',color:'#607D8B',rare:'Rara Ilustrada Especial',price:85.00,base:false,important:true},
@@ -274,11 +246,7 @@ const CARDS_SV10 = [
   {n:'240',dex:150,artist:"aky CG Works",name:'Team Rocket\'s Mewtwo ex',type:'Psíquico',color:'#9C27B0',rare:'Hiper Rara',price:335.00,base:false,important:true},
   {n:'241',dex:445,artist:"5ban Graphics",name:'Cynthia\'s Garchomp ex',type:'Lutador',color:'#FF9800',rare:'Hiper Rara',price:169.99,base:false,important:true},
   {n:'242',dex:169,artist:"5ban Graphics",name:'Team Rocket\'s Crobat ex',type:'Sombrio',color:'#607D8B',rare:'Hiper Rara',price:59.90,base:false,important:true},
-<<<<<<< HEAD
   {n:'243',artist:"AYUMI ODASHIMA",name:'Jamming Tower',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:69.90,base:false,important:true},
-=======
-  {n:'243',artist:"AYUMI ODASHIMA",name:'Jamming Tower',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:74.90,base:false,important:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'244',artist:"MARINA Chikazawa",name:'Levincia',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:40.00,base:false,important:true}
 ];
 

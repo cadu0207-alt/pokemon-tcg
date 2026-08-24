@@ -27,11 +27,7 @@ const CARDS_SV9 = [
   {n:'021',dex:467,artist:"Tonji Matsuno",name:'Magmortar',type:'Fogo',color:'#F44336',rare:'Rara',price:0.18,base:true},
   {n:'022',dex:255,artist:"OKACHEKE",name:'Torchic',type:'Fogo',color:'#F44336',rare:'Comum',price:0.14,base:true},
   {n:'023',dex:256,artist:"Fujimoto Gold",name:'Combusken',type:'Fogo',color:'#F44336',rare:'Incomum',price:0.15,base:true},
-<<<<<<< HEAD
   {n:'024',dex:257,artist:"takuyoa",name:'Blaziken ex',type:'Fogo',color:'#F44336',rare:'Rara Dupla',price:24.32,base:true},
-=======
-  {n:'024',dex:257,artist:"takuyoa",name:'Blaziken ex',type:'Fogo',color:'#F44336',rare:'Rara Dupla',price:24.90,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'025',dex:324,artist:"kodama",name:'Torkoal',type:'Fogo',color:'#F44336',rare:'Comum',price:0.15,base:true},
   {n:'026',dex:554,artist:"Gemi",name:'N\'s Darumaka',type:'Fogo',color:'#F44336',rare:'Comum',price:0.08,base:true},
   {n:'027',dex:555,artist:"nagimiso",name:'N\'s Darmanitan',type:'Fogo',color:'#F44336',rare:'Incomum',price:0.15,base:true},
@@ -175,27 +171,16 @@ const CARDS_SV9 = [
   {n:'165',dex:220,artist:"Nakamura Ippan",name:'Swinub',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada',price:9.90,base:false},
   {n:'166',dex:745,artist:"GIDORA",name:'Lycanroc',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada',price:18.00,base:false},
   {n:'167',dex:643,artist:"Bun Toujo",name:'N\'s Reshiram',type:'Dragão',color:'#3F51B5',rare:'Rara Ilustrada',price:45.90,base:false,important:true},
-<<<<<<< HEAD
   {n:'168',dex:162,artist:"REND",name:'Furret',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada',price:32.90,base:false},
-=======
-  {n:'168',dex:162,artist:"REND",name:'Furret',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada',price:37.00,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'169',dex:714,artist:"sowsow",name:'Noibat',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada',price:27.50,base:false},
   {n:'170',dex:831,artist:"MINAMINAMI Take",name:'Hop\'s Wooloo',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada',price:24.90,base:false},
   {n:'171',dex:721,artist:"5ban Graphics",name:'Volcanion ex',type:'Fogo',color:'#F44336',rare:'Ultra Rara',price:9.25,base:false},
   {n:'172',dex:939,artist:"5ban Graphics",name:'Iono\'s Bellibolt ex',type:'Raio',color:'#FFEB3B',rare:'Ultra Rara',price:11.00,base:false},
   {n:'173',dex:35,artist:"5ban Graphics",name:'Lillie\'s Clefairy ex',type:'Psíquico',color:'#9C27B0',rare:'Ultra Rara',price:52.43,base:false,important:true},
-<<<<<<< HEAD
   {n:'174',dex:473,artist:"N-DESIGN Inc.",name:'Mamoswine ex',type:'Lutador',color:'#FF9800',rare:'Ultra Rara',price:4.90,base:false},
   {n:'175',dex:571,artist:"takuyoa",name:'N\'s Zoroark ex',type:'Sombrio',color:'#607D8B',rare:'Ultra Rara',price:37.50,base:false},
   {n:'176',dex:888,artist:"aky CG Works",name:'Hop\'s Zacian ex',type:'Metal',color:'#78909C',rare:'Ultra Rara',price:9.90,base:false},
   {n:'177',dex:373,artist:"5ban Graphics",name:'Salamence ex',type:'Dragão',color:'#3F51B5',rare:'Ultra Rara',price:7.90,base:false},
-=======
-  {n:'174',dex:473,artist:"N-DESIGN Inc.",name:'Mamoswine ex',type:'Lutador',color:'#FF9800',rare:'Ultra Rara',price:2.94,base:false},
-  {n:'175',dex:571,artist:"takuyoa",name:'N\'s Zoroark ex',type:'Sombrio',color:'#607D8B',rare:'Ultra Rara',price:37.50,base:false},
-  {n:'176',dex:888,artist:"aky CG Works",name:'Hop\'s Zacian ex',type:'Metal',color:'#78909C',rare:'Ultra Rara',price:9.90,base:false},
-  {n:'177',dex:373,artist:"5ban Graphics",name:'Salamence ex',type:'Dragão',color:'#3F51B5',rare:'Ultra Rara',price:8.50,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'178',dex:982,artist:"5ban Graphics",name:'Dudunsparce ex',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:16.90,base:false},
   {n:'179',artist:"Teeziro",name:'Brock\'s Scouting',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:19.90,base:false},
   {n:'180',artist:"yuu",name:'Iris\'s Fighting Spirit',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:19.25,base:false},

@@ -41,11 +41,7 @@ const CARDS_ME2PT5 = [
   {n:'023',dex:218,name:'Ethan\'s Slugma',artist:'Sanosuke Sakuma',type:'Fogo',color:'#F44336',rare:'Comum',price:0.09,base:true},
   {n:'024',dex:219,name:'Ethan\'s Magcargo',artist:'kodama',type:'Fogo',color:'#F44336',rare:'Rara',price:0.14,base:true},
   {n:'025',dex:244,name:'Entei',artist:'Kazumasa Yasukuni',type:'Fogo',color:'#F44336',rare:'Rara',price:0.20,base:true},
-<<<<<<< HEAD
   {n:'026',dex:250,name:'Ethan\'s Ho-Oh ex',artist:'aky CG Works',type:'Fogo',color:'#F44336',rare:'Rara Dupla',price:4.75,base:true},
-=======
-  {n:'026',dex:250,name:'Ethan\'s Ho-Oh ex',artist:'aky CG Works',type:'Fogo',color:'#F44336',rare:'Rara Dupla',price:7.00,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'027',dex:322,name:'Numel',artist:'Ounishi',type:'Fogo',color:'#F44336',rare:'Comum',price:0.09,base:true},
   {n:'028',dex:323,name:'Camerupt',artist:'Minahamu',type:'Fogo',color:'#F44336',rare:'Incomum',price:0.14,base:true},
   {n:'029',dex:498,name:'Tepig',artist:'Uninori',type:'Fogo',color:'#F44336',rare:'Comum',price:0.09,base:true},
@@ -62,11 +58,7 @@ const CARDS_ME2PT5 = [
   {n:'040',dex:55,name:'Golduck',artist:'Jiro Sasumo',type:'Agua',color:'#2196F3',rare:'Incomum',price:0.15,base:true},
   {n:'041',dex:158,name:'Totodile',artist:'REND',type:'Agua',color:'#2196F3',rare:'Comum',price:0.10,base:true},
   {n:'042',dex:159,name:'Croconaw',artist:'Felicia Chen',type:'Agua',color:'#2196F3',rare:'Incomum',price:0.10,base:true},
-<<<<<<< HEAD
   {n:'043',dex:160,name:'Mega Feraligatr ex',artist:'5ban Graphics',type:'Agua',color:'#2196F3',rare:'Rara Dupla',price:7.60,base:true},
-=======
-  {n:'043',dex:160,name:'Mega Feraligatr ex',artist:'5ban Graphics',type:'Agua',color:'#2196F3',rare:'Rara Dupla',price:8.60,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'044',dex:215,name:'Sneasel',artist:'Krgc',type:'Agua',color:'#2196F3',rare:'Comum',price:0.13,base:true},
   {n:'045',dex:461,name:'Weavile',artist:'aspara',type:'Agua',color:'#2196F3',rare:'Incomum',price:0.13,base:true},
   {n:'046',dex:361,name:'Snorunt',artist:'Wintr Wandr',type:'Agua',color:'#2196F3',rare:'Comum',price:0.12,base:true},
@@ -96,11 +88,7 @@ const CARDS_ME2PT5 = [
   {n:'070',dex:939,name:'Iono\'s Bellibolt ex',artist:'5ban Graphics',type:'Eletrico',color:'#FFC107',rare:'Rara Dupla',price:3.59,base:true},
   {n:'071',dex:940,name:'Iono\'s Wattrel',artist:'Akira Komayama',type:'Eletrico',color:'#FFC107',rare:'Comum',price:0.13,base:true},
   {n:'072',dex:940,name:'Iono\'s Kilowattrel',artist:'chibi',type:'Eletrico',color:'#FFC107',rare:'Rara',price:0.19,base:true},
-<<<<<<< HEAD
   {n:'073',dex:1008,name:'Miraidon ex',artist:'5ban Graphics',type:'Eletrico',color:'#FFC107',rare:'Rara Dupla',price:4.00,base:true},
-=======
-  {n:'073',dex:1008,name:'Miraidon ex',artist:'5ban Graphics',type:'Eletrico',color:'#FFC107',rare:'Rara Dupla',price:4.75,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'074',dex:35,name:'Clefairy',artist:'satoma',type:'Psiquico',color:'#9C27B0',rare:'Comum',price:0.14,base:true},
   {n:'075',dex:36,name:'Clefable',artist:'satoma',type:'Psiquico',color:'#9C27B0',rare:'Incomum',price:0.15,base:true},
   {n:'076',dex:35,name:'Lillie\'s Clefairy ex',artist:'5ban Graphics',type:'Psiquico',color:'#9C27B0',rare:'Rara Dupla',price:27.50,base:true},
@@ -126,11 +114,7 @@ const CARDS_ME2PT5 = [
   {n:'096',dex:709,name:'Hop\'s Trevenant',artist:'matazo',type:'Psiquico',color:'#9C27B0',rare:'Rara',price:0.19,base:true},
   {n:'097',dex:778,name:'Team Rocket\'s Mimikyu',artist:'DOM',type:'Psiquico',color:'#9C27B0',rare:'Incomum',price:0.15,base:true},
   {n:'098',dex:897,name:'Spectrier',artist:'Taiga Kasai',type:'Psiquico',color:'#9C27B0',rare:'Rara',price:0.20,base:true},
-<<<<<<< HEAD
   {n:'099',dex:1015,name:'Munkidori',artist:'kodama',type:'Psiquico',color:'#9C27B0',rare:'Rara',price:0.55,base:true},
-=======
-  {n:'099',dex:1015,name:'Munkidori',artist:'kodama',type:'Psiquico',color:'#9C27B0',rare:'Rara',price:0.89,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'100',dex:50,name:'Team Rocket\'s Diglett',artist:'Yuriko Akase',type:'Luta',color:'#FF6B35',rare:'Comum',price:0.12,base:true},
   {n:'101',dex:51,name:'Team Rocket\'s Dugtrio',artist:'KEIICHIRO ITO',type:'Luta',color:'#FF6B35',rare:'Incomum',price:0.14,base:true},
   {n:'102',dex:237,name:'Hitmontop',artist:'Kouki Saitou',type:'Luta',color:'#FF6B35',rare:'Comum',price:0.10,base:true},
@@ -156,11 +140,7 @@ const CARDS_ME2PT5 = [
   {n:'122',name:'Okidogi',artist:'Mitsuhiro Arita',type:'Luta',color:'#FF6B35',rare:'Rara',price:0.20,base:true},
   {n:'123',dex:92,name:'Gastly',artist:'Saboteri',type:'Trevas',color:'#212121',rare:'Comum',price:0.10,base:true},
   {n:'124',dex:93,name:'Haunter',artist:'Rianti Hidayat',type:'Trevas',color:'#212121',rare:'Incomum',price:0.10,base:true},
-<<<<<<< HEAD
   {n:'125',dex:94,name:'Mega Gengar ex',artist:'5ban Graphics',type:'Trevas',color:'#212121',rare:'Rara Dupla',price:6.90,base:true},
-=======
-  {n:'125',dex:94,name:'Mega Gengar ex',artist:'5ban Graphics',type:'Trevas',color:'#212121',rare:'Rara Dupla',price:9.90,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'126',dex:198,name:'Team Rocket\'s Murkrow',artist:'Mugi Hamada',type:'Trevas',color:'#212121',rare:'Comum',price:0.15,base:true},
   {n:'127',dex:430,name:'Team Rocket\'s Honchkrow',artist:'hncl',type:'Trevas',color:'#212121',rare:'Rara',price:0.20,base:true},
   {n:'128',dex:261,name:'Poochyena',artist:'Miki Tanaka',type:'Trevas',color:'#212121',rare:'Comum',price:0.10,base:true},
@@ -197,11 +177,7 @@ const CARDS_ME2PT5 = [
   {n:'159',dex:886,name:'Drakloak',artist:'cochi8i',type:'Dragão',color:'#00BCD4',rare:'Comum',price:0.10,base:true},
   {n:'160',dex:887,name:'Dragapult ex',artist:'5ban Graphics',type:'Dragão',color:'#00BCD4',rare:'Rara Dupla',price:4.49,base:true},
   {n:'161',dex:52,name:'Team Rocket\'s Meowth',artist:'Megumi Mizutani',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.15,base:true},
-<<<<<<< HEAD
   {n:'162',dex:115,name:'Team Rocket\'s Kangaskhan ex',artist:'5ban Graphics',type:'Incolor',color:'#9E9E9E',rare:'Rara Dupla',price:5.00,base:true},
-=======
-  {n:'162',dex:115,name:'Team Rocket\'s Kangaskhan ex',artist:'5ban Graphics',type:'Incolor',color:'#9E9E9E',rare:'Rara Dupla',price:5.90,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'163',dex:206,name:'Larry\'s Dunsparce',artist:'0313',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.15,base:true},
   {n:'164',dex:206,name:'Larry\'s Dudunsparce ex',artist:'5ban Graphics',type:'Incolor',color:'#9E9E9E',rare:'Rara Dupla',price:3.99,base:true},
   {n:'165',dex:300,name:'Skitty',artist:'Yoko Hishida',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.12,base:true},
@@ -237,11 +213,7 @@ const CARDS_ME2PT5 = [
   {n:'195',name:'N\'s PP Up',artist:'Toyste Beach',type:'Treinador',color:'#607D8B',rare:'Incomum',price:0.15,base:true},
   {n:'196',name:'Night Stretcher',artist:'Toyste Beach',type:'Treinador',color:'#607D8B',rare:'Comum',price:0.15,base:true},
   {n:'197',name:'Nighttime Mine',artist:'Takashi Yamaguchi',type:'Treinador',color:'#607D8B',rare:'Incomum',price:0.10,base:true},
-<<<<<<< HEAD
   {n:'198',name:'Poké Pad',artist:'Studio Bora Inc.',type:'Treinador',color:'#607D8B',rare:'Comum',price:1.00,base:true},
-=======
-  {n:'198',name:'Poké Pad',artist:'Studio Bora Inc.',type:'Treinador',color:'#607D8B',rare:'Comum',price:0.24,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'199',name:'Premium Power Pro',artist:'Toyste Beach',type:'Treinador',color:'#607D8B',rare:'Incomum',price:0.13,base:true},
   {n:'200',name:'Surfer',artist:'Hideki Ishikawa',type:'Treinador',color:'#607D8B',rare:'Comum',price:0.10,base:true},
   {n:'201',name:'Team Rocket\'s Archer',artist:'Hideki Ishikawa',type:'Treinador',color:'#607D8B',rare:'Incomum',price:0.20,base:true},
@@ -262,21 +234,12 @@ const CARDS_ME2PT5 = [
   {n:'216',name:'Prism Energy',type:'Energia',color:'#9E9E9E',rare:'Incomum',price:0.15,base:true},
   {n:'217',name:'Team Rocket\'s Energy',type:'Energia',color:'#212121',rare:'Incomum',price:0.20,base:true},
   // ── SECRETAS 218–295 (acima do número de regulação, impressão única) ─────
-<<<<<<< HEAD
   {n:'218',dex:114,name:'Erika\'s Tangela',artist:'buchi',type:'Grama',color:'#4CAF50',rare:'Rara Ilustrada',price:97.89,base:false},
   {n:'219',dex:267,name:'Beautifly',artist:'Mori Yuu',type:'Grama',color:'#4CAF50',rare:'Rara Ilustrada',price:23.00,base:false},
   {n:'220',dex:269,name:'Dustox',artist:'IKEDA Saki',type:'Grama',color:'#4CAF50',rare:'Rara Ilustrada',price:17.78,base:false},
   {n:'221',dex:406,name:'Budew',artist:'Yoko Hishida',type:'Grama',color:'#4CAF50',rare:'Rara Ilustrada',price:26.00,base:false},
   {n:'222',dex:219,name:'Ethan\'s Magcargo',artist:'Hideki Ishikawa',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada',price:32.00,base:false},
   {n:'223',dex:322,name:'Numel',artist:'Yoshimi Miyoshi',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada',price:14.80,base:false},
-=======
-  {n:'218',dex:114,name:'Erika\'s Tangela',artist:'buchi',type:'Grama',color:'#4CAF50',rare:'Rara Ilustrada',price:97.00,base:false},
-  {n:'219',dex:267,name:'Beautifly',artist:'Mori Yuu',type:'Grama',color:'#4CAF50',rare:'Rara Ilustrada',price:24.90,base:false},
-  {n:'220',dex:269,name:'Dustox',artist:'IKEDA Saki',type:'Grama',color:'#4CAF50',rare:'Rara Ilustrada',price:17.78,base:false},
-  {n:'221',dex:406,name:'Budew',artist:'Yoko Hishida',type:'Grama',color:'#4CAF50',rare:'Rara Ilustrada',price:26.00,base:false},
-  {n:'222',dex:219,name:'Ethan\'s Magcargo',artist:'Hideki Ishikawa',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada',price:32.00,base:false},
-  {n:'223',dex:322,name:'Numel',artist:'Yoshimi Miyoshi',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada',price:17.50,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'224',dex:758,name:'Salazzle',artist:'Dsuke',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada',price:12.00,base:false},
   {n:'225',dex:813,name:'Scorbunny',artist:'Yuu Nishida',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada',price:32.24,base:false},
   {n:'226',dex:54,name:'Psyduck',artist:'REND',type:'Agua',color:'#2196F3',rare:'Rara Ilustrada',price:220.00,base:false},
@@ -293,7 +256,6 @@ const CARDS_ME2PT5 = [
   {n:'237',dex:709,name:'Hop\'s Trevenant',artist:'Tomowaka',type:'Psiquico',color:'#9C27B0',rare:'Rara Ilustrada',price:22.90,base:false},
   {n:'238',dex:778,name:'Team Rocket\'s Mimikyu',artist:'GOSSAN',type:'Psiquico',color:'#9C27B0',rare:'Rara Ilustrada',price:64.00,base:false},
   {n:'239',dex:51,name:'Team Rocket\'s Dugtrio',artist:'Whisker',type:'Luta',color:'#FF6B35',rare:'Rara Ilustrada',price:34.50,base:false},
-<<<<<<< HEAD
   {n:'240',dex:237,name:'Hitmontop',artist:'osare',type:'Luta',color:'#FF6B35',rare:'Rara Ilustrada',price:19.99,base:false},
   {n:'241',dex:308,name:'Medicham',artist:'KEIICHIRO ITO',type:'Luta',color:'#FF6B35',rare:'Rara Ilustrada',price:14.00,base:false},
   {n:'242',dex:703,name:'Carbink',artist:'sui',type:'Luta',color:'#FF6B35',rare:'Rara Ilustrada',price:18.00,base:false},
@@ -306,20 +268,6 @@ const CARDS_ME2PT5 = [
   {n:'249',dex:398,name:'Larry\'s Staraptor',artist:'kantaro',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada',price:16.50,base:false},
   {n:'250',dex:479,name:'Fan Rotom',artist:'Yukihiro Tada',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada',price:17.90,base:false},
   {n:'251',dex:906,name:'Sprigatito ex',artist:'5ban Graphics',type:'Grama',color:'#4CAF50',rare:'Ultra Rara',price:14.00,base:false},
-=======
-  {n:'240',dex:237,name:'Hitmontop',artist:'osare',type:'Luta',color:'#FF6B35',rare:'Rara Ilustrada',price:19.98,base:false},
-  {n:'241',dex:308,name:'Medicham',artist:'KEIICHIRO ITO',type:'Luta',color:'#FF6B35',rare:'Rara Ilustrada',price:14.00,base:false},
-  {n:'242',dex:703,name:'Carbink',artist:'sui',type:'Luta',color:'#FF6B35',rare:'Rara Ilustrada',price:17.49,base:false},
-  {n:'243',dex:262,name:'Mightyena',artist:'Yano Keiji',type:'Trevas',color:'#212121',rare:'Rara Ilustrada',price:21.90,base:false},
-  {n:'244',dex:442,name:'Cynthia\'s Spiritomb',artist:'hncl',type:'Trevas',color:'#212121',rare:'Rara Ilustrada',price:38.90,base:false},
-  {n:'245',dex:862,name:'Galarian Obstagoon',artist:'Krgc',type:'Trevas',color:'#212121',rare:'Rara Ilustrada',price:16.66,base:false},
-  {n:'246',dex:303,name:'Mawile',artist:'sowsow',type:'Metal',color:'#607D8B',rare:'Rara Ilustrada',price:19.90,base:false},
-  {n:'247',dex:885,name:'Dreepy',artist:'Jerky',type:'Dragão',color:'#00BCD4',rare:'Rara Ilustrada',price:36.90,base:false},
-  {n:'248',dex:886,name:'Drakloak',artist:'Jerky',type:'Dragão',color:'#00BCD4',rare:'Rara Ilustrada',price:41.50,base:false},
-  {n:'249',dex:398,name:'Larry\'s Staraptor',artist:'kantaro',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada',price:16.90,base:false},
-  {n:'250',dex:479,name:'Fan Rotom',artist:'Yukihiro Tada',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada',price:17.90,base:false},
-  {n:'251',dex:906,name:'Sprigatito ex',artist:'5ban Graphics',type:'Grama',color:'#4CAF50',rare:'Ultra Rara',price:14.50,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'252',dex:618,name:'Stunfisk ex',artist:'5ban Graphics',type:'Luta',color:'#FF6B35',rare:'Ultra Rara',price:3.90,base:false},
   {n:'253',dex:531,name:'Mega Audino ex',artist:'5ban Graphics',type:'Incolor',color:'#9E9E9E',rare:'Ultra Rara',price:8.00,base:false},
   {n:'254',name:'Anthea & Concordia',artist:'Sanosuke Sakuma',type:'Treinador',color:'#607D8B',rare:'Ultra Rara',price:8.00,base:false},
@@ -336,7 +284,6 @@ const CARDS_ME2PT5 = [
   {n:'265',dex:478,name:'Mega Froslass ex',artist:'Saboteri',type:'Agua',color:'#2196F3',rare:'Rara Mega Ataque',price:58.00,base:false},
   {n:'266',dex:604,name:'Mega Eelektross ex',artist:'DOM',type:'Eletrico',color:'#FFC107',rare:'Rara Mega Ataque',price:19.00,base:false},
   {n:'267',dex:719,name:'Mega Diancie ex',artist:'DOM',type:'Psiquico',color:'#9C27B0',rare:'Rara Mega Ataque',price:29.90,base:false},
-<<<<<<< HEAD
   {n:'268',dex:701,name:'Mega Hawlucha ex',artist:'Taiga Kasai',type:'Luta',color:'#FF6B35',rare:'Rara Mega Ataque',price:30.00,base:false},
   {n:'269',dex:94,name:'Mega Gengar ex',artist:'Taiga Kasai',type:'Trevas',color:'#212121',rare:'Rara Mega Ataque',price:206.78,base:false},
   {n:'270',dex:560,name:'Mega Scrafty ex',artist:'Taiga Kasai',type:'Trevas',color:'#212121',rare:'Rara Mega Ataque',price:24.90,base:false},
@@ -346,22 +293,10 @@ const CARDS_ME2PT5 = [
   {n:'274',dex:160,name:'Mega Feraligatr ex',artist:'Souichirou Gunjima',type:'Agua',color:'#2196F3',rare:'Rara Ilustrada Especial',price:350.00,base:false},
   {n:'275',dex:478,name:'Mega Froslass ex',artist:'Teeziro',type:'Agua',color:'#2196F3',rare:'Rara Ilustrada Especial',price:398.98,base:false},
   {n:'276',dex:25,name:'Pikachu ex',artist:'booota',type:'Eletrico',color:'#FFC107',rare:'Rara Ilustrada Especial',price:3350.00,base:false},
-=======
-  {n:'268',dex:701,name:'Mega Hawlucha ex',artist:'Taiga Kasai',type:'Luta',color:'#FF6B35',rare:'Rara Mega Ataque',price:28.90,base:false},
-  {n:'269',dex:94,name:'Mega Gengar ex',artist:'Taiga Kasai',type:'Trevas',color:'#212121',rare:'Rara Mega Ataque',price:206.78,base:false},
-  {n:'270',dex:560,name:'Mega Scrafty ex',artist:'Taiga Kasai',type:'Trevas',color:'#212121',rare:'Rara Mega Ataque',price:24.90,base:false},
-  {n:'271',dex:149,name:'Mega Dragonite ex',artist:'DOM',type:'Dragão',color:'#00BCD4',rare:'Rara Mega Ataque',price:120.00,base:false},
-  {n:'272',dex:154,name:'Mega Meganium ex',artist:'Tika Matsuno',type:'Grama',color:'#4CAF50',rare:'Rara Ilustrada Especial',price:377.90,base:false},
-  {n:'273',dex:500,name:'Mega Emboar ex',artist:'nagimiso',type:'Fogo',color:'#F44336',rare:'Rara Ilustrada Especial',price:235.00,base:false},
-  {n:'274',dex:160,name:'Mega Feraligatr ex',artist:'Souichirou Gunjima',type:'Agua',color:'#2196F3',rare:'Rara Ilustrada Especial',price:350.00,base:false},
-  {n:'275',dex:478,name:'Mega Froslass ex',artist:'Teeziro',type:'Agua',color:'#2196F3',rare:'Rara Ilustrada Especial',price:398.99,base:false},
-  {n:'276',dex:25,name:'Pikachu ex',artist:'booota',type:'Eletrico',color:'#FFC107',rare:'Rara Ilustrada Especial',price:3349.90,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'277',dex:25,name:'Pikachu ex',artist:'James Turner',type:'Eletrico',color:'#FFC107',rare:'Rara Ilustrada Especial',price:1190.00,base:false},
   {n:'278',dex:604,name:'Mega Eelektross ex',artist:'akagi',type:'Eletrico',color:'#FFC107',rare:'Rara Ilustrada Especial',price:138.90,base:false},
   {n:'279',dex:939,name:'Iono\'s Bellibolt ex',artist:'Akira Komayama',type:'Eletrico',color:'#FFC107',rare:'Rara Ilustrada Especial',price:234.00,base:false},
   {n:'280',dex:35,name:'Lillie\'s Clefairy ex',artist:'Naoki Saito',type:'Psiquico',color:'#9C27B0',rare:'Rara Ilustrada Especial',price:619.90,base:false},
-<<<<<<< HEAD
   {n:'281',dex:150,name:'Team Rocket\'s Mewtwo ex',artist:'Mitsuhiro Arita',type:'Psiquico',color:'#9C27B0',rare:'Rara Ilustrada Especial',price:899.99,base:false},
   {n:'282',dex:719,name:'Mega Diancie ex',artist:'Narano',type:'Psiquico',color:'#9C27B0',rare:'Rara Ilustrada Especial',price:220.00,base:false},
   {n:'283',dex:701,name:'Mega Hawlucha ex',artist:'AKIRA EGAWA',type:'Luta',color:'#FF6B35',rare:'Rara Ilustrada Especial',price:229.89,base:false},
@@ -371,26 +306,10 @@ const CARDS_ME2PT5 = [
   {n:'287',dex:861,name:'Marnie\'s Grimmsnarl ex',artist:'Ligton',type:'Trevas',color:'#212121',rare:'Rara Ilustrada Especial',price:269.90,base:false},
   {n:'288',dex:1016,name:'Fezandipiti ex',artist:'SIE NANAHARA',type:'Trevas',color:'#212121',rare:'Rara Ilustrada Especial',price:269.90,base:false},
   {n:'289',dex:376,name:'Steven\'s Metagross ex',artist:'chibi',type:'Metal',color:'#607D8B',rare:'Rara Ilustrada Especial',price:284.00,base:false},
-=======
-  {n:'281',dex:150,name:'Team Rocket\'s Mewtwo ex',artist:'Mitsuhiro Arita',type:'Psiquico',color:'#9C27B0',rare:'Rara Ilustrada Especial',price:920.00,base:false},
-  {n:'282',dex:719,name:'Mega Diancie ex',artist:'Narano',type:'Psiquico',color:'#9C27B0',rare:'Rara Ilustrada Especial',price:220.00,base:false},
-  {n:'283',dex:701,name:'Mega Hawlucha ex',artist:'AKIRA EGAWA',type:'Luta',color:'#FF6B35',rare:'Rara Ilustrada Especial',price:229.07,base:false},
-  {n:'284',dex:94,name:'Mega Gengar ex',artist:'danciao',type:'Trevas',color:'#212121',rare:'Rara Ilustrada Especial',price:2099.00,base:false},
-  {n:'285',dex:560,name:'Mega Scrafty ex',artist:'nagimiso',type:'Trevas',color:'#212121',rare:'Rara Ilustrada Especial',price:220.00,base:false},
-  {n:'286',dex:571,name:'N\'s Zoroark ex',artist:'Raita Kazama',type:'Trevas',color:'#212121',rare:'Rara Ilustrada Especial',price:549.90,base:false},
-  {n:'287',dex:861,name:'Marnie\'s Grimmsnarl ex',artist:'Ligton',type:'Trevas',color:'#212121',rare:'Rara Ilustrada Especial',price:269.90,base:false},
-  {n:'288',dex:1016,name:'Fezandipiti ex',artist:'SIE NANAHARA',type:'Trevas',color:'#212121',rare:'Rara Ilustrada Especial',price:269.90,base:false},
-  {n:'289',dex:376,name:'Steven\'s Metagross ex',artist:'chibi',type:'Metal',color:'#607D8B',rare:'Rara Ilustrada Especial',price:284.99,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'290',dex:149,name:'Mega Dragonite ex',artist:'DOM',type:'Dragão',color:'#00BCD4',rare:'Rara Ilustrada Especial',price:1484.78,base:false},
   {n:'291',name:'Canari',artist:'kantaro',type:'Treinador',color:'#607D8B',rare:'Rara Ilustrada Especial',price:174.90,base:false},
   {n:'292',name:'Iris\'s Fighting Spirit',artist:'Kuroimori',type:'Treinador',color:'#607D8B',rare:'Rara Ilustrada Especial',price:120.00,base:false},
   {n:'293',name:'Surfer',artist:'OKUBO',type:'Treinador',color:'#607D8B',rare:'Rara Ilustrada Especial',price:138.90,base:false},
-<<<<<<< HEAD
   {n:'294',dex:6,name:'Mega Charizard Y ex',artist:'aky CG Works',type:'Fogo',color:'#F44336',rare:'Hiper Rara Mega',price:1299.99,base:false},
   {n:'295',dex:149,name:'Mega Dragonite ex',artist:'aky CG Works',type:'Dragão',color:'#00BCD4',rare:'Hiper Rara Mega',price:749.99,base:false},
-=======
-  {n:'294',dex:6,name:'Mega Charizard Y ex',artist:'aky CG Works',type:'Fogo',color:'#F44336',rare:'Hiper Rara Mega',price:1339.00,base:false},
-  {n:'295',dex:149,name:'Mega Dragonite ex',artist:'aky CG Works',type:'Dragão',color:'#00BCD4',rare:'Hiper Rara Mega',price:750.00,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
 ];

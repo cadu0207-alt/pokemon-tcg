@@ -14,17 +14,10 @@ const CARDS_SV8PT5 = [
   {n:'008',dex:547,name:'Whimsicott',type:'Planta',color:'#4CAF50',rare:'Rara',price:0.15,base:true},
   {n:'009',dex:840,name:'Applin',type:'Planta',color:'#4CAF50',rare:'Comum',price:0.09,base:true},
   {n:'010',dex:1011,name:'Dipplin',type:'Planta',color:'#4CAF50',rare:'Incomum',price:0.18,base:true},
-<<<<<<< HEAD
   {n:'011',dex:1019,name:'Hydrapple ex',type:'Planta',color:'#4CAF50',rare:'Rara Dupla',price:6.40,base:true},
   {n:'012',dex:1017,name:'Teal Mask Ogerpon ex',type:'Planta',color:'#4CAF50',rare:'Rara Dupla',price:23.99,base:true},
   {n:'013',dex:136,name:'Flareon',type:'Fogo',color:'#F44336',rare:'Rara',price:0.99,base:true},
   {n:'014',dex:136,name:'Flareon ex',type:'Fogo',color:'#F44336',rare:'Rara Dupla',price:24.80,base:true},
-=======
-  {n:'011',dex:1019,name:'Hydrapple ex',type:'Planta',color:'#4CAF50',rare:'Rara Dupla',price:6.45,base:true},
-  {n:'012',dex:1017,name:'Teal Mask Ogerpon ex',type:'Planta',color:'#4CAF50',rare:'Rara Dupla',price:23.99,base:true},
-  {n:'013',dex:136,name:'Flareon',type:'Fogo',color:'#F44336',rare:'Rara',price:0.99,base:true},
-  {n:'014',dex:136,name:'Flareon ex',type:'Fogo',color:'#F44336',rare:'Rara Dupla',price:23.75,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'015',dex:667,name:'Litleo',type:'Fogo',color:'#F44336',rare:'Comum',price:0.10,base:true},
   {n:'016',dex:668,name:'Pyroar',type:'Fogo',color:'#F44336',rare:'Incomum',price:0.11,base:true},
   {n:'017',dex:1017,name:'Hearthflame Mask Ogerpon ex',type:'Fogo',color:'#F44336',rare:'Rara Dupla',price:3.90,base:true},
@@ -33,11 +26,7 @@ const CARDS_SV8PT5 = [
   {n:'020',dex:118,name:'Goldeen',type:'Aquático',color:'#2196F3',rare:'Comum',price:0.14,base:true},
   {n:'021',dex:119,name:'Seaking',type:'Aquático',color:'#2196F3',rare:'Incomum',price:0.15,base:true},
   {n:'022',dex:134,name:'Vaporeon',type:'Aquático',color:'#2196F3',rare:'Rara',price:0.48,base:true},
-<<<<<<< HEAD
   {n:'023',dex:134,name:'Vaporeon ex',type:'Aquático',color:'#2196F3',rare:'Rara Dupla',price:17.99,base:true},
-=======
-  {n:'023',dex:134,name:'Vaporeon ex',type:'Aquático',color:'#2196F3',rare:'Rara Dupla',price:19.80,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'024',dex:245,name:'Suicune',type:'Aquático',color:'#2196F3',rare:'Incomum',price:0.10,base:true},
   {n:'025',dex:471,name:'Glaceon',type:'Aquático',color:'#2196F3',rare:'Rara',price:0.35,base:true},
   {n:'026',dex:471,name:'Glaceon ex',type:'Aquático',color:'#2196F3',rare:'Rara Dupla',price:9.90,base:true},
@@ -46,13 +35,8 @@ const CARDS_SV8PT5 = [
   {n:'029',dex:135,name:'Jolteon',type:'Raio',color:'#FFEB3B',rare:'Rara',price:0.49,base:true},
   {n:'030',dex:135,name:'Jolteon ex',type:'Raio',color:'#FFEB3B',rare:'Rara Dupla',price:8.77,base:true},
   {n:'031',name:'Iron Hands ex',type:'Raio',color:'#FFEB3B',rare:'Rara Dupla',price:4.20,base:true},
-<<<<<<< HEAD
   {n:'032',name:'Iron Thorns ex',type:'Raio',color:'#FFEB3B',rare:'Rara Dupla',price:8.49,base:true},
   {n:'033',dex:196,name:'Espeon',type:'Psíquico',color:'#9C27B0',rare:'Rara',price:1.50,base:true},
-=======
-  {n:'032',name:'Iron Thorns ex',type:'Raio',color:'#FFEB3B',rare:'Rara Dupla',price:5.00,base:true},
-  {n:'033',dex:196,name:'Espeon',type:'Psíquico',color:'#9C27B0',rare:'Rara',price:1.45,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'034',dex:196,name:'Espeon ex',type:'Psíquico',color:'#9C27B0',rare:'Rara Dupla',price:17.64,base:true},
   {n:'035',dex:355,name:'Duskull',type:'Psíquico',color:'#9C27B0',rare:'Comum',price:0.14,base:true},
   {n:'036',dex:356,name:'Dusclops',type:'Psíquico',color:'#9C27B0',rare:'Comum',price:0.14,base:true},
@@ -77,13 +61,8 @@ const CARDS_SV8PT5 = [
   {n:'055',name:'Great Tusk',type:'Lutador',color:'#FF9800',rare:'Incomum',price:0.10,base:true},
   {n:'056',name:'Sandy Shocks ex',type:'Lutador',color:'#FF9800',rare:'Rara Dupla',price:3.99,base:true},
   {n:'057',name:'Okidogi',type:'Lutador',color:'#FF9800',rare:'Rara',price:0.19,base:true},
-<<<<<<< HEAD
   {n:'058',dex:1017,name:'Cornerstone Mask Ogerpon ex',type:'Lutador',color:'#FF9800',rare:'Rara Dupla',price:8.50,base:true},
   {n:'059',dex:197,name:'Umbreon',type:'Sombrio',color:'#607D8B',rare:'Rara',price:1.10,base:true},
-=======
-  {n:'058',dex:1017,name:'Cornerstone Mask Ogerpon ex',type:'Lutador',color:'#FF9800',rare:'Rara Dupla',price:7.70,base:true},
-  {n:'059',dex:197,name:'Umbreon',type:'Sombrio',color:'#607D8B',rare:'Rara',price:1.00,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'060',dex:197,name:'Umbreon ex',type:'Sombrio',color:'#607D8B',rare:'Rara Dupla',price:20.00,base:true},
   {n:'061',dex:215,name:'Sneasel',type:'Sombrio',color:'#607D8B',rare:'Comum',price:0.09,base:true},
   {n:'062',dex:228,name:'Houndour',type:'Sombrio',color:'#607D8B',rare:'Comum',price:0.09,base:true},
@@ -103,11 +82,7 @@ const CARDS_SV8PT5 = [
   {n:'076',dex:143,name:'Snorlax ex',type:'Incolor',color:'#9E9E9E',rare:'Rara Dupla',price:6.00,base:true},
   {n:'077',dex:163,name:'Hoothoot',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.14,base:true},
   {n:'078',dex:164,name:'Noctowl',type:'Incolor',color:'#9E9E9E',rare:'Rara',price:0.25,base:true},
-<<<<<<< HEAD
   {n:'079',dex:206,name:'Dunsparce',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.13,base:true},
-=======
-  {n:'079',dex:206,name:'Dunsparce',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.12,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'080',dex:982,name:'Dudunsparce',type:'Incolor',color:'#9E9E9E',rare:'Rara',price:5.00,base:true},
   {n:'081',dex:241,name:'Miltank',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.08,base:true},
   {n:'082',dex:249,name:'Lugia ex',type:'Incolor',color:'#9E9E9E',rare:'Rara Dupla',price:9.80,base:true},
@@ -155,11 +130,7 @@ const CARDS_SV8PT5 = [
   {n:'124',name:'Professor\'s Research',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.10,base:true},
   {n:'125',name:'Professor\'s Research',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.10,base:true},
   {n:'126',name:'Rescue Board',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.10,base:true},
-<<<<<<< HEAD
   {n:'127',name:'Roto-Stick',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.17,base:true},
-=======
-  {n:'127',name:'Roto-Stick',type:'Incolor',color:'#9E9E9E',rare:'Comum',price:0.16,base:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'128',name:'Scoop Up Cyclone',type:'Incolor',color:'#9E9E9E',rare:'ACE SPEC',price:3.00,base:false},
   {n:'129',name:'Sparkling Crystal',type:'Incolor',color:'#9E9E9E',rare:'ACE SPEC',price:3.80,base:false},
   {n:'130',name:'Techno Radar',type:'Incolor',color:'#9E9E9E',rare:'Incomum',price:0.10,base:true},
@@ -203,23 +174,14 @@ const CARDS_SV8PT5 = [
   {n:'168',dex:901,name:'Bloodmoon Ursaluna ex',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:119.90,base:false,important:true},
   {n:'169',dex:1024,name:'Terapagos ex',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:155.00,base:false,important:true},
   {n:'170',name:'Amarys',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:84.90,base:false,important:true},
-<<<<<<< HEAD
   {n:'171',name:'Crispin',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:240.00,base:false,important:true},
-=======
-  {n:'171',name:'Crispin',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:220.00,base:false,important:true},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'172',name:'Drayton',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:108.00,base:false,important:true},
   {n:'173',name:'Janine\'s Secret Art',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:120.00,base:false,important:true},
   {n:'174',name:'Kieran',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:129.00,base:false,important:true},
   {n:'175',name:'Lacey',type:'Incolor',color:'#9E9E9E',rare:'Rara Ilustrada Especial',price:105.00,base:false,important:true},
   {n:'176',name:'Iron Leaves ex',type:'Planta',color:'#4CAF50',rare:'Hiper Rara',price:34.90,base:false},
-<<<<<<< HEAD
   {n:'177',dex:1017,name:'Teal Mask Ogerpon ex',type:'Planta',color:'#4CAF50',rare:'Hiper Rara',price:59.00,base:false,important:true},
   {n:'178',name:'Walking Wake ex',type:'Aquático',color:'#2196F3',rare:'Hiper Rara',price:40.00,base:false},
-=======
-  {n:'177',dex:1017,name:'Teal Mask Ogerpon ex',type:'Planta',color:'#4CAF50',rare:'Hiper Rara',price:58.50,base:false,important:true},
-  {n:'178',name:'Walking Wake ex',type:'Aquático',color:'#2196F3',rare:'Hiper Rara',price:39.80,base:false},
->>>>>>> 39455092ff9f17ea6bcc4858637b917011073913
   {n:'179',dex:25,name:'Pikachu ex',type:'Raio',color:'#FFEB3B',rare:'Hiper Rara',price:178.50,base:false,important:true},
   {n:'180',dex:1024,name:'Terapagos ex',type:'Incolor',color:'#9E9E9E',rare:'Hiper Rara',price:29.99,base:false,important:true}
 ];
