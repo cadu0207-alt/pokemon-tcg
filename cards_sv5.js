@@ -102,7 +102,7 @@ const CARDS_SV5 = [
   {n:'096',dex:984,artist:"Mitsuhiro Arita",name:'Great Tusk',type:'Lutador',color:'#FF9800',rare:'Incomum',price:0.20,base:true},
   {n:'097',dex:984,artist:"GIDORA",name:'Great Tusk',type:'Lutador',color:'#FF9800',rare:'Incomum',price:0.13,base:true},
   {n:'098',dex:989,artist:"DOM",name:'Sandy Shocks',type:'Lutador',color:'#FF9800',rare:'Incomum',price:0.20,base:true},
-  {n:'099',artist:"5ban Graphics",name:'Iron Boulder ex',type:'Lutador',color:'#FF9800',rare:'Rara Dupla',price:2.00,base:true},
+  {n:'099',artist:"5ban Graphics",name:'Iron Boulder ex',type:'Lutador',color:'#FF9800',rare:'Rara Dupla',price:1.90,base:true},
   {n:'100',dex:23,artist:"Shimaris Yukichi",name:'Ekans',type:'Sombrio',color:'#607D8B',rare:'Comum',price:0.20,base:true},
   {n:'101',dex:24,artist:"Minato",name:'Arbok',type:'Sombrio',color:'#607D8B',rare:'Comum',price:0.30,base:true},
   {n:'102',dex:92,artist:"Fujimoto Gold",name:'Gastly',type:'Sombrio',color:'#607D8B',rare:'Comum',price:0.25,base:true},

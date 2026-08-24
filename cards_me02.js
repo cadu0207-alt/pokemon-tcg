@@ -5,7 +5,7 @@ const CARDS_ME02 = [
   {n:'001',dex:43,artist:"MINAMINAMI Take",name:'Oddish',type:'Grama',color:'#4CAF50',rare:'Comum',price:0.05,base:true},
   {n:'002',dex:44,artist:"Yoriyuki Ikegami",name:'Gloom',type:'Grama',color:'#4CAF50',rare:'Comum',price:0.10,base:true},
   {n:'003',dex:45,artist:"Shibuzoh.",name:'Vileplume',type:'Grama',color:'#4CAF50',rare:'Rara Holo',price:0.15,base:true},
-  {n:'004',dex:214,artist:"5ban Graphics",name:'Mega Heracross ex',type:'Grama',color:'#4CAF50',rare:'Rara Dupla',price:3.25,base:true},
+  {n:'004',dex:214,artist:"5ban Graphics",name:'Mega Heracross ex',type:'Grama',color:'#4CAF50',rare:'Rara Dupla',price:3.30,base:true},
   {n:'005',dex:270,artist:"Wintr Wandr",name:'Lotad',type:'Grama',color:'#4CAF50',rare:'Comum',price:0.10,base:true},
   {n:'006',dex:271,artist:"Shigenori Negishi",name:'Lombre',type:'Grama',color:'#4CAF50',rare:'Comum',price:0.06,base:true},
   {n:'007',dex:272,artist:"Anesaki Dynamic",name:'Ludicolo',type:'Grama',color:'#4CAF50',rare:'Incomum',price:0.10,base:true},
@@ -33,7 +33,7 @@ const CARDS_ME02 = [
   {n:'027',dex:393,artist:"Hideki Ishikawa",name:'Piplup',type:'Aquático',color:'#2196F3',rare:'Comum',price:0.10,base:true},
   {n:'028',dex:394,artist:"Atsuya Uki",name:'Prinplup',type:'Aquático',color:'#2196F3',rare:'Comum',price:0.10,base:true},
   // RAIO
-  {n:'029',dex:479,artist:"5ban Graphics",name:'Rotom ex',type:'Raio',color:'#FFEB3B',rare:'Rara Dupla',price:2.00,base:true},
+  {n:'029',dex:479,artist:"5ban Graphics",name:'Rotom ex',type:'Raio',color:'#FFEB3B',rare:'Rara Dupla',price:1.90,base:true},
   {n:'030',dex:835,artist:"Ayako Ozaki",name:'Yamper',type:'Raio',color:'#FFEB3B',rare:'Comum',price:0.04,base:true},
   {n:'031',dex:836,artist:"Orca",name:'Boltund',type:'Raio',color:'#FFEB3B',rare:'Comum',price:0.08,base:true},
   {n:'032',dex:921,artist:"Shimaris Yukichi",name:'Pawmi',type:'Raio',color:'#FFEB3B',rare:'Comum',price:0.05,base:true},

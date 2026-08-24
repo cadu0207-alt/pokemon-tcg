@@ -144,7 +144,7 @@ const CARDS_MEG = [
   {n:'129',name:'Energia Escuridão',type:'Energia',color:'#607D8B',rare:'Comum',price:0.10,base:true},
   {n:'130',name:'Energia Metal',type:'Energia',color:'#9E9E9E',rare:'Comum',price:0.13,base:true},
   {n:'131',name:'Energia Dupla Turbo',type:'Energia',color:'#78909C',rare:'Incomum',price:0.15,base:true},
-  {n:'132',name:'Energia Turbo Escuridão',type:'Energia',color:'#607D8B',rare:'Incomum',price:0.20,base:true},
+  {n:'132',name:'Energia Turbo Escuridão',type:'Energia',color:'#607D8B',rare:'Incomum',price:0.25,base:true},
   // ── SECRETAS 133–188 ──────────────────────────────────────────────────────
   // Ilustração Rara (IR) 133–154
   {n:'133',dex:1,dex:1,name:'Bulbasaur (IR)',type:'Grama',color:'#4CAF50',rare:'Ilustr. Rara',price:39.90,base:false},
@@ -165,7 +165,7 @@ const CARDS_MEG = [
   {n:'148',dex:442,dex:442,name:'Yveltal (IR)',type:'Escuridão',color:'#607D8B',rare:'Ilustr. Rara',price:11.00,base:false},
   {n:'149',dex:944,dex:944,name:'Mega Mawile ex (IR)',type:'Metal',color:'#9E9E9E',rare:'Ilustr. Rara',price:7.00,base:false},
   {n:'150',dex:208,dex:208,name:'Gholdengo (IR)',type:'Metal',color:'#9E9E9E',rare:'Ilustr. Rara',price:18.00,base:false},
-  {n:'151',dex:21,dex:21,name:'Mega Latias ex (IR)',type:'Dragão',color:'#00BCD4',rare:'Ilustr. Rara',price:25.00,base:false},
+  {n:'151',dex:21,dex:21,name:'Mega Latias ex (IR)',type:'Dragão',color:'#00BCD4',rare:'Ilustr. Rara',price:26.00,base:false},
   {n:'152',dex:225,dex:225,name:'Mega Kangaskhan ex (IR)',type:'Incolor',color:'#78909C',rare:'Ilustr. Rara',price:9.49,base:false},
   {n:'153',dex:735,dex:735,name:'Determinação da Lillie (IR)',type:'Suporte',color:'#E91E63',rare:'Ilustr. Rara',price:13.90,base:false},
   {n:'154',dex:759,dex:759,name:'Travessura da Acerola (IR)',type:'Suporte',color:'#E91E63',rare:'Ilustr. Rara',price:16.90,base:false},

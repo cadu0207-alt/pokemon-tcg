@@ -166,7 +166,7 @@ const CARDS_SV9 = [
   {n:'160',dex:556,artist:"Ounishi",name:'Maractus',type:'Planta',color:'#4CAF50',rare:'Rara Ilustrada',price:11.90,base:false},
   {n:'161',dex:144,artist:"Kuroimori",name:'Articuno',type:'Aquático',color:'#2196F3',rare:'Rara Ilustrada',price:84.90,base:false,important:true},
   {n:'162',dex:321,artist:"Katsunori Sato",name:'Wailord',type:'Aquático',color:'#2196F3',rare:'Rara Ilustrada',price:36.49,base:false,important:true},
-  {n:'163',dex:941,artist:"Terada Tera",name:'Iono\'s Kilowattrel',type:'Raio',color:'#FFEB3B',rare:'Rara Ilustrada',price:29.92,base:false},
+  {n:'163',dex:941,artist:"Terada Tera",name:'Iono\'s Kilowattrel',type:'Raio',color:'#FFEB3B',rare:'Rara Ilustrada',price:30.00,base:false},
   {n:'164',dex:743,artist:"saino misaki",name:'Lillie\'s Ribombee',type:'Psíquico',color:'#9C27B0',rare:'Rara Ilustrada',price:39.00,base:false},
   {n:'165',dex:220,artist:"Nakamura Ippan",name:'Swinub',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada',price:9.90,base:false},
   {n:'166',dex:745,artist:"GIDORA",name:'Lycanroc',type:'Lutador',color:'#FF9800',rare:'Rara Ilustrada',price:18.00,base:false},

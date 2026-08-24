@@ -216,7 +216,7 @@ const CARDS_SV4PT5 = [
   {n:'210',dex:925,artist:"Shigenori Negishi",name:'Maushold',type:'Incolor',color:'#9E9E9E',rare:'Rara Brilhante',price:109.50,base:false,important:true},
   {n:'211',dex:973,artist:"Akira Komayama",name:'Flamigo',type:'Incolor',color:'#9E9E9E',rare:'Rara Brilhante',price:22.90,base:false},
   {n:'212',dex:205,artist:"5ban Graphics",name:'Forretress ex',type:'Planta',color:'#4CAF50',rare:'Ultra Rara Brilhante',price:7.99,base:false},
-  {n:'213',dex:949,artist:"5ban Graphics",name:'Toedscruel ex',type:'Planta',color:'#4CAF50',rare:'Ultra Rara Brilhante',price:9.79,base:false},
+  {n:'213',dex:949,artist:"5ban Graphics",name:'Toedscruel ex',type:'Planta',color:'#4CAF50',rare:'Ultra Rara Brilhante',price:9.00,base:false},
   {n:'214',dex:956,artist:"takuyoa",name:'Espathra ex',type:'Planta',color:'#4CAF50',rare:'Ultra Rara Brilhante',price:8.00,base:false},
   {n:'215',dex:65,artist:"PLANETA Tsuji",name:'Alakazam ex',type:'Psíquico',color:'#9C27B0',rare:'Ultra Rara Brilhante',price:28.90,base:false},
   {n:'216',dex:151,artist:"aky CG Works",name:'Mew ex',type:'Psíquico',color:'#9C27B0',rare:'Ultra Rara Brilhante',price:129.90,base:false,important:true},

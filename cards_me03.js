@@ -127,7 +127,7 @@ const CARDS_ME03 = [
   {n:'118',dex:121,dex:121,name:'Mega Starmie ex',   type:'Aquático', color:'#2196F3',rare:'Ilustr. Esp. Rara',price:140.00, base:false},
   {n:'119',dex:36,dex:36,name:'Mega Clefable ex',  type:'Psíquico', color:'#9C27B0',rare:'Ilustr. Esp. Rara',price:150.00, base:false},
   {n:'120',dex:718,dex:718,name:'Mega Zygarde ex',   type:'Lutador',  color:'#FF9800',rare:'Ilustr. Esp. Rara',price:161.41, base:false},
-  {n:'121',dex:52,dex:52,name:'Meowth ex',         type:'Incolor',  color:'#78909C',rare:'Ilustr. Esp. Rara',price:422.10,base:false,important:true},
+  {n:'121',dex:52,dex:52,name:'Meowth ex',         type:'Incolor',  color:'#78909C',rare:'Ilustr. Esp. Rara',price:425.90,base:false,important:true},
   {n:'122',name:'Jacinthe',          type:'Suporte',  color:'#E91E63',rare:'Ilustr. Esp. Rara',price:96.59, base:false},
   {n:'123',name:'Estimulo da Rosa',  type:'Suporte',  color:'#E91E63',rare:'Ilustr. Esp. Rara',price:224.03, base:false},
   // ── MEGA HYPER RARE 124 ──────────────────────────────────────
