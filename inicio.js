@@ -123,10 +123,17 @@ async function renderInicio() {
   loadInicioFeed();
 }
 
+// Mesma lógica de "número de geração" do loadInicioFeed() — evita que uma
+// chamada antiga (disparada por um _updateUserChip anterior) sobrescreva
+// o resultado de uma chamada mais nova quando o app.js chama renderInicio()
+// mais de uma vez em sequência (ex.: INITIAL_SESSION + SIGNED_IN no login).
+let INICIO_HERO_REQ = 0;
+
 // ── HERO — puxa o artigo em destaque da Revista ────────────────────
 async function renderInicioHero() {
   const holder = document.getElementById('inicio-hero-wrap');
   if (!holder) return;
+  const reqId = ++INICIO_HERO_REQ;
 
   const { data, error } = await sbClient
     .from('magazine_articles')
@@ -134,6 +141,7 @@ async function renderInicioHero() {
     .eq('is_featured', true)
     .order('published_at', { ascending: false })
     .limit(1);
+  if (reqId !== INICIO_HERO_REQ) return;
 
   if (error || !data || !data.length) {
     holder.innerHTML = '';
@@ -151,10 +159,13 @@ async function renderInicioHero() {
     '</div>';
 }
 
+let INICIO_UPDATES_REQ = 0;
+
 // ── NOVIDADES DO MYDECK — reaproveita site_updates ──────────────────
 async function loadInicioUpdates() {
   const holder = document.getElementById('inicio-updates-wrap');
   if (!holder) return;
+  const reqId = ++INICIO_UPDATES_REQ;
   holder.innerHTML = '<div class="admin-stats-loading">Carregando...</div>';
 
   const { data, error } = await sbClient
@@ -162,6 +173,7 @@ async function loadInicioUpdates() {
     .select('*')
     .order('created_at', { ascending: false })
     .limit(6);
+  if (reqId !== INICIO_UPDATES_REQ) return;
 
   if (error) { holder.innerHTML = '<div class="admin-stats-loading">Erro ao carregar.</div>'; return; }
 
@@ -195,44 +207,68 @@ let INICIO_FEED_COMMENT_COUNTS = {};
 const INICIO_FEED_PAGE = 12;
 let inicioFeedObserver = null;
 
+// 24/08/2026 (bug "o feed não carregou"): _updateUserChip() no app.js roda
+// em TODO evento do onAuthStateChange do Supabase — não só no login, mas
+// também em SIGNED_IN+INITIAL_SESSION disparando quase juntos ao abrir a
+// página. Isso chama renderInicio()/loadInicioFeed() mais de uma vez em
+// sequência rápida. Como loadInicioFeed() tem vários "await" (4 selects +
+// contagem de comentários) antes de finalmente reescrever o innerHTML, a
+// chamada MAIS ANTIGA podia terminar DEPOIS da mais nova e sobrescrever
+// o feed já renderizado com um resultado obsoleto no meio da corrida —
+// e se essa sobrescrita acontecesse num instante infeliz, a tela ficava
+// em branco (sem "Carregando...", sem "Nada publicado", sem erro nenhum).
+// INICIO_FEED_REQ é um número de geração: cada chamada guarda o valor que
+// pegou ao entrar; se ele mudou (uma chamada mais nova já começou) antes
+// de mexer no DOM, a chamada velha desiste em vez de escrever por cima.
+let INICIO_FEED_REQ = 0;
+
 async function loadInicioFeed() {
   const holder = document.getElementById('inicio-feed-wrap');
   if (!holder) return;
+  const reqId = ++INICIO_FEED_REQ;
   holder.innerHTML = '<div class="admin-stats-loading">Carregando...</div>';
 
-  const [newsRes, videoRes, linkRes, artRes] = await Promise.all([
-    sbClient.from('pokemon_news').select('id,title,subtitle,body,media_type,media_url,author_uid,published_at').order('published_at', { ascending: false }).limit(40),
-    sbClient.from('community_videos').select('id,platform,video_url,title,handle,created_at').order('created_at', { ascending: false }).limit(40),
-    sbClient.from('community_links').select('id,title,url,category,icon,created_at').order('created_at', { ascending: false }).limit(40),
-    sbClient.from('magazine_articles').select('id,title,subtitle,tag,is_featured,published_at').order('published_at', { ascending: false }).limit(40)
-  ]);
+  try {
+    const [newsRes, videoRes, linkRes, artRes] = await Promise.all([
+      sbClient.from('pokemon_news').select('id,title,subtitle,body,media_type,media_url,author_uid,published_at').order('published_at', { ascending: false }).limit(40),
+      sbClient.from('community_videos').select('id,platform,video_url,title,handle,created_at').order('created_at', { ascending: false }).limit(40),
+      sbClient.from('community_links').select('id,title,url,category,icon,created_at').order('created_at', { ascending: false }).limit(40),
+      sbClient.from('magazine_articles').select('id,title,subtitle,tag,is_featured,published_at').order('published_at', { ascending: false }).limit(40)
+    ]);
+    if (reqId !== INICIO_FEED_REQ) return; // uma chamada mais nova já assumiu
 
-  const items = [];
-  (newsRes.data || []).forEach(function (n) { items.push({ kind: 'news', date: n.published_at, row: n }); });
-  (videoRes.data || []).forEach(function (v) { items.push({ kind: 'video', date: v.created_at, row: v }); });
-  (linkRes.data || []).forEach(function (l) { items.push({ kind: 'link', date: l.created_at, row: l }); });
-  (artRes.data || []).forEach(function (a) { items.push({ kind: 'article', date: a.published_at, row: a }); });
-  items.sort(function (a, b) { return new Date(b.date || 0) - new Date(a.date || 0); });
+    const items = [];
+    (newsRes.data || []).forEach(function (n) { items.push({ kind: 'news', date: n.published_at, row: n }); });
+    (videoRes.data || []).forEach(function (v) { items.push({ kind: 'video', date: v.created_at, row: v }); });
+    (linkRes.data || []).forEach(function (l) { items.push({ kind: 'link', date: l.created_at, row: l }); });
+    (artRes.data || []).forEach(function (a) { items.push({ kind: 'article', date: a.published_at, row: a }); });
+    items.sort(function (a, b) { return new Date(b.date || 0) - new Date(a.date || 0); });
 
-  INICIO_FEED_ITEMS = items;
-  INICIO_FEED_RENDERED = 0;
-  INICIO_NEWS_CACHE = {};
-  items.forEach(function (it) { if (it.kind === 'news') INICIO_NEWS_CACHE[it.row.id] = it.row; });
+    INICIO_FEED_ITEMS = items;
+    INICIO_FEED_RENDERED = 0;
+    INICIO_NEWS_CACHE = {};
+    items.forEach(function (it) { if (it.kind === 'news') INICIO_NEWS_CACHE[it.row.id] = it.row; });
 
-  if (!items.length) { holder.innerHTML = '<div class="admin-stats-loading">Nada publicado ainda.</div>'; return; }
+    if (!items.length) { holder.innerHTML = '<div class="admin-stats-loading">Nada publicado ainda.</div>'; return; }
 
-  const newsIds = items.filter(function (it) { return it.kind === 'news'; }).map(function (it) { return it.row.id; });
-  INICIO_FEED_COMMENT_COUNTS = {};
-  if (newsIds.length) {
-    try {
-      const { data: cdata } = await sbClient.from('pokemon_news_comments').select('news_id').in('news_id', newsIds);
-      (cdata || []).forEach(function (c) { INICIO_FEED_COMMENT_COUNTS[c.news_id] = (INICIO_FEED_COMMENT_COUNTS[c.news_id] || 0) + 1; });
-    } catch (e) { /* silencioso — comentário é só decoração aqui */ }
+    const newsIds = items.filter(function (it) { return it.kind === 'news'; }).map(function (it) { return it.row.id; });
+    INICIO_FEED_COMMENT_COUNTS = {};
+    if (newsIds.length) {
+      try {
+        const { data: cdata } = await sbClient.from('pokemon_news_comments').select('news_id').in('news_id', newsIds);
+        (cdata || []).forEach(function (c) { INICIO_FEED_COMMENT_COUNTS[c.news_id] = (INICIO_FEED_COMMENT_COUNTS[c.news_id] || 0) + 1; });
+      } catch (e) { /* silencioso — comentário é só decoração aqui */ }
+    }
+    if (reqId !== INICIO_FEED_REQ) return; // uma chamada mais nova já assumiu
+
+    holder.innerHTML = '<div class="inicio-feed"></div>';
+    inicioRenderFeedPage();
+    inicioSetupFeedObserver();
+  } catch (e) {
+    if (reqId !== INICIO_FEED_REQ) return;
+    console.error('[inicio] falha ao carregar o feed:', e);
+    holder.innerHTML = '<div class="admin-stats-loading">Não foi possível carregar o feed agora. <a href="#" onclick="loadInicioFeed();return false;">Tentar de novo</a>.</div>';
   }
-
-  holder.innerHTML = '<div class="inicio-feed"></div>';
-  inicioRenderFeedPage();
-  inicioSetupFeedObserver();
 }
 
 // Renderiza a próxima leva do feed já carregado em memória (INICIO_FEED_ITEMS)
@@ -243,23 +279,30 @@ function inicioRenderFeedPage() {
   const slice = INICIO_FEED_ITEMS.slice(INICIO_FEED_RENDERED, INICIO_FEED_RENDERED + INICIO_FEED_PAGE);
   if (!slice.length) return;
 
-  let hasTiktok = false;
-  const html = slice.map(function (it) {
-    if (it.kind === 'video' && it.row.platform === 'tiktok') hasTiktok = true;
-    return inicioRenderFeedItem(it);
-  }).join('');
-  list.insertAdjacentHTML('beforeend', html);
-  if (hasTiktok) inicioReloadTiktokEmbed();
+  try {
+    let hasTiktok = false;
+    const html = slice.map(function (it) {
+      if (it.kind === 'video' && it.row.platform === 'tiktok') hasTiktok = true;
+      return inicioRenderFeedItem(it);
+    }).join('');
+    list.insertAdjacentHTML('beforeend', html);
+    if (hasTiktok) inicioReloadTiktokEmbed();
 
-  // Registra visualização (1x por usuário) só das notícias que acabaram de
-  // entrar na tela — silencioso, admin lê a soma via fn_news_view_counts.
-  slice.filter(function (it) { return it.kind === 'news'; }).forEach(function (it) {
-    sbClient.rpc('fn_register_news_view', { p_news_id: it.row.id }).then(function () {}, function () {});
-  });
+    // Registra visualização (1x por usuário) só das notícias que acabaram de
+    // entrar na tela — silencioso, admin lê a soma via fn_news_view_counts.
+    slice.filter(function (it) { return it.kind === 'news'; }).forEach(function (it) {
+      sbClient.rpc('fn_register_news_view', { p_news_id: it.row.id }).then(function () {}, function () {});
+    });
 
-  INICIO_FEED_RENDERED += slice.length;
-  const sentinel = document.getElementById('inicio-feed-sentinel');
-  if (sentinel) sentinel.style.display = INICIO_FEED_RENDERED >= INICIO_FEED_ITEMS.length ? 'none' : '';
+    INICIO_FEED_RENDERED += slice.length;
+    const sentinel = document.getElementById('inicio-feed-sentinel');
+    if (sentinel) sentinel.style.display = INICIO_FEED_RENDERED >= INICIO_FEED_ITEMS.length ? 'none' : '';
+  } catch (e) {
+    // Uma linha de dado malformada não pode derrubar o feed inteiro em
+    // silêncio — melhor logar e deixar o resto do que já renderizou visível.
+    console.error('[inicio] falha ao renderizar um item do feed:', e);
+    INICIO_FEED_RENDERED += slice.length;
+  }
 }
 
 function inicioSetupFeedObserver() {
