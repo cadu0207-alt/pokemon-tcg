@@ -52,6 +52,9 @@ let aucAutoNavigated=false; // evita reabrir a aba toda vez que o hook de login 
 let aucRulesAccepted=null;  // null=ainda não checou · true/false depois de loadRulesAcceptance()
 let aucPendingBid=null;     // {auctionId,idSuffix} — lance que ficou esperando o aceite das regras
 const AUC_RULES_VERSION='v1'; // precisa bater com a checada em place_bid() no banco (leilao_setup.sql)
+let aucSellerAccepted=null;   // null=ainda não checou · true/false depois de loadSellerAcceptance() — aceite do LEILOEIRO (privacidade+compromisso+comissões)
+let aucPendingSellerAction=null; // função (createAuctionRound/publishAuction) que ficou esperando o aceite
+const AUC_SELLER_TERMS_VERSION='v1'; // precisa bater com has_accepted_seller_terms() no banco (leilao_seller_onboarding_setup.sql)
 
 // ── SOU LEILOEIRO? (admin principal OU autorizado em auction_admins) ─
 async function resolveLeilaoAdminStatus(){
@@ -108,6 +111,7 @@ async function updateLeilaoTabVisibility(){
 // ── CARREGAR TUDO ───────────────────────────────────────────────
 async function renderLeilaoTab(){
   await resolveLeilaoAdminStatus();
+  if(aucIsLeilaoAdmin)await loadSellerAcceptance();
   // Subnav em si é visível pra todo usuário logado desde 13/08/2026 ("Leilões",
   // "Meus Arremates" e, desde 19/08/2026, "Loja do Leiloeiro"); só os botões de
   // gestão (Cadastro/Estoque/Análises/Arquivo/Financeiro) continuam escondidos
@@ -195,6 +199,10 @@ function switchLeilaoSubtab(name){
       else{btn.style.background='transparent';btn.style.color='var(--text)';btn.style.border='1px solid var(--border)';}
     }
   });
+  // Primeira vez que o leiloeiro entra em Cadastro sem ter aceitado ainda
+  // — mostra o popup na hora, mesmo antes de ele tentar salvar algo
+  // (além da trava dentro de createAuctionRound/publishAuction).
+  if(name==='cadastro'&&aucIsLeilaoAdmin&&aucSellerAccepted===false)openLeiloeiroOnboardingModal();
 }
 
 // Atalho do aviso "cadastre seu endereço" (mostrado quando falta
@@ -2152,6 +2160,7 @@ async function releaseShippingHold(orderId){
 // ── RODADAS ────────────────────────────────────────────────────
 async function createAuctionRound(){
   if(!aucIsLeilaoAdmin)return;
+  if(!requireSellerAcceptance(createAuctionRound))return;
   const statusEl=document.getElementById('leilao-round-status');
   const title=(document.getElementById('leilao-round-title')?.value||'').trim();
   const startAt=document.getElementById('leilao-round-inicio')?.value;
@@ -2536,6 +2545,7 @@ function clearAuctionCardSelection(){
 
 async function publishAuction(){
   if(!aucIsLeilaoAdmin)return;
+  if(!requireSellerAcceptance(publishAuction))return;
   const statusEl=document.getElementById('leilao-admin-status');
   const roundId=parseInt(document.getElementById('leilao-admin-round')?.value);
   const cardName=(document.getElementById('leilao-admin-nome')?.value||'').trim();
@@ -2820,5 +2830,87 @@ async function acceptLeilaoRules(){
     const{auctionId,idSuffix}=aucPendingBid;
     aucPendingBid=null;
     submitBid(auctionId,idSuffix);
+  }
+}
+
+// ================================================================
+// COMPROMISSO DO LEILOEIRO — popup de aceite (24/08/2026)
+// Espelha o aceite do comprador acima, só que pro LEILOEIRO: aparece
+// antes do primeiro cadastro (rodada ou carta) e exige 3 aceites
+// separados — Política de Privacidade, Termos de Compromisso do
+// Leiloeiro (isenção de responsabilidade do MyDeck) e a tabela de
+// comissões vigente. Fica salvo em auction_seller_acceptance (banco,
+// insert-only — histórico nunca é apagado nem sobrescrito) e
+// has_accepted_seller_terms() barra INSERT em auction_rounds/auctions no
+// servidor pra quem não aceitou, mesmo chamando a API direto (ver
+// leilao_seller_onboarding_setup.sql).
+// ================================================================
+async function loadSellerAcceptance(){
+  if(!uid()){aucSellerAccepted=null;return;}
+  const{data,error}=await sbClient.from('auction_seller_acceptance')
+    .select('user_id').eq('user_id',uid()).eq('terms_version',AUC_SELLER_TERMS_VERSION).maybeSingle();
+  aucSellerAccepted=!error&&!!data;
+}
+
+// Chama isso no início de toda ação de cadastro do leiloeiro (criar
+// rodada, publicar carta). Se ainda não aceitou, guarda a própria função
+// pra rodar de novo automaticamente assim que aceitar, abre o popup, e
+// devolve false pra quem chamou não continuar agora.
+function requireSellerAcceptance(pendingFn){
+  if(aucSellerAccepted)return true;
+  aucPendingSellerAction=pendingFn;
+  openLeiloeiroOnboardingModal();
+  return false;
+}
+
+const AUC_SELLER_CHECK_IDS=['leilao-seller-check-privacy','leilao-seller-check-terms','leilao-seller-check-fees'];
+
+function openLeiloeiroOnboardingModal(){
+  AUC_SELLER_CHECK_IDS.forEach(id=>{const el=document.getElementById(id);if(el)el.checked=false;});
+  const btn=document.getElementById('leilao-seller-accept-btn');
+  if(btn)btn.disabled=true;
+  if(typeof openModal==='function')openModal('leilao-seller-onboarding-ov');
+}
+
+function toggleSellerOnboardingAccept(){
+  const ok=AUC_SELLER_CHECK_IDS.every(id=>document.getElementById(id)?.checked);
+  const btn=document.getElementById('leilao-seller-accept-btn');
+  if(btn)btn.disabled=!ok;
+}
+
+async function acceptSellerTerms(){
+  if(!uid())return;
+  const ok=AUC_SELLER_CHECK_IDS.every(id=>document.getElementById(id)?.checked);
+  if(!ok)return;
+  const btn=document.getElementById('leilao-seller-accept-btn');
+  if(btn){btn.disabled=true;btn.textContent='Salvando...';}
+
+  const now=new Date().toISOString();
+  const{error}=await sbClient.from('auction_seller_acceptance')
+    .upsert({
+      user_id:uid(),
+      terms_version:AUC_SELLER_TERMS_VERSION,
+      privacy_accepted_at:now,
+      terms_accepted_at:now,
+      fees_accepted_at:now,
+      user_agent:navigator.userAgent||null
+    },{onConflict:'user_id,terms_version'});
+
+  if(error){
+    console.error('[leilao] acceptSellerTerms',error);
+    if(btn){btn.disabled=false;btn.textContent='✓ Aceitar e continuar';}
+    setStatus('Erro ao registrar aceite. Verifique se rodou leilao_seller_onboarding_setup.sql no Supabase.','err');
+    return;
+  }
+
+  aucSellerAccepted=true;
+  if(typeof closeModal==='function')closeModal('leilao-seller-onboarding-ov');
+  if(btn){btn.disabled=false;btn.textContent='✓ Aceitar e continuar';}
+
+  // Retoma a ação (criar rodada / publicar carta) que ficou esperando.
+  if(aucPendingSellerAction){
+    const fn=aucPendingSellerAction;
+    aucPendingSellerAction=null;
+    fn();
   }
 }
