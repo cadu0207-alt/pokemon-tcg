@@ -928,6 +928,18 @@
     </div>
   </div>
 
+  <!-- EDITAR LEILÃO (24/08/2026): botão "✏️ Editar" só aparece pro
+       leiloeiro (aucIsLeilaoAdmin) no card/zoom de cada item já publicado
+       — deixa mudar preço/reserva/condição/descrição/fotos sem precisar
+       excluir e recadastrar. Conteúdo montado em openAuctionEdit()
+       (leilao.js). -->
+  <div class="ov" id="leilao-edit-ov" onclick="if(event.target===this)closeModal('leilao-edit-ov')">
+    <div class="modal">
+      <button class="mc-btn" onclick="closeModal('leilao-edit-ov')">✕</button>
+      <div id="leilao-edit-content"></div>
+    </div>
+  </div>
+
   <!-- ESCOLHA DE VERSÃO (13/08/2026): algumas cartas têm mais de uma versão
        física possível (ex: Normal + Reverse Holo) — quando isso acontece,
        addOrderToFichario() (leilao.js) para aqui e pede pra pessoa confirmar

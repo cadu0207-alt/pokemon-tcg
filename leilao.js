@@ -42,6 +42,9 @@ let aucSelectedCard=null;
 let aucCustomPhotoFiles=[]; // File[] — foto(s) reais escolhidas no cadastro (ver handleAuctionPhotoPick), sobrepõem a foto do catálogo ao publicar
 const AUC_PHOTO_MAX=4;
 const AUC_PHOTO_MAX_INPUT_MB=15; // recusa arquivo bruto maior que isso ANTES de tentar decodificar — foto de celular pode chegar em 20-40MB
+let aucEditAuctionId=null; // leilão em edição no momento (ver openAuctionEdit)
+let aucEditExistingPhotos=[]; // [{url,removed}] — fotos já publicadas do item em edição
+let aucEditNewPhotoFiles=[]; // File[] — fotos novas escolhidas durante a edição
 let aucLeiloeiros=[];
 let aucLeiloeiroNames={}; // {user_id: nome de exibição} — todo participante vê, ver loadLeiloeiroNames()
 let aucMyBidAuctionIds=new Set(); // leilões em que eu já dei lance (ver loadMyBidAuctionIds)
@@ -1307,6 +1310,7 @@ function aucInfoBlockHtml(a,idSuffix){
     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal)" onclick="shareAuctionPdf(${a.id})">📄 PDF (foto + texto)</button>
       <button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal)" onclick="shareAuctionText(${a.id})">💬 Só texto</button>
+      ${aucIsLeilaoAdmin?`<button class="cv-item-remove" style="color:var(--gold);border-color:var(--gold)" onclick="openAuctionEdit(${a.id})">✏️ Editar</button>`:''}
       ${aucIsLeilaoAdmin?`<button class="cv-item-remove" onclick="deleteAuction(${a.id})">🗑️ Excluir leilão</button>`:''}
     </div>`;
 }
@@ -2305,6 +2309,184 @@ async function uploadAuctionPhotos(files){
   const urls=[];
   for(const file of files)urls.push(await uploadAuctionPhoto(file));
   return urls.filter(Boolean);
+}
+
+// ── EDITAR LEILÃO JÁ PUBLICADO (só leiloeiro, botão "✏️ Editar" no
+// card/zoom — ver aucInfoBlockHtml) ───────────────────────────
+// Preço inicial só pode mudar enquanto bid_count===0 — depois do primeiro
+// lance, mudar retroativamente seria injusto com quem já deu lance. Preço
+// de reserva é sempre oculto pro comprador, então pode mudar a qualquer
+// momento. Fotos podem ser adicionadas/removidas a qualquer momento.
+function openAuctionEdit(auctionId){
+  if(!aucIsLeilaoAdmin)return;
+  const a=aucAuctions.find(x=>x.id===auctionId);
+  if(!a)return;
+  aucEditAuctionId=auctionId;
+  aucEditExistingPhotos=aucPhotosFor(a).map(url=>({url,removed:false}));
+  aucEditNewPhotoFiles=[];
+  renderAuctionEditContent(a);
+  if(typeof openModal==='function')openModal('leilao-edit-ov');
+}
+
+function renderAuctionEditContent(a){
+  const box=document.getElementById('leilao-edit-content');
+  if(!box)return;
+  const hasBids=(a.bid_count||0)>0;
+  box.innerHTML=`
+    <h3 style="margin-bottom:4px">✏️ Editar leilão</h3>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px">${esc(a.card_name)}</div>
+
+    <div class="ff"><label>Preço inicial (R$)${hasBids?' — bloqueado':' *'}</label>
+      <input type="number" id="leilao-edit-preco" step="0.01" min="0.01" value="${a.starting_price}" ${hasBids?'disabled':''}>
+    </div>
+    ${hasBids?`<div style="font-size:9.5px;color:var(--muted);margin-bottom:8px">Esse leilão já tem ${a.bid_count} lance(s) — mudar o preço inicial agora seria injusto com quem já deu lance. Cancele e recrie se precisar mesmo mudar.</div>`:''}
+    <div class="ff"><label>Preço de reserva (R$, opcional — fica oculto pro comprador)</label>
+      <input type="number" id="leilao-edit-reserva" step="0.01" value="${a.reserve_price??''}">
+    </div>
+    <div class="ff"><label>Condição</label>
+      <select id="leilao-edit-cond">
+        ${Object.entries(AUC_COND_LBL).map(([v,l])=>`<option value="${v}"${a.condition===v?' selected':''}>${l}</option>`).join('')}
+      </select>
+    </div>
+    <div class="ff"><label>Descrição</label><textarea id="leilao-edit-desc" rows="2">${esc(a.description||'')}</textarea></div>
+
+    <div class="ff"><label>Fotos atuais</label></div>
+    <div id="leilao-edit-existing-photos" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>
+    <div class="ff"><label>Adicionar foto(s) nova(s) (até ${AUC_PHOTO_MAX} no total)</label>
+      <input type="file" id="leilao-edit-foto" accept="image/*" capture="environment" multiple onchange="handleAuctionEditPhotoPick(event)">
+    </div>
+    <div id="leilao-edit-new-photos" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>
+
+    <div id="leilao-edit-status" style="font-size:10.5px;color:var(--accent);margin:8px 0"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-add" onclick="saveAuctionEdit()">💾 Salvar alterações</button>
+      <button class="cv-item-remove" onclick="closeModal('leilao-edit-ov')">Cancelar</button>
+    </div>`;
+  renderAuctionEditExistingPhotos();
+  renderAuctionEditNewPhotos();
+}
+
+function renderAuctionEditExistingPhotos(){
+  const box=document.getElementById('leilao-edit-existing-photos');
+  if(!box)return;
+  const visible=aucEditExistingPhotos.map((p,idx)=>({...p,idx})).filter(p=>!p.removed);
+  if(!visible.length){box.innerHTML=`<div style="font-size:10px;color:var(--muted)">Nenhuma foto ainda.</div>`;return;}
+  box.innerHTML=visible.map((p,i)=>`<div style="position:relative">
+    <img src="${p.url}" style="width:70px;height:70px;border-radius:6px;object-fit:cover;background:var(--surface2)">
+    ${i===0?`<span style="position:absolute;bottom:2px;left:2px;font-size:8px;background:var(--accent);color:#fff;padding:1px 4px;border-radius:4px">capa</span>`:''}
+    <button type="button" onclick="removeAuctionEditExistingPhoto(${p.idx})" title="Remover" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:none;background:var(--surface2);color:var(--muted);cursor:pointer;line-height:1;font-size:11px">✕</button>
+  </div>`).join('');
+}
+
+function removeAuctionEditExistingPhoto(idx){
+  if(aucEditExistingPhotos[idx])aucEditExistingPhotos[idx].removed=true;
+  renderAuctionEditExistingPhotos();
+}
+
+function handleAuctionEditPhotoPick(ev){
+  const picked=Array.from(ev.target?.files||[]);
+  if(!picked.length)return;
+  const statusEl=document.getElementById('leilao-edit-status');
+  let total=aucEditExistingPhotos.filter(p=>!p.removed).length+aucEditNewPhotoFiles.length;
+  for(const file of picked){
+    if(!file.type.startsWith('image/')){if(statusEl)statusEl.textContent=`"${file.name}" não é uma imagem — ignorado.`;continue;}
+    if(file.size>AUC_PHOTO_MAX_INPUT_MB*1024*1024){if(statusEl)statusEl.textContent=`"${file.name}" passa de ${AUC_PHOTO_MAX_INPUT_MB}MB — ignorado.`;continue;}
+    if(total>=AUC_PHOTO_MAX){if(statusEl)statusEl.textContent=`Máximo de ${AUC_PHOTO_MAX} fotos por item.`;break;}
+    aucEditNewPhotoFiles.push(file);
+    total++;
+  }
+  ev.target.value='';
+  renderAuctionEditNewPhotos();
+}
+
+function removeAuctionEditNewPhoto(idx){
+  aucEditNewPhotoFiles.splice(idx,1);
+  renderAuctionEditNewPhotos();
+}
+
+function renderAuctionEditNewPhotos(){
+  const box=document.getElementById('leilao-edit-new-photos');
+  if(!box)return;
+  if(!aucEditNewPhotoFiles.length){box.innerHTML='';return;}
+  box.innerHTML=aucEditNewPhotoFiles.map((file,idx)=>{
+    const url=URL.createObjectURL(file);
+    return`<div style="position:relative">
+      <img src="${url}" style="width:70px;height:70px;border-radius:6px;object-fit:cover;background:var(--surface2)">
+      <span style="position:absolute;bottom:2px;left:2px;font-size:8px;background:var(--teal);color:#fff;padding:1px 4px;border-radius:4px">nova</span>
+      <button type="button" onclick="removeAuctionEditNewPhoto(${idx})" title="Remover" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:none;background:var(--surface2);color:var(--muted);cursor:pointer;line-height:1;font-size:11px">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// Extrai o caminho dentro do bucket a partir da URL pública — só pra saber
+// se uma foto removida é nossa (pra apagar do storage) ou uma imagem de
+// catálogo (Scrydex/TCGdex), que nunca deve ser tocada.
+function aucStoragePathFromUrl(url){
+  const marker='/object/public/leilao-fotos/';
+  const idx=(url||'').indexOf(marker);
+  return idx===-1?null:url.slice(idx+marker.length);
+}
+
+async function saveAuctionEdit(){
+  if(!aucIsLeilaoAdmin||!aucEditAuctionId)return;
+  const a=aucAuctions.find(x=>x.id===aucEditAuctionId);
+  if(!a)return;
+  const statusEl=document.getElementById('leilao-edit-status');
+  const hasBids=(a.bid_count||0)>0;
+
+  let startingPrice=a.starting_price;
+  if(!hasBids){
+    startingPrice=parseFloat(document.getElementById('leilao-edit-preco')?.value);
+    if(!startingPrice||startingPrice<=0){if(statusEl)statusEl.textContent='Informe um preço inicial válido.';return;}
+  }
+  const reservaRaw=document.getElementById('leilao-edit-reserva')?.value;
+  const reservePrice=reservaRaw?parseFloat(reservaRaw):null;
+  if(reservePrice&&reservePrice<startingPrice){if(statusEl)statusEl.textContent='O preço de reserva não pode ser menor que o inicial.';return;}
+  const condition=document.getElementById('leilao-edit-cond')?.value||a.condition;
+  const description=(document.getElementById('leilao-edit-desc')?.value||'').trim();
+
+  let uploadedUrls=[];
+  if(aucEditNewPhotoFiles.length){
+    if(statusEl)statusEl.textContent=`Enviando ${aucEditNewPhotoFiles.length} foto(s)...`;
+    try{
+      uploadedUrls=await uploadAuctionPhotos(aucEditNewPhotoFiles);
+    }catch(e){
+      console.error('[leilao] saveAuctionEdit upload',e);
+      if(statusEl)statusEl.textContent='Erro ao enviar as fotos novas. Tente de novo.';
+      return;
+    }
+  }
+
+  const keptExisting=aucEditExistingPhotos.filter(p=>!p.removed).map(p=>p.url);
+  const removedExisting=aucEditExistingPhotos.filter(p=>p.removed).map(p=>p.url);
+  const finalPhotos=[...keptExisting,...uploadedUrls];
+
+  const payload={
+    starting_price:startingPrice,
+    reserve_price:reservePrice,
+    condition,
+    description:description||null,
+    image_url:finalPhotos[0]||null,
+    photo_urls:finalPhotos.length?finalPhotos:null,
+    updated_at:new Date().toISOString()
+  };
+
+  if(statusEl)statusEl.textContent='Salvando...';
+  const{error}=await sbClient.from('auctions').update(payload).eq('id',aucEditAuctionId);
+  if(error){console.error('[leilao] saveAuctionEdit',error);if(statusEl)statusEl.textContent='Erro ao salvar. Tente de novo.';return;}
+
+  // Apaga do storage só as fotos removidas que são NOSSAS (bucket
+  // leilao-fotos) — best-effort, não trava a edição se falhar.
+  removedExisting.forEach(url=>{
+    const path=aucStoragePathFromUrl(url);
+    if(path)sbClient.storage.from('leilao-fotos').remove([path]).catch(()=>{});
+  });
+
+  setStatus('Leilão atualizado','ok');
+  if(typeof closeModal==='function')closeModal('leilao-edit-ov');
+  await loadRoundsAndAuctions();
+  renderAuctionsList();
+  renderRoundsAdminList();
 }
 
 // ── CADASTRAR CARTA (dentro de uma rodada) ────────────────────
