@@ -3230,6 +3230,31 @@ body.inicio-modal-open { overflow: hidden; }
 .inicio-video-title { font-size: 13px; font-weight: 700; line-height: 1.35; margin-bottom: 4px; }
 .inicio-video-handle { font-size: 11px; color: var(--muted); }
 
+/* ── FEED ÚNICO (24/08/2026) — Notícias/Vídeos/Links/Revista numa linha do
+   tempo só, ordenada por data, scroll infinito (ver loadInicioFeed em
+   inicio.js). Coluna única em vez de grid — cada item (independente do
+   tipo) ocupa a largura inteira da coluna, então o vídeo sai maior que no
+   grid antigo (pedido do Eduardo) sem precisar de classe própria de
+   tamanho. */
+.inicio-feed { display: flex; flex-direction: column; gap: 16px; max-width: 720px; }
+.inicio-feed-item-foot { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 4px; }
+.inicio-feed-video-card { padding-bottom: 12px; }
+
+.inicio-feed-link-card {
+  display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 14px; text-decoration: none; color: var(--text);
+}
+.inicio-feed-link-card:hover { border-color: var(--accent); }
+.inicio-feed-link-main { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.inicio-feed-link-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.inicio-feed-link-cat {
+  font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--blue, var(--muted));
+}
+
+.inicio-feed-article-card { margin-bottom: 0; }
+
+#inicio-feed-sentinel { height: 1px; }
+
 .inicio-link-group { margin-bottom: 14px; }
 .inicio-link-group-label {
   font-family: 'Space Mono', monospace; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase;

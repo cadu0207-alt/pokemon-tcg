@@ -314,17 +314,13 @@
     <div class="sec-title" style="margin-top:0">📢 Novidades do MyDeck</div>
     <div id="inicio-updates-wrap"></div>
 
-    <div class="sec-title">📰 Notícias do Mundo Pokémon</div>
-    <div id="inicio-news-wrap"></div>
-
-    <div class="sec-title">🎥 Vídeos da Comunidade</div>
-    <div id="inicio-videos-wrap"></div>
-
-    <div class="sec-title">🔗 Links Úteis</div>
-    <div id="inicio-links-wrap"></div>
-
-    <div class="sec-title">📖 Revista MyDeck</div>
-    <div id="inicio-revista-wrap"></div>
+    <!-- FEED ÚNICO 24/08/2026 (pedido do Eduardo): Notícias, Vídeos, Links e
+         Revista deixaram de ser seções separadas — agora é uma linha do tempo
+         só, ordenada por data (mais novo primeiro), com scroll infinito (ver
+         loadInicioFeed()/inicioRenderFeedPage() em inicio.js). -->
+    <div class="sec-title">📰 Feed do Mundo Pokémon</div>
+    <div id="inicio-feed-wrap"></div>
+    <div id="inicio-feed-sentinel" style="display:none"></div>
   </div>
 
   <!-- MODAL DE MATÉRIA 24/08/2026: leitura completa da notícia + comentários
@@ -971,18 +967,6 @@
     </div>
   </div>
 
-  <!-- EDITAR LEILÃO (24/08/2026): botão "✏️ Editar" só aparece pro
-       leiloeiro (aucIsLeilaoAdmin) no card/zoom de cada item já publicado
-       — deixa mudar preço/reserva/condição/descrição/fotos sem precisar
-       excluir e recadastrar. Conteúdo montado em openAuctionEdit()
-       (leilao.js). -->
-  <div class="ov" id="leilao-edit-ov" onclick="if(event.target===this)closeModal('leilao-edit-ov')">
-    <div class="modal">
-      <button class="mc-btn" onclick="closeModal('leilao-edit-ov')">✕</button>
-      <div id="leilao-edit-content"></div>
-    </div>
-  </div>
-
   <!-- ESCOLHA DE VERSÃO (13/08/2026): algumas cartas têm mais de uma versão
        física possível (ex: Normal + Reverse Holo) — quando isso acontece,
        addOrderToFichario() (leilao.js) para aqui e pede pra pessoa confirmar
@@ -1057,88 +1041,6 @@
         <span>Li e aceito as regras do leilão acima, incluindo as penalidades por não cumprimento.</span>
       </label>
       <button class="btn-add" id="leilao-rules-accept-btn" disabled onclick="acceptLeilaoRules()">✓ Li e aceito as regras</button>
-    </div>
-  </div>
-
-  <!-- COMPROMISSO DO LEILOEIRO (24/08/2026): aparece antes do PRIMEIRO
-       cadastro (rodada ou carta) de quem vira leiloeiro — abre sozinho ao
-       entrar em Cadastro (switchLeilaoSubtab) e também trava dentro de
-       createAuctionRound()/publishAuction() via requireSellerAcceptance().
-       Aceite fica em auction_seller_acceptance (banco, insert-only) — ver
-       leilao_seller_onboarding_setup.sql. Não pergunta de novo a não ser
-       que AUC_SELLER_TERMS_VERSION mude. -->
-  <div class="ov" id="leilao-seller-onboarding-ov" onclick="if(event.target===this)closeModal('leilao-seller-onboarding-ov')">
-    <div class="modal modal-wide">
-      <button class="mc-btn" onclick="closeModal('leilao-seller-onboarding-ov')">✕</button>
-      <div class="panel-t" style="margin-bottom:4px">🔏 Compromisso do Leiloeiro MyDeck</div>
-      <div style="font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:16px">
-        Antes de cadastrar sua primeira rodada ou carta, leia e aceite os itens abaixo. Isso fica registrado com data/hora.
-      </div>
-
-      <div class="mkt-term-box" style="max-height:38vh;overflow-y:auto">
-        <b>1. Responsabilidade pelos itens</b><br>
-        Você garante que os itens que cadastrar são de sua posse legítima, autênticos, e que a
-        condição, descrição e fotos informadas correspondem fielmente ao estado real do exemplar.
-        Informação falsa ou enganosa sobre um item é responsabilidade exclusiva sua.<br><br>
-
-        <b>2. Compromisso de venda</b><br>
-        Ao publicar um item em leilão, você se compromete a entregá-lo ao maior lance no
-        fechamento (respeitado o preço de reserva, quando houver), dentro do prazo combinado na
-        rodada. Cancelamento de leilão sem justificativa razoável, ou não entrega ao vencedor
-        legítimo, pode levar à suspensão do seu acesso como leiloeiro.<br><br>
-
-        <b>3. Pagamento e comissão</b><br>
-        O pagamento do comprador é feito via PIX diretamente a você, fora do site — o MyDeck não
-        processa, retém ou intermedia esse valor. Em contrapartida, você se compromete a repassar
-        ao MyDeck a comissão vigente sobre o total de pedidos pagos no mês (ver tabela abaixo),
-        nos termos combinados.<br><br>
-
-        <b>4. Impostos e legalidade</b><br>
-        Questões fiscais/tributárias sobre suas vendas, e a legalidade dos itens anunciados, são
-        de sua exclusiva responsabilidade — o MyDeck não presta consultoria fiscal ou jurídica.<br><br>
-
-        <b>5. Disputas</b><br>
-        Eventuais disputas, atrasos, extravios ou divergências com um comprador devem ser
-        resolvidas diretamente entre vocês. O MyDeck pode, a seu critério e sem obrigação, ajudar
-        a mediar contato, mas não garante nem se responsabiliza pelo resultado.<br><br>
-
-        <b>6. O papel do MyDeck e isenção de responsabilidade</b><br>
-        O site é só uma ferramenta de cadastro, lances e acompanhamento de pedidos — o MyDeck
-        <b>não é parte</b> nas transações que você conduz como leiloeiro. Ao aceitar este termo, você
-        exime o MyDeck de qualquer responsabilidade decorrente de itens que cadastrar, disputas
-        com compradores, fraude, inadimplência de terceiros ou qualquer resultado da negociação
-        que você conduz através da plataforma.<br><br>
-
-        <b>7. Dados e privacidade</b><br>
-        O tratamento dos seus dados (cadastro, histórico de vendas, comunicação) segue a
-        <a href="politica-privacidade.html" target="_blank" rel="noopener">Política de Privacidade do MyDeck</a>,
-        que complementa este termo.
-      </div>
-
-      <label style="display:flex;align-items:flex-start;gap:8px;margin:14px 0 8px;font-size:12px;cursor:pointer">
-        <input type="checkbox" id="leilao-seller-check-privacy" onchange="toggleSellerOnboardingAccept()" style="margin-top:2px">
-        <span>Li e aceito a <a href="politica-privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a> do MyDeck.</span>
-      </label>
-      <label style="display:flex;align-items:flex-start;gap:8px;margin:0 0 14px;font-size:12px;cursor:pointer">
-        <input type="checkbox" id="leilao-seller-check-terms" onchange="toggleSellerOnboardingAccept()" style="margin-top:2px">
-        <span>Li e aceito os Termos de Compromisso do Leiloeiro acima, incluindo a isenção de responsabilidade do MyDeck (item 6).</span>
-      </label>
-
-      <div class="panel" style="padding:12px;margin-bottom:6px">
-        <div style="font-size:11px;font-weight:700;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:6px">💰 COMO FUNCIONAM AS COMISSÕES</div>
-        <div style="font-size:10.5px;color:var(--muted)">
-          Comissão decrescente por faixa de soma de pedidos pagos no mês:
-          <b>5% até R$30k · 4% até R$40k · 3% até R$50k · 2,5% até R$60k · 2% até R$70k · 1,5% até R$80k · 1% acima de R$80k.</b>
-          Você acompanha o valor exato apurado a qualquer momento na sub-aba "Financeiro".
-        </div>
-      </div>
-
-      <label style="display:flex;align-items:flex-start;gap:8px;margin:0 0 16px;font-size:12px;cursor:pointer">
-        <input type="checkbox" id="leilao-seller-check-fees" onchange="toggleSellerOnboardingAccept()" style="margin-top:2px">
-        <span>Li e entendi como funcionam as comissões do MyDeck sobre os pedidos pagos no meu leilão.</span>
-      </label>
-
-      <button class="btn-add" id="leilao-seller-accept-btn" disabled onclick="acceptSellerTerms()">✓ Aceitar e continuar</button>
     </div>
   </div>
 

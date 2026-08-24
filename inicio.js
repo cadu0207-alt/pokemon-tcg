@@ -18,6 +18,10 @@
 // - Notícia virou "matéria": título + subtítulo (opcionais, mas usados
 //   no formulário) + texto, com uma tela de leitura (modal) própria —
 //   os comentários vivem lá, não mais espremidos dentro do card do feed.
+// - Notícias/Vídeos/Links/Revista deixaram de ser 4 seções separadas e
+//   viraram um feed único (loadInicioFeed), ordenado por data (mais novo
+//   primeiro) com scroll infinito — ver INICIO_FEED_ITEMS/inicioRenderFeedPage.
+//   Vídeo ganhou mais espaço no feed (coluna única, não mais grid).
 //
 // Publicação de notícias/vídeos/links/artigos acontece só na aba Admin
 // (ver home_content_admin.js) por quem tem hasPerm('inicio')
@@ -116,10 +120,7 @@ async function renderInicio() {
   if (!sbClient || !currentUser) return;
   renderInicioHero();
   loadInicioUpdates();
-  loadInicioNews();
-  loadInicioVideos();
-  loadInicioLinks();
-  loadInicioRevista();
+  loadInicioFeed();
 }
 
 // ── HERO — puxa o artigo em destaque da Revista ────────────────────
@@ -178,65 +179,189 @@ async function loadInicioUpdates() {
   }).join('') + '</div>';
 }
 
-// ── NOTÍCIAS DO MUNDO POKÉMON — agora com título/subtítulo/texto ───
-let INICIO_NEWS_CACHE = {}; // id -> row, pra abrir o modal sem re-buscar
+// ── FEED ÚNICO — 24/08/2026 (pedido do Eduardo) ─────────────────────
+// Antes eram 4 seções separadas (Notícias / Vídeos / Links / Revista),
+// cada uma com sua própria lista. Agora tudo entra num feed só, ordenado
+// por data (mais novo primeiro), com scroll infinito — o usuário rola pra
+// ver o que é mais antigo em vez de navegar seção por seção. Cada tipo de
+// item mantém sua cara própria (a notícia abre matéria+comentários, o
+// vídeo toca embutido — um pouco maior que antes — link e artigo da
+// revista ficam mais compactos), só a ordem que virou uma linha do tempo
+// única.
+let INICIO_NEWS_CACHE = {}; // id -> row da notícia, pra abrir o modal sem re-buscar
+let INICIO_FEED_ITEMS = []; // merge de notícia/vídeo/link/artigo, já ordenado por data desc
+let INICIO_FEED_RENDERED = 0;
+let INICIO_FEED_COMMENT_COUNTS = {};
+const INICIO_FEED_PAGE = 12;
+let inicioFeedObserver = null;
 
-async function loadInicioNews() {
-  const holder = document.getElementById('inicio-news-wrap');
+async function loadInicioFeed() {
+  const holder = document.getElementById('inicio-feed-wrap');
   if (!holder) return;
   holder.innerHTML = '<div class="admin-stats-loading">Carregando...</div>';
 
-  const { data, error } = await sbClient
-    .from('pokemon_news')
-    .select('id,title,subtitle,body,media_type,media_url,author_uid,published_at')
-    .order('published_at', { ascending: false })
-    .limit(15);
+  const [newsRes, videoRes, linkRes, artRes] = await Promise.all([
+    sbClient.from('pokemon_news').select('id,title,subtitle,body,media_type,media_url,author_uid,published_at').order('published_at', { ascending: false }).limit(40),
+    sbClient.from('community_videos').select('id,platform,video_url,title,handle,created_at').order('created_at', { ascending: false }).limit(40),
+    sbClient.from('community_links').select('id,title,url,category,icon,created_at').order('created_at', { ascending: false }).limit(40),
+    sbClient.from('magazine_articles').select('id,title,subtitle,tag,is_featured,published_at').order('published_at', { ascending: false }).limit(40)
+  ]);
 
-  if (error) { holder.innerHTML = '<div class="admin-stats-loading">Erro ao carregar notícias.</div>'; return; }
+  const items = [];
+  (newsRes.data || []).forEach(function (n) { items.push({ kind: 'news', date: n.published_at, row: n }); });
+  (videoRes.data || []).forEach(function (v) { items.push({ kind: 'video', date: v.created_at, row: v }); });
+  (linkRes.data || []).forEach(function (l) { items.push({ kind: 'link', date: l.created_at, row: l }); });
+  (artRes.data || []).forEach(function (a) { items.push({ kind: 'article', date: a.published_at, row: a }); });
+  items.sort(function (a, b) { return new Date(b.date || 0) - new Date(a.date || 0); });
 
-  const rows = data || [];
-  if (!rows.length) { holder.innerHTML = '<div class="admin-stats-loading">Nenhuma notícia publicada ainda.</div>'; return; }
-
+  INICIO_FEED_ITEMS = items;
+  INICIO_FEED_RENDERED = 0;
   INICIO_NEWS_CACHE = {};
-  rows.forEach(function (n) { INICIO_NEWS_CACHE[n.id] = n; });
+  items.forEach(function (it) { if (it.kind === 'news') INICIO_NEWS_CACHE[it.row.id] = it.row; });
 
-  const ids = rows.map(function (r) { return r.id; });
+  if (!items.length) { holder.innerHTML = '<div class="admin-stats-loading">Nada publicado ainda.</div>'; return; }
 
-  // Comentários — contagem por notícia (aberto a todo mundo ver o total).
-  let commentCounts = {};
-  try {
-    const { data: cdata } = await sbClient.from('pokemon_news_comments').select('news_id').in('news_id', ids);
-    (cdata || []).forEach(function (c) { commentCounts[c.news_id] = (commentCounts[c.news_id] || 0) + 1; });
-  } catch (e) { /* silencioso — comentário é só decoração aqui */ }
+  const newsIds = items.filter(function (it) { return it.kind === 'news'; }).map(function (it) { return it.row.id; });
+  INICIO_FEED_COMMENT_COUNTS = {};
+  if (newsIds.length) {
+    try {
+      const { data: cdata } = await sbClient.from('pokemon_news_comments').select('news_id').in('news_id', newsIds);
+      (cdata || []).forEach(function (c) { INICIO_FEED_COMMENT_COUNTS[c.news_id] = (INICIO_FEED_COMMENT_COUNTS[c.news_id] || 0) + 1; });
+    } catch (e) { /* silencioso — comentário é só decoração aqui */ }
+  }
 
-  holder.innerHTML = '<div class="inicio-news-grid">' + rows.map(function (n) {
-    const dt = n.published_at ? new Date(n.published_at).toLocaleDateString('pt-BR') : '';
-    const mediaTag = INICIO_MEDIA_LABEL[n.media_type] || '';
-    const thumbBlock = n.media_type === 'image' && n.media_url
-      ? '<img class="inicio-news-media" src="' + inicioSafeUrl(n.media_url) + '" alt="" loading="lazy">'
-      : '';
-    const commentN = commentCounts[n.id] || 0;
-    const title = n.title ? inicioEsc(n.title) : inicioEsc(inicioTruncate(n.body, 70));
-    return (
-      '<div class="inicio-news-card" data-news-id="' + n.id + '" onclick="openInicioArticle(\'' + n.id + '\')" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\')openInicioArticle(\'' + n.id + '\')">' +
-        (mediaTag ? '<div class="inicio-news-tag">' + mediaTag + '</div>' : '') +
-        thumbBlock +
-        '<div class="inicio-news-title">' + title + '</div>' +
-        (n.subtitle ? '<div class="inicio-news-sub">' + inicioEsc(n.subtitle) + '</div>' : '') +
-        (n.title ? '<div class="inicio-news-snippet">' + inicioEsc(inicioTruncate(n.body, 110)) + '</div>' : '') +
-        '<div class="inicio-news-foot">' +
-          '<span class="inicio-news-date">' + dt + '</span>' +
-          '<span class="inicio-news-comment-toggle">💬 ' + commentN + ' comentário' + (commentN === 1 ? '' : 's') + '</span>' +
-        '</div>' +
-      '</div>'
-    );
-  }).join('') + '</div>';
+  holder.innerHTML = '<div class="inicio-feed"></div>';
+  inicioRenderFeedPage();
+  inicioSetupFeedObserver();
+}
 
-  // Registra visualização (1x por usuário) pra cada notícia que acabou de
-  // aparecer na tela — silencioso, admin lê a soma via fn_news_view_counts.
-  ids.forEach(function (id) {
-    sbClient.rpc('fn_register_news_view', { p_news_id: id }).then(function () {}, function () {});
+// Renderiza a próxima leva do feed já carregado em memória (INICIO_FEED_ITEMS)
+// — scroll infinito sem re-buscar do banco a cada rolagem.
+function inicioRenderFeedPage() {
+  const list = document.querySelector('#inicio-feed-wrap .inicio-feed');
+  if (!list) return;
+  const slice = INICIO_FEED_ITEMS.slice(INICIO_FEED_RENDERED, INICIO_FEED_RENDERED + INICIO_FEED_PAGE);
+  if (!slice.length) return;
+
+  let hasTiktok = false;
+  const html = slice.map(function (it) {
+    if (it.kind === 'video' && it.row.platform === 'tiktok') hasTiktok = true;
+    return inicioRenderFeedItem(it);
+  }).join('');
+  list.insertAdjacentHTML('beforeend', html);
+  if (hasTiktok) inicioReloadTiktokEmbed();
+
+  // Registra visualização (1x por usuário) só das notícias que acabaram de
+  // entrar na tela — silencioso, admin lê a soma via fn_news_view_counts.
+  slice.filter(function (it) { return it.kind === 'news'; }).forEach(function (it) {
+    sbClient.rpc('fn_register_news_view', { p_news_id: it.row.id }).then(function () {}, function () {});
   });
+
+  INICIO_FEED_RENDERED += slice.length;
+  const sentinel = document.getElementById('inicio-feed-sentinel');
+  if (sentinel) sentinel.style.display = INICIO_FEED_RENDERED >= INICIO_FEED_ITEMS.length ? 'none' : '';
+}
+
+function inicioSetupFeedObserver() {
+  const sentinel = document.getElementById('inicio-feed-sentinel');
+  if (!sentinel || typeof IntersectionObserver === 'undefined') return;
+  if (inicioFeedObserver) inicioFeedObserver.disconnect();
+  sentinel.style.display = INICIO_FEED_RENDERED >= INICIO_FEED_ITEMS.length ? 'none' : '';
+  inicioFeedObserver = new IntersectionObserver(function (entries) {
+    if (entries.some(function (e) { return e.isIntersecting; })) inicioRenderFeedPage();
+  }, { rootMargin: '400px' });
+  inicioFeedObserver.observe(sentinel);
+}
+
+function inicioRenderFeedItem(it) {
+  if (it.kind === 'news') return inicioFeedNewsCard(it.row);
+  if (it.kind === 'video') return inicioFeedVideoCard(it.row);
+  if (it.kind === 'link') return inicioFeedLinkCard(it.row);
+  if (it.kind === 'article') return inicioFeedArticleCard(it.row);
+  return '';
+}
+
+function inicioFeedNewsCard(n) {
+  const dt = n.published_at ? new Date(n.published_at).toLocaleDateString('pt-BR') : '';
+  const mediaTag = INICIO_MEDIA_LABEL[n.media_type] || '';
+  const thumbBlock = n.media_type === 'image' && n.media_url
+    ? '<img class="inicio-news-media" src="' + inicioSafeUrl(n.media_url) + '" alt="" loading="lazy">'
+    : '';
+  const commentN = INICIO_FEED_COMMENT_COUNTS[n.id] || 0;
+  const title = n.title ? inicioEsc(n.title) : inicioEsc(inicioTruncate(n.body, 70));
+  return (
+    '<div class="inicio-news-card" data-news-id="' + n.id + '" onclick="openInicioArticle(\'' + n.id + '\')" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\')openInicioArticle(\'' + n.id + '\')">' +
+      (mediaTag ? '<div class="inicio-news-tag">' + mediaTag + '</div>' : '') +
+      thumbBlock +
+      '<div class="inicio-news-title">' + title + '</div>' +
+      (n.subtitle ? '<div class="inicio-news-sub">' + inicioEsc(n.subtitle) + '</div>' : '') +
+      (n.title ? '<div class="inicio-news-snippet">' + inicioEsc(inicioTruncate(n.body, 110)) + '</div>' : '') +
+      '<div class="inicio-news-foot">' +
+        '<span class="inicio-news-date">' + dt + '</span>' +
+        '<span class="inicio-news-comment-toggle">💬 ' + commentN + ' comentário' + (commentN === 1 ? '' : 's') + '</span>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+// Vídeo no feed único ganhou mais espaço que no grid antigo (pedido do
+// Eduardo — "o vídeo pode aumentar um pouco o tamanho"): o feed é uma
+// coluna só (não mais grid de várias colunas), então o embed 16:9 usa a
+// largura inteira da coluna (até 720px, ver .inicio-feed no style.css).
+function inicioFeedVideoCard(v) {
+  const dt = v.created_at ? new Date(v.created_at).toLocaleDateString('pt-BR') : '';
+  const plat = v.platform === 'tiktok' ? 'TikTok' : 'YouTube';
+  return (
+    '<div class="inicio-video-card inicio-feed-video-card">' +
+      '<div class="inicio-video-plat">' + plat + '</div>' +
+      inicioVideoEmbedHtml(v.platform, v.video_url, v.title) +
+      '<div class="inicio-video-title">' + inicioEsc(v.title) + '</div>' +
+      '<div class="inicio-feed-item-foot">' +
+        (v.handle ? '<span class="inicio-video-handle">' + inicioEsc(v.handle) + '</span>' : '<span></span>') +
+        '<span class="inicio-news-date">' + dt + '</span>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function inicioFeedLinkCard(l) {
+  const dt = l.created_at ? new Date(l.created_at).toLocaleDateString('pt-BR') : '';
+  return (
+    '<a class="inicio-feed-link-card" href="' + inicioSafeUrl(l.url) + '" target="_blank" rel="noopener">' +
+      '<span class="inicio-chip-ic">' + inicioEsc(l.icon || '🔗') + '</span>' +
+      '<span class="inicio-feed-link-main">' +
+        '<span class="inicio-feed-link-title">' + inicioEsc(l.title) + '</span>' +
+        (l.category ? '<span class="inicio-feed-link-cat">' + inicioEsc(l.category) + '</span>' : '') +
+      '</span>' +
+      '<span class="inicio-news-date">' + dt + '</span>' +
+    '</a>'
+  );
+}
+
+function inicioFeedArticleCard(a) {
+  const dt = a.published_at ? new Date(a.published_at).toLocaleDateString('pt-BR') : '';
+  return (
+    '<div class="inicio-article-row inicio-feed-article-card' + (a.is_featured ? ' inicio-article-featured' : '') + '">' +
+      '<div class="inicio-article-tag">📖 ' + inicioEsc(a.tag || 'Revista') + (a.is_featured ? ' · Capa' : '') + '</div>' +
+      '<div class="inicio-article-title">' + inicioEsc(a.title) + '</div>' +
+      (a.subtitle ? '<div class="inicio-article-sub">' + inicioEsc(a.subtitle) + '</div>' : '') +
+      '<div class="inicio-article-date">' + dt + '</div>' +
+    '</div>'
+  );
+}
+
+// Atualiza só o contador de comentários do card já renderizado no feed —
+// evita re-buscar/re-renderizar o feed inteiro (perderia a posição do
+// scroll) só porque um comentário foi postado/apagado.
+async function inicioRefreshNewsCommentCount(newsId) {
+  let n = 0;
+  try {
+    const { count } = await sbClient.from('pokemon_news_comments').select('id', { count: 'exact', head: true }).eq('news_id', newsId);
+    n = count || 0;
+  } catch (e) { return; }
+  INICIO_FEED_COMMENT_COUNTS[newsId] = n;
+  const el = document.querySelector('.inicio-news-card[data-news-id="' + newsId + '"] .inicio-news-comment-toggle');
+  if (el) el.textContent = '💬 ' + n + ' comentário' + (n === 1 ? '' : 's');
 }
 
 // ── MODAL DE MATÉRIA — leitura completa + comentários ───────────────
@@ -344,7 +469,7 @@ async function postInicioComment(newsId) {
   if (error) { alert('Erro ao comentar: ' + error.message); return; }
   input.value = '';
   await loadInicioCommentsList(newsId);
-  loadInicioNews(); // atualiza o contador de comentários no card (fica por baixo do modal, sem recarregar a tela)
+  inicioRefreshNewsCommentCount(newsId); // atualiza só o contador no card do feed, sem re-renderizar tudo
 }
 window.postInicioComment = postInicioComment;
 
@@ -353,107 +478,9 @@ async function deleteInicioComment(commentId, newsId) {
   const { error } = await sbClient.from('pokemon_news_comments').delete().eq('id', commentId);
   if (error) { alert('Erro ao apagar: ' + error.message); return; }
   await loadInicioCommentsList(newsId);
-  loadInicioNews();
+  inicioRefreshNewsCommentCount(newsId);
 }
 window.deleteInicioComment = deleteInicioComment;
-
-// ── VÍDEOS DA COMUNIDADE — tocam embutidos no site ──────────────────
-async function loadInicioVideos() {
-  const holder = document.getElementById('inicio-videos-wrap');
-  if (!holder) return;
-  holder.innerHTML = '<div class="admin-stats-loading">Carregando...</div>';
-
-  const { data, error } = await sbClient
-    .from('community_videos')
-    .select('id,platform,video_url,title,handle')
-    .order('created_at', { ascending: false })
-    .limit(12);
-
-  if (error) { holder.innerHTML = '<div class="admin-stats-loading">Erro ao carregar vídeos.</div>'; return; }
-
-  const rows = data || [];
-  if (!rows.length) { holder.innerHTML = '<div class="admin-stats-loading">Nenhum vídeo linkado ainda.</div>'; return; }
-
-  let hasTiktok = false;
-  holder.innerHTML = '<div class="inicio-video-grid">' + rows.map(function (v) {
-    const plat = v.platform === 'tiktok' ? 'TikTok' : 'YouTube';
-    if (v.platform === 'tiktok') hasTiktok = true;
-    return (
-      '<div class="inicio-video-card">' +
-        '<div class="inicio-video-plat">' + plat + '</div>' +
-        inicioVideoEmbedHtml(v.platform, v.video_url, v.title) +
-        '<div class="inicio-video-title">' + inicioEsc(v.title) + '</div>' +
-        (v.handle ? '<div class="inicio-video-handle">' + inicioEsc(v.handle) + '</div>' : '') +
-      '</div>'
-    );
-  }).join('') + '</div>';
-
-  if (hasTiktok) inicioReloadTiktokEmbed();
-}
-
-// ── LINKS ÚTEIS ──────────────────────────────────────────────────────
-async function loadInicioLinks() {
-  const holder = document.getElementById('inicio-links-wrap');
-  if (!holder) return;
-  holder.innerHTML = '<div class="admin-stats-loading">Carregando...</div>';
-
-  const { data, error } = await sbClient
-    .from('community_links')
-    .select('id,title,url,category,icon')
-    .order('created_at', { ascending: false });
-
-  if (error) { holder.innerHTML = '<div class="admin-stats-loading">Erro ao carregar links.</div>'; return; }
-
-  const rows = data || [];
-  if (!rows.length) { holder.innerHTML = '<div class="admin-stats-loading">Nenhum link ainda.</div>'; return; }
-
-  const groups = {};
-  rows.forEach(function (l) {
-    const cat = l.category || 'Outros';
-    (groups[cat] = groups[cat] || []).push(l);
-  });
-
-  holder.innerHTML = Object.keys(groups).map(function (cat) {
-    const chips = groups[cat].map(function (l) {
-      return (
-        '<a class="inicio-chip" href="' + inicioSafeUrl(l.url) + '" target="_blank" rel="noopener">' +
-          '<span class="inicio-chip-ic">' + inicioEsc(l.icon || '🔗') + '</span> <b>' + inicioEsc(l.title) + '</b>' +
-        '</a>'
-      );
-    }).join('');
-    return '<div class="inicio-link-group"><div class="inicio-link-group-label">' + inicioEsc(cat) + '</div><div class="inicio-chips">' + chips + '</div></div>';
-  }).join('');
-}
-
-// ── REVISTA MYDECK ───────────────────────────────────────────────────
-async function loadInicioRevista() {
-  const holder = document.getElementById('inicio-revista-wrap');
-  if (!holder) return;
-  holder.innerHTML = '<div class="admin-stats-loading">Carregando...</div>';
-
-  const { data, error } = await sbClient
-    .from('magazine_articles')
-    .select('id,title,subtitle,tag,is_featured,published_at')
-    .order('published_at', { ascending: false })
-    .limit(10);
-
-  if (error) { holder.innerHTML = '<div class="admin-stats-loading">Erro ao carregar a revista.</div>'; return; }
-
-  const rows = data || [];
-  if (!rows.length) { holder.innerHTML = '<div class="admin-stats-loading">Nenhum artigo publicado ainda.</div>'; return; }
-
-  holder.innerHTML = rows.map(function (a) {
-    const dt = a.published_at ? new Date(a.published_at).toLocaleDateString('pt-BR') : '';
-    return (
-      '<div class="inicio-article-row' + (a.is_featured ? ' inicio-article-featured' : '') + '">' +
-        '<div class="inicio-article-tag">' + inicioEsc(a.tag || 'Revista') + (a.is_featured ? ' · Capa' : '') + '</div>' +
-        '<div class="inicio-article-title">' + inicioEsc(a.title) + '</div>' +
-        (a.subtitle ? '<div class="inicio-article-sub">' + inicioEsc(a.subtitle) + '</div>' : '') +
-        '<div class="inicio-article-date">' + dt + '</div>' +
-      '</div>'
-    );
-  }).join('');
-}
 
 // ── HOOKS ────────────────────────────────────────────────────────────
 (function hookInicioIntoApp() {
@@ -464,7 +491,9 @@ async function loadInicioRevista() {
       original(user);
       if (user) renderInicio(); else {
         closeInicioArticle();
-        ['inicio-hero-wrap', 'inicio-updates-wrap', 'inicio-news-wrap', 'inicio-videos-wrap', 'inicio-links-wrap', 'inicio-revista-wrap']
+        if (inicioFeedObserver) { inicioFeedObserver.disconnect(); inicioFeedObserver = null; }
+        INICIO_FEED_ITEMS = []; INICIO_FEED_RENDERED = 0;
+        ['inicio-hero-wrap', 'inicio-updates-wrap', 'inicio-feed-wrap']
           .forEach(function (id) { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
       }
     };
