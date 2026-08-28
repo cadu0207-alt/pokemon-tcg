@@ -37,6 +37,7 @@ let rifCustomPhotoFiles=[];
 const RIF_PHOTO_MAX=4;
 const RIF_PHOTO_MAX_INPUT_MB=15;
 let rifPollTimer=null;
+let rifAutoNavigated=false; // evita reabrir a aba toda vez que o hook de login roda (mesmo padrão de aucAutoNavigated)
 let rifCountdownTimer=null;
 let rifAutoDrawTriggered=new Set(); // evita chamar draw_raffle mais de uma vez por rifa nesta aba aberta
 let rifScheduleFormOpenFor=null;    // id da rifa com o formulário de agendar sorteio aberto
@@ -52,6 +53,11 @@ async function updateRifasTabVisibility(){
   if(!show){
     const pane=document.getElementById('rifas');
     if(pane&&pane.classList.contains('active')&&typeof goToTab==='function')goToTab('dash');
+  }else if(!rifAutoNavigated&&typeof goToTab==='function'&&new URLSearchParams(window.location.search).get('rifa')){
+    // Chegou por um link compartilhado (?rifa=<id>) — abre a aba direto,
+    // sem precisar clicar no menu (mesmo padrão do leilão).
+    rifAutoNavigated=true;
+    goToTab('rifas');
   }
 }
 (function hookRifasTabVisibility(){
@@ -80,6 +86,7 @@ async function renderRifasTab(){
   await loadMyRaffleNumbers();
   renderRafflesList();
   renderRaffleArchive();
+  rifScrollToShared();
 
   if(aucIsLeilaoAdmin){
     await loadPendingRafflePayments();
@@ -197,7 +204,7 @@ function rifCardHtml(r){
   // só de criar as próprias (ver rifa_setup.sql seção 10).
   const isMine=aucIsLeilaoAdmin&&r.created_by===uid();
 
-  return`<div class="panel${isWinner?' auc-hot-card':''}">
+  return`<div class="panel${isWinner?' auc-hot-card':''}" id="rif-card-${r.id}">
     <div style="display:flex;gap:14px;flex-wrap:wrap">
       ${img?`<img src="${img}" alt="${esc(r.title)}" style="width:100px;border-radius:8px;object-fit:contain;background:var(--surface2)">`:''}
       <div style="flex:1;min-width:220px">
@@ -313,27 +320,80 @@ function rifArchiveCardHtml(r){
   </div>`;
 }
 
-// ── COMPARTILHAR NO WHATSAPP (28/08/2026) ──────────────────────
+// ── COMPARTILHAR NO WHATSAPP (28/08/2026, com link + imagem) ────
 // Botão aberto pra qualquer um (participante ou não) espalhar a rifa —
-// pedido do Eduardo: já leva as regras resumidas + passo a passo, sem
-// número fixo de destino (wa.me sem número abre o seletor de contato/grupo).
+// já leva as regras resumidas + passo a passo, o link direto pra essa
+// rifa (?rifa=<id> — abre a aba sozinho, ver updateRifasTabVisibility) e,
+// quando o navegador suporta (celular, principalmente), a FOTO do prêmio
+// anexada de verdade — mesmo padrão de shareAuctionText/aucFetchImageBlob
+// do leilão (leilao.js), sem número fixo de destino.
+function rifShareUrl(raffleId){
+  const base=window.location.origin+window.location.pathname;
+  return`${base}?rifa=${raffleId}`;
+}
+
 function rifShareMessage(r){
   const c=rifNumberCounts[r.id]||{livres:r.ticket_count};
+  const url=rifShareUrl(r.id);
   return`🎟️ *RIFA: ${r.title}*\n\n`+
     `${r.description?r.description+'\n\n':''}`+
     `💰 R$ ${fmtR(r.ticket_price)} por número — ${c.livres} de ${r.ticket_count} ainda livre(s)\n\n`+
     `📋 *Como participar:*\n`+
-    `1️⃣ Entre no MyDeck, aba Rifas\n`+
+    `1️⃣ Entre no link abaixo (abre direto na rifa)\n`+
     `2️⃣ Clique em "Participar" e escolha quantos números quer\n`+
     `3️⃣ Pague via PIX (a chave aparece na hora) e envie o comprovante\n`+
     `4️⃣ Escolha seus números entre os livres\n`+
     `5️⃣ Aguarde a confirmação e acompanhe o sorteio ao vivo, com contagem regressiva! 🎬\n\n`+
-    `Ao participar você aceita as regras da rifa, exibidas no site antes de começar.`;
+    `Ao participar você aceita as regras da rifa, exibidas no site antes de começar.\n\n`+
+    `Vem ver:\n${url}`;
 }
-function rifShareRaffle(raffleId){
+
+async function rifShareRaffle(raffleId){
   const r=rifRaffleById(raffleId);
   if(!r)return;
-  window.open(`https://wa.me/?text=${encodeURIComponent(rifShareMessage(r))}`,'_blank');
+  const msg=rifShareMessage(r);
+  const imgUrl=rifImgFor(r);
+
+  // Celular com suporte a compartilhar arquivo: manda a foto do prêmio
+  // JUNTO com o texto (link incluso), tudo num só compartilhamento nativo.
+  if(imgUrl&&navigator.share&&navigator.canShare){
+    try{
+      const blob=typeof aucFetchImageBlob==='function'?await aucFetchImageBlob(imgUrl):null;
+      if(blob){
+        const file=new File([blob],'rifa.jpg',{type:blob.type||'image/jpeg'});
+        if(navigator.canShare({files:[file]})){
+          await navigator.share({title:`Rifa — ${r.title}`,text:msg,files:[file]});
+          return;
+        }
+      }
+    }catch(e){ if(e?.name==='AbortError')return; /* cai pro fallback abaixo */ }
+  }
+  // Sem imagem, ou sem suporte a anexar arquivo: compartilhamento nativo só
+  // com texto (que já leva o link) — ou, no desktop, abre o WhatsApp Web
+  // direto com a mensagem pronta e copia pro clipboard também.
+  if(navigator.share){
+    try{ await navigator.share({title:`Rifa — ${r.title}`,text:msg}); return; }
+    catch(e){ if(e?.name==='AbortError')return; }
+  }
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
+  if(navigator.clipboard)navigator.clipboard.writeText(msg).catch(()=>{});
+  setStatus('Mensagem pronta pro WhatsApp (também copiada)','ok');
+}
+
+// Se chegou por um link compartilhado (?rifa=<id>), rola a tela até o
+// card daquela rifa específica e dá um destaque rápido, pra não precisar
+// procurar na lista.
+function rifScrollToShared(){
+  const id=parseInt(new URLSearchParams(window.location.search).get('rifa'));
+  if(!id)return;
+  const el=document.getElementById(`rif-card-${id}`);
+  if(!el)return;
+  setTimeout(()=>{
+    el.scrollIntoView({behavior:'smooth',block:'center'});
+    el.style.transition='box-shadow .3s ease';
+    el.style.boxShadow='0 0 0 3px var(--accent)';
+    setTimeout(()=>{el.style.boxShadow='';},2200);
+  },300);
 }
 
 // ── LETREIRO DE CONTAGEM REGRESSIVA (28/08/2026) ────────────────
