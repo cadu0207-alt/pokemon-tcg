@@ -73,11 +73,11 @@ async function updateRifasTabVisibility(){
 // ── CARREGAR TUDO ───────────────────────────────────────────────
 async function renderRifasTab(){
   if(typeof resolveLeilaoAdminStatus==='function')await resolveLeilaoAdminStatus();
-  ['rif-tab-cadastro','rif-tab-revisao'].forEach(id=>{
+  ['rif-tab-cadastro','rif-tab-revisao','rif-tab-acompanhamento'].forEach(id=>{
     const btn=document.getElementById(id);
     if(btn)btn.style.display=aucIsLeilaoAdmin?'':'none';
   });
-  const allowed=aucIsLeilaoAdmin?['rifas','cadastro','revisao','arquivo']:['rifas','arquivo'];
+  const allowed=aucIsLeilaoAdmin?['rifas','cadastro','revisao','acompanhamento','arquivo']:['rifas','arquivo'];
   switchRifasSubtab(allowed.includes(rifActiveSubtab)?rifActiveSubtab:'rifas');
 
   await loadRifRulesAcceptance();
@@ -91,6 +91,7 @@ async function renderRifasTab(){
   if(aucIsLeilaoAdmin){
     await loadPendingRafflePayments();
     renderRafflePaymentsReview();
+    renderRifTracking();
   }
 
   rifStartPolling();
@@ -99,7 +100,8 @@ async function renderRifasTab(){
 
 function switchRifasSubtab(name){
   rifActiveSubtab=name;
-  ['rifas','cadastro','revisao','arquivo'].forEach(n=>{
+  if(name==='acompanhamento'&&aucIsLeilaoAdmin)renderRifTracking();
+  ['rifas','cadastro','revisao','acompanhamento','arquivo'].forEach(n=>{
     const pane=document.getElementById('rif-sub-'+n);
     if(pane)pane.style.display=(n===name)?'':'none';
     const btn=document.querySelector(`.rif-subtab-btn[data-sub="${n}"]`);
@@ -612,6 +614,9 @@ function renderRifParticipateContent(){
     box.innerHTML=`
       <h3 style="margin-bottom:4px">🎟️ ${esc(r.title)}</h3>
       <div style="font-size:11px;color:var(--muted);margin-bottom:14px">${c.livres} número(s) livre(s) de ${r.ticket_count} — R$ ${fmtR(r.ticket_price)} cada</div>
+      <div class="ff"><label>Seu nome *</label>
+        <input id="rif-buyer-name" placeholder="Nome completo (o rifeiro usa isso pra te identificar)">
+      </div>
       <div class="ff"><label>Quantos números você quer?</label>
         <input type="number" id="rif-qty-input" min="1" max="${c.livres}" value="1" oninput="rifUpdateQtyTotal(${r.id})">
       </div>
@@ -655,8 +660,10 @@ async function submitRifPayment(raffleId){
   const r=rifRaffleById(raffleId);
   if(!r)return;
   const statusEl=document.getElementById('rif-participate-status');
+  const buyerName=(document.getElementById('rif-buyer-name')?.value||'').trim();
   const qty=parseInt(document.getElementById('rif-qty-input')?.value);
   const c=rifNumberCounts[r.id]||{livres:r.ticket_count};
+  if(!buyerName){if(statusEl)statusEl.textContent='Informe seu nome.';return;}
   if(!qty||qty<1){if(statusEl)statusEl.textContent='Escolha uma quantidade válida.';return;}
   if(qty>c.livres){if(statusEl)statusEl.textContent=`Só tem ${c.livres} número(s) livre(s) — escolha uma quantidade menor.`;return;}
   const file=document.getElementById('rif-proof-input')?.files?.[0];
@@ -673,7 +680,7 @@ async function submitRifPayment(raffleId){
 
     const total=Math.round(qty*r.ticket_price*100)/100;
     const{data:payment,error:payErr}=await sbClient.from('raffle_payments')
-      .insert({raffle_id:raffleId,user_id:uid(),quantity:qty,total_amount:total,proof_path:path,status:'pendente'})
+      .insert({raffle_id:raffleId,user_id:uid(),quantity:qty,total_amount:total,proof_path:path,status:'pendente',buyer_name:buyerName})
       .select().single();
     if(payErr)throw payErr;
 
@@ -749,12 +756,27 @@ async function confirmRifNumbers(){
 // etc.) — o próprio rifeiro dono da rifa escreve o nome, marca os
 // números e confirma tudo de uma vez (não passa pela fila de revisão,
 // já nasce confirmado — ver admin_add_manual_raffle_payment no SQL).
-let rifManualPayment=null; // {raffleId, chosen:Set}
+// rifManualPayment.mode: 'new' (lançar pagamento do zero) ou 'fix'
+// (completar números de um pagamento que já existe e ficou faltando —
+// ver openRifFixPaymentNumbers, pro relato do Eduardo de PIX recebido
+// sem os números aparecerem).
+let rifManualPayment=null; // {raffleId, chosen:Set, mode, paymentId, neededCount, buyerLabel}
 
 function openRifManualPayment(raffleId){
   const r=rifRaffleById(raffleId);
   if(!r||!aucIsLeilaoAdmin||r.created_by!==uid())return;
-  rifManualPayment={raffleId,chosen:new Set()};
+  rifManualPayment={raffleId,chosen:new Set(),mode:'new'};
+  renderRifManualPaymentContent();
+  if(typeof openModal==='function')openModal('rif-manual-payment-ov');
+}
+
+// Chamado a partir da Revisão de Pagamentos (ou da aba Acompanhamento)
+// quando um pagamento pendente tem menos números escolhidos do que a
+// quantidade paga — o rifeiro completa a diferença aqui.
+function openRifFixPaymentNumbers(paymentId,raffleId,neededCount,buyerLabel){
+  const r=rifRaffleById(raffleId);
+  if(!r||!aucIsLeilaoAdmin||r.created_by!==uid())return;
+  rifManualPayment={raffleId,chosen:new Set(),mode:'fix',paymentId,neededCount,buyerLabel};
   renderRifManualPaymentContent();
   if(typeof openModal==='function')openModal('rif-manual-payment-ov');
 }
@@ -764,16 +786,26 @@ async function renderRifManualPaymentContent(){
   if(!box||!rifManualPayment)return;
   const r=rifRaffleById(rifManualPayment.raffleId);
   if(!r)return;
-  box.innerHTML=`
-    <h3 style="margin-bottom:4px">✍️ Marcar pagamento manual</h3>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:14px">${esc(r.title)} — pra quem pagou por fora do site (dinheiro, PIX combinado direto etc.)</div>
-    <div class="ff"><label>Nome de quem pagou *</label>
-      <input id="rif-manual-name" placeholder="Nome completo">
-    </div>
-    <div style="font-size:11px;color:var(--muted);margin:10px 0 6px">Marque os números que essa pessoa ficou. Selecionados: <b id="rif-manual-picked-count">0</b></div>
-    <div id="rif-manual-number-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:6px;max-height:36vh;overflow-y:auto;margin-bottom:14px"></div>
-    <div id="rif-manual-status" style="font-size:10.5px;color:var(--accent);margin:8px 0"></div>
-    <button class="btn-add" onclick="submitRifManualPayment()">✓ Confirmar pagamento</button>`;
+  if(rifManualPayment.mode==='fix'){
+    box.innerHTML=`
+      <h3 style="margin-bottom:4px">🔢 Completar números</h3>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px">${esc(r.title)} — ${esc(rifManualPayment.buyerLabel||'pagamento')} pagou mas não terminou de escolher os números. Marque exatamente ${rifManualPayment.neededCount} pra completar.</div>
+      <div style="font-size:11px;color:var(--muted);margin:10px 0 6px">Selecionados: <b id="rif-manual-picked-count">0</b>/${rifManualPayment.neededCount}</div>
+      <div id="rif-manual-number-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:6px;max-height:36vh;overflow-y:auto;margin-bottom:14px"></div>
+      <div id="rif-manual-status" style="font-size:10.5px;color:var(--accent);margin:8px 0"></div>
+      <button class="btn-add" id="rif-manual-submit-btn" disabled onclick="submitRifFixPaymentNumbers()">✓ Atribuir números</button>`;
+  }else{
+    box.innerHTML=`
+      <h3 style="margin-bottom:4px">✍️ Marcar pagamento manual</h3>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px">${esc(r.title)} — pra quem pagou por fora do site (dinheiro, PIX combinado direto etc.)</div>
+      <div class="ff"><label>Nome de quem pagou *</label>
+        <input id="rif-manual-name" placeholder="Nome completo">
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin:10px 0 6px">Marque os números que essa pessoa ficou. Selecionados: <b id="rif-manual-picked-count">0</b></div>
+      <div id="rif-manual-number-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:6px;max-height:36vh;overflow-y:auto;margin-bottom:14px"></div>
+      <div id="rif-manual-status" style="font-size:10.5px;color:var(--accent);margin:8px 0"></div>
+      <button class="btn-add" onclick="submitRifManualPayment()">✓ Confirmar pagamento</button>`;
+  }
   await renderRifManualNumberGrid();
 }
 
@@ -796,11 +828,22 @@ async function renderRifManualNumberGrid(){
 
 function rifToggleManualNumber(number){
   if(!rifManualPayment)return;
-  if(rifManualPayment.chosen.has(number))rifManualPayment.chosen.delete(number);
-  else rifManualPayment.chosen.add(number);
+  if(rifManualPayment.chosen.has(number)){
+    rifManualPayment.chosen.delete(number);
+  }else{
+    if(rifManualPayment.mode==='fix'&&rifManualPayment.chosen.size>=rifManualPayment.neededCount){
+      setStatus(`Marque no máximo ${rifManualPayment.neededCount} número(s).`,'err');
+      return;
+    }
+    rifManualPayment.chosen.add(number);
+  }
   renderRifManualNumberGrid();
   const countEl=document.getElementById('rif-manual-picked-count');
   if(countEl)countEl.textContent=rifManualPayment.chosen.size;
+  if(rifManualPayment.mode==='fix'){
+    const btn=document.getElementById('rif-manual-submit-btn');
+    if(btn)btn.disabled=rifManualPayment.chosen.size!==rifManualPayment.neededCount;
+  }
 }
 
 async function submitRifManualPayment(){
@@ -825,6 +868,35 @@ async function submitRifManualPayment(){
   rifManualPayment=null;
   await loadRaffleNumberCounts();
   renderRafflesList();
+  if(typeof renderRifTracking==='function')renderRifTracking();
+}
+
+async function submitRifFixPaymentNumbers(){
+  if(!rifManualPayment||rifManualPayment.mode!=='fix')return;
+  const statusEl=document.getElementById('rif-manual-status');
+  const numbers=Array.from(rifManualPayment.chosen);
+  if(numbers.length!==rifManualPayment.neededCount){
+    if(statusEl)statusEl.textContent=`Marque exatamente ${rifManualPayment.neededCount} número(s).`;
+    return;
+  }
+  if(statusEl)statusEl.textContent='Salvando...';
+  const{error}=await sbClient.rpc('admin_assign_numbers_to_payment',{
+    p_payment_id:rifManualPayment.paymentId,p_numbers:numbers
+  });
+  if(error){
+    console.error('[rifa] submitRifFixPaymentNumbers',error);
+    if(statusEl)statusEl.textContent=error.message||'Erro ao salvar — atualize e tente de novo.';
+    renderRifManualNumberGrid();
+    return;
+  }
+  setStatus('Números completados — já dá pra confirmar o pagamento.','ok');
+  if(typeof closeModal==='function')closeModal('rif-manual-payment-ov');
+  rifManualPayment=null;
+  await loadPendingRafflePayments();
+  await renderRafflePaymentsReview();
+  await loadRaffleNumberCounts();
+  renderRafflesList();
+  if(typeof renderRifTracking==='function')renderRifTracking();
 }
 
 // ── PAINEL DO RIFEIRO — CADASTRO ────────────────────────────────
@@ -993,18 +1065,21 @@ async function renderRafflePaymentsReview(){
     const{data:signed}=await sbClient.storage.from('rifa-comprovantes').createSignedUrl(p.proof_path,600);
     const{data:nums}=await sbClient.from('raffle_numbers').select('number').eq('payment_id',p.id).order('number');
     const{data:addr}=await sbClient.from('user_addresses').select('whatsapp').eq('user_id',p.user_id).maybeSingle();
+    const have=(nums||[]).length;
+    const missing=p.quantity-have;
     return`<div class="cv-item" style="cursor:default;flex-direction:column;align-items:stretch;gap:8px">
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         ${signed?.signedUrl?`<img src="${signed.signedUrl}" onclick="window.open('${signed.signedUrl}','_blank')" style="width:80px;border-radius:6px;object-fit:contain;background:var(--surface2);cursor:zoom-in" title="Clique pra ampliar">`:''}
         <div style="flex:1;min-width:200px">
-          <div style="font-weight:700">${esc(p.raffles?.title||'Rifa')}</div>
+          <div style="font-weight:700">${esc(p.raffles?.title||'Rifa')}${p.buyer_name?` — ${esc(p.buyer_name)}`:''}</div>
           <div style="font-size:11px;color:var(--muted)">${p.quantity} número(s) — R$ ${fmtR(p.total_amount)}</div>
-          <div style="font-size:11px;color:var(--muted)">Números: ${(nums||[]).map(n=>n.number).join(', ')||'—'}</div>
+          <div style="font-size:11px;color:${missing>0?'var(--accent)':'var(--muted)'}">Números: ${(nums||[]).map(n=>n.number).join(', ')||'—'}${missing>0?` ⚠️ faltam ${missing}`:''}</div>
           <div style="font-size:11px;color:var(--muted)">${addr?.whatsapp?`WhatsApp: ${esc(addr.whatsapp)}`:'Sem WhatsApp cadastrado'}</div>
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn-add" onclick="confirmRifPayment(${p.id})">✓ Confirmar pagamento</button>
+        ${missing>0?`<button class="btn-add" onclick="openRifFixPaymentNumbers(${p.id},${p.raffle_id},${missing},'${esc(p.buyer_name||'esse pagamento').replace(/'/g,"\\'")}')">🔢 Completar ${missing} número(s)</button>`
+          :`<button class="btn-add" onclick="confirmRifPayment(${p.id})">✓ Confirmar pagamento</button>`}
         <button class="cv-item-remove" onclick="rejectRifPayment(${p.id})">✕ Rejeitar</button>
       </div>
     </div>`;
@@ -1015,12 +1090,13 @@ async function renderRafflePaymentsReview(){
 async function confirmRifPayment(paymentId){
   if(!aucIsLeilaoAdmin)return;
   const{error}=await sbClient.rpc('confirm_raffle_payment',{p_payment_id:paymentId});
-  if(error){console.error('[rifa] confirmRifPayment',error);setStatus('Erro ao confirmar','err');return;}
+  if(error){console.error('[rifa] confirmRifPayment',error);setStatus(error.message||'Erro ao confirmar','err');return;}
   setStatus('Pagamento confirmado','ok');
   await loadPendingRafflePayments();
   await renderRafflePaymentsReview();
   await loadRaffleNumberCounts();
   renderRafflesList();
+  renderRifTracking();
 }
 
 async function rejectRifPayment(paymentId){
@@ -1033,6 +1109,69 @@ async function rejectRifPayment(paymentId){
   await renderRafflePaymentsReview();
   await loadRaffleNumberCounts();
   renderRafflesList();
+  renderRifTracking();
+}
+
+// ── ACOMPANHAMENTO (rifeiro/admin, 28/08/2026) ──────────────────
+// Pedido do Eduardo: visão de tudo — nome de quem pagou, quantidade,
+// números, confirmado ou não — mais o financeiro consolidado, pra pegar
+// na hora um pagamento "travado" sem número (relato do PIX recebido sem
+// os números aparecerem). RLS (seção 10) já garante que só vêm
+// pagamentos das rifas que o próprio rifeiro criou.
+async function renderRifTracking(){
+  const summaryBox=document.getElementById('rif-tracking-summary');
+  const listBox=document.getElementById('rif-tracking-list');
+  if(!summaryBox||!listBox||!aucIsLeilaoAdmin)return;
+
+  const{data,error}=await sbClient.from('raffle_payments')
+    .select('*, raffles!inner(title,created_by,status), raffle_numbers(number)')
+    .eq('raffles.created_by',uid())
+    .order('created_at',{ascending:false});
+  if(error){
+    console.error('[rifa] renderRifTracking',error);
+    listBox.innerHTML=`<div class="cv-item-empty">Erro ao carregar acompanhamento.</div>`;
+    return;
+  }
+  const payments=Array.isArray(data)?data:[];
+
+  const confirmados=payments.filter(p=>p.status==='confirmado');
+  const pendentes=payments.filter(p=>p.status==='pendente');
+  const rejeitados=payments.filter(p=>p.status==='rejeitado');
+  const totalConfirmado=confirmados.reduce((s,p)=>s+Number(p.total_amount||0),0);
+  const totalPendente=pendentes.reduce((s,p)=>s+Number(p.total_amount||0),0);
+  const numerosConfirmados=confirmados.reduce((s,p)=>s+p.quantity,0);
+  const semNumeroCompleto=payments.filter(p=>p.status!=='rejeitado'&&(p.raffle_numbers||[]).length<p.quantity).length;
+
+  summaryBox.innerHTML=[
+    {label:'💰 Recebido (confirmado)',val:`R$ ${fmtR(totalConfirmado)}`,color:'var(--teal)'},
+    {label:'⏳ Aguardando confirmação',val:`R$ ${fmtR(totalPendente)}`,color:'var(--gold)'},
+    {label:'🎟️ Números confirmados',val:numerosConfirmados,color:'var(--text)'},
+    {label:'⚠️ Pagamentos com número faltando',val:semNumeroCompleto,color:semNumeroCompleto>0?'var(--accent)':'var(--muted)'}
+  ].map(s=>`<div class="panel" style="padding:12px;text-align:center">
+    <div style="font-size:9.5px;color:var(--muted);margin-bottom:4px">${s.label}</div>
+    <div style="font-size:18px;font-weight:800;color:${s.color};font-family:'Space Mono',monospace">${s.val}</div>
+  </div>`).join('');
+
+  if(!payments.length){listBox.innerHTML=`<div class="cv-item-empty">Nenhum pagamento registrado ainda.</div>`;return;}
+
+  const STATUS_LBL={pendente:['⏳ Pendente','var(--gold)'],confirmado:['✓ Confirmado','var(--teal)'],rejeitado:['✕ Rejeitado','var(--muted)']};
+  listBox.innerHTML=payments.map(p=>{
+    const have=(p.raffle_numbers||[]).length;
+    const missing=p.quantity-have;
+    const[lbl,color]=STATUS_LBL[p.status]||[p.status,'var(--muted)'];
+    const dt=new Date(p.created_at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+    const nums=(p.raffle_numbers||[]).map(n=>n.number).sort((a,b)=>a-b).join(', ')||'—';
+    return`<div class="cv-item" style="cursor:default;flex-direction:column;align-items:stretch;gap:6px">
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="font-weight:700">${esc(p.buyer_name||'(sem nome)')}${p.is_manual?' <span style="font-size:9px;color:var(--muted);font-weight:400">· manual</span>':''}</div>
+        <div style="font-size:11px;font-weight:700;color:${color}">${lbl}</div>
+      </div>
+      <div style="font-size:10.5px;color:var(--muted)">${esc(p.raffles?.title||'Rifa')} · ${dt}</div>
+      <div style="font-size:11px">${p.quantity} número(s) — R$ ${fmtR(p.total_amount)}</div>
+      <div style="font-size:11px;color:${missing>0&&p.status!=='rejeitado'?'var(--accent)':'var(--muted)'}">Números: ${nums}${missing>0&&p.status!=='rejeitado'?` ⚠️ faltam ${missing}`:''}</div>
+      ${missing>0&&p.status==='pendente'?`<button class="btn-add" style="align-self:flex-start" onclick="openRifFixPaymentNumbers(${p.id},${p.raffle_id},${missing},'${esc(p.buyer_name||'esse pagamento').replace(/'/g,"\\'")}')">🔢 Completar ${missing} número(s)</button>`:''}
+    </div>`;
+  }).join('');
 }
 
 // ── SORTEIO ──────────────────────────────────────────────────────

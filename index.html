@@ -1158,6 +1158,7 @@
       <button type="button" class="btn-add rif-subtab-btn" data-sub="rifas" onclick="switchRifasSubtab('rifas')">🎟️ Rifas</button>
       <button type="button" id="rif-tab-cadastro" class="btn-add rif-subtab-btn" data-sub="cadastro" onclick="switchRifasSubtab('cadastro')" style="display:none">➕ Cadastro</button>
       <button type="button" id="rif-tab-revisao" class="btn-add rif-subtab-btn" data-sub="revisao" onclick="switchRifasSubtab('revisao')" style="display:none">🔍 Revisão de Pagamentos</button>
+      <button type="button" id="rif-tab-acompanhamento" class="btn-add rif-subtab-btn" data-sub="acompanhamento" onclick="switchRifasSubtab('acompanhamento')" style="display:none">📊 Acompanhamento</button>
       <button type="button" class="btn-add rif-subtab-btn" data-sub="arquivo" onclick="switchRifasSubtab('arquivo')">📦 Arquivo de Rifas</button>
     </div>
 
@@ -1218,6 +1219,17 @@
         dela aqui.
       </div>
       <div id="rif-review-list" class="cv-list"></div>
+    </div>
+
+    <!-- ── ACOMPANHAMENTO (rifeiro/admin, 28/08/2026) ──────────────────
+         Pedido do Eduardo: gente pagou (PIX recebido) mas os números não
+         apareciam — essa aba dá visão de tudo (nome, quantidade, números,
+         confirmado ou não) + acompanhamento financeiro, pra pegar esse
+         tipo de problema na hora. -->
+    <div id="rif-sub-acompanhamento" style="display:none">
+      <div class="mkt-note">Todos os pagamentos das suas rifas (pendente, confirmado e rejeitado), com nome, números e o financeiro consolidado.</div>
+      <div id="rif-tracking-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px"></div>
+      <div id="rif-tracking-list" class="cv-list"></div>
     </div>
 
     <!-- ── ARQUIVO DE RIFAS ENCERRADAS (28/08/2026) ────────────────────

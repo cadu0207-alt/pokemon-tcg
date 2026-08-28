@@ -715,3 +715,104 @@ end;
 $$;
 
 grant execute on function archive_raffle_without_draw(bigint) to authenticated;
+
+-- ================================================================
+-- 13. ABA DE ACOMPANHAMENTO + CONSERTO DE NÚMEROS SEM ESCOLHA (28/08/2026)
+-- Pedido do Eduardo: o rifeiro relatou gente que pagou (recebeu o PIX)
+-- mas os números dela não aparecem — isso acontece quando o participante
+-- sobe o comprovante (cria o pagamento) mas fecha a tela ANTES de
+-- terminar o passo de escolher os números (submitRifPayment cria o
+-- registro; claim_raffle_numbers só roda depois, num segundo passo). O
+-- pagamento fica "órfão" de números pra sempre se ninguém completar.
+--
+-- Duas coisas:
+--  a) O participante agora informa o NOME dele ao pagar (buyer_name),
+--     pra aparecer na aba de acompanhamento mesmo sem cruzar com conta
+--     de usuário nenhuma.
+--  b) O rifeiro ganha uma função pra ele mesmo completar a escolha de
+--     números de um pagamento que ficou "travado" sem número nenhum (ou
+--     só com alguns) — só ele, dono da rifa, e só pra fechar a diferença
+--     entre o que falta e o total já esperado (quantity).
+-- ================================================================
+create or replace function admin_assign_numbers_to_payment(p_payment_id bigint, p_numbers int[])
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_payment  raffle_payments%rowtype;
+  v_owner    uuid;
+  v_have     int;
+  v_need     int;
+  v_taken    int;
+begin
+  select * into v_payment from raffle_payments where id = p_payment_id for update;
+  if v_payment.id is null then
+    raise exception 'Pagamento não encontrado.';
+  end if;
+
+  select created_by into v_owner from raffles where id = v_payment.raffle_id;
+  if v_owner <> auth.uid() then
+    raise exception 'Só o rifeiro dono dessa rifa pode completar os números desse pagamento.';
+  end if;
+
+  select count(*) into v_have from raffle_numbers where payment_id = p_payment_id;
+  v_need := v_payment.quantity - v_have;
+  if v_need <= 0 then
+    raise exception 'Esse pagamento já tem todos os números escolhidos.';
+  end if;
+  if coalesce(array_length(p_numbers, 1), 0) <> v_need then
+    raise exception 'Marque exatamente % número(s) pra completar esse pagamento.', v_need;
+  end if;
+
+  perform 1 from raffle_numbers
+    where raffle_id = v_payment.raffle_id and number = any(p_numbers)
+    for update;
+
+  select count(*) into v_taken from raffle_numbers
+    where raffle_id = v_payment.raffle_id and number = any(p_numbers) and payment_id is not null;
+  if v_taken > 0 then
+    raise exception 'Um ou mais números marcados já estão reservados — atualize a lista e escolha outros.';
+  end if;
+
+  update raffle_numbers
+    set payment_id = p_payment_id, claimed_at = now()
+    where raffle_id = v_payment.raffle_id and number = any(p_numbers);
+end;
+$$;
+
+grant execute on function admin_assign_numbers_to_payment(bigint, int[]) to authenticated;
+
+-- Trava extra: não deixa confirmar um pagamento com números faltando —
+-- é exatamente o estado que gerou o relato do Eduardo ("recebi o PIX
+-- mas os números não aparecem"). Se faltar número, o rifeiro precisa
+-- completar com admin_assign_numbers_to_payment antes de confirmar.
+create or replace function confirm_raffle_payment(p_payment_id bigint)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_owner uuid; v_qty int; v_have int;
+begin
+  select r.created_by, rp.quantity into v_owner, v_qty
+    from raffle_payments rp join raffles r on r.id = rp.raffle_id
+    where rp.id = p_payment_id;
+  if v_owner is null then
+    raise exception 'Pagamento não encontrado.';
+  end if;
+  if v_owner <> auth.uid() then
+    raise exception 'Só o rifeiro que criou essa rifa pode confirmar esse pagamento.';
+  end if;
+
+  select count(*) into v_have from raffle_numbers where payment_id = p_payment_id;
+  if v_have < v_qty then
+    raise exception 'Esse pagamento ainda não tem todos os números escolhidos (% de %) — complete os números antes de confirmar.', v_have, v_qty;
+  end if;
+
+  update raffle_payments
+    set status = 'confirmado', reviewed_by = auth.uid(), reviewed_at = now()
+    where id = p_payment_id and status = 'pendente';
+end;
+$$;
