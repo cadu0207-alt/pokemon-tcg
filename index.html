@@ -1158,6 +1158,7 @@
       <button type="button" class="btn-add rif-subtab-btn" data-sub="rifas" onclick="switchRifasSubtab('rifas')">🎟️ Rifas</button>
       <button type="button" id="rif-tab-cadastro" class="btn-add rif-subtab-btn" data-sub="cadastro" onclick="switchRifasSubtab('cadastro')" style="display:none">➕ Cadastro</button>
       <button type="button" id="rif-tab-revisao" class="btn-add rif-subtab-btn" data-sub="revisao" onclick="switchRifasSubtab('revisao')" style="display:none">🔍 Revisão de Pagamentos</button>
+      <button type="button" class="btn-add rif-subtab-btn" data-sub="arquivo" onclick="switchRifasSubtab('arquivo')">📦 Arquivo de Rifas</button>
     </div>
 
     <!-- ── LISTA / PARTICIPAR ──────────────────────────────────────── -->
@@ -1217,6 +1218,14 @@
         dela aqui.
       </div>
       <div id="rif-review-list" class="cv-list"></div>
+    </div>
+
+    <!-- ── ARQUIVO DE RIFAS ENCERRADAS (28/08/2026) ────────────────────
+         Pedido do Eduardo: aberto pra qualquer usuário, mostra as rifas
+         já sorteadas com o número vencedor em destaque. -->
+    <div id="rif-sub-arquivo" style="display:none">
+      <div class="mkt-note">Rifas já sorteadas, com o número vencedor de cada uma.</div>
+      <div id="rif-archive-list" class="cv-list"></div>
     </div>
   </div>
 

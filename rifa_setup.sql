@@ -389,3 +389,216 @@ end;
 $$;
 
 grant execute on function cancel_raffle_draw_schedule(bigint) to authenticated;
+
+-- ================================================================
+-- 10. ISOLAMENTO ENTRE RIFEIROS (28/08/2026)
+-- Pedido do Eduardo: is_auction_admin() só diz "essa pessoa é
+-- leiloeiro/rifeiro" — até aqui, isso dava acesso de gerenciar QUALQUER
+-- rifa, de qualquer rifeiro. Agora cada rifeiro só gerencia (edita,
+-- cancela, revisa comprovante, confirma/rejeita pagamento, agenda e
+-- realiza o sorteio, vê o comprovante de PIX) as rifas que ELE MESMO
+-- criou (raffles.created_by = auth.uid()). A lista pública de rifas
+-- abertas continua igual pra todo mundo — isso aqui é só sobre quem
+-- pode ADMINISTRAR o quê.
+-- ================================================================
+
+-- Rifa cancelada só aparece pro próprio criador (não pra outros rifeiros).
+drop policy if exists "raffles_select" on raffles;
+create policy "raffles_select" on raffles
+  for select using (status <> 'cancelada' or created_by = auth.uid());
+
+-- Editar (ex: reagendar campos futuros) e cancelar só o próprio criador.
+drop policy if exists "raffles_update_admin" on raffles;
+create policy "raffles_update_admin" on raffles
+  for update using (is_auction_admin() and created_by = auth.uid());
+
+drop policy if exists "raffles_delete_admin" on raffles;
+create policy "raffles_delete_admin" on raffles
+  for delete using (is_auction_admin() and created_by = auth.uid());
+
+-- Comprovante de pagamento só quem pagou e o rifeiro DAQUELA rifa (não
+-- qualquer rifeiro) enxergam a linha do pagamento.
+drop policy if exists "raffle_payments_select" on raffle_payments;
+create policy "raffle_payments_select" on raffle_payments
+  for select using (
+    user_id = auth.uid()
+    or exists(select 1 from raffles r where r.id = raffle_id and r.created_by = auth.uid())
+  );
+
+-- Idem pro ARQUIVO da foto do comprovante no storage — só o dono do
+-- comprovante e o rifeiro DAQUELA rifa específica (join por proof_path).
+drop policy if exists "rifa-comprovantes select" on storage.objects;
+create policy "rifa-comprovantes select" on storage.objects
+  for select using (
+    bucket_id = 'rifa-comprovantes'
+    and (
+      (storage.foldername(name))[1] = auth.uid()::text
+      or exists(
+        select 1 from raffle_payments rp
+        join raffles r on r.id = rp.raffle_id
+        where rp.proof_path = name and r.created_by = auth.uid()
+      )
+    )
+  );
+
+-- Confirmar/rejeitar pagamento: só o rifeiro dono DAQUELA rifa.
+create or replace function confirm_raffle_payment(p_payment_id bigint)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_owner uuid;
+begin
+  select r.created_by into v_owner
+    from raffle_payments rp join raffles r on r.id = rp.raffle_id
+    where rp.id = p_payment_id;
+  if v_owner is null then
+    raise exception 'Pagamento não encontrado.';
+  end if;
+  if v_owner <> auth.uid() then
+    raise exception 'Só o rifeiro que criou essa rifa pode confirmar esse pagamento.';
+  end if;
+  update raffle_payments
+    set status = 'confirmado', reviewed_by = auth.uid(), reviewed_at = now()
+    where id = p_payment_id and status = 'pendente';
+end;
+$$;
+
+create or replace function reject_raffle_payment(p_payment_id bigint, p_reason text default null)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_owner uuid;
+begin
+  select r.created_by into v_owner
+    from raffle_payments rp join raffles r on r.id = rp.raffle_id
+    where rp.id = p_payment_id;
+  if v_owner is null then
+    raise exception 'Pagamento não encontrado.';
+  end if;
+  if v_owner <> auth.uid() then
+    raise exception 'Só o rifeiro que criou essa rifa pode rejeitar esse pagamento.';
+  end if;
+  update raffle_payments
+    set status = 'rejeitado', reviewed_by = auth.uid(), reviewed_at = now(), reject_reason = p_reason
+    where id = p_payment_id and status = 'pendente';
+  update raffle_numbers set payment_id = null, claimed_at = null where payment_id = p_payment_id;
+end;
+$$;
+
+-- Sortear: só o rifeiro dono da rifa.
+create or replace function draw_raffle(p_raffle_id bigint)
+returns table(winner_number integer, winner_user_id uuid)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_pending    int;
+  v_number     int;
+  v_uid        uuid;
+  v_status     text;
+  v_scheduled  timestamptz;
+  v_owner      uuid;
+begin
+  select status, draw_scheduled_at, created_by into v_status, v_scheduled, v_owner
+    from raffles where id = p_raffle_id for update;
+  if v_status is null then
+    raise exception 'Rifa não encontrada.';
+  end if;
+  if v_owner <> auth.uid() then
+    raise exception 'Só o rifeiro que criou essa rifa pode realizar o sorteio.';
+  end if;
+  if v_status = 'sorteada' then
+    raise exception 'Essa rifa já foi sorteada.';
+  end if;
+  if v_status = 'cancelada' then
+    raise exception 'Rifa cancelada não pode ser sorteada.';
+  end if;
+  if v_scheduled is not null and now() < v_scheduled then
+    raise exception 'O sorteio está agendado para %  — aguarde a contagem regressiva chegar a zero.', to_char(v_scheduled at time zone 'America/Sao_Paulo', 'DD/MM HH24:MI');
+  end if;
+
+  select count(*) into v_pending from raffle_payments
+    where raffle_id = p_raffle_id and status = 'pendente';
+  if v_pending > 0 then
+    raise exception 'Ainda tem % pagamento(s) pendente(s) de revisão — confirme ou rejeite todos antes de sortear.', v_pending;
+  end if;
+
+  select rn.number, rp.user_id into v_number, v_uid
+    from raffle_numbers rn
+    join raffle_payments rp on rp.id = rn.payment_id
+    where rn.raffle_id = p_raffle_id and rp.status = 'confirmado'
+    order by random() limit 1;
+
+  if v_number is null then
+    raise exception 'Nenhum número confirmado ainda — não dá pra sortear.';
+  end if;
+
+  update raffles
+    set status = 'sorteada', winner_number = v_number, winner_user_id = v_uid, drawn_at = now(), updated_at = now()
+    where id = p_raffle_id;
+
+  return query select v_number, v_uid;
+end;
+$$;
+
+-- Agendar/cancelar agendamento do sorteio: só o rifeiro dono.
+create or replace function schedule_raffle_draw(p_raffle_id bigint, p_scheduled_at timestamptz)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_status  text;
+  v_pending int;
+  v_owner   uuid;
+begin
+  select status, created_by into v_status, v_owner from raffles where id = p_raffle_id for update;
+  if v_status is null then
+    raise exception 'Rifa não encontrada.';
+  end if;
+  if v_owner <> auth.uid() then
+    raise exception 'Só o rifeiro que criou essa rifa pode agendar o sorteio dela.';
+  end if;
+  if v_status <> 'aberta' then
+    raise exception 'Só dá pra agendar sorteio de uma rifa aberta.';
+  end if;
+
+  select count(*) into v_pending from raffle_payments
+    where raffle_id = p_raffle_id and status = 'pendente';
+  if v_pending > 0 then
+    raise exception 'Ainda tem % pagamento(s) pendente(s) de revisão — confirme ou rejeite todos antes de agendar o sorteio.', v_pending;
+  end if;
+
+  if p_scheduled_at <= now() then
+    raise exception 'Escolha um horário no futuro.';
+  end if;
+
+  update raffles set draw_scheduled_at = p_scheduled_at, updated_at = now() where id = p_raffle_id;
+end;
+$$;
+
+create or replace function cancel_raffle_draw_schedule(p_raffle_id bigint)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_owner uuid;
+begin
+  select created_by into v_owner from raffles where id = p_raffle_id for update;
+  if v_owner is null then
+    raise exception 'Rifa não encontrada.';
+  end if;
+  if v_owner <> auth.uid() then
+    raise exception 'Só o rifeiro que criou essa rifa pode cancelar o agendamento dela.';
+  end if;
+  update raffles set draw_scheduled_at = null, updated_at = now()
+    where id = p_raffle_id and status = 'aberta';
+end;
+$$;

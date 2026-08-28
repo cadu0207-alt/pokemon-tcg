@@ -70,7 +70,7 @@ async function renderRifasTab(){
     const btn=document.getElementById(id);
     if(btn)btn.style.display=aucIsLeilaoAdmin?'':'none';
   });
-  const allowed=aucIsLeilaoAdmin?['rifas','cadastro','revisao']:['rifas'];
+  const allowed=aucIsLeilaoAdmin?['rifas','cadastro','revisao','arquivo']:['rifas','arquivo'];
   switchRifasSubtab(allowed.includes(rifActiveSubtab)?rifActiveSubtab:'rifas');
 
   await loadRifRulesAcceptance();
@@ -78,6 +78,7 @@ async function renderRifasTab(){
   await loadRaffleNumberCounts();
   await loadMyRaffleNumbers();
   renderRafflesList();
+  renderRaffleArchive();
 
   if(aucIsLeilaoAdmin){
     await loadPendingRafflePayments();
@@ -90,7 +91,7 @@ async function renderRifasTab(){
 
 function switchRifasSubtab(name){
   rifActiveSubtab=name;
-  ['rifas','cadastro','revisao'].forEach(n=>{
+  ['rifas','cadastro','revisao','arquivo'].forEach(n=>{
     const pane=document.getElementById('rif-sub-'+n);
     if(pane)pane.style.display=(n===name)?'':'none';
     const btn=document.querySelector(`.rif-subtab-btn[data-sub="${n}"]`);
@@ -115,6 +116,7 @@ function rifStartPolling(){
     await loadRaffleNumberCounts();
     const newlyDrawn=rifRaffles.filter(r=>prevStatus[r.id]==='aberta'&&r.status==='sorteada');
     renderRafflesList();
+    if(newlyDrawn.length)renderRaffleArchive();
     newlyDrawn.forEach(r=>rifPlayDrawReveal(r));
   },4000);
 }
@@ -171,11 +173,15 @@ function rifImgFor(r){
 function rifRaffleById(id){return rifRaffles.find(r=>r.id===id);}
 
 // ── LISTA DE RIFAS ──────────────────────────────────────────────
+// Lista principal: só rifas abertas pra todo mundo, mais as canceladas
+// do PRÓPRIO rifeiro (que criou) — outro rifeiro não vê a cancelada de
+// alguém, e rifas já sorteadas ficam no Arquivo (renderRaffleArchive).
 function renderRafflesList(){
   const wrap=document.getElementById('rif-list');
   if(!wrap)return;
-  if(!rifRaffles.length){wrap.innerHTML=`<div class="cv-item-empty">Nenhuma rifa cadastrada ainda.</div>`;return;}
-  wrap.innerHTML=rifRaffles.filter(r=>r.status!=='cancelada'||aucIsLeilaoAdmin).map(r=>rifCardHtml(r)).join('');
+  const visible=rifRaffles.filter(r=>r.status==='aberta'||(r.status==='cancelada'&&aucIsLeilaoAdmin&&r.created_by===uid()));
+  if(!visible.length){wrap.innerHTML=`<div class="cv-item-empty">Nenhuma rifa aberta no momento.</div>`;return;}
+  wrap.innerHTML=visible.map(r=>rifCardHtml(r)).join('');
 }
 
 function rifCardHtml(r){
@@ -185,6 +191,10 @@ function rifCardHtml(r){
   const pct=r.ticket_count?Math.round((vendidos/r.ticket_count)*100):0;
   const mine=rifMyNumbers[r.id]||[];
   const isWinner=r.status==='sorteada'&&r.winner_user_id===uid();
+  // Só o rifeiro que CRIOU essa rifa específica pode gerenciá-la — outro
+  // rifeiro (aucIsLeilaoAdmin também) não tem acesso de administrar aqui,
+  // só de criar as próprias (ver rifa_setup.sql seção 10).
+  const isMine=aucIsLeilaoAdmin&&r.created_by===uid();
 
   return`<div class="panel${isWinner?' auc-hot-card':''}">
     <div style="display:flex;gap:14px;flex-wrap:wrap">
@@ -210,14 +220,46 @@ function rifCardHtml(r){
       </div>
     </div>
     ${r.status==='aberta'?rifCountdownBannerHtml(r):''}
-    ${aucIsLeilaoAdmin&&r.status==='aberta'?rifScheduleFormHtml(r,c):''}
+    ${isMine&&r.status==='aberta'?rifScheduleFormHtml(r,c):''}
     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
       ${r.status==='aberta'?`<button class="btn-add" onclick="openRifParticipate(${r.id})">🎟️ Participar</button>`:''}
       ${r.status==='aberta'?`<button class="cv-item-remove" style="color:#25d366;border-color:#25d366" onclick="rifShareRaffle(${r.id})">📤 Compartilhar no WhatsApp</button>`:''}
       ${isWinner?`<button class="btn-add" onclick="rifContactRifeiro(${r.id})">💬 Falar com o rifeiro no WhatsApp</button>`:''}
-      ${aucIsLeilaoAdmin&&r.status==='aberta'?`<button class="cv-item-remove" style="color:var(--gold);border-color:var(--gold)" onclick="rifDrawNow(${r.id})">🎬 Realizar Sorteio Agora</button>`:''}
-      ${aucIsLeilaoAdmin&&r.status!=='cancelada'?`<button class="cv-item-remove" onclick="rifCancelRaffle(${r.id})">🗑️ Cancelar</button>`:''}
+      ${isMine&&r.status==='aberta'?`<button class="cv-item-remove" style="color:var(--gold);border-color:var(--gold)" onclick="rifDrawNow(${r.id})">🎬 Realizar Sorteio Agora</button>`:''}
+      ${isMine&&r.status!=='cancelada'?`<button class="cv-item-remove" onclick="rifCancelRaffle(${r.id})">🗑️ Cancelar</button>`:''}
     </div>
+  </div>`;
+}
+
+// ── ARQUIVO DE RIFAS ENCERRADAS (28/08/2026) ────────────────────
+// Pedido do Eduardo: aberto pra qualquer usuário, mostra as rifas já
+// sorteadas com o número vencedor em destaque.
+function renderRaffleArchive(){
+  const wrap=document.getElementById('rif-archive-list');
+  if(!wrap)return;
+  const done=rifRaffles.filter(r=>r.status==='sorteada')
+    .sort((a,b)=>new Date(b.drawn_at||b.updated_at)-new Date(a.drawn_at||a.updated_at));
+  if(!done.length){wrap.innerHTML=`<div class="cv-item-empty">Nenhuma rifa sorteada ainda.</div>`;return;}
+  wrap.innerHTML=done.map(r=>rifArchiveCardHtml(r)).join('');
+}
+
+function rifArchiveCardHtml(r){
+  const img=rifImgFor(r);
+  const isWinner=r.winner_user_id===uid();
+  const dt=r.drawn_at?new Date(r.drawn_at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'';
+  return`<div class="panel${isWinner?' auc-hot-card':''}">
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+      ${img?`<img src="${img}" alt="${esc(r.title)}" style="width:80px;border-radius:8px;object-fit:contain;background:var(--surface2)">`:''}
+      <div style="flex:1;min-width:200px">
+        <div style="font-weight:700;font-size:14px">🎟️ ${esc(r.title)}</div>
+        <div style="font-size:10.5px;color:var(--muted);margin-top:2px">${r.ticket_count} número(s) · sorteada em ${dt}</div>
+      </div>
+      <div style="text-align:center;padding:8px 16px;background:var(--surface2);border-radius:10px;border:1px solid var(--gold)">
+        <div style="font-size:9px;color:var(--muted)">NÚMERO SORTEADO</div>
+        <div style="font-size:26px;font-weight:800;color:var(--gold);font-family:'Space Mono',monospace">${r.winner_number}</div>
+      </div>
+    </div>
+    ${isWinner?`<div style="font-size:12px;font-weight:700;color:var(--gold);margin-top:10px">🎉 Parabéns, você ganhou essa rifa!</div>`:''}
   </div>`;
 }
 
@@ -309,6 +351,7 @@ async function rifMaybeAutoDraw(raffleId){
   await loadRaffleNumberCounts();
   const updated=rifRaffleById(raffleId);
   renderRafflesList();
+  renderRaffleArchive();
   if(updated)rifPlayDrawReveal(updated);
 }
 
@@ -814,6 +857,7 @@ async function rifDrawNow(raffleId){
   await loadRaffleNumberCounts();
   const r=rifRaffleById(raffleId);
   renderRafflesList();
+  renderRaffleArchive();
   if(r)rifPlayDrawReveal(r);
 }
 
