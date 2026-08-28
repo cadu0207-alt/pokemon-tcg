@@ -828,3 +828,39 @@ $$;
 -- muda, continua valendo igual pra essa coluna nova.
 -- ================================================================
 alter table user_addresses add column if not exists full_name text;
+
+-- ================================================================
+-- 15. CORREÇÃO: CONTAGEM DE VENDIDOS INCONSISTENTE ENTRE USUÁRIOS
+-- (28/08/2026)
+-- Bug relatado pelo Eduardo: a mesma rifa aparecia com "10/100 vendido(s)"
+-- pro rifeiro e "5/100 vendido(s)" pra outras pessoas. Causa: o client
+-- calculava a contagem fazendo um select em raffle_numbers com join
+-- embutido em raffle_payments(status) — e a policy raffle_payments_select
+-- (seção 10) só deixa cada usuário ver linhas de pagamento que são dele
+-- ou de rifa que ele criou. Pra qualquer outro usuário, o join voltava
+-- null pros pagamentos dos outros, e o código contava esses números como
+-- "livres" — subcontando o total vendido. A contagem, portanto, variava
+-- dependendo de QUEM estava olhando.
+-- Correção: uma função security definer que devolve só os totais
+-- agregados (livres/pendentes/confirmados) por rifa, sem expor as linhas
+-- de raffle_payments (nome do comprador, comprovante etc. continuam
+-- protegidos pela RLS normal) — assim todo mundo vê o mesmo número.
+-- ================================================================
+create or replace function get_raffle_number_counts(p_raffle_ids bigint[])
+returns table(raffle_id bigint, livres integer, pendentes integer, confirmados integer)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    rn.raffle_id,
+    count(*) filter (where rn.payment_id is null or rp.id is null)::int as livres,
+    count(*) filter (where rp.status = 'pendente')::int as pendentes,
+    count(*) filter (where rp.status = 'confirmado')::int as confirmados
+  from raffle_numbers rn
+  left join raffle_payments rp on rp.id = rn.payment_id
+  where rn.raffle_id = any(p_raffle_ids)
+  group by rn.raffle_id;
+$$;
+
+grant execute on function get_raffle_number_counts(bigint[]) to authenticated;

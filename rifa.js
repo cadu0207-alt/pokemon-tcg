@@ -140,22 +140,21 @@ async function loadRaffles(){
   rifRaffles=Array.isArray(data)?data:[];
 }
 
+// Usa a RPC get_raffle_number_counts (security definer) em vez de um
+// select direto com join em raffle_payments — esse join dependia da RLS
+// de raffle_payments (só o rifeiro dono/comprador enxerga a linha), então
+// cada usuário via uma contagem diferente pra mesma rifa (bug relatado:
+// "10/100" pro rifeiro, "5/100" pra outra pessoa). A RPC devolve só os
+// totais agregados, iguais pra todo mundo, sem expor as linhas de
+// pagamento em si. Ver rifa_setup.sql seção 15.
 async function loadRaffleNumberCounts(){
   rifNumberCounts={};
   if(!rifRaffles.length)return;
   const ids=rifRaffles.map(r=>r.id);
-  const{data,error}=await sbClient.from('raffle_numbers')
-    .select('raffle_id,payment_id,raffle_payments(status)')
-    .in('raffle_id',ids);
+  const{data,error}=await sbClient.rpc('get_raffle_number_counts',{p_raffle_ids:ids});
   if(error){console.error('[rifa] loadRaffleNumberCounts',error);return;}
-  (data||[]).forEach(n=>{
-    if(!rifNumberCounts[n.raffle_id])rifNumberCounts[n.raffle_id]={livres:0,pendentes:0,confirmados:0};
-    const c=rifNumberCounts[n.raffle_id];
-    const st=n.raffle_payments?.status;
-    if(!n.payment_id)c.livres++;
-    else if(st==='confirmado')c.confirmados++;
-    else if(st==='pendente')c.pendentes++;
-    else c.livres++; // rejeitado (não deveria sobrar payment_id, mas por segurança)
+  (data||[]).forEach(row=>{
+    rifNumberCounts[row.raffle_id]={livres:row.livres,pendentes:row.pendentes,confirmados:row.confirmados};
   });
 }
 
