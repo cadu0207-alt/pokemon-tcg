@@ -283,6 +283,8 @@ function inicioRenderFeedPage() {
     let hasTiktok = false;
     const html = slice.map(function (it) {
       if (it.kind === 'video' && it.row.platform === 'tiktok') hasTiktok = true;
+      // notícia com vídeo embutido (25/08/2026) também pode ser um TikTok
+      if (it.kind === 'news' && it.row.media_type === 'video' && inicioTiktokId(it.row.media_url)) hasTiktok = true;
       return inicioRenderFeedItem(it);
     }).join('');
     list.insertAdjacentHTML('beforeend', html);
@@ -324,21 +326,54 @@ function inicioRenderFeedItem(it) {
   return '';
 }
 
+// 25/08/2026 (pedido do Eduardo): notícia com media_type 'video' só mostrava
+// a etiqueta "🎥 vídeo" no card, sem tocar de verdade — agora, se der pra
+// reconhecer a URL (YouTube/TikTok), o vídeo entra embutido igual aos cards
+// de Vídeos da Comunidade. Se não reconhecer, cai em string vazia e o card
+// fica como estava (só a etiqueta).
+function inicioNewsVideoEmbed(url, title) {
+  if (inicioYoutubeId(url)) return inicioVideoEmbedHtml('youtube', url, title);
+  if (inicioTiktokId(url)) return inicioVideoEmbedHtml('tiktok', url, title);
+  return '';
+}
+
 function inicioFeedNewsCard(n) {
   const dt = n.published_at ? new Date(n.published_at).toLocaleDateString('pt-BR') : '';
   const mediaTag = INICIO_MEDIA_LABEL[n.media_type] || '';
+  const videoEmbed = n.media_type === 'video' && n.media_url ? inicioNewsVideoEmbed(n.media_url, n.title) : '';
   const thumbBlock = n.media_type === 'image' && n.media_url
     ? '<img class="inicio-news-media" src="' + inicioSafeUrl(n.media_url) + '" alt="" loading="lazy">'
     : '';
   const commentN = INICIO_FEED_COMMENT_COUNTS[n.id] || 0;
   const title = n.title ? inicioEsc(n.title) : inicioEsc(inicioTruncate(n.body, 70));
+
+  // 25/08/2026 (pedido do Eduardo — "deixar mais texto ... leia mais com
+  // botão discreto"): antes cortava em 110 caracteres sem jeito de ler o
+  // resto sem abrir a matéria inteira. Agora mostra bem mais (220) e, se
+  // ainda sobrar texto, um botão discreto "Leia mais" expande o card no
+  // próprio feed — sem precisar abrir o modal só pra terminar de ler.
+  const SNIPPET_LEN = 220;
+  const hasBody = !!(n.title && n.body);
+  const bodyStr = String(n.body || '');
+  const needsExpand = hasBody && bodyStr.length > SNIPPET_LEN;
+  const snippetBlock = hasBody
+    ? '<div class="inicio-news-snippet-wrap">' +
+        '<div class="inicio-news-snippet inicio-news-snippet-short">' + inicioEsc(inicioTruncate(bodyStr, SNIPPET_LEN)) + '</div>' +
+        (needsExpand
+          ? '<div class="inicio-news-snippet inicio-news-snippet-full" style="display:none">' + inicioEscML(bodyStr) + '</div>' +
+            '<button type="button" class="inicio-news-expand-btn" onclick="event.stopPropagation();inicioToggleNewsExcerpt(this)">Leia mais ▾</button>'
+          : '') +
+      '</div>'
+    : '';
+
   return (
     '<div class="inicio-news-card" data-news-id="' + n.id + '" onclick="openInicioArticle(\'' + n.id + '\')" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\')openInicioArticle(\'' + n.id + '\')">' +
       (mediaTag ? '<div class="inicio-news-tag">' + mediaTag + '</div>' : '') +
+      videoEmbed +
       thumbBlock +
       '<div class="inicio-news-title">' + title + '</div>' +
       (n.subtitle ? '<div class="inicio-news-sub">' + inicioEsc(n.subtitle) + '</div>' : '') +
-      (n.title ? '<div class="inicio-news-snippet">' + inicioEsc(inicioTruncate(n.body, 110)) + '</div>' : '') +
+      snippetBlock +
       '<div class="inicio-news-foot">' +
         '<span class="inicio-news-date">' + dt + '</span>' +
         '<span class="inicio-news-comment-toggle">💬 ' + commentN + ' comentário' + (commentN === 1 ? '' : 's') + '</span>' +
@@ -346,6 +381,21 @@ function inicioFeedNewsCard(n) {
     '</div>'
   );
 }
+
+// Expande/recolhe o texto da notícia sem abrir a matéria inteira. stopPropagation
+// no onclick do botão (feito no HTML) evita que o clique também dispare o
+// onclick do card (que abriria o modal).
+window.inicioToggleNewsExcerpt = function (btn) {
+  const wrap = btn.closest('.inicio-news-snippet-wrap');
+  if (!wrap) return;
+  const short = wrap.querySelector('.inicio-news-snippet-short');
+  const full = wrap.querySelector('.inicio-news-snippet-full');
+  if (!short || !full) return;
+  const isExpanded = full.style.display !== 'none';
+  full.style.display = isExpanded ? 'none' : '';
+  short.style.display = isExpanded ? '' : 'none';
+  btn.textContent = isExpanded ? 'Leia mais ▾' : 'Ler menos ▴';
+};
 
 // Vídeo no feed único ganhou mais espaço que no grid antigo (pedido do
 // Eduardo — "o vídeo pode aumentar um pouco o tamanho"): o feed é uma

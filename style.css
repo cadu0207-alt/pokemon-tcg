@@ -3157,7 +3157,19 @@ body.share-view .btn-add { display: none !important; }
 .inicio-news-media { display: block; width: 100%; max-height: 160px; object-fit: cover; border-radius: 8px; margin-bottom: 10px; }
 .inicio-news-title { font-size: 14.5px; font-weight: 700; color: var(--text); line-height: 1.35; margin-bottom: 4px; }
 .inicio-news-sub { font-size: 12.5px; color: var(--muted); line-height: 1.4; margin-bottom: 6px; }
-.inicio-news-snippet { font-size: 12.5px; color: var(--text2, var(--muted)); line-height: 1.5; margin-bottom: 10px; }
+.inicio-news-snippet { font-size: 12.5px; color: var(--text2, var(--muted)); line-height: 1.5; margin-bottom: 4px; }
+/* 25/08/2026 — "leia mais" discreto: botão pequeno, sem fundo/borda, cor
+   suave (não compete com o título nem parece outro CTA), próprio card
+   inteiro já é clicável (abre a matéria) então esse botão para o clique
+   de propagar (ver onclick inline) pra só expandir o texto no lugar. */
+.inicio-news-snippet-wrap { margin-bottom: 10px; }
+.inicio-news-expand-btn {
+  display: inline-block; margin-top: 2px;
+  font-family: 'DM Sans', sans-serif; font-size: 11.5px; font-weight: 700;
+  color: var(--accent); background: none; border: none; padding: 0;
+  cursor: pointer; appearance: none; opacity: .85;
+}
+.inicio-news-expand-btn:hover, .inicio-news-expand-btn:focus-visible { opacity: 1; text-decoration: underline; }
 .inicio-news-foot {
   display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; color: var(--muted);
   padding-top: 8px; border-top: 1px solid var(--border);
