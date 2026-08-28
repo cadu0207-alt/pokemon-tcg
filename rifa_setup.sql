@@ -248,16 +248,17 @@ security definer
 set search_path = public
 as $$
 declare
-  v_pending  int;
-  v_number   int;
-  v_uid      uuid;
-  v_status   text;
+  v_pending    int;
+  v_number     int;
+  v_uid        uuid;
+  v_status     text;
+  v_scheduled  timestamptz;
 begin
   if not is_auction_admin() then
     raise exception 'Só o rifeiro pode realizar o sorteio.';
   end if;
 
-  select status into v_status from raffles where id = p_raffle_id for update;
+  select status, draw_scheduled_at into v_status, v_scheduled from raffles where id = p_raffle_id for update;
   if v_status is null then
     raise exception 'Rifa não encontrada.';
   end if;
@@ -266,6 +267,12 @@ begin
   end if;
   if v_status = 'cancelada' then
     raise exception 'Rifa cancelada não pode ser sorteada.';
+  end if;
+  -- Se tem horário agendado (contagem regressiva pública), não deixa
+  -- sortear antes da hora combinada — evita quebrar o "show ao vivo"
+  -- pra quem está esperando o letreiro chegar a zero.
+  if v_scheduled is not null and now() < v_scheduled then
+    raise exception 'O sorteio está agendado para %  — aguarde a contagem regressiva chegar a zero.', to_char(v_scheduled at time zone 'America/Sao_Paulo', 'DD/MM HH24:MI');
   end if;
 
   select count(*) into v_pending from raffle_payments
@@ -316,3 +323,69 @@ create policy "rifa-comprovantes insert" on storage.objects
     bucket_id = 'rifa-comprovantes'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- ================================================================
+-- 9. HORÁRIO DO SORTEIO + CONTAGEM REGRESSIVA (28/08/2026)
+-- Pedido do Eduardo: depois que o rifeiro revisa/confirma todos os
+-- pagamentos pendentes, ele marca dia e hora do sorteio. Todo mundo com
+-- a rifa aberta na tela vê um letreiro com contagem regressiva (dado
+-- lido direto de raffles.draw_scheduled_at, sem precisar de RPC nova pra
+-- isso). Só dá pra agendar com zero pendências, igual à regra do sorteio
+-- em si (draw_raffle), pra ninguém marcar hora sem ter revisado tudo.
+-- ================================================================
+alter table raffles add column if not exists draw_scheduled_at timestamptz;
+
+create or replace function schedule_raffle_draw(p_raffle_id bigint, p_scheduled_at timestamptz)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_status  text;
+  v_pending int;
+begin
+  if not is_auction_admin() then
+    raise exception 'Só o rifeiro pode agendar o sorteio.';
+  end if;
+
+  select status into v_status from raffles where id = p_raffle_id for update;
+  if v_status is null then
+    raise exception 'Rifa não encontrada.';
+  end if;
+  if v_status <> 'aberta' then
+    raise exception 'Só dá pra agendar sorteio de uma rifa aberta.';
+  end if;
+
+  select count(*) into v_pending from raffle_payments
+    where raffle_id = p_raffle_id and status = 'pendente';
+  if v_pending > 0 then
+    raise exception 'Ainda tem % pagamento(s) pendente(s) de revisão — confirme ou rejeite todos antes de agendar o sorteio.', v_pending;
+  end if;
+
+  if p_scheduled_at <= now() then
+    raise exception 'Escolha um horário no futuro.';
+  end if;
+
+  update raffles set draw_scheduled_at = p_scheduled_at, updated_at = now() where id = p_raffle_id;
+end;
+$$;
+
+grant execute on function schedule_raffle_draw(bigint, timestamptz) to authenticated;
+
+create or replace function cancel_raffle_draw_schedule(p_raffle_id bigint)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_auction_admin() then
+    raise exception 'Só o rifeiro pode cancelar o agendamento.';
+  end if;
+  update raffles set draw_scheduled_at = null, updated_at = now()
+    where id = p_raffle_id and status = 'aberta';
+end;
+$$;
+
+grant execute on function cancel_raffle_draw_schedule(bigint) to authenticated;

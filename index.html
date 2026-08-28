@@ -1162,6 +1162,19 @@
 
     <!-- ── LISTA / PARTICIPAR ──────────────────────────────────────── -->
     <div id="rif-sub-rifas">
+      <!-- PASSO A PASSO (28/08/2026): pedido do Eduardo — guia rápido e
+           sempre visível de como participar, antes mesmo de abrir uma
+           rifa específica. -->
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-t">📋 Como participar</div>
+        <div style="display:grid;gap:8px;font-size:11.5px">
+          <div><b style="color:var(--accent)">1.</b> Escolha uma rifa aberta e clique em <b>Participar</b>.</div>
+          <div><b style="color:var(--accent)">2.</b> Aceite as regras (só na sua primeira vez) e diga quantos números quer.</div>
+          <div><b style="color:var(--accent)">3.</b> Pague o valor certinho via PIX (a chave aparece na hora) e suba o comprovante.</div>
+          <div><b style="color:var(--accent)">4.</b> Escolha quais números você quer, entre os que ainda estão livres.</div>
+          <div><b style="color:var(--accent)">5.</b> Aguarde o rifeiro confirmar seu pagamento e acompanhe o sorteio ao vivo — o letreiro avisa o dia e hora! 🎬</div>
+        </div>
+      </div>
       <div id="rif-list" class="cv-list"></div>
     </div>
 
@@ -1265,11 +1278,69 @@
   <!-- REVELAÇÃO DO SORTEIO (24/08/2026): animação de alguns segundos antes
        de mostrar o número vencedor — rifPlayDrawReveal() (rifa.js). -->
   <div class="ov" id="rif-draw-reveal-ov" onclick="if(event.target===this)closeModal('rif-draw-reveal-ov')">
-    <div class="modal">
+    <div class="modal modal-wide">
       <button class="mc-btn" onclick="closeModal('rif-draw-reveal-ov')">✕</button>
       <div id="rif-draw-reveal-content"></div>
     </div>
   </div>
+
+  <!-- ESTILOS DA CONTAGEM REGRESSIVA + ROLETA DO SORTEIO (28/08/2026):
+       pedido do Eduardo — letreiro grande com contagem regressiva visível
+       pra todo mundo, números maiores/animados nos últimos 10s, e uma
+       roleta estilo "show de TV" que gira só entre os números vendidos e
+       vai freando até parar exatamente no número sorteado. -->
+  <style>
+    .rif-countdown-banner{
+      margin-top:10px;padding:12px 14px;border-radius:10px;
+      background:linear-gradient(135deg,rgba(230,57,70,.12),rgba(6,214,160,.08));
+      border:1px solid var(--border);text-align:center;transition:all .3s ease;
+    }
+    .rif-countdown-label{font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:.5px;margin-bottom:4px}
+    .rif-countdown-clock{font-size:26px;font-weight:800;font-family:'Space Mono',monospace;color:var(--accent);letter-spacing:1px;transition:all .25s ease}
+    .rif-countdown-banner.rif-hot{
+      background:linear-gradient(135deg,rgba(255,209,102,.22),rgba(230,57,70,.18));
+      border-color:var(--gold);animation:rifHotPulse .6s ease-in-out infinite;
+    }
+    .rif-countdown-banner.rif-hot .rif-countdown-clock{
+      font-size:46px;color:var(--gold);text-shadow:0 0 18px rgba(255,209,102,.6);
+    }
+    @keyframes rifHotPulse{
+      0%,100%{transform:scale(1)}
+      50%{transform:scale(1.035)}
+    }
+    .rif-reel-wrap{
+      position:relative;margin:14px auto;width:100%;max-width:420px;height:110px;
+      overflow:hidden;border-radius:12px;background:var(--surface2);
+      border:2px solid var(--gold);
+    }
+    .rif-reel-wrap::before,.rif-reel-wrap::after{
+      content:'';position:absolute;top:0;bottom:0;width:36px;z-index:2;pointer-events:none;
+    }
+    .rif-reel-wrap::before{left:0;background:linear-gradient(90deg,var(--surface2),transparent)}
+    .rif-reel-wrap::after{right:0;background:linear-gradient(-90deg,var(--surface2),transparent)}
+    .rif-reel-marker{
+      position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--accent);
+      transform:translateX(-50%);z-index:3;box-shadow:0 0 8px var(--accent);
+    }
+    .rif-reel-track{display:flex;align-items:center;height:100%;will-change:transform}
+    .rif-reel-tile{
+      flex:0 0 90px;height:80px;margin:0 5px;border-radius:10px;background:var(--surface);
+      border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+      font-size:34px;font-weight:800;font-family:'Space Mono',monospace;color:var(--text);
+    }
+    .rif-reel-tile.rif-reel-winner{
+      background:linear-gradient(135deg,var(--gold),#fff3c4);color:#1a1200;
+      box-shadow:0 0 24px rgba(255,209,102,.75);
+    }
+    .rif-reel-track.rif-reel-spinning{
+      transition:transform 4.2s cubic-bezier(.1,.85,.25,1);
+    }
+    .rif-reveal-winner-number{
+      font-size:15px;font-weight:700;color:var(--gold);text-align:center;margin-top:14px;
+      animation:rifWinnerFadeIn .4s ease;
+    }
+    @keyframes rifWinnerFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  </style>
 
   <!-- ===== ABA ADMIN (11/08/2026) =====
        Painel único pro Eduardo — reúne tudo que antes ficava misturado nas

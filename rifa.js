@@ -37,6 +37,9 @@ let rifCustomPhotoFiles=[];
 const RIF_PHOTO_MAX=4;
 const RIF_PHOTO_MAX_INPUT_MB=15;
 let rifPollTimer=null;
+let rifCountdownTimer=null;
+let rifAutoDrawTriggered=new Set(); // evita chamar draw_raffle mais de uma vez por rifa nesta aba aberta
+let rifScheduleFormOpenFor=null;    // id da rifa com o formulário de agendar sorteio aberto
 
 // ── VISIBILIDADE DA ABA (mesmo padrão de hookLeilaoTabVisibility) ──
 async function updateRifasTabVisibility(){
@@ -82,6 +85,7 @@ async function renderRifasTab(){
   }
 
   rifStartPolling();
+  startRifCountdownLoop();
 }
 
 function switchRifasSubtab(name){
@@ -205,13 +209,185 @@ function rifCardHtml(r){
         </div>`:''}
       </div>
     </div>
+    ${r.status==='aberta'?rifCountdownBannerHtml(r):''}
+    ${aucIsLeilaoAdmin&&r.status==='aberta'?rifScheduleFormHtml(r,c):''}
     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
       ${r.status==='aberta'?`<button class="btn-add" onclick="openRifParticipate(${r.id})">🎟️ Participar</button>`:''}
+      ${r.status==='aberta'?`<button class="cv-item-remove" style="color:#25d366;border-color:#25d366" onclick="rifShareRaffle(${r.id})">📤 Compartilhar no WhatsApp</button>`:''}
       ${isWinner?`<button class="btn-add" onclick="rifContactRifeiro(${r.id})">💬 Falar com o rifeiro no WhatsApp</button>`:''}
-      ${aucIsLeilaoAdmin&&r.status==='aberta'?`<button class="cv-item-remove" style="color:var(--gold);border-color:var(--gold)" onclick="rifDrawNow(${r.id})">🎬 Realizar Sorteio</button>`:''}
+      ${aucIsLeilaoAdmin&&r.status==='aberta'?`<button class="cv-item-remove" style="color:var(--gold);border-color:var(--gold)" onclick="rifDrawNow(${r.id})">🎬 Realizar Sorteio Agora</button>`:''}
       ${aucIsLeilaoAdmin&&r.status!=='cancelada'?`<button class="cv-item-remove" onclick="rifCancelRaffle(${r.id})">🗑️ Cancelar</button>`:''}
     </div>
   </div>`;
+}
+
+// ── COMPARTILHAR NO WHATSAPP (28/08/2026) ──────────────────────
+// Botão aberto pra qualquer um (participante ou não) espalhar a rifa —
+// pedido do Eduardo: já leva as regras resumidas + passo a passo, sem
+// número fixo de destino (wa.me sem número abre o seletor de contato/grupo).
+function rifShareMessage(r){
+  const c=rifNumberCounts[r.id]||{livres:r.ticket_count};
+  return`🎟️ *RIFA: ${r.title}*\n\n`+
+    `${r.description?r.description+'\n\n':''}`+
+    `💰 R$ ${fmtR(r.ticket_price)} por número — ${c.livres} de ${r.ticket_count} ainda livre(s)\n\n`+
+    `📋 *Como participar:*\n`+
+    `1️⃣ Entre no MyDeck, aba Rifas\n`+
+    `2️⃣ Clique em "Participar" e escolha quantos números quer\n`+
+    `3️⃣ Pague via PIX (a chave aparece na hora) e envie o comprovante\n`+
+    `4️⃣ Escolha seus números entre os livres\n`+
+    `5️⃣ Aguarde a confirmação e acompanhe o sorteio ao vivo, com contagem regressiva! 🎬\n\n`+
+    `Ao participar você aceita as regras da rifa, exibidas no site antes de começar.`;
+}
+function rifShareRaffle(raffleId){
+  const r=rifRaffleById(raffleId);
+  if(!r)return;
+  window.open(`https://wa.me/?text=${encodeURIComponent(rifShareMessage(r))}`,'_blank');
+}
+
+// ── LETREIRO DE CONTAGEM REGRESSIVA (28/08/2026) ────────────────
+// Pedido do Eduardo: depois que o rifeiro agenda o sorteio, todo mundo
+// com a aba aberta vê um letreiro contando o tempo até a hora marcada —
+// nos últimos 10s os números ficam maiores/animados. Ao chegar a zero,
+// quem é rifeiro dispara o sorteio automaticamente (uma única vez);
+// quem só está assistindo pega a mudança pelo polling normal.
+function rifCountdownBannerHtml(r){
+  if(!r.draw_scheduled_at)return'';
+  return`<div class="rif-countdown-banner" id="rif-countdown-${r.id}" data-raffle-id="${r.id}" data-scheduled="${r.draw_scheduled_at}">
+    <div class="rif-countdown-label">🎬 SORTEIO AO VIVO EM</div>
+    <div class="rif-countdown-clock">--:--:--</div>
+  </div>`;
+}
+
+function rifFmtCountdown(ms){
+  const total=Math.max(0,Math.floor(ms/1000));
+  const h=Math.floor(total/3600), m=Math.floor((total%3600)/60), s=total%60;
+  return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function startRifCountdownLoop(){
+  stopRifCountdownLoop();
+  rifCountdownLoopTick();
+  rifCountdownTimer=setInterval(rifCountdownLoopTick,500);
+}
+function stopRifCountdownLoop(){
+  if(rifCountdownTimer){clearInterval(rifCountdownTimer);rifCountdownTimer=null;}
+}
+function rifCountdownLoopTick(){
+  const pane=document.getElementById('rifas');
+  if(!pane||!pane.classList.contains('active')){stopRifCountdownLoop();return;}
+  document.querySelectorAll('.rif-countdown-banner').forEach(box=>{
+    const raffleId=parseInt(box.dataset.raffleId);
+    const scheduled=new Date(box.dataset.scheduled).getTime();
+    const clock=box.querySelector('.rif-countdown-clock');
+    const diff=scheduled-Date.now();
+    if(diff<=0){
+      if(clock)clock.textContent='🎬 AO VIVO AGORA';
+      box.classList.add('rif-hot');
+      rifMaybeAutoDraw(raffleId);
+      return;
+    }
+    if(clock)clock.textContent=rifFmtCountdown(diff);
+    box.classList.toggle('rif-hot',diff<=10000);
+  });
+}
+
+// Só quem é rifeiro dispara o sorteio de fato (a RPC já barra qualquer
+// outra pessoa) — dispara uma única vez por rifa nesta sessão da aba.
+async function rifMaybeAutoDraw(raffleId){
+  if(!aucIsLeilaoAdmin)return;
+  if(rifAutoDrawTriggered.has(raffleId))return;
+  const r=rifRaffleById(raffleId);
+  if(!r||r.status!=='aberta')return;
+  rifAutoDrawTriggered.add(raffleId);
+  const{data,error}=await sbClient.rpc('draw_raffle',{p_raffle_id:raffleId});
+  if(error){
+    console.error('[rifa] rifMaybeAutoDraw',error);
+    rifAutoDrawTriggered.delete(raffleId); // permite tentar de novo no próximo tick
+    return;
+  }
+  await loadRaffles();
+  await loadRaffleNumberCounts();
+  const updated=rifRaffleById(raffleId);
+  renderRafflesList();
+  if(updated)rifPlayDrawReveal(updated);
+}
+
+// ── FORMULÁRIO DO RIFEIRO PRA AGENDAR O SORTEIO (28/08/2026) ───
+function rifScheduleFormHtml(r,c){
+  const pendencias=c.pendentes>0;
+  if(pendencias){
+    return`<div class="mkt-note" style="margin-top:10px">⏳ Ainda tem ${c.pendentes} pagamento(s) pendente(s) — revise em "Revisão de Pagamentos" antes de agendar o sorteio.</div>`;
+  }
+  if(rifScheduleFormOpenFor===r.id){
+    return`<div class="panel" style="padding:12px;margin-top:10px">
+      <div class="ff"><label>Dia e hora do sorteio</label>
+        <input type="datetime-local" id="rif-schedule-input-${r.id}" value="${rifDefaultScheduleValue()}">
+      </div>
+      <div id="rif-schedule-status-${r.id}" style="font-size:10.5px;color:var(--accent);margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-add" onclick="submitRifSchedule(${r.id})">✓ Confirmar horário</button>
+        <button class="cv-item-remove" onclick="closeRifScheduleForm()">Cancelar</button>
+      </div>
+    </div>`;
+  }
+  if(r.draw_scheduled_at){
+    return`<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-add" onclick="openRifScheduleForm(${r.id})">🗓️ Alterar horário do sorteio</button>
+      <button class="cv-item-remove" onclick="cancelRifSchedule(${r.id})">✕ Cancelar agendamento</button>
+    </div>`;
+  }
+  return`<div style="margin-top:10px">
+    <button class="btn-add" onclick="openRifScheduleForm(${r.id})">🗓️ Agendar Sorteio</button>
+  </div>`;
+}
+
+function rifDefaultScheduleValue(){
+  // datetime-local pede horário local sem timezone — sugere daqui 10min.
+  const d=new Date(Date.now()+10*60000);
+  d.setSeconds(0,0);
+  const pad=n=>String(n).padStart(2,'0');
+  return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function openRifScheduleForm(raffleId){
+  rifScheduleFormOpenFor=raffleId;
+  renderRafflesList();
+}
+function closeRifScheduleForm(){
+  rifScheduleFormOpenFor=null;
+  renderRafflesList();
+}
+
+async function submitRifSchedule(raffleId){
+  const input=document.getElementById(`rif-schedule-input-${raffleId}`);
+  const statusEl=document.getElementById(`rif-schedule-status-${raffleId}`);
+  if(!input?.value){if(statusEl)statusEl.textContent='Escolha um dia e horário.';return;}
+  const scheduledAt=new Date(input.value);
+  if(isNaN(scheduledAt.getTime())||scheduledAt.getTime()<=Date.now()){
+    if(statusEl)statusEl.textContent='Escolha um horário no futuro.';return;
+  }
+  if(statusEl)statusEl.textContent='Agendando...';
+  const{error}=await sbClient.rpc('schedule_raffle_draw',{p_raffle_id:raffleId,p_scheduled_at:scheduledAt.toISOString()});
+  if(error){
+    console.error('[rifa] submitRifSchedule',error);
+    if(statusEl)statusEl.textContent=error.message||'Erro ao agendar.';
+    return;
+  }
+  rifScheduleFormOpenFor=null;
+  rifAutoDrawTriggered.delete(raffleId);
+  setStatus('Sorteio agendado! O letreiro de contagem regressiva já está visível pra todo mundo.','ok');
+  await loadRaffles();
+  renderRafflesList();
+  startRifCountdownLoop();
+}
+
+async function cancelRifSchedule(raffleId){
+  if(!confirm('Cancelar o agendamento do sorteio? O letreiro de contagem regressiva vai sumir.'))return;
+  const{error}=await sbClient.rpc('cancel_raffle_draw_schedule',{p_raffle_id:raffleId});
+  if(error){console.error('[rifa] cancelRifSchedule',error);setStatus('Erro ao cancelar agendamento','err');return;}
+  setStatus('Agendamento cancelado','ok');
+  await loadRaffles();
+  renderRafflesList();
 }
 
 // ── REGRAS DA RIFA (mesmo padrão do leilão) ────────────────────
@@ -641,34 +817,65 @@ async function rifDrawNow(raffleId){
   if(r)rifPlayDrawReveal(r);
 }
 
-// Animação simples: gira por números aleatórios por ~2.5s e revela o
-// número real que já veio do servidor — dá o efeito "ao vivo" mesmo
-// quem só está vendo via polling (rifStartPolling) roda a mesma animação
-// no momento em que percebe a mudança de status.
-function rifPlayDrawReveal(raffle){
+// Roleta "show de TV" (28/08/2026): gira só entre os números que
+// realmente foram vendidos/confirmados (exclui os que ninguém escolheu —
+// não faria sentido girar em cima de número que nem concorre) e vai
+// freando (easing CSS) até parar exatamente no número sorteado que já
+// veio do servidor. Aberto pra qualquer um com a rifa na tela — quem só
+// está vendo via polling (rifStartPolling) roda a mesma animação no
+// momento em que percebe a mudança de status, então todo mundo assiste
+// praticamente junto.
+async function rifPlayDrawReveal(raffle){
   const box=document.getElementById('rif-draw-reveal-content');
-  if(!box){return;}
+  if(!box)return;
+
+  const{data,error}=await sbClient.from('raffle_numbers')
+    .select('number,raffle_payments!inner(status)')
+    .eq('raffle_id',raffle.id).eq('raffle_payments.status','confirmado').order('number');
+  let sold=(error?[]:(data||[]).map(n=>n.number));
+  if(!sold.includes(raffle.winner_number))sold.push(raffle.winner_number);
+  if(sold.length<2)sold=[...sold,...sold,...sold]; // garante roleta com mais de um "clique" mesmo em rifa pequena
+
   if(typeof openModal==='function')openModal('rif-draw-reveal-ov');
-  box.innerHTML=`<div style="text-align:center;padding:20px">
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">🎬 ${esc(raffle.title)}</div>
-    <div id="rif-reveal-number" style="font-size:48px;font-weight:800;color:var(--accent)">?</div>
+
+  // Embaralha os números vendidos, monta uma sequência longa o bastante
+  // pra dar sensação de giro, e garante que o ÚLTIMO ladrilho seja o
+  // número sorteado de verdade.
+  const shuffled=[...sold].sort(()=>Math.random()-0.5);
+  const REPEATS=Math.max(3,Math.ceil(24/shuffled.length));
+  let sequence=[];
+  for(let i=0;i<REPEATS;i++)sequence=sequence.concat(shuffled);
+  sequence=sequence.filter(n=>n!==raffle.winner_number);
+  sequence.push(raffle.winner_number);
+
+  const TILE_W=90+10; // largura do ladrilho (90px) + margem (5px de cada lado)
+  box.innerHTML=`<div style="text-align:center;padding:16px 8px">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:4px">🎬 ${esc(raffle.title)}</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:10px">Sorteando entre os números vendidos...</div>
+    <div class="rif-reel-wrap">
+      <div class="rif-reel-marker"></div>
+      <div class="rif-reel-track" id="rif-reel-track">
+        ${sequence.map((n,i)=>`<div class="rif-reel-tile${i===sequence.length-1?' rif-reel-winner':''}">${n}</div>`).join('')}
+      </div>
+    </div>
+    <div id="rif-reveal-caption"></div>
   </div>`;
-  const numEl=document.getElementById('rif-reveal-number');
-  let ticks=0;
-  const maxN=raffle.ticket_count;
-  const spin=setInterval(()=>{
-    ticks++;
-    if(numEl)numEl.textContent=1+Math.floor(Math.random()*maxN);
-    if(ticks>=14){
-      clearInterval(spin);
-      if(numEl){
-        numEl.textContent=raffle.winner_number;
-        numEl.style.color='var(--gold)';
-      }
-      const box2=document.getElementById('rif-draw-reveal-content');
-      if(box2)box2.innerHTML+=`<div style="text-align:center;font-size:12px;color:var(--muted);margin-top:10px">Número vencedor 🎉</div>`;
-    }
-  },180);
+
+  const track=document.getElementById('rif-reel-track');
+  if(track){
+    // Ponto de parada: centraliza o último ladrilho (o vencedor) embaixo
+    // do marcador central do compartimento.
+    const wrapWidth=track.parentElement.clientWidth||360;
+    const finalOffset=(sequence.length-1)*TILE_W+TILE_W/2-wrapWidth/2;
+    requestAnimationFrame(()=>{
+      track.classList.add('rif-reel-spinning');
+      track.style.transform=`translateX(-${finalOffset}px)`;
+    });
+    track.addEventListener('transitionend',()=>{
+      const caption=document.getElementById('rif-reveal-caption');
+      if(caption)caption.innerHTML=`<div class="rif-reveal-winner-number">🏆 Número sorteado: ${raffle.winner_number}</div>`;
+    },{once:true});
+  }
 }
 
 // ── FALAR COM O RIFEIRO (WhatsApp — vencedor só, reaproveita user_addresses) ──
