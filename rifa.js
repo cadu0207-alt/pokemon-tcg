@@ -40,6 +40,7 @@ let rifPollTimer=null;
 let rifCountdownTimer=null;
 let rifAutoDrawTriggered=new Set(); // evita chamar draw_raffle mais de uma vez por rifa nesta aba aberta
 let rifScheduleFormOpenFor=null;    // id da rifa com o formulário de agendar sorteio aberto
+let rifArchiveConfirmFor=null;      // id da rifa com o "tem certeza?" de arquivar aberto
 
 // ── VISIBILIDADE DA ABA (mesmo padrão de hookLeilaoTabVisibility) ──
 async function updateRifasTabVisibility(){
@@ -173,13 +174,13 @@ function rifImgFor(r){
 function rifRaffleById(id){return rifRaffles.find(r=>r.id===id);}
 
 // ── LISTA DE RIFAS ──────────────────────────────────────────────
-// Lista principal: só rifas abertas pra todo mundo, mais as canceladas
-// do PRÓPRIO rifeiro (que criou) — outro rifeiro não vê a cancelada de
-// alguém, e rifas já sorteadas ficam no Arquivo (renderRaffleArchive).
+// Lista principal: só rifas abertas. Sorteadas, canceladas e arquivadas
+// (sem sorteio) ficam todas no Arquivo (renderRaffleArchive) — canceladas
+// só aparecem lá pro próprio rifeiro que cancelou (RLS, seção 10).
 function renderRafflesList(){
   const wrap=document.getElementById('rif-list');
   if(!wrap)return;
-  const visible=rifRaffles.filter(r=>r.status==='aberta'||(r.status==='cancelada'&&aucIsLeilaoAdmin&&r.created_by===uid()));
+  const visible=rifRaffles.filter(r=>r.status==='aberta');
   if(!visible.length){wrap.innerHTML=`<div class="cv-item-empty">Nenhuma rifa aberta no momento.</div>`;return;}
   wrap.innerHTML=visible.map(r=>rifCardHtml(r)).join('');
 }
@@ -225,39 +226,88 @@ function rifCardHtml(r){
       ${r.status==='aberta'?`<button class="btn-add" onclick="openRifParticipate(${r.id})">🎟️ Participar</button>`:''}
       ${r.status==='aberta'?`<button class="cv-item-remove" style="color:#25d366;border-color:#25d366" onclick="rifShareRaffle(${r.id})">📤 Compartilhar no WhatsApp</button>`:''}
       ${isWinner?`<button class="btn-add" onclick="rifContactRifeiro(${r.id})">💬 Falar com o rifeiro no WhatsApp</button>`:''}
+      ${isMine&&r.status==='aberta'?`<button class="btn-add" onclick="openRifManualPayment(${r.id})">✍️ Marcar Pagamento Manual</button>`:''}
       ${isMine&&r.status==='aberta'?`<button class="cv-item-remove" style="color:var(--gold);border-color:var(--gold)" onclick="rifDrawNow(${r.id})">🎬 Realizar Sorteio Agora</button>`:''}
-      ${isMine&&r.status!=='cancelada'?`<button class="cv-item-remove" onclick="rifCancelRaffle(${r.id})">🗑️ Cancelar</button>`:''}
+      ${isMine&&r.status==='aberta'?rifArchiveButtonHtml(r.id):''}
+      ${isMine&&r.status==='aberta'?`<button class="cv-item-remove" onclick="rifCancelRaffle(${r.id})">🗑️ Cancelar</button>`:''}
     </div>
   </div>`;
 }
 
+// Botão de arquivar com confirmação DENTRO da própria tela (não usa o
+// confirm() nativo do navegador) — pedido do Eduardo: clique sem querer
+// não pode disparar a ação, precisa de um segundo clique explícito.
+function rifArchiveButtonHtml(raffleId){
+  if(rifArchiveConfirmFor===raffleId){
+    return`<span style="font-size:10.5px;color:var(--muted);align-self:center">Arquivar mesmo, sem sortear?</span>
+      <button class="btn-add" onclick="rifArchiveRaffleManually(${raffleId})">✓ Confirmar arquivamento</button>
+      <button class="cv-item-remove" onclick="cancelRifArchiveConfirm()">Voltar</button>`;
+  }
+  return`<button class="cv-item-remove" onclick="openRifArchiveConfirm(${raffleId})">📦 Arquivar</button>`;
+}
+
+function openRifArchiveConfirm(raffleId){
+  rifArchiveConfirmFor=raffleId;
+  renderRafflesList();
+}
+function cancelRifArchiveConfirm(){
+  rifArchiveConfirmFor=null;
+  renderRafflesList();
+}
+
+async function rifArchiveRaffleManually(raffleId){
+  rifArchiveConfirmFor=null;
+  const{error}=await sbClient.rpc('archive_raffle_without_draw',{p_raffle_id:raffleId});
+  if(error){console.error('[rifa] rifArchiveRaffleManually',error);setStatus(error.message||'Erro ao arquivar','err');return;}
+  setStatus('Rifa arquivada','ok');
+  await loadRaffles();
+  renderRafflesList();
+  renderRaffleArchive();
+}
+
 // ── ARQUIVO DE RIFAS ENCERRADAS (28/08/2026) ────────────────────
-// Pedido do Eduardo: aberto pra qualquer usuário, mostra as rifas já
-// sorteadas com o número vencedor em destaque.
+// Pedido do Eduardo: aberto pra qualquer usuário, mostra as rifas
+// sorteadas (número vencedor em destaque), arquivadas sem sorteio e —
+// só pro próprio rifeiro que cancelou, via RLS da seção 10 — as
+// canceladas, que antes ficavam misturadas na lista principal.
 function renderRaffleArchive(){
   const wrap=document.getElementById('rif-archive-list');
   if(!wrap)return;
-  const done=rifRaffles.filter(r=>r.status==='sorteada')
+  const done=rifRaffles.filter(r=>['sorteada','arquivada','cancelada'].includes(r.status))
     .sort((a,b)=>new Date(b.drawn_at||b.updated_at)-new Date(a.drawn_at||a.updated_at));
-  if(!done.length){wrap.innerHTML=`<div class="cv-item-empty">Nenhuma rifa sorteada ainda.</div>`;return;}
+  if(!done.length){wrap.innerHTML=`<div class="cv-item-empty">Nenhuma rifa encerrada ainda.</div>`;return;}
   wrap.innerHTML=done.map(r=>rifArchiveCardHtml(r)).join('');
 }
 
 function rifArchiveCardHtml(r){
   const img=rifImgFor(r);
-  const isWinner=r.winner_user_id===uid();
-  const dt=r.drawn_at?new Date(r.drawn_at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'';
+  const isWinner=r.status==='sorteada'&&r.winner_user_id===uid();
+  const dt=new Date(r.drawn_at||r.updated_at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+
+  let statusBox;
+  if(r.status==='sorteada'){
+    statusBox=`<div style="text-align:center;padding:8px 16px;background:var(--surface2);border-radius:10px;border:1px solid var(--gold)">
+      <div style="font-size:9px;color:var(--muted)">NÚMERO SORTEADO</div>
+      <div style="font-size:26px;font-weight:800;color:var(--gold);font-family:'Space Mono',monospace">${r.winner_number}</div>
+    </div>`;
+  }else if(r.status==='arquivada'){
+    statusBox=`<div style="text-align:center;padding:8px 16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--muted)">📦 Encerrada sem sorteio</div>
+    </div>`;
+  }else{
+    statusBox=`<div style="text-align:center;padding:8px 16px;background:var(--surface2);border-radius:10px;border:1px solid var(--accent)">
+      <div style="font-size:11px;color:var(--accent)">🗑️ Cancelada</div>
+    </div>`;
+  }
+
   return`<div class="panel${isWinner?' auc-hot-card':''}">
     <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
       ${img?`<img src="${img}" alt="${esc(r.title)}" style="width:80px;border-radius:8px;object-fit:contain;background:var(--surface2)">`:''}
       <div style="flex:1;min-width:200px">
         <div style="font-weight:700;font-size:14px">🎟️ ${esc(r.title)}</div>
-        <div style="font-size:10.5px;color:var(--muted);margin-top:2px">${r.ticket_count} número(s) · sorteada em ${dt}</div>
+        <div style="font-size:10.5px;color:var(--muted);margin-top:2px">${r.ticket_count} número(s) · ${dt}</div>
       </div>
-      <div style="text-align:center;padding:8px 16px;background:var(--surface2);border-radius:10px;border:1px solid var(--gold)">
-        <div style="font-size:9px;color:var(--muted)">NÚMERO SORTEADO</div>
-        <div style="font-size:26px;font-weight:800;color:var(--gold);font-family:'Space Mono',monospace">${r.winner_number}</div>
-      </div>
+      ${statusBox}
     </div>
     ${isWinner?`<div style="font-size:12px;font-weight:700;color:var(--gold);margin-top:10px">🎉 Parabéns, você ganhou essa rifa!</div>`:''}
   </div>`;
@@ -631,6 +681,89 @@ async function confirmRifNumbers(){
   rifParticipate=null;
   await loadRaffleNumberCounts();
   await loadMyRaffleNumbers();
+  renderRafflesList();
+}
+
+// ── PAGAMENTO MANUAL PELO RIFEIRO (28/08/2026) ──────────────────
+// Pra gente que pagou por fora do site (dinheiro, PIX combinado direto
+// etc.) — o próprio rifeiro dono da rifa escreve o nome, marca os
+// números e confirma tudo de uma vez (não passa pela fila de revisão,
+// já nasce confirmado — ver admin_add_manual_raffle_payment no SQL).
+let rifManualPayment=null; // {raffleId, chosen:Set}
+
+function openRifManualPayment(raffleId){
+  const r=rifRaffleById(raffleId);
+  if(!r||!aucIsLeilaoAdmin||r.created_by!==uid())return;
+  rifManualPayment={raffleId,chosen:new Set()};
+  renderRifManualPaymentContent();
+  if(typeof openModal==='function')openModal('rif-manual-payment-ov');
+}
+
+async function renderRifManualPaymentContent(){
+  const box=document.getElementById('rif-manual-payment-content');
+  if(!box||!rifManualPayment)return;
+  const r=rifRaffleById(rifManualPayment.raffleId);
+  if(!r)return;
+  box.innerHTML=`
+    <h3 style="margin-bottom:4px">✍️ Marcar pagamento manual</h3>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px">${esc(r.title)} — pra quem pagou por fora do site (dinheiro, PIX combinado direto etc.)</div>
+    <div class="ff"><label>Nome de quem pagou *</label>
+      <input id="rif-manual-name" placeholder="Nome completo">
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin:10px 0 6px">Marque os números que essa pessoa ficou. Selecionados: <b id="rif-manual-picked-count">0</b></div>
+    <div id="rif-manual-number-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:6px;max-height:36vh;overflow-y:auto;margin-bottom:14px"></div>
+    <div id="rif-manual-status" style="font-size:10.5px;color:var(--accent);margin:8px 0"></div>
+    <button class="btn-add" onclick="submitRifManualPayment()">✓ Confirmar pagamento</button>`;
+  await renderRifManualNumberGrid();
+}
+
+async function renderRifManualNumberGrid(){
+  const grid=document.getElementById('rif-manual-number-grid');
+  if(!grid||!rifManualPayment)return;
+  const raffleId=rifManualPayment.raffleId;
+  const{data,error}=await sbClient.from('raffle_numbers')
+    .select('number,payment_id').eq('raffle_id',raffleId).order('number');
+  if(error){console.error('[rifa] renderRifManualNumberGrid',error);return;}
+  grid.innerHTML=(data||[]).map(n=>{
+    const taken=!!n.payment_id;
+    const chosen=rifManualPayment.chosen.has(n.number);
+    const bg=taken?'var(--surface2)':chosen?'var(--accent)':'var(--surface)';
+    const color=taken?'var(--muted)':chosen?'#fff':'var(--text)';
+    return`<button type="button" ${taken?'disabled':''} onclick="rifToggleManualNumber(${n.number})"
+      style="padding:8px 0;border-radius:6px;border:1px solid var(--border);background:${bg};color:${color};font-size:11px;cursor:${taken?'not-allowed':'pointer'}">${n.number}</button>`;
+  }).join('');
+}
+
+function rifToggleManualNumber(number){
+  if(!rifManualPayment)return;
+  if(rifManualPayment.chosen.has(number))rifManualPayment.chosen.delete(number);
+  else rifManualPayment.chosen.add(number);
+  renderRifManualNumberGrid();
+  const countEl=document.getElementById('rif-manual-picked-count');
+  if(countEl)countEl.textContent=rifManualPayment.chosen.size;
+}
+
+async function submitRifManualPayment(){
+  if(!rifManualPayment)return;
+  const statusEl=document.getElementById('rif-manual-status');
+  const name=(document.getElementById('rif-manual-name')?.value||'').trim();
+  const numbers=Array.from(rifManualPayment.chosen);
+  if(!name){if(statusEl)statusEl.textContent='Informe o nome de quem pagou.';return;}
+  if(!numbers.length){if(statusEl)statusEl.textContent='Marque pelo menos um número.';return;}
+  if(statusEl)statusEl.textContent='Salvando...';
+  const{error}=await sbClient.rpc('admin_add_manual_raffle_payment',{
+    p_raffle_id:rifManualPayment.raffleId,p_buyer_name:name,p_numbers:numbers
+  });
+  if(error){
+    console.error('[rifa] submitRifManualPayment',error);
+    if(statusEl)statusEl.textContent=error.message||'Erro ao salvar — atualize e tente de novo.';
+    renderRifManualNumberGrid();
+    return;
+  }
+  setStatus(`Pagamento de ${name} confirmado — ${numbers.length} número(s).`,'ok');
+  if(typeof closeModal==='function')closeModal('rif-manual-payment-ov');
+  rifManualPayment=null;
+  await loadRaffleNumberCounts();
   renderRafflesList();
 }
 

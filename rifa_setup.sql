@@ -602,3 +602,116 @@ begin
     where id = p_raffle_id and status = 'aberta';
 end;
 $$;
+
+-- ================================================================
+-- 11. PAGAMENTO MANUAL LANÇADO PELO PRÓPRIO RIFEIRO (28/08/2026)
+-- Pedido do Eduardo: gente que pagou por fora (dinheiro, outro PIX
+-- combinado direto, etc.) sem passar pelo fluxo normal do site. O
+-- rifeiro escreve o nome da pessoa, marca os números e confirma tudo de
+-- uma vez só — sem comprovante, sem conta de usuário, e o pagamento já
+-- nasce "confirmado" (não passa pela fila de revisão, porque quem está
+-- lançando já é o próprio rifeiro conferindo na hora).
+-- ================================================================
+alter table raffle_payments alter column user_id drop not null;
+alter table raffle_payments alter column user_id drop default;
+alter table raffle_payments alter column proof_path drop not null;
+alter table raffle_payments add column if not exists buyer_name text;
+alter table raffle_payments add column if not exists is_manual boolean not null default false;
+
+alter table raffle_payments drop constraint if exists raffle_payments_owner_check;
+alter table raffle_payments add constraint raffle_payments_owner_check
+  check (
+    (is_manual and buyer_name is not null and length(trim(buyer_name)) > 0)
+    or (not is_manual and user_id is not null and proof_path is not null)
+  );
+
+create or replace function admin_add_manual_raffle_payment(p_raffle_id bigint, p_buyer_name text, p_numbers int[])
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_raffle     raffles%rowtype;
+  v_taken      int;
+  v_qty        int;
+  v_payment_id bigint;
+begin
+  select * into v_raffle from raffles where id = p_raffle_id for update;
+  if v_raffle.id is null then
+    raise exception 'Rifa não encontrada.';
+  end if;
+  if v_raffle.created_by <> auth.uid() then
+    raise exception 'Só o rifeiro que criou essa rifa pode lançar pagamentos manuais nela.';
+  end if;
+  if v_raffle.status <> 'aberta' then
+    raise exception 'Só dá pra lançar pagamento manual em rifa aberta.';
+  end if;
+  if p_buyer_name is null or length(trim(p_buyer_name)) = 0 then
+    raise exception 'Informe o nome de quem pagou.';
+  end if;
+  v_qty := coalesce(array_length(p_numbers, 1), 0);
+  if v_qty = 0 then
+    raise exception 'Marque pelo menos um número.';
+  end if;
+
+  perform 1 from raffle_numbers
+    where raffle_id = p_raffle_id and number = any(p_numbers)
+    for update;
+
+  select count(*) into v_taken from raffle_numbers
+    where raffle_id = p_raffle_id and number = any(p_numbers) and payment_id is not null;
+  if v_taken > 0 then
+    raise exception 'Um ou mais números marcados já estão reservados — atualize a lista e escolha outros.';
+  end if;
+
+  insert into raffle_payments(raffle_id, user_id, quantity, total_amount, proof_path, status, buyer_name, is_manual, reviewed_by, reviewed_at)
+  values (p_raffle_id, null, v_qty, v_qty * v_raffle.ticket_price, null, 'confirmado', trim(p_buyer_name), true, auth.uid(), now())
+  returning id into v_payment_id;
+
+  update raffle_numbers
+    set payment_id = v_payment_id, claimed_at = now()
+    where raffle_id = p_raffle_id and number = any(p_numbers);
+end;
+$$;
+
+grant execute on function admin_add_manual_raffle_payment(bigint, text, int[]) to authenticated;
+
+-- ================================================================
+-- 12. ARQUIVAR RIFA SEM SORTEIO + CANCELADAS TAMBÉM NO ARQUIVO (28/08/2026)
+-- Pedido do Eduardo: o rifeiro também tem um botão de "arquivar" — pra
+-- encerrar/ocultar uma rifa aberta que ele não quer mais sortear, sem
+-- passar pelo sorteio (novo status 'arquivada'). E as rifas que ele já
+-- cancelou (antes só apareciam pra ele mesmo na lista principal) agora
+-- também aparecem na aba Arquivo, em vez de ficar misturadas com as
+-- abertas. A visibilidade de cancelada continua só pro próprio rifeiro
+-- (raffles_select da seção 10) — 'arquivada' fica pública que nem
+-- 'sorteada', não precisa de policy nova.
+-- ================================================================
+alter table raffles drop constraint if exists raffles_status_check;
+alter table raffles add constraint raffles_status_check
+  check (status in ('aberta','sorteada','cancelada','arquivada'));
+
+create or replace function archive_raffle_without_draw(p_raffle_id bigint)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_status text; v_owner uuid;
+begin
+  select status, created_by into v_status, v_owner from raffles where id = p_raffle_id for update;
+  if v_status is null then
+    raise exception 'Rifa não encontrada.';
+  end if;
+  if v_owner <> auth.uid() then
+    raise exception 'Só o rifeiro que criou essa rifa pode arquivá-la.';
+  end if;
+  if v_status <> 'aberta' then
+    raise exception 'Só dá pra arquivar uma rifa aberta.';
+  end if;
+  update raffles set status = 'arquivada', updated_at = now() where id = p_raffle_id;
+end;
+$$;
+
+grant execute on function archive_raffle_without_draw(bigint) to authenticated;

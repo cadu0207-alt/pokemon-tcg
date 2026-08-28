@@ -1284,6 +1284,17 @@
     </div>
   </div>
 
+  <!-- PAGAMENTO MANUAL PELO RIFEIRO (28/08/2026): pra gente que pagou por
+       fora (dinheiro, PIX combinado direto, etc.) — o rifeiro escreve o
+       nome, marca os números e confirma tudo de uma vez. Só aparece pro
+       rifeiro dono da rifa. Ver renderRifManualPaymentContent() (rifa.js). -->
+  <div class="ov" id="rif-manual-payment-ov" onclick="if(event.target===this)closeModal('rif-manual-payment-ov')">
+    <div class="modal modal-wide">
+      <button class="mc-btn" onclick="closeModal('rif-manual-payment-ov')">✕</button>
+      <div id="rif-manual-payment-content"></div>
+    </div>
+  </div>
+
   <!-- REVELAÇÃO DO SORTEIO (24/08/2026): animação de alguns segundos antes
        de mostrar o número vencedor — rifPlayDrawReveal() (rifa.js). -->
   <div class="ov" id="rif-draw-reveal-ov" onclick="if(event.target===this)closeModal('rif-draw-reveal-ov')">
