@@ -240,11 +240,24 @@ if(sbClient){
       // sozinha" enquanto o usuário só estava com a aba aberta. Só recarrega
       // dados em eventos que de fato significam login novo/trocado.
       if(_event==='TOKEN_REFRESHED') return;
+      // 28/08/2026: troca de conta (logout de um usuário de teste e login
+      // com outro) enquanto a aba Rifas já estava aberta NÃO disparava
+      // renderRifasTab() de novo — loadAll() só recarrega dashboard/fichário
+      // e só revisita a aba ativa via hash (routeFromHash). Resultado: "Seus
+      // números" e as ações de rifeiro ficavam com o estado do usuário
+      // ANTERIOR até a pessoa clicar em outra aba e voltar pra Rifas — o
+      // bug relatado de números aparecendo como "seus" sem ser. Aqui força
+      // um re-render da aba Rifas (se for a que está aberta no momento) a
+      // cada login/logout de verdade, não só em refresh de token.
+      if(typeof rifMyNumbers!=='undefined')rifMyNumbers={};
+      if(typeof rifNumberCounts!=='undefined')rifNumberCounts={};
+      const _rifPane=document.getElementById('rifas');
+      const _rifWasActive=_rifPane&&_rifPane.classList.contains('active');
       // Só carrega dados se o DOM estiver pronto
       if(document.readyState==='complete'||document.readyState==='interactive'){
-        loadAll();
+        loadAll().then(()=>{ if(_rifWasActive&&typeof renderRifasTab==='function')renderRifasTab(); });
       }else{
-        document.addEventListener('DOMContentLoaded',()=>loadAll());
+        document.addEventListener('DOMContentLoaded',()=>loadAll().then(()=>{ if(_rifWasActive&&typeof renderRifasTab==='function')renderRifasTab(); }));
       }
     }else{
       _showAuth(true);

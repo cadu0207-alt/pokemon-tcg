@@ -124,6 +124,7 @@ function rifStartPolling(){
     rifRaffles.forEach(r=>{prevStatus[r.id]=r.status;});
     await loadRaffles();
     await loadRaffleNumberCounts();
+    await loadMyRaffleNumbers(); // sem isso, "Seus números" ficava parado no valor do carregamento inicial da aba enquanto o resto atualizava a cada 4s
     const newlyDrawn=rifRaffles.filter(r=>prevStatus[r.id]==='aberta'&&r.status==='sorteada');
     renderRafflesList();
     if(newlyDrawn.length)renderRaffleArchive();
