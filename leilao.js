@@ -1760,12 +1760,15 @@ function aucOnPhoneInput(el){
 function fillLeilaoAddressForm(){
   const map={'auc-addr-cep':'cep','auc-addr-logradouro':'logradouro','auc-addr-numero':'numero','auc-addr-bairro':'bairro','auc-addr-cidade':'cidade','auc-addr-uf':'uf'};
   Object.keys(map).forEach(id=>{const el=document.getElementById(id);if(el)el.value=aucAddress?.[map[id]]||'';});
+  const nEl=document.getElementById('auc-addr-nome');
+  if(nEl)nEl.value=aucAddress?.full_name||'';
   const wEl=document.getElementById('auc-addr-whatsapp');
   if(wEl)wEl.value=aucPhoneMask(aucAddress?.whatsapp||'');
 }
 
 async function saveLeilaoAddress(){
   if(!uid())return;
+  const fullName=(document.getElementById('auc-addr-nome')?.value||'').trim();
   const cep=document.getElementById('auc-addr-cep')?.value.trim();
   const logradouro=document.getElementById('auc-addr-logradouro')?.value.trim();
   const numero=document.getElementById('auc-addr-numero')?.value.trim();
@@ -1774,6 +1777,10 @@ async function saveLeilaoAddress(){
   const uf=document.getElementById('auc-addr-uf')?.value;
   const whatsappDigits=aucPhoneDigits(document.getElementById('auc-addr-whatsapp')?.value);
   const statusEl=document.getElementById('auc-addr-status');
+  if(!fullName){
+    if(statusEl)statusEl.textContent='Informe seu nome completo.';
+    return;
+  }
   if(!logradouro||!numero||!cidade||!uf){
     if(statusEl)statusEl.textContent='Preencha ao menos rua, número, cidade e UF — é o endereço que vai receber a carta.';
     return;
@@ -1784,7 +1791,7 @@ async function saveLeilaoAddress(){
   }
   const whatsapp=aucPhoneMask(whatsappDigits);
   const{data,error}=await sbClient.from('user_addresses')
-    .upsert({user_id:uid(),cep:cep||null,logradouro,numero,bairro:bairro||null,cidade,uf,whatsapp,updated_at:new Date().toISOString()},{onConflict:'user_id'})
+    .upsert({user_id:uid(),full_name:fullName,cep:cep||null,logradouro,numero,bairro:bairro||null,cidade,uf,whatsapp,updated_at:new Date().toISOString()},{onConflict:'user_id'})
     .select();
   if(error){console.error('[leilao] user_addresses upsert',error);if(statusEl)statusEl.textContent='Erro ao salvar. Verifique se rodou leilao_setup.sql/marketplace_setup.sql no Supabase.';return;}
   aucAddress=Array.isArray(data)?data[0]:aucAddress;

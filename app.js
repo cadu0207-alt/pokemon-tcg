@@ -4660,3 +4660,85 @@ if(document.readyState==='complete'){
     requestAnimationFrame(_updHdr);
   },{passive:true});
 })();
+
+// ================================================================
+// MEU PERFIL — nome + endereço + WhatsApp (28/08/2026)
+// Pedido do Eduardo: reaproveitar em qualquer lugar do site (leilão,
+// rifa, o que vier depois) em vez de cada feature pedir nome/endereço
+// avulso. Mesma tabela user_addresses de sempre (o leilão já usa ela
+// pra endereço de entrega + WhatsApp) — só ganhou a coluna full_name
+// (ver rifa_setup.sql seção 14). Fica em app.js (carrega antes de
+// leilao.js/rifa.js) pra qualquer um dos dois poder chamar.
+// ================================================================
+let userProfile=null;
+let _profileAfterSaveCb=null;
+
+async function loadUserProfile(){
+  if(!uid()){userProfile=null;return;}
+  const{data,error}=await sbClient.from('user_addresses').select('*').eq('user_id',uid()).maybeSingle();
+  if(error){console.error('[perfil] loadUserProfile',error);return;}
+  userProfile=data||null;
+}
+
+function userProfileComplete(p){
+  return!!(p&&p.full_name&&p.whatsapp);
+}
+
+// callback (opcional) roda depois que o perfil é salvo com sucesso —
+// pra quem abriu o modal no meio de outro fluxo (ex: participar de rifa)
+// continuar de onde parou sem precisar clicar de novo em nada.
+function openProfileModal(callback){
+  _profileAfterSaveCb=typeof callback==='function'?callback:null;
+  fillProfileForm();
+  if(typeof openModal==='function')openModal('perfil-ov');
+}
+
+function fillProfileForm(){
+  const map={'perfil-cep':'cep','perfil-logradouro':'logradouro','perfil-numero':'numero','perfil-bairro':'bairro','perfil-cidade':'cidade','perfil-uf':'uf'};
+  Object.keys(map).forEach(id=>{const el=document.getElementById(id);if(el)el.value=userProfile?.[map[id]]||'';});
+  const nEl=document.getElementById('perfil-nome');
+  if(nEl)nEl.value=userProfile?.full_name||'';
+  const wEl=document.getElementById('perfil-whatsapp');
+  if(wEl)wEl.value=typeof aucPhoneMask==='function'?aucPhoneMask(userProfile?.whatsapp||''):(userProfile?.whatsapp||'');
+  const statusEl=document.getElementById('perfil-status');
+  if(statusEl)statusEl.textContent='';
+}
+
+async function saveUserProfile(){
+  if(!uid())return;
+  const statusEl=document.getElementById('perfil-status');
+  const fullName=(document.getElementById('perfil-nome')?.value||'').trim();
+  const cep=(document.getElementById('perfil-cep')?.value||'').trim();
+  const logradouro=(document.getElementById('perfil-logradouro')?.value||'').trim();
+  const numero=(document.getElementById('perfil-numero')?.value||'').trim();
+  const bairro=(document.getElementById('perfil-bairro')?.value||'').trim();
+  const cidade=(document.getElementById('perfil-cidade')?.value||'').trim();
+  const uf=document.getElementById('perfil-uf')?.value||'';
+  const whatsappRaw=document.getElementById('perfil-whatsapp')?.value||'';
+  const whatsappDigits=typeof aucPhoneDigits==='function'?aucPhoneDigits(whatsappRaw):whatsappRaw.replace(/\D/g,'');
+
+  if(!fullName){if(statusEl)statusEl.textContent='Informe seu nome completo.';return;}
+  if(whatsappDigits.length!==10&&whatsappDigits.length!==11){
+    if(statusEl)statusEl.textContent='Informe um WhatsApp válido, com DDD — ex: (85) 98888-7777.';
+    return;
+  }
+  const whatsapp=typeof aucPhoneMask==='function'?aucPhoneMask(whatsappDigits):whatsappDigits;
+
+  if(statusEl)statusEl.textContent='Salvando...';
+  const{data,error}=await sbClient.from('user_addresses')
+    .upsert({user_id:uid(),full_name:fullName,cep:cep||null,logradouro:logradouro||null,numero:numero||null,bairro:bairro||null,cidade:cidade||null,uf:uf||null,whatsapp,updated_at:new Date().toISOString()},{onConflict:'user_id'})
+    .select();
+  if(error){
+    console.error('[perfil] saveUserProfile',error);
+    if(statusEl)statusEl.textContent='Erro ao salvar. Verifique se rodou rifa_setup.sql (seção 14) no Supabase.';
+    return;
+  }
+  userProfile=Array.isArray(data)?data[0]:userProfile;
+  if(typeof aucAddress!=='undefined')aucAddress=userProfile; // mesmo dado, mantém o leilão sincronizado também
+  if(statusEl)statusEl.textContent='✓ Perfil salvo.';
+  if(typeof setStatus==='function')setStatus('Perfil salvo','ok');
+  if(typeof closeModal==='function')closeModal('perfil-ov');
+  const cb=_profileAfterSaveCb;
+  _profileAfterSaveCb=null;
+  if(cb)cb();
+}

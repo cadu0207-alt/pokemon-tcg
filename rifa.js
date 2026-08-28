@@ -593,11 +593,12 @@ async function acceptRifRules(){
 // ── PARTICIPAR (escolher quantidade → pagar → comprovante → números) ──
 let rifParticipate=null; // {raffleId, step:'qty'|'numbers', qty, paymentId, chosen:Set}
 
-function openRifParticipate(raffleId){
+async function openRifParticipate(raffleId){
   if(!uid())return;
   if(!rifRulesAccepted){openRifRulesModal(raffleId);return;}
   const r=rifRaffleById(raffleId);
   if(!r)return;
+  if(typeof loadUserProfile==='function')await loadUserProfile();
   rifParticipate={raffleId,step:'qty',qty:1,paymentId:null,chosen:new Set()};
   renderRifParticipateContent();
   if(typeof openModal==='function')openModal('rif-participate-ov');
@@ -611,11 +612,23 @@ function renderRifParticipateContent(){
   const c=rifNumberCounts[r.id]||{livres:r.ticket_count};
 
   if(rifParticipate.step==='qty'){
+    const profileOk=typeof userProfileComplete==='function'&&userProfileComplete(userProfile);
+    if(!profileOk){
+      box.innerHTML=`
+        <h3 style="margin-bottom:4px">🎟️ ${esc(r.title)}</h3>
+        <div class="mkt-note">
+          Antes de participar, complete seu perfil (nome e WhatsApp) — é assim que o rifeiro sabe
+          quem escolheu cada número e consegue te avisar se ganhar.
+        </div>
+        <button class="btn-add" onclick="openProfileModal(()=>{ if(rifParticipate)renderRifParticipateContent(); })">📇 Completar meu perfil</button>`;
+      return;
+    }
     box.innerHTML=`
       <h3 style="margin-bottom:4px">🎟️ ${esc(r.title)}</h3>
       <div style="font-size:11px;color:var(--muted);margin-bottom:14px">${c.livres} número(s) livre(s) de ${r.ticket_count} — R$ ${fmtR(r.ticket_price)} cada</div>
-      <div class="ff"><label>Seu nome *</label>
-        <input id="rif-buyer-name" placeholder="Nome completo (o rifeiro usa isso pra te identificar)">
+      <div style="font-size:10.5px;color:var(--teal);margin-bottom:12px">
+        📇 Participando como <b>${esc(userProfile.full_name)}</b> · ${esc(userProfile.whatsapp)}
+        — <a href="#" onclick="event.preventDefault();openProfileModal(()=>{ if(rifParticipate)renderRifParticipateContent(); })" style="color:var(--accent)">trocar</a>
       </div>
       <div class="ff"><label>Quantos números você quer?</label>
         <input type="number" id="rif-qty-input" min="1" max="${c.livres}" value="1" oninput="rifUpdateQtyTotal(${r.id})">
@@ -660,10 +673,13 @@ async function submitRifPayment(raffleId){
   const r=rifRaffleById(raffleId);
   if(!r)return;
   const statusEl=document.getElementById('rif-participate-status');
-  const buyerName=(document.getElementById('rif-buyer-name')?.value||'').trim();
+  if(!(typeof userProfileComplete==='function'&&userProfileComplete(userProfile))){
+    if(statusEl)statusEl.textContent='Complete seu perfil (nome e WhatsApp) antes de continuar.';
+    return;
+  }
+  const buyerName=userProfile.full_name;
   const qty=parseInt(document.getElementById('rif-qty-input')?.value);
   const c=rifNumberCounts[r.id]||{livres:r.ticket_count};
-  if(!buyerName){if(statusEl)statusEl.textContent='Informe seu nome.';return;}
   if(!qty||qty<1){if(statusEl)statusEl.textContent='Escolha uma quantidade válida.';return;}
   if(qty>c.livres){if(statusEl)statusEl.textContent=`Só tem ${c.livres} número(s) livre(s) — escolha uma quantidade menor.`;return;}
   const file=document.getElementById('rif-proof-input')?.files?.[0];

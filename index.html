@@ -841,6 +841,7 @@
             Obrigatório antes de dar o primeiro lance — é pra onde a carta vai se você arrematar, e é
             por esse WhatsApp que o leiloeiro combina pagamento e envio com você. Envio por conta do comprador.
           </div>
+          <div class="ff"><label>Nome completo *</label><input id="auc-addr-nome" placeholder="Seu nome completo"></div>
           <div class="ff"><label>CEP</label><input id="auc-addr-cep" placeholder="00000-000"></div>
           <div class="ff"><label>Rua/Logradouro *</label><input id="auc-addr-logradouro"></div>
           <div class="ff"><label>Número *</label><input id="auc-addr-numero"></div>
@@ -1313,6 +1314,44 @@
     <div class="modal modal-wide">
       <button class="mc-btn" onclick="closeModal('rif-draw-reveal-ov')">✕</button>
       <div id="rif-draw-reveal-content"></div>
+    </div>
+  </div>
+
+  <!-- MEU PERFIL (28/08/2026): nome + endereço + WhatsApp, num perfil ÚNICO
+       reaproveitado em qualquer lugar do site que precise disso (hoje:
+       leilão — via user_addresses direto — e rifa). Mesma tabela
+       user_addresses de sempre, só ganhou a coluna full_name (ver
+       rifa_setup.sql seção 14). Funções em app.js: loadUserProfile(),
+       openProfileModal(callback), saveUserProfile(). -->
+  <div class="ov" id="perfil-ov" onclick="if(event.target===this)closeModal('perfil-ov')">
+    <div class="modal">
+      <button class="mc-btn" onclick="closeModal('perfil-ov')">✕</button>
+      <div class="panel-t" style="margin-bottom:4px">📇 Meu Perfil</div>
+      <div style="font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:14px">
+        Nome, endereço e WhatsApp — usados em leilões, rifas e outras áreas do site que precisem
+        identificar você ou enviar algo pra você.
+      </div>
+      <div class="ff"><label>Nome completo *</label><input id="perfil-nome" placeholder="Seu nome completo"></div>
+      <div class="ff"><label>CEP</label><input id="perfil-cep" placeholder="00000-000"></div>
+      <div class="ff"><label>Rua/Logradouro</label><input id="perfil-logradouro"></div>
+      <div class="ff"><label>Número</label><input id="perfil-numero"></div>
+      <div class="ff"><label>Bairro</label><input id="perfil-bairro"></div>
+      <div class="ff"><label>Cidade</label><input id="perfil-cidade"></div>
+      <div class="ff"><label>UF</label>
+        <select id="perfil-uf">
+          <option value="">—</option>
+          <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option>
+          <option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option>
+          <option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
+          <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option>
+          <option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option>
+          <option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option>
+          <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
+        </select>
+      </div>
+      <div class="ff"><label>WhatsApp *</label><input id="perfil-whatsapp" placeholder="(xx) xxxxx-xxxx" inputmode="tel" maxlength="15" oninput="if(typeof aucOnPhoneInput==='function')aucOnPhoneInput(this)"></div>
+      <button class="btn-add" onclick="saveUserProfile()">✓ Salvar Perfil</button>
+      <div id="perfil-status" style="font-size:10px;color:var(--teal);font-family:'IBM Plex Mono',monospace;margin-top:8px"></div>
     </div>
   </div>
 

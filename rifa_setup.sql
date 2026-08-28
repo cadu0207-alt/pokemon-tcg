@@ -816,3 +816,15 @@ begin
     where id = p_payment_id and status = 'pendente';
 end;
 $$;
+
+-- ================================================================
+-- 14. PERFIL COMPARTILHADO (NOME) EM user_addresses (28/08/2026)
+-- Pedido do Eduardo: em vez de pedir "seu nome" avulso toda vez (só pra
+-- rifa), reaproveitar a MESMA tabela user_addresses que já guarda
+-- endereço + WhatsApp (usada pelo leilão) — ela vira o "perfil" único
+-- do usuário, com nome incluso agora, pra reaproveitar em leilão, rifa e
+-- o que mais vier depois. Só adiciona a coluna — RLS de user_addresses
+-- já existente (criada em leilao_setup.sql/marketplace_setup.sql) não
+-- muda, continua valendo igual pra essa coluna nova.
+-- ================================================================
+alter table user_addresses add column if not exists full_name text;
