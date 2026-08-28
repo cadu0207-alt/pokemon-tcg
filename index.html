@@ -232,6 +232,10 @@
         <button type="button" class="tdrop-item" data-tab="positivo" onclick="goToTab('positivo')">✅ Cadastro Positivo</button>
         <!-- espelha nav-tab-leilao: só admin vê (updateLeilaoTabVisibility em leilao.js) -->
         <button type="button" class="tdrop-item" id="desk-tab-leilao" style="display:none" data-tab="leilao" onclick="goToTab('leilao')">🔨 Leilão</button>
+        <!-- RIFAS (24/08/2026): mesma visibilidade do leilão — qualquer usuário
+             logado vê (updateRifasTabVisibility em rifa.js); painel de rifeiro
+             usa a MESMA permissão do leiloeiro (aucIsLeilaoAdmin). -->
+        <button type="button" class="tdrop-item" id="desk-tab-rifas" style="display:none" data-tab="rifas" onclick="goToTab('rifas')">🎟️ Rifas</button>
       </div>
     </div>
     <button type="button" class="tdesk-link" data-tab="iniciantes" onclick="goToTab('iniciantes')">🔰 INICIANTES</button>
@@ -296,6 +300,10 @@
          estado padrão/seguro; leilao.js mostra via JS. Pra abrir pra todos os
          usuários registrados, trocar a condição em updateLeilaoTabVisibility(). -->
     <button type="button" class="tab" id="nav-tab-leilao" style="display:none" onclick="go('leilao',this)">🔨 Leilão</button>
+    <!-- RIFAS (24/08/2026): mesma visibilidade do leilão (updateRifasTabVisibility,
+         rifa.js) — qualquer usuário logado vê; painel de rifeiro usa a mesma
+         permissão do leiloeiro. -->
+    <button type="button" class="tab" id="nav-tab-rifas" style="display:none" onclick="go('rifas',this)">🎟️ Rifas</button>
     <!-- ADMIN 11/08/2026: aba própria, só visível pro Eduardo (isAdmin(), lojas.js)
          — display:none aqui é o estado padrão/seguro; admin_panel.js mostra via JS
          só depois de confirmar o e-mail logado (e-mail do Eduardo). -->
@@ -1138,6 +1146,131 @@
     </div>
   </div>
 
+  <!-- ===== ABA RIFAS (24/08/2026) =====
+       Pedido do Eduardo: grupo "Compra e Venda e Leilão" ganha uma aba de
+       rifas. Reaproveita a mesma permissão de leiloeiro (aucIsLeilaoAdmin)
+       pra quem pode cadastrar/revisar/sortear — ver rifa.js. Aberta pra
+       qualquer usuário logado ver e participar (nav-tab-rifas). -->
+  <div id="rifas" class="pane">
+    <div class="sec-title" style="margin-top:0">🎟️ Rifas</div>
+
+    <div id="rif-subnav" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+      <button type="button" class="btn-add rif-subtab-btn" data-sub="rifas" onclick="switchRifasSubtab('rifas')">🎟️ Rifas</button>
+      <button type="button" id="rif-tab-cadastro" class="btn-add rif-subtab-btn" data-sub="cadastro" onclick="switchRifasSubtab('cadastro')" style="display:none">➕ Cadastro</button>
+      <button type="button" id="rif-tab-revisao" class="btn-add rif-subtab-btn" data-sub="revisao" onclick="switchRifasSubtab('revisao')" style="display:none">🔍 Revisão de Pagamentos</button>
+    </div>
+
+    <!-- ── LISTA / PARTICIPAR ──────────────────────────────────────── -->
+    <div id="rif-sub-rifas">
+      <div id="rif-list" class="cv-list"></div>
+    </div>
+
+    <!-- ── CADASTRO (rifeiro) ──────────────────────────────────────── -->
+    <div id="rif-sub-cadastro" style="display:none">
+      <div class="mkt-note">
+        Escolha o prêmio (carta do catálogo ou uma foto real/produto), defina quantos números a
+        rifa vai ter e o valor de cada um, e informe a chave PIX que os participantes vão usar
+        pra pagar. Os números (1 a N) são criados automaticamente ao publicar.
+      </div>
+      <div class="panel">
+        <div class="panel-t">🎟️ Nova Rifa</div>
+        <div class="ff"><label>Buscar carta no catálogo (opcional — preenche foto)</label>
+          <input id="rif-admin-search" placeholder="Nome da carta..." oninput="searchRifCards()">
+        </div>
+        <div id="rif-admin-search-results" class="cv-list" style="max-height:220px;overflow:auto;margin-bottom:10px"></div>
+        <div id="rif-admin-preview" style="display:none;gap:10px;align-items:center;margin-bottom:10px"></div>
+
+        <div class="ff"><label>Ou tire/envie foto(s) reais do prêmio (até 4)</label>
+          <input type="file" id="rif-admin-foto" accept="image/*" capture="environment" multiple onchange="handleRifPhotoPick(event)">
+        </div>
+        <div id="rif-admin-foto-preview" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>
+
+        <div class="ff"><label>Nome/Prêmio da rifa *</label><input id="rif-admin-titulo" placeholder="Ex: Charizard SAR"></div>
+        <div class="ff"><label>Descrição (opcional)</label><textarea id="rif-admin-desc" rows="2" placeholder="Detalhes do prêmio, regras extras..."></textarea></div>
+        <div class="ff"><label>Quantidade de números *</label><input type="number" id="rif-admin-qtd" min="2" max="1000" placeholder="Ex: 100"></div>
+        <div class="ff"><label>Valor por número (R$) *</label><input type="number" id="rif-admin-preco" step="0.01" min="0.01"></div>
+        <div class="ff"><label>Chave PIX *</label><input id="rif-admin-pix" placeholder="CPF, e-mail, telefone ou chave aleatória"></div>
+        <div class="ff"><label>Titular da chave PIX *</label><input id="rif-admin-pix-titular" placeholder="Nome completo do titular"></div>
+        <button class="btn-add" onclick="publishRaffle()">🎟️ Publicar Rifa</button>
+        <div id="rif-admin-status" style="font-size:10px;color:var(--teal);font-family:'IBM Plex Mono',monospace;margin-top:8px"></div>
+      </div>
+    </div>
+
+    <!-- ── REVISÃO DE PAGAMENTOS (rifeiro) ─────────────────────────── -->
+    <div id="rif-sub-revisao" style="display:none">
+      <div class="mkt-note">
+        Confira o comprovante de cada pagamento pendente antes de confirmar. Rejeitar libera os
+        números de volta pro estoque. Só dá pra sortear uma rifa depois de zerar as pendências
+        dela aqui.
+      </div>
+      <div id="rif-review-list" class="cv-list"></div>
+    </div>
+  </div>
+
+  <!-- REGRAS DA RIFA (24/08/2026): aparece só na primeira vez que alguém
+       tenta participar de uma rifa — mesmo padrão do aceite de regras do
+       leilão. Aceite fica em raffle_rules_acceptance (banco). -->
+  <div class="ov" id="rif-rules-ov" onclick="if(event.target===this)closeModal('rif-rules-ov')">
+    <div class="modal modal-wide">
+      <button class="mc-btn" onclick="closeModal('rif-rules-ov')">✕</button>
+      <div class="panel-t" style="margin-bottom:4px">📜 Regras da Rifa MyDeck</div>
+      <div style="font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:16px">
+        Leia com atenção antes de participar da sua primeira rifa.
+      </div>
+      <div class="mkt-term-box" style="max-height:48vh;overflow-y:auto">
+        <b>1. Como funciona</b><br>
+        Cada rifa tem uma quantidade fixa de números e um valor por número. Você escolhe quantos
+        números quer, paga o total via PIX diretamente ao rifeiro (fora do site) e sobe o
+        comprovante. Depois disso, você escolhe quais números específicos quer, entre os ainda
+        livres.<br><br>
+
+        <b>2. Revisão do pagamento</b><br>
+        O rifeiro confere o comprovante antes de confirmar seus números. Se o comprovante for
+        rejeitado (pagamento não identificado, valor errado, etc.), os números escolhidos voltam
+        pro estoque livre — fale com o rifeiro pra resolver.<br><br>
+
+        <b>3. Sorteio</b><br>
+        O sorteio só acontece depois que o rifeiro revisa TODOS os pagamentos pendentes da rifa.
+        É feito pelo servidor, entre os números já confirmados — ninguém, nem o rifeiro, escolhe
+        o resultado manualmente.<br><br>
+
+        <b>4. Pagamento e entrega do prêmio</b><br>
+        O pagamento é feito via PIX diretamente ao rifeiro, fora do site — o MyDeck não processa,
+        retém ou garante nenhum valor financeiro. A entrega do prêmio ao vencedor é combinada
+        diretamente com o rifeiro.<br><br>
+
+        <b>5. O papel do MyDeck</b><br>
+        O site é só uma ferramenta de cadastro, reserva de números e sorteio. O MyDeck não é
+        parte na transação entre você e o rifeiro, e não se responsabiliza pelo resultado da
+        negociação.
+      </div>
+      <label style="display:flex;align-items:flex-start;gap:8px;margin:16px 0;font-size:12px;cursor:pointer">
+        <input type="checkbox" id="rif-rules-check" onchange="toggleRifRulesAccept()" style="margin-top:2px">
+        <span>Li e aceito as regras da rifa acima.</span>
+      </label>
+      <button class="btn-add" id="rif-rules-accept-btn" disabled onclick="acceptRifRules()">✓ Li e aceito as regras</button>
+    </div>
+  </div>
+
+  <!-- PARTICIPAR DE UMA RIFA (24/08/2026): fluxo de 2 passos (quantidade+
+       comprovante → escolher números), montado em renderRifParticipateContent()
+       (rifa.js). -->
+  <div class="ov" id="rif-participate-ov" onclick="if(event.target===this)closeModal('rif-participate-ov')">
+    <div class="modal modal-wide">
+      <button class="mc-btn" onclick="closeModal('rif-participate-ov')">✕</button>
+      <div id="rif-participate-content"></div>
+    </div>
+  </div>
+
+  <!-- REVELAÇÃO DO SORTEIO (24/08/2026): animação de alguns segundos antes
+       de mostrar o número vencedor — rifPlayDrawReveal() (rifa.js). -->
+  <div class="ov" id="rif-draw-reveal-ov" onclick="if(event.target===this)closeModal('rif-draw-reveal-ov')">
+    <div class="modal">
+      <button class="mc-btn" onclick="closeModal('rif-draw-reveal-ov')">✕</button>
+      <div id="rif-draw-reveal-content"></div>
+    </div>
+  </div>
+
   <!-- ===== ABA ADMIN (11/08/2026) =====
        Painel único pro Eduardo — reúne tudo que antes ficava misturado nas
        abas públicas (estatísticas do site e mensagens de usuários viviam no
@@ -1624,6 +1757,10 @@
      por ele) e antes de leilao.js. Ver [[project_price_history_book]] na memória do projeto. -->
 <script defer src="price_history.js"></script>
 <script defer src="leilao.js"></script>
+<!-- rifa.js (24/08/2026): aba de Rifas, reaproveita estado/funções globais do
+     leilao.js (aucIsLeilaoAdmin, compressAuctionPhoto, uploadAuctionPhotos,
+     etc.) — por isso precisa carregar DEPOIS dele. -->
+<script defer src="rifa.js"></script>
 <script defer src="loja.js"></script>
 <script defer src="positivo.js"></script>
 <script defer src="lojas_store_vespa.js"></script>
