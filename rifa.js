@@ -641,7 +641,7 @@ function renderRifParticipateContent(){
         <div style="font-size:9.5px;color:var(--muted);margin-top:6px">Pague o valor exato acima, direto por PIX (fora do site), e suba o comprovante abaixo.</div>
       </div>
       <div class="ff"><label>Comprovante do PIX (foto ou print)</label>
-        <input type="file" id="rif-proof-input" accept="image/*" capture="environment">
+        <input type="file" id="rif-proof-input" accept="image/*">
       </div>
       <div id="rif-participate-status" style="font-size:10.5px;color:var(--accent);margin:8px 0"></div>
       <button class="btn-add" onclick="submitRifPayment(${r.id})">✓ Enviar comprovante</button>`;
