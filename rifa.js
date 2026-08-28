@@ -1072,9 +1072,15 @@ async function loadPendingRafflePayments(){
   rifAdminPendingPayments=Array.isArray(data)?data:[];
 }
 
+// Guarda, por pagamento, o que confirmRifPayment precisa pra montar o
+// aviso de WhatsApp na hora (sem re-consultar o banco) — populado a cada
+// renderização da lista de revisão.
+let rifReviewRowInfo={};
+
 async function renderRafflePaymentsReview(){
   const wrap=document.getElementById('rif-review-list');
   if(!wrap)return;
+  rifReviewRowInfo={};
   if(!rifAdminPendingPayments.length){wrap.innerHTML=`<div class="cv-item-empty">Nenhum pagamento pendente de revisão.</div>`;return;}
 
   const rows=await Promise.all(rifAdminPendingPayments.map(async p=>{
@@ -1083,7 +1089,13 @@ async function renderRafflePaymentsReview(){
     const{data:addr}=await sbClient.from('user_addresses').select('whatsapp').eq('user_id',p.user_id).maybeSingle();
     const have=(nums||[]).length;
     const missing=p.quantity-have;
-    return`<div class="cv-item" style="cursor:default;flex-direction:column;align-items:stretch;gap:8px">
+    rifReviewRowInfo[p.id]={
+      whatsapp:addr?.whatsapp||null,
+      raffleTitle:p.raffles?.title||'a rifa',
+      buyerName:p.buyer_name||null,
+      numbers:(nums||[]).map(n=>n.number).sort((a,b)=>a-b)
+    };
+    return`<div class="cv-item" id="rif-review-row-${p.id}" style="cursor:default;flex-direction:column;align-items:stretch;gap:8px">
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         ${signed?.signedUrl?`<img src="${signed.signedUrl}" onclick="window.open('${signed.signedUrl}','_blank')" style="width:80px;border-radius:6px;object-fit:contain;background:var(--surface2);cursor:zoom-in" title="Clique pra ampliar">`:''}
         <div style="flex:1;min-width:200px">
@@ -1093,7 +1105,7 @@ async function renderRafflePaymentsReview(){
           <div style="font-size:11px;color:var(--muted)">${addr?.whatsapp?`WhatsApp: ${esc(addr.whatsapp)}`:'Sem WhatsApp cadastrado'}</div>
         </div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div id="rif-review-actions-${p.id}" style="display:flex;gap:8px;flex-wrap:wrap">
         ${missing>0?`<button class="btn-add" onclick="openRifFixPaymentNumbers(${p.id},${p.raffle_id},${missing},'${esc(p.buyer_name||'esse pagamento').replace(/'/g,"\\'")}')">🔢 Completar ${missing} número(s)</button>`
           :`<button class="btn-add" onclick="confirmRifPayment(${p.id})">✓ Confirmar pagamento</button>`}
         <button class="cv-item-remove" onclick="rejectRifPayment(${p.id})">✕ Rejeitar</button>
@@ -1103,13 +1115,43 @@ async function renderRafflePaymentsReview(){
   wrap.innerHTML=rows.join('');
 }
 
+// Mensagem enviada ao comprador assim que o rifeiro confirma o
+// pagamento — clara e simpática, já dizendo que os números foram
+// computados de verdade (não só "recebemos seu pagamento").
+function rifConfirmedMessage(raffleTitle,numbers){
+  const numsTxt=numbers&&numbers.length?numbers.join(', '):'—';
+  return`✅ Pagamento confirmado!\n\n`+
+    `Recebi seu PIX e já conferi tudo certinho. Seus números da rifa *${raffleTitle}* foram computados: *${numsTxt}*.\n\n`+
+    `Você está participando! 🎟️🍀 Boa sorte no sorteio.`;
+}
+
+// Depois de confirmar, troca os botões da linha por um aviso de sucesso
+// + link do WhatsApp já com a mensagem pronta pro comprador — sem
+// precisar recarregar a lista toda (que tiraria a linha na hora, já que
+// ela deixa de ser "pendente").
+function rifShowConfirmedContact(paymentId){
+  const actions=document.getElementById(`rif-review-actions-${paymentId}`);
+  if(!actions)return;
+  const info=rifReviewRowInfo[paymentId]||{};
+  const msg=rifConfirmedMessage(info.raffleTitle||'a rifa',info.numbers);
+  const digits=info.whatsapp&&typeof aucPhoneDigits==='function'?aucPhoneDigits(info.whatsapp):null;
+  const link=digits?`https://wa.me/55${digits}?text=${encodeURIComponent(msg)}`:null;
+  actions.innerHTML=`<div style="display:flex;align-items:center;gap:6px;color:var(--teal);font-weight:700;font-size:12px">✓ Pagamento confirmado</div>
+    ${link?`<a class="btn-add" href="${link}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">💬 Avisar ${esc(info.buyerName||'comprador')} no WhatsApp</a>`
+      :`<div style="font-size:10.5px;color:var(--muted)">Comprador sem WhatsApp cadastrado — avise por outro canal.</div>`}`;
+}
+
 async function confirmRifPayment(paymentId){
   if(!aucIsLeilaoAdmin)return;
   const{error}=await sbClient.rpc('confirm_raffle_payment',{p_payment_id:paymentId});
   if(error){console.error('[rifa] confirmRifPayment',error);setStatus(error.message||'Erro ao confirmar','err');return;}
   setStatus('Pagamento confirmado','ok');
+  // Troca o botão pela confirmação + WhatsApp na hora, ANTES de recarregar
+  // a lista de pendentes (que ia fazer essa linha sumir, já que ela deixa
+  // de ser "pendente") — assim o rifeiro consegue avisar o comprador na
+  // hora, sem precisar procurar o contato depois.
+  rifShowConfirmedContact(paymentId);
   await loadPendingRafflePayments();
-  await renderRafflePaymentsReview();
   await loadRaffleNumberCounts();
   renderRafflesList();
   renderRifTracking();
