@@ -81,6 +81,16 @@ function routeFromHash(){
   const[tabId,setId]=h.split('/');
   const el=document.getElementById('nav-tab-'+tabId);
   if(!el) return; // hash inválido/antigo — fica no Dashboard (aba padrão)
+  // 28/08/2026: qualquer hash de aba (#rifas, #fichario/..., etc) só existe
+  // porque o usuário JÁ estava dentro do app (pg-app) quando navegou — mas
+  // essa função nunca chamava goPage('app'), só trocava a aba DENTRO de
+  // pg-app. Resultado: toda vez que o navegador recarregava a página sozinho
+  // (celular descartando a aba em segundo plano, ou um refresh manual), o
+  // usuário caía de volta na página inicial (pg-home) mesmo com o hash
+  // correto na URL — a aba certa ficava ativa por baixo, só que escondida.
+  // Ver relato do Eduardo: "sempre que saio da aba e volto, dá refresh e
+  // volta pra página inicial".
+  if(typeof goPage==='function')goPage('app');
   _routingFromHash=true;
   go(tabId,el);
   if(tabId==='fichario' && setId) switchSet(decodeURIComponent(setId));
