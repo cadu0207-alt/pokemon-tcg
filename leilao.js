@@ -56,6 +56,44 @@ let aucSellerAccepted=null;   // null=ainda não checou · true/false depois de 
 let aucPendingSellerAction=null; // função (createAuctionRound/publishAuction) que ficou esperando o aceite
 const AUC_SELLER_TERMS_VERSION='v1'; // precisa bater com has_accepted_seller_terms() no banco (leilao_seller_onboarding_setup.sql)
 
+// ── PRIVACIDADE ENTRE LEILOEIROS (29/08/2026) ─────────────────────
+// Cada leiloeiro (menos o admin principal, Eduardo) só pode ver em
+// detalhe/gerenciar o que ELE MESMO cadastrou — cartas, rodadas,
+// pedidos, custo de aquisição. O banco já trava isso via RLS (ver
+// leilao_leiloeiro_privacidade_setup.sql); essas duas funções + a
+// filtragem nas telas de Cadastro/Estoque/Análises/Financeiro/Arquivo
+// abaixo são o espelho no client, pra nem sequer LISTAR o que não é
+// dele (a RLS sozinha não impede aparecer no array — auctions/rounds
+// continuam com SELECT público pros compradores verem tudo).
+function aucAmSuperAdmin(){return typeof isAdminEditor==='function'&&isAdminEditor();}
+function aucIsMine(createdBy){return aucAmSuperAdmin()||createdBy===uid();}
+
+// Total combinado (TODOS os leiloeiros, não só eu) pago em cada mês —
+// via RPC security definer que devolve só o número, sem PII (ver seção
+// 6 da migração leilao_leiloeiro_privacidade_setup.sql). Precisa disso
+// pra faixa de comissão continuar calculada pelo volume certo mesmo
+// depois que auction_orders ficou restrita por leiloeiro (um leiloeiro
+// comum só vê os PRÓPRIOS pedidos agora — sem isso ele veria uma faixa
+// pior do que a combinada real). Cacheado por mês ('YYYY-MM') porque o
+// Financeiro mostra histórico, não só o mês corrente.
+let aucOrdersMonthlyTotals={};
+async function loadAucOrdersMonthlyTotals(monthKeys){
+  const pending=[...new Set(monthKeys)].filter(k=>k&&aucOrdersMonthlyTotals[k]==null);
+  await Promise.all(pending.map(async k=>{
+    const[y,m]=k.split('-').map(Number);
+    const start=new Date(y,m-1,1);
+    const{data,error}=await sbClient.rpc('auction_orders_monthly_total',{p_month_start:start.toISOString()});
+    if(error){console.error('[leilao] auction_orders_monthly_total',k,error);return;}
+    aucOrdersMonthlyTotals[k]=+data||0;
+  }));
+}
+// Total certo pro mês k: o combinado (RPC) se já carregado, senão o
+// que dá pra ver localmente (exato pro admin principal; subestimado
+// pra um leiloeiro comum, só como fallback se a RPC falhar).
+function aucMonthlyTotalFor(k,localFallback){
+  return aucOrdersMonthlyTotals[k]!=null?aucOrdersMonthlyTotals[k]:localFallback;
+}
+
 // ── SOU LEILOEIRO? (admin principal OU autorizado em auction_admins) ─
 async function resolveLeilaoAdminStatus(){
   if(!uid()){aucIsLeilaoAdmin=false;return;}
@@ -160,6 +198,12 @@ async function renderLeilaoTab(){
     renderAdminOrders();
     renderLeilaoArquivo();
     await loadAuctionCosts();
+    {
+      const paidMonthKeys=aucAdminOrders
+        .filter(o=>['pago','enviado','concluido'].includes(o.status)&&o.paid_at)
+        .map(o=>aucMonthKey(o.paid_at));
+      await loadAucOrdersMonthlyTotals(paidMonthKeys);
+    }
 
     // Análises/Financeiro do LEILÃO rodam ANTES do bloco da loja de propósito:
     // assim, mesmo se algo na loja (menos testada) falhar, a análise do
@@ -175,6 +219,15 @@ async function renderLeilaoTab(){
         renderLojaAdminReservations();
       }
       if(typeof loadLojaItemCosts==='function')await loadLojaItemCosts();
+      // 29/08/2026 — total combinado (todos os leiloeiros) por mês, pra
+      // faixa de comissão da Loja continuar certa mesmo com
+      // lojaAdminReservations agora restrita por leiloeiro.
+      if(typeof loadLojaReservationsMonthlyTotals==='function'){
+        const paidMonthKeys=lojaAdminReservations
+          .filter(r=>['pago','enviado','concluido'].includes(r.status)&&r.paid_at)
+          .map(r=>aucMonthKey(r.paid_at));
+        await loadLojaReservationsMonthlyTotals(paidMonthKeys);
+      }
       if(typeof renderLojaAnalises==='function')renderLojaAnalises();
       if(typeof renderLojaFinanceiro==='function')renderLojaFinanceiro();
     }catch(e){console.error('[loja] erro no bloco admin da loja',e);}
@@ -220,14 +273,21 @@ function goToLeilaoAddressForm(){
 function renderLeilaoAnalises(){
   const wrap=document.getElementById('leilao-analises-kpis');
   if(!wrap)return;
-  const ativosLotes=aucAuctions.filter(a=>a.status==='ativo');
-  const arrematados=aucAuctions.filter(a=>a.status==='encerrado'&&a.winner_id);
+  // 29/08/2026 — KPIs escopados: leiloeiro comum só vê os PRÓPRIOS lotes
+  // (o admin principal continua vendo tudo). aucAuctions em si segue
+  // trazendo todo mundo (SELECT público, precisa pros compradores) — o
+  // filtro é só aqui na tela de gestão.
+  const myAuctions=aucAmSuperAdmin()?aucAuctions:aucAuctions.filter(a=>aucIsMine(a.created_by));
+  const ativosLotes=myAuctions.filter(a=>a.status==='ativo');
+  const arrematados=myAuctions.filter(a=>a.status==='encerrado'&&a.winner_id);
   const totalArrecadado=arrematados.reduce((s,a)=>s+ +a.winning_bid,0);
   // "Em disputa agora" — diferente de TOTAL ARRECADADO (só o que já
   // fechou/foi pago): soma do lance atual (ou preço inicial se ainda
   // sem lance) de todo lote AINDA ativo, ou seja, quanto já tá em jogo
   // nas rodadas em andamento neste exato momento.
   const valorEmDisputa=ativosLotes.reduce((s,a)=>s+ +(a.current_bid||a.starting_price||0),0);
+  // aucAdminOrders já vem restrito por RLS a pedidos com pelo menos 1
+  // item meu (ou tudo, se admin principal) — ver leilao_leiloeiro_privacidade_setup.sql.
   const pendentes=aucAdminOrders.filter(o=>o.status==='aguardando_pagamento');
   const vencidos=pendentes.filter(o=>aucIsOverdue(o));
   const totalPendente=pendentes.reduce((s,o)=>s+ +o.amount,0);
@@ -294,6 +354,10 @@ function renderLeilaoAnalisesCountdown(){
 function renderLeilaoAnalisesPorLeiloeiro(){
   const wrap=document.getElementById('leilao-analises-por-leiloeiro');
   if(!wrap)return;
+  // 29/08/2026 — essa comparação entre leiloeiros só faz sentido pro
+  // admin principal ver (mostra quantos lotes/valor CADA leiloeiro tem,
+  // incluindo os outros) — some da tela pra quem não é o Eduardo.
+  if(!aucAmSuperAdmin()){wrap.innerHTML='';return;}
   const ativos=aucAuctions.filter(a=>a.status==='ativo');
   const porLeiloeiro={};
   ativos.forEach(a=>{
@@ -455,7 +519,11 @@ function renderLeilaoComissao(){
   const pagosMes=aucAdminOrders.filter(o=>
     ['pago','enviado','concluido'].includes(o.status)&&o.paid_at&&new Date(o.paid_at)>=inicioMes
   );
-  const totalMes=pagosMes.reduce((s,o)=>s+ +o.amount,0);
+  const totalMesLocal=pagosMes.reduce((s,o)=>s+ +o.amount,0);
+  // 29/08/2026 — usa o total COMBINADO (todos os leiloeiros, via RPC) pra
+  // faixa de comissão, não só o que esse leiloeiro vê em aucAdminOrders
+  // (que agora é restrito por RLS aos próprios pedidos).
+  const totalMes=aucMonthlyTotalFor(aucMonthKey(inicioMes),totalMesLocal);
   const{commission,rows,effectiveRate}=aucCommissionBreakdown(totalMes);
   const liquido=totalMes-commission;
   const mesLabel=now.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
@@ -545,18 +613,25 @@ function aucWeekKey(d){
 // pedido já foi PAGO (senão não tem como saber em qual mês a comissão
 // vai cair).
 function aucComputeFinanceiroRows(){
-  const pagosPorMes={};
+  // 29/08/2026 — pagosPorMes (LOCAL, só o que aucAdminOrders trouxe) serve
+  // de fallback; o valor "de verdade" pra faixa de comissão é o
+  // combinado de todos os leiloeiros, via aucMonthlyTotalFor (RPC
+  // cacheada em loadAucOrdersMonthlyTotals, chamada em renderLeilaoTab).
+  const pagosPorMesLocal={};
   aucAdminOrders.forEach(o=>{
     if(['pago','enviado','concluido'].includes(o.status)&&o.paid_at){
       const k=aucMonthKey(o.paid_at);
-      pagosPorMes[k]=(pagosPorMes[k]||0)+ +o.amount;
+      pagosPorMesLocal[k]=(pagosPorMesLocal[k]||0)+ +o.amount;
     }
   });
   const comissaoPorMes={};
-  Object.keys(pagosPorMes).forEach(k=>{comissaoPorMes[k]=aucCommissionBreakdown(pagosPorMes[k]).commission;});
+  Object.keys(pagosPorMesLocal).forEach(k=>{
+    const totalMes=aucMonthlyTotalFor(k,pagosPorMesLocal[k]);
+    comissaoPorMes[k]=aucCommissionBreakdown(totalMes).commission;
+  });
 
   const arrematados=aucAuctions.filter(a=>a.status==='encerrado'&&a.winner_id);
-  return arrematados.map(a=>{
+  const rows=arrematados.map(a=>{
     const item=aucAdminOrderItems.find(it=>it.auction_id===a.id);
     const order=item?aucAdminOrders.find(o=>o.id===item.order_id):null;
     const venda=+a.winning_bid||0;
@@ -565,12 +640,15 @@ function aucComputeFinanceiroRows(){
     let comissao=null;
     if(order&&order.paid_at&&['pago','enviado','concluido'].includes(order.status)){
       const k=aucMonthKey(order.paid_at);
-      const totalMes=pagosPorMes[k]||0;
+      const totalMes=aucMonthlyTotalFor(k,pagosPorMesLocal[k]||0);
       comissao=totalMes>0?comissaoPorMes[k]*((+item.amount)/totalMes):0;
     }
     const lucro=(custo!=null&&comissao!=null)?(venda-custo-comissao):null;
     return{a,order,item,venda,custo,comissao,lucro};
   }).sort((x,y)=>new Date(y.a.end_at)-new Date(x.a.end_at));
+  // A lista EXIBIDA só mostra as linhas do leiloeiro logado (a faixa
+  // acima já usa o volume combinado certo, mesmo assim).
+  return aucAmSuperAdmin()?rows:rows.filter(r=>aucIsMine(r.a.created_by));
 }
 
 // Gráfico de barras simples em SVG (sem lib externa) — barras acima da
@@ -680,7 +758,8 @@ function renderLeilaoArquivo(){
     .sort((a,b)=>new Date(b.end_at)-new Date(a.end_at));
   if(!rounds.length){wrap.innerHTML=`<div class="cv-item-empty">Nenhuma rodada encerrada ainda.</div>`;return;}
   wrap.innerHTML=rounds.map(r=>{
-    const cards=aucAuctions.filter(a=>a.round_id===r.id);
+    // 29/08/2026 — só minhas cartas nessa rodada (ou tudo, admin principal)
+    const cards=aucAuctions.filter(a=>a.round_id===r.id&&aucIsMine(a.created_by));
     return`<div class="panel" style="margin-bottom:14px${r.archived?';opacity:.6':''}">
       <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center">
         <b style="font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.5px">🗓️ ${esc(r.title)}</b>
@@ -851,7 +930,7 @@ async function loadAdminAuctionOrders(){
   if(error){console.error('[leilao] admin orders',error);aucAdminOrders=[];aucAdminOrderItems=[];return;}
   aucAdminOrders=Array.isArray(orders)?orders:[];
   if(aucAdminOrders.length){
-    const{data:items}=await sbClient.from('auction_order_items').select('*, auctions(card_name,image_url,set_id,card_n,version)').in('order_id',aucAdminOrders.map(o=>o.id));
+    const{data:items}=await sbClient.from('auction_order_items').select('*, auctions(card_name,image_url,set_id,card_n,version,created_by)').in('order_id',aucAdminOrders.map(o=>o.id));
     aucAdminOrderItems=Array.isArray(items)?items:[];
   }else aucAdminOrderItems=[];
 }
@@ -1318,8 +1397,8 @@ function aucInfoBlockHtml(a,idSuffix){
     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal)" onclick="shareAuctionPdf(${a.id})">📄 PDF (foto + texto)</button>
       <button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal)" onclick="shareAuctionText(${a.id})">💬 Só texto</button>
-      ${aucIsLeilaoAdmin?`<button class="cv-item-remove" style="color:var(--gold);border-color:var(--gold)" onclick="openAuctionEdit(${a.id})">✏️ Editar</button>`:''}
-      ${aucIsLeilaoAdmin?`<button class="cv-item-remove" onclick="deleteAuction(${a.id})">🗑️ Excluir leilão</button>`:''}
+      ${aucIsMine(a.created_by)?`<button class="cv-item-remove" style="color:var(--gold);border-color:var(--gold)" onclick="openAuctionEdit(${a.id})">✏️ Editar</button>`:''}
+      ${aucIsMine(a.created_by)?`<button class="cv-item-remove" onclick="deleteAuction(${a.id})">🗑️ Excluir leilão</button>`:''}
     </div>`;
 }
 
@@ -2217,15 +2296,20 @@ function renderRoundsAdminList(){
   const rounds=aucRounds.filter(r=>!r.archived);
   if(!rounds.length){wrap.innerHTML=`<div class="cv-item-empty">Nenhuma rodada criada ainda.</div>`;return;}
   wrap.innerHTML=rounds.map(r=>{
-    const cards=aucAuctions.filter(a=>a.round_id===r.id&&a.status!=='cancelado');
+    // 29/08/2026 — contagem e botões de gestão da rodada (cancelar/excluir)
+    // só contam MINHAS cartas / só aparecem pra quem criou a rodada (ou o
+    // admin principal) — a rodada em si continua compartilhada.
+    const allCards=aucAuctions.filter(a=>a.round_id===r.id&&a.status!=='cancelado');
+    const myCards=aucAmSuperAdmin()?allCards:allCards.filter(a=>aucIsMine(a.created_by));
+    const canManageRound=aucIsMine(r.created_by);
     const st={agendado:'var(--gold)',ativo:'var(--accent)',encerrado:'var(--teal)',cancelado:'var(--muted)'}[r.status]||'var(--muted)';
     return`<div class="cv-item" style="cursor:default">
       <div class="cv-item-info">
         <div class="cv-item-name">${esc(r.title)}</div>
-        <div class="cv-item-meta">${cards.length} carta(s) · <span style="color:${st}">${r.status}</span></div>
+        <div class="cv-item-meta">${myCards.length}${aucAmSuperAdmin()?'':' sua(s)'} carta(s)${aucAmSuperAdmin()?'':` de ${allCards.length} no total`} · <span style="color:${st}">${r.status}</span></div>
       </div>
-      ${r.status==='agendado'?`<button class="cv-item-remove" onclick="cancelAuctionRound(${r.id})">Cancelar</button>`:''}
-      <button class="cv-item-remove" onclick="deleteAuctionRound(${r.id})">🗑️ Excluir</button>
+      ${canManageRound&&r.status==='agendado'?`<button class="cv-item-remove" onclick="cancelAuctionRound(${r.id})">Cancelar</button>`:''}
+      ${canManageRound?`<button class="cv-item-remove" onclick="deleteAuctionRound(${r.id})">🗑️ Excluir</button>`:''}
     </div>`;
   }).join('');
 }
@@ -2675,7 +2759,15 @@ function renderAdminOrders(){
   wrap.innerHTML=aucAdminOrders.map(o=>{
     const round=aucRoundById(o.round_id);
     const addr=o.shipping_snapshot||{};
-    const items=aucAdminOrderItems.filter(it=>it.order_id===o.id);
+    // 29/08/2026 — o pedido é um carrinho por RODADA, pode ter cartas de
+    // mais de um leiloeiro (por isso a RLS deixa o pedido inteiro
+    // aparecer se eu tiver pelo menos 1 item nele). Aqui na tela só
+    // mostro/somo MINHAS cartas — "Total" do pedido vira "Sua parte" pra
+    // quem não é o admin principal, pra não expor o valor combinado com
+    // cartas de outro leiloeiro.
+    const allItems=aucAdminOrderItems.filter(it=>it.order_id===o.id);
+    const items=aucAmSuperAdmin()?allItems:allItems.filter(it=>aucIsMine(it.auctions?.created_by));
+    const minhaParte=items.reduce((s,it)=>s+ +it.amount,0);
     const overdue=aucIsOverdue(o);
     return`<div class="panel" style="margin-bottom:12px${overdue?';border-color:var(--accent)':''}">
       <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center">
@@ -2683,7 +2775,8 @@ function renderAdminOrders(){
         <span style="font-size:10px;font-family:'Space Mono',monospace;color:${overdue?'var(--accent)':aucOrderStatusColor(o.status)};border:1px solid ${overdue?'var(--accent)':aucOrderStatusColor(o.status)};border-radius:20px;padding:2px 10px">${overdue?'⚠️ Vencido':(AUC_ORDER_LBL[o.status]||o.status)}</span>
       </div>
       <div style="font-size:11px;color:var(--muted);margin:6px 0">
-        Comprador: <b style="color:var(--text)">${esc(o.buyer_email||'—')}</b> · Total: <b style="color:var(--teal)">R$ ${fmtR(o.amount)}</b>
+        Comprador: <b style="color:var(--text)">${esc(o.buyer_email||'—')}</b> · ${aucAmSuperAdmin()?'Total':'Sua parte'}: <b style="color:var(--teal)">R$ ${fmtR(aucAmSuperAdmin()?o.amount:minhaParte)}</b>
+        ${!aucAmSuperAdmin()&&items.length<allItems.length?` <span style="color:var(--muted)">(pedido tem mais itens, de outro leiloeiro)</span>`:''}
       </div>
       <div style="font-size:10.5px;margin-bottom:6px">
         ${items.map(it=>`${esc(it.auctions?.card_name||('Carta #'+it.auction_id))} — R$ ${fmtR(it.amount)}`).join('<br>')}

@@ -405,8 +405,12 @@ async function publishLojaSelado(){
 function renderLojaAdminItems(){
   const wrap=document.getElementById('loja-admin-items');
   if(!wrap)return;
-  if(!lojaItems.length){wrap.innerHTML=`<div class="cv-item-empty">Nenhum item cadastrado ainda.</div>`;return;}
-  wrap.innerHTML=lojaItems.map(i=>{
+  // 29/08/2026 — cada leiloeiro só vê/gerencia os PRÓPRIOS itens da loja
+  // aqui (o admin principal continua vendo tudo). lojaItems em si segue
+  // trazendo todo mundo (SELECT público, precisa pra vitrine).
+  const myItems=(typeof aucAmSuperAdmin==='function'&&aucAmSuperAdmin())?lojaItems:lojaItems.filter(i=>typeof aucIsMine==='function'?aucIsMine(i.created_by):i.created_by===uid());
+  if(!myItems.length){wrap.innerHTML=`<div class="cv-item-empty">Nenhum item cadastrado ainda.</div>`;return;}
+  wrap.innerHTML=myItems.map(i=>{
     const disp=lojaAvailableQty(i);
     return`<div class="panel" style="margin-bottom:10px;padding:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
       <div>
@@ -599,11 +603,40 @@ async function saveLojaCostPrice(itemId,rowId){
   renderLojaFinanceiro();
 }
 
+// 29/08/2026 — mesmo padrão de aucIsMine em leilao.js, com fallback caso
+// esse arquivo alguma vez carregue sem leilao.js.
+// Total combinado (TODOS os leiloeiros) pago em cada mês na Loja — via
+// RPC security definer, sem PII (mesmo padrão de aucOrdersMonthlyTotals
+// em leilao.js). store_reservations agora é restrita por RLS ao dono do
+// item, então sem isso a faixa de comissão da Loja ficaria errada
+// (calcularia só sobre o volume do próprio leiloeiro).
+let lojaReservationsMonthlyTotals={};
+async function loadLojaReservationsMonthlyTotals(monthKeys){
+  const pending=[...new Set(monthKeys)].filter(k=>k&&lojaReservationsMonthlyTotals[k]==null);
+  await Promise.all(pending.map(async k=>{
+    const[y,m]=k.split('-').map(Number);
+    const start=new Date(y,m-1,1);
+    const{data,error}=await sbClient.rpc('store_reservations_monthly_total',{p_month_start:start.toISOString()});
+    if(error){console.error('[loja] store_reservations_monthly_total',k,error);return;}
+    lojaReservationsMonthlyTotals[k]=+data||0;
+  }));
+}
+function lojaMonthlyTotalFor(k,localFallback){
+  return lojaReservationsMonthlyTotals[k]!=null?lojaReservationsMonthlyTotals[k]:localFallback;
+}
+
+function lojaAmSuperAdmin(){return typeof aucAmSuperAdmin==='function'?aucAmSuperAdmin():(typeof isAdminEditor==='function'&&isAdminEditor());}
+function lojaIsMine(createdBy){return lojaAmSuperAdmin()||createdBy===uid();}
+
 // ── ANÁLISES: KPIs + itens ativos por leiloeiro ─────────────────
 function renderLojaAnalisesKpis(){
   const wrap=document.getElementById('loja-analises-kpis');
   if(!wrap)return;
-  const ativos=lojaItems.filter(i=>i.status==='ativo');
+  // lojaAdminReservations já vem restrito por RLS às reservas dos MEUS
+  // itens (ou tudo, admin principal) — não precisa filtrar aqui nos
+  // totais vendido/aguardando. lojaItems continua público, então
+  // "ativos" escopa a mine.
+  const ativos=lojaItems.filter(i=>i.status==='ativo'&&lojaIsMine(i.created_by));
   const vendidoTotal=lojaAdminReservations.filter(r=>['pago','enviado','concluido'].includes(r.status))
     .reduce((s,r)=>s+ +r.unit_price*r.qty,0);
   const aguardando=lojaAdminReservations.filter(r=>r.status==='reservado');
@@ -622,6 +655,8 @@ function renderLojaAnalisesKpis(){
 function renderLojaAnalisesPorLeiloeiro(){
   const wrap=document.getElementById('loja-analises-por-leiloeiro');
   if(!wrap)return;
+  // 29/08/2026 — comparação entre leiloeiros, só o admin principal vê.
+  if(!lojaAmSuperAdmin()){wrap.innerHTML='';return;}
   const ativos=lojaItems.filter(i=>i.status==='ativo');
   const porLeiloeiro={};
   ativos.forEach(i=>{
@@ -650,7 +685,10 @@ function renderLojaComissao(){
   const pagosMes=lojaAdminReservations.filter(r=>
     ['pago','enviado','concluido'].includes(r.status)&&r.paid_at&&new Date(r.paid_at)>=inicioMes
   );
-  const totalMes=pagosMes.reduce((s,r)=>s+ +r.unit_price*r.qty,0);
+  const totalMesLocal=pagosMes.reduce((s,r)=>s+ +r.unit_price*r.qty,0);
+  // 29/08/2026 — total COMBINADO (todos os leiloeiros, via RPC), não só
+  // o que esse leiloeiro vê em lojaAdminReservations (restrita por RLS).
+  const totalMes=lojaMonthlyTotalFor(aucMonthKey(inicioMes),totalMesLocal);
   const{commission,rows,effectiveRate}=lojaCommissionBreakdown(totalMes);
   const liquido=totalMes-commission;
   const mesLabel=now.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
@@ -738,15 +776,23 @@ function renderLojaAnalises(){
 // linha fazer sentido sozinha — a comissão "de verdade" é sempre a
 // calculada por faixa em renderLojaComissao().
 function lojaComputeFinanceiroRows(){
-  const pagosPorMes={};
+  // 29/08/2026 — lojaAdminReservations já vem restrita por RLS às MINHAS
+  // reservas (ou tudo, admin principal), então pagosPorMesLocal por si só
+  // já é exatamente o que essa tela deveria LISTAR — mas a faixa de
+  // comissão precisa do volume COMBINADO (todos os leiloeiros), daí o
+  // lojaMonthlyTotalFor via RPC.
+  const pagosPorMesLocal={};
   lojaAdminReservations.forEach(r=>{
     if(['pago','enviado','concluido'].includes(r.status)&&r.paid_at){
       const k=aucMonthKey(r.paid_at);
-      pagosPorMes[k]=(pagosPorMes[k]||0)+ +r.unit_price*r.qty;
+      pagosPorMesLocal[k]=(pagosPorMesLocal[k]||0)+ +r.unit_price*r.qty;
     }
   });
   const comissaoPorMes={};
-  Object.keys(pagosPorMes).forEach(k=>{comissaoPorMes[k]=lojaCommissionBreakdown(pagosPorMes[k]).commission;});
+  Object.keys(pagosPorMesLocal).forEach(k=>{
+    const totalMes=lojaMonthlyTotalFor(k,pagosPorMesLocal[k]);
+    comissaoPorMes[k]=lojaCommissionBreakdown(totalMes).commission;
+  });
 
   const vendidas=lojaAdminReservations.filter(r=>['pago','enviado','concluido'].includes(r.status));
   return vendidas.map(r=>{
@@ -758,7 +804,7 @@ function lojaComputeFinanceiroRows(){
     let comissao=null;
     if(r.paid_at){
       const k=aucMonthKey(r.paid_at);
-      const totalMes=pagosPorMes[k]||0;
+      const totalMes=lojaMonthlyTotalFor(k,pagosPorMesLocal[k]||0);
       comissao=totalMes>0?comissaoPorMes[k]*(venda/totalMes):0;
     }
     const lucro=(custo!=null&&comissao!=null)?(venda-custo-comissao):null;
