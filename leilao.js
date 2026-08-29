@@ -67,6 +67,13 @@ const AUC_SELLER_TERMS_VERSION='v1'; // precisa bater com has_accepted_seller_te
 // continuam com SELECT público pros compradores verem tudo).
 function aucAmSuperAdmin(){return typeof isAdminEditor==='function'&&isAdminEditor();}
 function aucIsMine(createdBy){return aucAmSuperAdmin()||createdBy===uid();}
+// 29/08/2026 — aucAmSuperAdmin() continua só o Eduardo (edita/exclui
+// qualquer coisa). aucCanViewAll() é o novo escopo de LEITURA: Eduardo
+// OU membro da equipe (staff_access) com a permissão 'leilao' marcada —
+// enxerga tudo (cartas, pedidos, valores, comissão de todo mundo) mas
+// NÃO ganha botão de editar/excluir carta ou pedido alheio (isso
+// continua só do dono ou do Eduardo, via aucIsMine/aucAmSuperAdmin).
+function aucCanViewAll(){return aucAmSuperAdmin()||(typeof hasPerm==='function'&&hasPerm('leilao'));}
 
 // Total combinado (TODOS os leiloeiros, não só eu) pago em cada mês —
 // via RPC security definer que devolve só o número, sem PII (ver seção
@@ -277,7 +284,7 @@ function renderLeilaoAnalises(){
   // (o admin principal continua vendo tudo). aucAuctions em si segue
   // trazendo todo mundo (SELECT público, precisa pros compradores) — o
   // filtro é só aqui na tela de gestão.
-  const myAuctions=aucAmSuperAdmin()?aucAuctions:aucAuctions.filter(a=>aucIsMine(a.created_by));
+  const myAuctions=aucCanViewAll()?aucAuctions:aucAuctions.filter(a=>aucIsMine(a.created_by));
   const ativosLotes=myAuctions.filter(a=>a.status==='ativo');
   const arrematados=myAuctions.filter(a=>a.status==='encerrado'&&a.winner_id);
   const totalArrecadado=arrematados.reduce((s,a)=>s+ +a.winning_bid,0);
@@ -357,7 +364,7 @@ function renderLeilaoAnalisesPorLeiloeiro(){
   // 29/08/2026 — essa comparação entre leiloeiros só faz sentido pro
   // admin principal ver (mostra quantos lotes/valor CADA leiloeiro tem,
   // incluindo os outros) — some da tela pra quem não é o Eduardo.
-  if(!aucAmSuperAdmin()){wrap.innerHTML='';return;}
+  if(!aucCanViewAll()){wrap.innerHTML='';return;}
   const ativos=aucAuctions.filter(a=>a.status==='ativo');
   const porLeiloeiro={};
   ativos.forEach(a=>{
@@ -648,7 +655,7 @@ function aucComputeFinanceiroRows(){
   }).sort((x,y)=>new Date(y.a.end_at)-new Date(x.a.end_at));
   // A lista EXIBIDA só mostra as linhas do leiloeiro logado (a faixa
   // acima já usa o volume combinado certo, mesmo assim).
-  return aucAmSuperAdmin()?rows:rows.filter(r=>aucIsMine(r.a.created_by));
+  return aucCanViewAll()?rows:rows.filter(r=>aucIsMine(r.a.created_by));
 }
 
 // Gráfico de barras simples em SVG (sem lib externa) — barras acima da
@@ -759,7 +766,7 @@ function renderLeilaoArquivo(){
   if(!rounds.length){wrap.innerHTML=`<div class="cv-item-empty">Nenhuma rodada encerrada ainda.</div>`;return;}
   wrap.innerHTML=rounds.map(r=>{
     // 29/08/2026 — só minhas cartas nessa rodada (ou tudo, admin principal)
-    const cards=aucAuctions.filter(a=>a.round_id===r.id&&aucIsMine(a.created_by));
+    const cards=aucAuctions.filter(a=>a.round_id===r.id&&(aucCanViewAll()||a.created_by===uid()));
     return`<div class="panel" style="margin-bottom:14px${r.archived?';opacity:.6':''}">
       <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:center">
         <b style="font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:.5px">🗓️ ${esc(r.title)}</b>
@@ -2300,13 +2307,13 @@ function renderRoundsAdminList(){
     // só contam MINHAS cartas / só aparecem pra quem criou a rodada (ou o
     // admin principal) — a rodada em si continua compartilhada.
     const allCards=aucAuctions.filter(a=>a.round_id===r.id&&a.status!=='cancelado');
-    const myCards=aucAmSuperAdmin()?allCards:allCards.filter(a=>aucIsMine(a.created_by));
+    const myCards=aucCanViewAll()?allCards:allCards.filter(a=>aucIsMine(a.created_by));
     const canManageRound=aucIsMine(r.created_by);
     const st={agendado:'var(--gold)',ativo:'var(--accent)',encerrado:'var(--teal)',cancelado:'var(--muted)'}[r.status]||'var(--muted)';
     return`<div class="cv-item" style="cursor:default">
       <div class="cv-item-info">
         <div class="cv-item-name">${esc(r.title)}</div>
-        <div class="cv-item-meta">${myCards.length}${aucAmSuperAdmin()?'':' sua(s)'} carta(s)${aucAmSuperAdmin()?'':` de ${allCards.length} no total`} · <span style="color:${st}">${r.status}</span></div>
+        <div class="cv-item-meta">${myCards.length}${aucCanViewAll()?'':' sua(s)'} carta(s)${aucCanViewAll()?'':` de ${allCards.length} no total`} · <span style="color:${st}">${r.status}</span></div>
       </div>
       ${canManageRound&&r.status==='agendado'?`<button class="cv-item-remove" onclick="cancelAuctionRound(${r.id})">Cancelar</button>`:''}
       ${canManageRound?`<button class="cv-item-remove" onclick="deleteAuctionRound(${r.id})">🗑️ Excluir</button>`:''}
@@ -2766,7 +2773,7 @@ function renderAdminOrders(){
     // quem não é o admin principal, pra não expor o valor combinado com
     // cartas de outro leiloeiro.
     const allItems=aucAdminOrderItems.filter(it=>it.order_id===o.id);
-    const items=aucAmSuperAdmin()?allItems:allItems.filter(it=>aucIsMine(it.auctions?.created_by));
+    const items=aucCanViewAll()?allItems:allItems.filter(it=>aucIsMine(it.auctions?.created_by));
     const minhaParte=items.reduce((s,it)=>s+ +it.amount,0);
     const overdue=aucIsOverdue(o);
     return`<div class="panel" style="margin-bottom:12px${overdue?';border-color:var(--accent)':''}">
@@ -2775,8 +2782,8 @@ function renderAdminOrders(){
         <span style="font-size:10px;font-family:'Space Mono',monospace;color:${overdue?'var(--accent)':aucOrderStatusColor(o.status)};border:1px solid ${overdue?'var(--accent)':aucOrderStatusColor(o.status)};border-radius:20px;padding:2px 10px">${overdue?'⚠️ Vencido':(AUC_ORDER_LBL[o.status]||o.status)}</span>
       </div>
       <div style="font-size:11px;color:var(--muted);margin:6px 0">
-        Comprador: <b style="color:var(--text)">${esc(o.buyer_email||'—')}</b> · ${aucAmSuperAdmin()?'Total':'Sua parte'}: <b style="color:var(--teal)">R$ ${fmtR(aucAmSuperAdmin()?o.amount:minhaParte)}</b>
-        ${!aucAmSuperAdmin()&&items.length<allItems.length?` <span style="color:var(--muted)">(pedido tem mais itens, de outro leiloeiro)</span>`:''}
+        Comprador: <b style="color:var(--text)">${esc(o.buyer_email||'—')}</b> · ${aucCanViewAll()?'Total':'Sua parte'}: <b style="color:var(--teal)">R$ ${fmtR(aucCanViewAll()?o.amount:minhaParte)}</b>
+        ${!aucCanViewAll()&&items.length<allItems.length?` <span style="color:var(--muted)">(pedido tem mais itens, de outro leiloeiro)</span>`:''}
       </div>
       <div style="font-size:10.5px;margin-bottom:6px">
         ${items.map(it=>`${esc(it.auctions?.card_name||('Carta #'+it.auction_id))} — R$ ${fmtR(it.amount)}`).join('<br>')}

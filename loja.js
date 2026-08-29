@@ -627,6 +627,10 @@ function lojaMonthlyTotalFor(k,localFallback){
 
 function lojaAmSuperAdmin(){return typeof aucAmSuperAdmin==='function'?aucAmSuperAdmin():(typeof isAdminEditor==='function'&&isAdminEditor());}
 function lojaIsMine(createdBy){return lojaAmSuperAdmin()||createdBy===uid();}
+// 29/08/2026 — mesmo padrão de aucCanViewAll() em leilao.js: quem tem a
+// permissão 'leilao' (staff_access) enxerga tudo na Loja também, sem
+// ganhar botão de editar/pausar/remover item alheio.
+function lojaCanViewAll(){return typeof aucCanViewAll==='function'?aucCanViewAll():(lojaAmSuperAdmin()||(typeof hasPerm==='function'&&hasPerm('leilao')));}
 
 // ── ANÁLISES: KPIs + itens ativos por leiloeiro ─────────────────
 function renderLojaAnalisesKpis(){
@@ -636,7 +640,7 @@ function renderLojaAnalisesKpis(){
   // itens (ou tudo, admin principal) — não precisa filtrar aqui nos
   // totais vendido/aguardando. lojaItems continua público, então
   // "ativos" escopa a mine.
-  const ativos=lojaItems.filter(i=>i.status==='ativo'&&lojaIsMine(i.created_by));
+  const ativos=lojaItems.filter(i=>i.status==='ativo'&&(lojaCanViewAll()||i.created_by===uid()));
   const vendidoTotal=lojaAdminReservations.filter(r=>['pago','enviado','concluido'].includes(r.status))
     .reduce((s,r)=>s+ +r.unit_price*r.qty,0);
   const aguardando=lojaAdminReservations.filter(r=>r.status==='reservado');
@@ -656,7 +660,7 @@ function renderLojaAnalisesPorLeiloeiro(){
   const wrap=document.getElementById('loja-analises-por-leiloeiro');
   if(!wrap)return;
   // 29/08/2026 — comparação entre leiloeiros, só o admin principal vê.
-  if(!lojaAmSuperAdmin()){wrap.innerHTML='';return;}
+  if(!lojaCanViewAll()){wrap.innerHTML='';return;}
   const ativos=lojaItems.filter(i=>i.status==='ativo');
   const porLeiloeiro={};
   ativos.forEach(i=>{
