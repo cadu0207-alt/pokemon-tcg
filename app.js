@@ -81,6 +81,16 @@ function routeFromHash(){
   const[tabId,setId]=h.split('/');
   const el=document.getElementById('nav-tab-'+tabId);
   if(!el) return; // hash inválido/antigo — fica no Dashboard (aba padrão)
+  // 28/08/2026: qualquer hash de aba (#rifas, #fichario/..., etc) só existe
+  // porque o usuário JÁ estava dentro do app (pg-app) quando navegou — mas
+  // essa função nunca chamava goPage('app'), só trocava a aba DENTRO de
+  // pg-app. Resultado: toda vez que o navegador recarregava a página sozinho
+  // (celular descartando a aba em segundo plano, ou um refresh manual), o
+  // usuário caía de volta na página inicial (pg-home) mesmo com o hash
+  // correto na URL — a aba certa ficava ativa por baixo, só que escondida.
+  // Ver relato do Eduardo: "sempre que saio da aba e volto, dá refresh e
+  // volta pra página inicial".
+  if(typeof goPage==='function')goPage('app');
   _routingFromHash=true;
   go(tabId,el);
   if(tabId==='fichario' && setId) switchSet(decodeURIComponent(setId));
@@ -240,11 +250,24 @@ if(sbClient){
       // sozinha" enquanto o usuário só estava com a aba aberta. Só recarrega
       // dados em eventos que de fato significam login novo/trocado.
       if(_event==='TOKEN_REFRESHED') return;
+      // 28/08/2026: troca de conta (logout de um usuário de teste e login
+      // com outro) enquanto a aba Rifas já estava aberta NÃO disparava
+      // renderRifasTab() de novo — loadAll() só recarrega dashboard/fichário
+      // e só revisita a aba ativa via hash (routeFromHash). Resultado: "Seus
+      // números" e as ações de rifeiro ficavam com o estado do usuário
+      // ANTERIOR até a pessoa clicar em outra aba e voltar pra Rifas — o
+      // bug relatado de números aparecendo como "seus" sem ser. Aqui força
+      // um re-render da aba Rifas (se for a que está aberta no momento) a
+      // cada login/logout de verdade, não só em refresh de token.
+      if(typeof rifMyNumbers!=='undefined')rifMyNumbers={};
+      if(typeof rifNumberCounts!=='undefined')rifNumberCounts={};
+      const _rifPane=document.getElementById('rifas');
+      const _rifWasActive=_rifPane&&_rifPane.classList.contains('active');
       // Só carrega dados se o DOM estiver pronto
       if(document.readyState==='complete'||document.readyState==='interactive'){
-        loadAll();
+        loadAll().then(()=>{ if(_rifWasActive&&typeof renderRifasTab==='function')renderRifasTab(); });
       }else{
-        document.addEventListener('DOMContentLoaded',()=>loadAll());
+        document.addEventListener('DOMContentLoaded',()=>loadAll().then(()=>{ if(_rifWasActive&&typeof renderRifasTab==='function')renderRifasTab(); }));
       }
     }else{
       _showAuth(true);
@@ -926,6 +949,7 @@ function go(id,el){
   if(id==='lojas'){if(typeof renderLojas==='function')renderLojas();}
   if(id==='mercado'){if(typeof renderMercado==='function')renderMercado();}
   if(id==='leilao'){if(typeof renderLeilaoTab==='function')renderLeilaoTab();}
+  if(id==='rifas'){if(typeof renderRifasTab==='function')renderRifasTab();}
   if(id==='positivo'){if(typeof renderPositivo==='function')renderPositivo();}
   if(id==='iniciantes'){if(typeof renderIniciantes==='function')renderIniciantes();}
   if(id==='centralizacao'){if(typeof renderCentralizacao==='function')renderCentralizacao();}
@@ -4659,3 +4683,85 @@ if(document.readyState==='complete'){
     requestAnimationFrame(_updHdr);
   },{passive:true});
 })();
+
+// ================================================================
+// MEU PERFIL — nome + endereço + WhatsApp (28/08/2026)
+// Pedido do Eduardo: reaproveitar em qualquer lugar do site (leilão,
+// rifa, o que vier depois) em vez de cada feature pedir nome/endereço
+// avulso. Mesma tabela user_addresses de sempre (o leilão já usa ela
+// pra endereço de entrega + WhatsApp) — só ganhou a coluna full_name
+// (ver rifa_setup.sql seção 14). Fica em app.js (carrega antes de
+// leilao.js/rifa.js) pra qualquer um dos dois poder chamar.
+// ================================================================
+let userProfile=null;
+let _profileAfterSaveCb=null;
+
+async function loadUserProfile(){
+  if(!uid()){userProfile=null;return;}
+  const{data,error}=await sbClient.from('user_addresses').select('*').eq('user_id',uid()).maybeSingle();
+  if(error){console.error('[perfil] loadUserProfile',error);return;}
+  userProfile=data||null;
+}
+
+function userProfileComplete(p){
+  return!!(p&&p.full_name&&p.whatsapp);
+}
+
+// callback (opcional) roda depois que o perfil é salvo com sucesso —
+// pra quem abriu o modal no meio de outro fluxo (ex: participar de rifa)
+// continuar de onde parou sem precisar clicar de novo em nada.
+function openProfileModal(callback){
+  _profileAfterSaveCb=typeof callback==='function'?callback:null;
+  fillProfileForm();
+  if(typeof openModal==='function')openModal('perfil-ov');
+}
+
+function fillProfileForm(){
+  const map={'perfil-cep':'cep','perfil-logradouro':'logradouro','perfil-numero':'numero','perfil-bairro':'bairro','perfil-cidade':'cidade','perfil-uf':'uf'};
+  Object.keys(map).forEach(id=>{const el=document.getElementById(id);if(el)el.value=userProfile?.[map[id]]||'';});
+  const nEl=document.getElementById('perfil-nome');
+  if(nEl)nEl.value=userProfile?.full_name||'';
+  const wEl=document.getElementById('perfil-whatsapp');
+  if(wEl)wEl.value=typeof aucPhoneMask==='function'?aucPhoneMask(userProfile?.whatsapp||''):(userProfile?.whatsapp||'');
+  const statusEl=document.getElementById('perfil-status');
+  if(statusEl)statusEl.textContent='';
+}
+
+async function saveUserProfile(){
+  if(!uid())return;
+  const statusEl=document.getElementById('perfil-status');
+  const fullName=(document.getElementById('perfil-nome')?.value||'').trim();
+  const cep=(document.getElementById('perfil-cep')?.value||'').trim();
+  const logradouro=(document.getElementById('perfil-logradouro')?.value||'').trim();
+  const numero=(document.getElementById('perfil-numero')?.value||'').trim();
+  const bairro=(document.getElementById('perfil-bairro')?.value||'').trim();
+  const cidade=(document.getElementById('perfil-cidade')?.value||'').trim();
+  const uf=document.getElementById('perfil-uf')?.value||'';
+  const whatsappRaw=document.getElementById('perfil-whatsapp')?.value||'';
+  const whatsappDigits=typeof aucPhoneDigits==='function'?aucPhoneDigits(whatsappRaw):whatsappRaw.replace(/\D/g,'');
+
+  if(!fullName){if(statusEl)statusEl.textContent='Informe seu nome completo.';return;}
+  if(whatsappDigits.length!==10&&whatsappDigits.length!==11){
+    if(statusEl)statusEl.textContent='Informe um WhatsApp válido, com DDD — ex: (85) 98888-7777.';
+    return;
+  }
+  const whatsapp=typeof aucPhoneMask==='function'?aucPhoneMask(whatsappDigits):whatsappDigits;
+
+  if(statusEl)statusEl.textContent='Salvando...';
+  const{data,error}=await sbClient.from('user_addresses')
+    .upsert({user_id:uid(),full_name:fullName,cep:cep||null,logradouro:logradouro||null,numero:numero||null,bairro:bairro||null,cidade:cidade||null,uf:uf||null,whatsapp,updated_at:new Date().toISOString()},{onConflict:'user_id'})
+    .select();
+  if(error){
+    console.error('[perfil] saveUserProfile',error);
+    if(statusEl)statusEl.textContent='Erro ao salvar. Verifique se rodou rifa_setup.sql (seção 14) no Supabase.';
+    return;
+  }
+  userProfile=Array.isArray(data)?data[0]:userProfile;
+  if(typeof aucAddress!=='undefined')aucAddress=userProfile; // mesmo dado, mantém o leilão sincronizado também
+  if(statusEl)statusEl.textContent='✓ Perfil salvo.';
+  if(typeof setStatus==='function')setStatus('Perfil salvo','ok');
+  if(typeof closeModal==='function')closeModal('perfil-ov');
+  const cb=_profileAfterSaveCb;
+  _profileAfterSaveCb=null;
+  if(cb)cb();
+}

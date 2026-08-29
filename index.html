@@ -162,7 +162,7 @@
   <div id="app-mosaic"></div>
   <header>
     <div style="display:flex;align-items:center;gap:14px">
-      <button class="back-btn" onclick="goPage('home')" title="Início">⌂</button>
+      <button class="back-btn" onclick="goToTab('inicio')" title="Início">⌂</button>
       <div>
         <div class="hbadge">MyDeck • Pokémon TCG</div>
         <div class="hlogo">MyDeck</div>
@@ -200,7 +200,16 @@
          "iniciantes", só que na frente de tudo. -->
     <button type="button" class="tdesk-link active" data-tab="inicio" onclick="goToTab('inicio')">🏠 INÍCIO</button>
     <div class="tdrop">
-      <button type="button" class="tdrop-btn" data-group="mydeck">MYDECK
+      <!-- CORRIGIDO 24/08/2026: era hover-only (funcionava na barra horizontal
+           de cima, onde o flyout abria pra baixo bem colado no botão). Virando
+           sidebar vertical, o flyout passou a abrir pro lado — pra alcançar um
+           item mais embaixo no menu o mouse tinha que atravessar uma faixa sem
+           nada por baixo (fora do botão, fora do flyout), então o hover
+           "soltava" no meio do caminho e o menu fechava antes de dar pra
+           clicar. Eduardo reportou "muita coisa não clica". Trocado por
+           clique (tdeskToggleDrop, expande dentro da própria sidebar em vez
+           de flutuar) — sem esse problema de trajeto do mouse. -->
+      <button type="button" class="tdrop-btn" data-group="mydeck" onclick="tdeskToggleDrop(this)" aria-expanded="false">MYDECK
         <svg class="tdrop-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <div class="tdrop-menu">
@@ -213,7 +222,7 @@
       </div>
     </div>
     <div class="tdrop">
-      <button type="button" class="tdrop-btn" data-group="cv">COMPRA E VENDA E LEILÃO
+      <button type="button" class="tdrop-btn" data-group="cv" onclick="tdeskToggleDrop(this)" aria-expanded="false">COMPRA E VENDA E LEILÃO
         <svg class="tdrop-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <div class="tdrop-menu">
@@ -223,6 +232,10 @@
         <button type="button" class="tdrop-item" data-tab="positivo" onclick="goToTab('positivo')">✅ Cadastro Positivo</button>
         <!-- espelha nav-tab-leilao: só admin vê (updateLeilaoTabVisibility em leilao.js) -->
         <button type="button" class="tdrop-item" id="desk-tab-leilao" style="display:none" data-tab="leilao" onclick="goToTab('leilao')">🔨 Leilão</button>
+        <!-- RIFAS (24/08/2026): mesma visibilidade do leilão — qualquer usuário
+             logado vê (updateRifasTabVisibility em rifa.js); painel de rifeiro
+             usa a MESMA permissão do leiloeiro (aucIsLeilaoAdmin). -->
+        <button type="button" class="tdrop-item" id="desk-tab-rifas" style="display:none" data-tab="rifas" onclick="goToTab('rifas')">🎟️ Rifas</button>
       </div>
     </div>
     <button type="button" class="tdesk-link" data-tab="iniciantes" onclick="goToTab('iniciantes')">🔰 INICIANTES</button>
@@ -230,6 +243,35 @@
     <!-- espelha nav-tab-admin: só Eduardo vê (updateAdminTabVisibility em admin_panel.js) -->
     <button type="button" class="tdesk-link tdesk-admin" id="desk-tab-admin" style="display:none" data-tab="admin" onclick="goToTab('admin')">🔐 Admin</button>
   </nav>
+  <script>
+  // Sidebar (24/08/2026): abre/fecha o grupo (MYDECK / COMPRA E VENDA E LEILÃO)
+  // por clique, um de cada vez (clicar num grupo aberto fecha; clicar noutro
+  // fecha o anterior e abre o novo). Só existe dentro de .tdesk (sidebar) —
+  // o menu do Fichário (.fic-tdesk) continua hover, sem essa função.
+  function tdeskToggleDrop(btn) {
+    var wrap = btn.closest('.tdrop');
+    if (!wrap) return;
+    var isOpen = wrap.classList.contains('tdrop-open');
+    document.querySelectorAll('.tdesk .tdrop.tdrop-open').forEach(function (el) {
+      el.classList.remove('tdrop-open');
+      var b = el.querySelector('.tdrop-btn');
+      if (b) b.setAttribute('aria-expanded', 'false');
+    });
+    if (!isOpen) {
+      wrap.classList.add('tdrop-open');
+      btn.setAttribute('aria-expanded', 'true');
+    }
+  }
+  // Clicar fora da sidebar fecha qualquer grupo aberto.
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('.tdesk .tdrop')) return;
+    document.querySelectorAll('.tdesk .tdrop.tdrop-open').forEach(function (el) {
+      el.classList.remove('tdrop-open');
+      var b = el.querySelector('.tdrop-btn');
+      if (b) b.setAttribute('aria-expanded', 'false');
+    });
+  });
+  </script>
 
   <!-- ids nav-tab-* adicionados 02/08/2026 — permitem goToTab(id) (app.js) navegar
        pra aba certa a partir de qualquer clique fora do <nav> (cards do Dashboard
@@ -258,6 +300,10 @@
          estado padrão/seguro; leilao.js mostra via JS. Pra abrir pra todos os
          usuários registrados, trocar a condição em updateLeilaoTabVisibility(). -->
     <button type="button" class="tab" id="nav-tab-leilao" style="display:none" onclick="go('leilao',this)">🔨 Leilão</button>
+    <!-- RIFAS (24/08/2026): mesma visibilidade do leilão (updateRifasTabVisibility,
+         rifa.js) — qualquer usuário logado vê; painel de rifeiro usa a mesma
+         permissão do leiloeiro. -->
+    <button type="button" class="tab" id="nav-tab-rifas" style="display:none" onclick="go('rifas',this)">🎟️ Rifas</button>
     <!-- ADMIN 11/08/2026: aba própria, só visível pro Eduardo (isAdmin(), lojas.js)
          — display:none aqui é o estado padrão/seguro; admin_panel.js mostra via JS
          só depois de confirmar o e-mail logado (e-mail do Eduardo). -->
@@ -276,18 +322,19 @@
     <div class="sec-title" style="margin-top:0">📢 Novidades do MyDeck</div>
     <div id="inicio-updates-wrap"></div>
 
-    <div class="sec-title">📰 Notícias do Mundo Pokémon</div>
-    <div id="inicio-news-wrap"></div>
-
-    <div class="sec-title">🎥 Vídeos da Comunidade</div>
-    <div id="inicio-videos-wrap"></div>
-
-    <div class="sec-title">🔗 Links Úteis</div>
-    <div id="inicio-links-wrap"></div>
-
-    <div class="sec-title">📖 Revista MyDeck</div>
-    <div id="inicio-revista-wrap"></div>
+    <!-- FEED ÚNICO 24/08/2026 (pedido do Eduardo): Notícias, Vídeos, Links e
+         Revista deixaram de ser seções separadas — agora é uma linha do tempo
+         só, ordenada por data (mais novo primeiro), com scroll infinito (ver
+         loadInicioFeed()/inicioRenderFeedPage() em inicio.js). -->
+    <div class="sec-title">📰 Feed do Mundo Pokémon</div>
+    <div id="inicio-feed-wrap"></div>
+    <div id="inicio-feed-sentinel" style="display:none"></div>
   </div>
+
+  <!-- MODAL DE MATÉRIA 24/08/2026: leitura completa da notícia + comentários
+       (ver openInicioArticle() em inicio.js). Fica fora do fluxo normal do
+       .pane, controlado só por display:none/'' via JS. -->
+  <div id="inicio-article-modal" class="inicio-modal" style="display:none"></div>
 
   <div id="dash" class="pane">
     <div id="updates-log-wrap" class="updates-log-panel"></div>
@@ -634,6 +681,11 @@
           <div id="leilao-admin-search-results" class="cv-list" style="max-height:220px;overflow:auto;margin-bottom:10px"></div>
           <div id="leilao-admin-preview" style="display:none;gap:10px;align-items:center;margin-bottom:10px"></div>
 
+          <div class="ff"><label>Ou tire/envie foto(s) reais do item (até 4) — pra produto fora do catálogo, ou pra mostrar o estado real do exemplar. A 1ª foto vira a capa e substitui a do catálogo.</label>
+            <input type="file" id="leilao-admin-foto" accept="image/*" capture="environment" multiple onchange="handleAuctionPhotoPick(event)">
+          </div>
+          <div id="leilao-admin-foto-preview" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>
+
           <div class="ff"><label>Nome da carta *</label><input id="leilao-admin-nome" placeholder="Ex: Charizard SAR"></div>
           <div class="ff"><label>Condição</label>
             <select id="leilao-admin-cond">
@@ -789,6 +841,7 @@
             Obrigatório antes de dar o primeiro lance — é pra onde a carta vai se você arrematar, e é
             por esse WhatsApp que o leiloeiro combina pagamento e envio com você. Envio por conta do comprador.
           </div>
+          <div class="ff"><label>Nome completo *</label><input id="auc-addr-nome" placeholder="Seu nome completo"></div>
           <div class="ff"><label>CEP</label><input id="auc-addr-cep" placeholder="00000-000"></div>
           <div class="ff"><label>Rua/Logradouro *</label><input id="auc-addr-logradouro"></div>
           <div class="ff"><label>Número *</label><input id="auc-addr-numero"></div>
@@ -923,6 +976,18 @@
     </div>
   </div>
 
+  <!-- EDITAR LEILÃO (24/08/2026): botão "✏️ Editar" só aparece pro
+       leiloeiro (aucIsLeilaoAdmin) no card/zoom de cada item já publicado
+       — deixa mudar preço/reserva/condição/descrição/fotos sem precisar
+       excluir e recadastrar. Conteúdo montado em openAuctionEdit()
+       (leilao.js). -->
+  <div class="ov" id="leilao-edit-ov" onclick="if(event.target===this)closeModal('leilao-edit-ov')">
+    <div class="modal">
+      <button class="mc-btn" onclick="closeModal('leilao-edit-ov')">✕</button>
+      <div id="leilao-edit-content"></div>
+    </div>
+  </div>
+
   <!-- ESCOLHA DE VERSÃO (13/08/2026): algumas cartas têm mais de uma versão
        física possível (ex: Normal + Reverse Holo) — quando isso acontece,
        addOrderToFichario() (leilao.js) para aqui e pede pra pessoa confirmar
@@ -1000,6 +1065,354 @@
       <div id="leilao-rules-status" style="font-size:10.5px;color:var(--err,#e5484d);margin-top:8px"></div>
     </div>
   </div>
+
+  <!-- COMPROMISSO DO LEILOEIRO (24/08/2026): aparece antes do PRIMEIRO
+       cadastro (rodada ou carta) de quem vira leiloeiro — abre sozinho ao
+       entrar em Cadastro (switchLeilaoSubtab) e também trava dentro de
+       createAuctionRound()/publishAuction() via requireSellerAcceptance().
+       Aceite fica em auction_seller_acceptance (banco, insert-only) — ver
+       leilao_seller_onboarding_setup.sql. Não pergunta de novo a não ser
+       que AUC_SELLER_TERMS_VERSION mude. -->
+  <div class="ov" id="leilao-seller-onboarding-ov" onclick="if(event.target===this)closeModal('leilao-seller-onboarding-ov')">
+    <div class="modal modal-wide">
+      <button class="mc-btn" onclick="closeModal('leilao-seller-onboarding-ov')">✕</button>
+      <div class="panel-t" style="margin-bottom:4px">🔏 Compromisso do Leiloeiro MyDeck</div>
+      <div style="font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:16px">
+        Antes de cadastrar sua primeira rodada ou carta, leia e aceite os itens abaixo. Isso fica registrado com data/hora.
+      </div>
+
+      <div class="mkt-term-box" style="max-height:38vh;overflow-y:auto">
+        <b>1. Responsabilidade pelos itens</b><br>
+        Você garante que os itens que cadastrar são de sua posse legítima, autênticos, e que a
+        condição, descrição e fotos informadas correspondem fielmente ao estado real do exemplar.
+        Informação falsa ou enganosa sobre um item é responsabilidade exclusiva sua.<br><br>
+
+        <b>2. Compromisso de venda</b><br>
+        Ao publicar um item em leilão, você se compromete a entregá-lo ao maior lance no
+        fechamento (respeitado o preço de reserva, quando houver), dentro do prazo combinado na
+        rodada. Cancelamento de leilão sem justificativa razoável, ou não entrega ao vencedor
+        legítimo, pode levar à suspensão do seu acesso como leiloeiro.<br><br>
+
+        <b>3. Pagamento e comissão</b><br>
+        O pagamento do comprador é feito via PIX diretamente a você, fora do site — o MyDeck não
+        processa, retém ou intermedia esse valor. Em contrapartida, você se compromete a repassar
+        ao MyDeck a comissão vigente sobre o total de pedidos pagos no mês (ver tabela abaixo),
+        nos termos combinados.<br><br>
+
+        <b>4. Impostos e legalidade</b><br>
+        Questões fiscais/tributárias sobre suas vendas, e a legalidade dos itens anunciados, são
+        de sua exclusiva responsabilidade — o MyDeck não presta consultoria fiscal ou jurídica.<br><br>
+
+        <b>5. Disputas</b><br>
+        Eventuais disputas, atrasos, extravios ou divergências com um comprador devem ser
+        resolvidas diretamente entre vocês. O MyDeck pode, a seu critério e sem obrigação, ajudar
+        a mediar contato, mas não garante nem se responsabiliza pelo resultado.<br><br>
+
+        <b>6. O papel do MyDeck e isenção de responsabilidade</b><br>
+        O site é só uma ferramenta de cadastro, lances e acompanhamento de pedidos — o MyDeck
+        <b>não é parte</b> nas transações que você conduz como leiloeiro. Ao aceitar este termo, você
+        exime o MyDeck de qualquer responsabilidade decorrente de itens que cadastrar, disputas
+        com compradores, fraude, inadimplência de terceiros ou qualquer resultado da negociação
+        que você conduz através da plataforma.<br><br>
+
+        <b>7. Dados e privacidade</b><br>
+        O tratamento dos seus dados (cadastro, histórico de vendas, comunicação) segue a
+        <a href="politica-privacidade.html" target="_blank" rel="noopener">Política de Privacidade do MyDeck</a>,
+        que complementa este termo.
+      </div>
+
+      <label style="display:flex;align-items:flex-start;gap:8px;margin:14px 0 8px;font-size:12px;cursor:pointer">
+        <input type="checkbox" id="leilao-seller-check-privacy" onchange="toggleSellerOnboardingAccept()" style="margin-top:2px">
+        <span>Li e aceito a <a href="politica-privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a> do MyDeck.</span>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:8px;margin:0 0 14px;font-size:12px;cursor:pointer">
+        <input type="checkbox" id="leilao-seller-check-terms" onchange="toggleSellerOnboardingAccept()" style="margin-top:2px">
+        <span>Li e aceito os Termos de Compromisso do Leiloeiro acima, incluindo a isenção de responsabilidade do MyDeck (item 6).</span>
+      </label>
+
+      <div class="panel" style="padding:12px;margin-bottom:6px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:6px">💰 COMO FUNCIONAM AS COMISSÕES</div>
+        <div style="font-size:10.5px;color:var(--muted)">
+          Comissão decrescente por faixa de soma de pedidos pagos no mês:
+          <b>5% até R$30k · 4% até R$40k · 3% até R$50k · 2,5% até R$60k · 2% até R$70k · 1,5% até R$80k · 1% acima de R$80k.</b>
+          Você acompanha o valor exato apurado a qualquer momento na sub-aba "Financeiro".
+        </div>
+      </div>
+
+      <label style="display:flex;align-items:flex-start;gap:8px;margin:0 0 16px;font-size:12px;cursor:pointer">
+        <input type="checkbox" id="leilao-seller-check-fees" onchange="toggleSellerOnboardingAccept()" style="margin-top:2px">
+        <span>Li e entendi como funcionam as comissões do MyDeck sobre os pedidos pagos no meu leilão.</span>
+      </label>
+
+      <button class="btn-add" id="leilao-seller-accept-btn" disabled onclick="acceptSellerTerms()">✓ Aceitar e continuar</button>
+    </div>
+  </div>
+
+  <!-- ===== ABA RIFAS (24/08/2026) =====
+       Pedido do Eduardo: grupo "Compra e Venda e Leilão" ganha uma aba de
+       rifas. Reaproveita a mesma permissão de leiloeiro (aucIsLeilaoAdmin)
+       pra quem pode cadastrar/revisar/sortear — ver rifa.js. Aberta pra
+       qualquer usuário logado ver e participar (nav-tab-rifas). -->
+  <div id="rifas" class="pane">
+    <div class="sec-title" style="margin-top:0">🎟️ Rifas</div>
+
+    <div id="rif-subnav" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+      <button type="button" class="btn-add rif-subtab-btn" data-sub="rifas" onclick="switchRifasSubtab('rifas')">🎟️ Rifas</button>
+      <button type="button" id="rif-tab-cadastro" class="btn-add rif-subtab-btn" data-sub="cadastro" onclick="switchRifasSubtab('cadastro')" style="display:none">➕ Cadastro</button>
+      <button type="button" id="rif-tab-revisao" class="btn-add rif-subtab-btn" data-sub="revisao" onclick="switchRifasSubtab('revisao')" style="display:none">🔍 Revisão de Pagamentos</button>
+      <button type="button" id="rif-tab-acompanhamento" class="btn-add rif-subtab-btn" data-sub="acompanhamento" onclick="switchRifasSubtab('acompanhamento')" style="display:none">📊 Acompanhamento</button>
+      <button type="button" class="btn-add rif-subtab-btn" data-sub="arquivo" onclick="switchRifasSubtab('arquivo')">📦 Arquivo de Rifas</button>
+    </div>
+
+    <!-- ── LISTA / PARTICIPAR ──────────────────────────────────────── -->
+    <div id="rif-sub-rifas">
+      <!-- PASSO A PASSO (28/08/2026): pedido do Eduardo — guia rápido e
+           sempre visível de como participar, antes mesmo de abrir uma
+           rifa específica. -->
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-t">📋 Como participar</div>
+        <div style="display:grid;gap:8px;font-size:11.5px">
+          <div><b style="color:var(--accent)">1.</b> Escolha uma rifa aberta e clique em <b>Participar</b>.</div>
+          <div><b style="color:var(--accent)">2.</b> Aceite as regras (só na sua primeira vez) e diga quantos números quer.</div>
+          <div><b style="color:var(--accent)">3.</b> Pague o valor certinho via PIX (a chave aparece na hora) e suba o comprovante.</div>
+          <div><b style="color:var(--accent)">4.</b> Escolha quais números você quer, entre os que ainda estão livres.</div>
+          <div><b style="color:var(--accent)">5.</b> Aguarde o rifeiro confirmar seu pagamento e acompanhe o sorteio ao vivo — o letreiro avisa o dia e hora! 🎬</div>
+        </div>
+      </div>
+      <div id="rif-list" class="cv-list"></div>
+    </div>
+
+    <!-- ── CADASTRO (rifeiro) ──────────────────────────────────────── -->
+    <div id="rif-sub-cadastro" style="display:none">
+      <div class="mkt-note">
+        Escolha o prêmio (carta do catálogo ou uma foto real/produto), defina quantos números a
+        rifa vai ter e o valor de cada um, e informe a chave PIX que os participantes vão usar
+        pra pagar. Os números (1 a N) são criados automaticamente ao publicar.
+      </div>
+      <div class="panel">
+        <div class="panel-t">🎟️ Nova Rifa</div>
+        <div class="ff"><label>Buscar carta no catálogo (opcional — preenche foto)</label>
+          <input id="rif-admin-search" placeholder="Nome da carta..." oninput="searchRifCards()">
+        </div>
+        <div id="rif-admin-search-results" class="cv-list" style="max-height:220px;overflow:auto;margin-bottom:10px"></div>
+        <div id="rif-admin-preview" style="display:none;gap:10px;align-items:center;margin-bottom:10px"></div>
+
+        <div class="ff"><label>Ou tire/envie foto(s) reais do prêmio (até 4)</label>
+          <input type="file" id="rif-admin-foto" accept="image/*" multiple onchange="handleRifPhotoPick(event)">
+        </div>
+        <div id="rif-admin-foto-preview" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>
+
+        <div class="ff"><label>Nome/Prêmio da rifa *</label><input id="rif-admin-titulo" placeholder="Ex: Charizard SAR"></div>
+        <div class="ff"><label>Descrição (opcional)</label><textarea id="rif-admin-desc" rows="2" placeholder="Detalhes do prêmio, regras extras..."></textarea></div>
+        <div class="ff"><label>Quantidade de números *</label><input type="number" id="rif-admin-qtd" min="2" max="1000" placeholder="Ex: 100"></div>
+        <div class="ff"><label>Valor por número (R$) *</label><input type="number" id="rif-admin-preco" step="0.01" min="0.01"></div>
+        <div class="ff"><label>Chave PIX *</label><input id="rif-admin-pix" placeholder="CPF, e-mail, telefone ou chave aleatória"></div>
+        <div class="ff"><label>Titular da chave PIX *</label><input id="rif-admin-pix-titular" placeholder="Nome completo do titular"></div>
+        <button class="btn-add" onclick="publishRaffle()">🎟️ Publicar Rifa</button>
+        <div id="rif-admin-status" style="font-size:10px;color:var(--teal);font-family:'IBM Plex Mono',monospace;margin-top:8px"></div>
+      </div>
+    </div>
+
+    <!-- ── REVISÃO DE PAGAMENTOS (rifeiro) ─────────────────────────── -->
+    <div id="rif-sub-revisao" style="display:none">
+      <div class="mkt-note">
+        Confira o comprovante de cada pagamento pendente antes de confirmar. Rejeitar libera os
+        números de volta pro estoque. Só dá pra sortear uma rifa depois de zerar as pendências
+        dela aqui.
+      </div>
+      <div id="rif-review-list" class="cv-list"></div>
+    </div>
+
+    <!-- ── ACOMPANHAMENTO (rifeiro/admin, 28/08/2026) ──────────────────
+         Pedido do Eduardo: gente pagou (PIX recebido) mas os números não
+         apareciam — essa aba dá visão de tudo (nome, quantidade, números,
+         confirmado ou não) + acompanhamento financeiro, pra pegar esse
+         tipo de problema na hora. -->
+    <div id="rif-sub-acompanhamento" style="display:none">
+      <div class="mkt-note">Todos os pagamentos das suas rifas (pendente, confirmado e rejeitado), com nome, números e o financeiro consolidado.</div>
+      <div id="rif-tracking-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px"></div>
+      <div id="rif-tracking-list" class="cv-list"></div>
+    </div>
+
+    <!-- ── ARQUIVO DE RIFAS ENCERRADAS (28/08/2026) ────────────────────
+         Pedido do Eduardo: aberto pra qualquer usuário, mostra as rifas
+         já sorteadas com o número vencedor em destaque. -->
+    <div id="rif-sub-arquivo" style="display:none">
+      <div class="mkt-note">Rifas já sorteadas, com o número vencedor de cada uma.</div>
+      <div id="rif-archive-list" class="cv-list"></div>
+    </div>
+  </div>
+
+  <!-- REGRAS DA RIFA (24/08/2026): aparece só na primeira vez que alguém
+       tenta participar de uma rifa — mesmo padrão do aceite de regras do
+       leilão. Aceite fica em raffle_rules_acceptance (banco). -->
+  <div class="ov" id="rif-rules-ov" onclick="if(event.target===this)closeModal('rif-rules-ov')">
+    <div class="modal modal-wide">
+      <button class="mc-btn" onclick="closeModal('rif-rules-ov')">✕</button>
+      <div class="panel-t" style="margin-bottom:4px">📜 Regras da Rifa MyDeck</div>
+      <div style="font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:16px">
+        Leia com atenção antes de participar da sua primeira rifa.
+      </div>
+      <div class="mkt-term-box" style="max-height:48vh;overflow-y:auto">
+        <b>1. Como funciona</b><br>
+        Cada rifa tem uma quantidade fixa de números e um valor por número. Você escolhe quantos
+        números quer, paga o total via PIX diretamente ao rifeiro (fora do site) e sobe o
+        comprovante. Depois disso, você escolhe quais números específicos quer, entre os ainda
+        livres.<br><br>
+
+        <b>2. Revisão do pagamento</b><br>
+        O rifeiro confere o comprovante antes de confirmar seus números. Se o comprovante for
+        rejeitado (pagamento não identificado, valor errado, etc.), os números escolhidos voltam
+        pro estoque livre — fale com o rifeiro pra resolver.<br><br>
+
+        <b>3. Sorteio</b><br>
+        O sorteio só acontece depois que o rifeiro revisa TODOS os pagamentos pendentes da rifa.
+        É feito pelo servidor, entre os números já confirmados — ninguém, nem o rifeiro, escolhe
+        o resultado manualmente.<br><br>
+
+        <b>4. Pagamento e entrega do prêmio</b><br>
+        O pagamento é feito via PIX diretamente ao rifeiro, fora do site — o MyDeck não processa,
+        retém ou garante nenhum valor financeiro. A entrega do prêmio ao vencedor é combinada
+        diretamente com o rifeiro.<br><br>
+
+        <b>5. O papel do MyDeck</b><br>
+        O site é só uma ferramenta de cadastro, reserva de números e sorteio. O MyDeck não é
+        parte na transação entre você e o rifeiro, e não se responsabiliza pelo resultado da
+        negociação.
+      </div>
+      <label style="display:flex;align-items:flex-start;gap:8px;margin:16px 0;font-size:12px;cursor:pointer">
+        <input type="checkbox" id="rif-rules-check" onchange="toggleRifRulesAccept()" style="margin-top:2px">
+        <span>Li e aceito as regras da rifa acima.</span>
+      </label>
+      <button class="btn-add" id="rif-rules-accept-btn" disabled onclick="acceptRifRules()">✓ Li e aceito as regras</button>
+    </div>
+  </div>
+
+  <!-- PARTICIPAR DE UMA RIFA (24/08/2026): fluxo de 2 passos (quantidade+
+       comprovante → escolher números), montado em renderRifParticipateContent()
+       (rifa.js). -->
+  <div class="ov" id="rif-participate-ov" onclick="if(event.target===this)closeModal('rif-participate-ov')">
+    <div class="modal modal-wide">
+      <button class="mc-btn" onclick="closeModal('rif-participate-ov')">✕</button>
+      <div id="rif-participate-content"></div>
+    </div>
+  </div>
+
+  <!-- PAGAMENTO MANUAL PELO RIFEIRO (28/08/2026): pra gente que pagou por
+       fora (dinheiro, PIX combinado direto, etc.) — o rifeiro escreve o
+       nome, marca os números e confirma tudo de uma vez. Só aparece pro
+       rifeiro dono da rifa. Ver renderRifManualPaymentContent() (rifa.js). -->
+  <div class="ov" id="rif-manual-payment-ov" onclick="if(event.target===this)closeModal('rif-manual-payment-ov')">
+    <div class="modal modal-wide">
+      <button class="mc-btn" onclick="closeModal('rif-manual-payment-ov')">✕</button>
+      <div id="rif-manual-payment-content"></div>
+    </div>
+  </div>
+
+  <!-- REVELAÇÃO DO SORTEIO (24/08/2026): animação de alguns segundos antes
+       de mostrar o número vencedor — rifPlayDrawReveal() (rifa.js). -->
+  <div class="ov" id="rif-draw-reveal-ov" onclick="if(event.target===this)closeModal('rif-draw-reveal-ov')">
+    <div class="modal modal-wide">
+      <button class="mc-btn" onclick="closeModal('rif-draw-reveal-ov')">✕</button>
+      <div id="rif-draw-reveal-content"></div>
+    </div>
+  </div>
+
+  <!-- MEU PERFIL (28/08/2026): nome + endereço + WhatsApp, num perfil ÚNICO
+       reaproveitado em qualquer lugar do site que precise disso (hoje:
+       leilão — via user_addresses direto — e rifa). Mesma tabela
+       user_addresses de sempre, só ganhou a coluna full_name (ver
+       rifa_setup.sql seção 14). Funções em app.js: loadUserProfile(),
+       openProfileModal(callback), saveUserProfile(). -->
+  <div class="ov" id="perfil-ov" onclick="if(event.target===this)closeModal('perfil-ov')">
+    <div class="modal">
+      <button class="mc-btn" onclick="closeModal('perfil-ov')">✕</button>
+      <div class="panel-t" style="margin-bottom:4px">📇 Meu Perfil</div>
+      <div style="font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;margin-bottom:14px">
+        Nome, endereço e WhatsApp — usados em leilões, rifas e outras áreas do site que precisem
+        identificar você ou enviar algo pra você.
+      </div>
+      <div class="ff"><label>Nome completo *</label><input id="perfil-nome" placeholder="Seu nome completo"></div>
+      <div class="ff"><label>CEP</label><input id="perfil-cep" placeholder="00000-000"></div>
+      <div class="ff"><label>Rua/Logradouro</label><input id="perfil-logradouro"></div>
+      <div class="ff"><label>Número</label><input id="perfil-numero"></div>
+      <div class="ff"><label>Bairro</label><input id="perfil-bairro"></div>
+      <div class="ff"><label>Cidade</label><input id="perfil-cidade"></div>
+      <div class="ff"><label>UF</label>
+        <select id="perfil-uf">
+          <option value="">—</option>
+          <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option>
+          <option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option>
+          <option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
+          <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option>
+          <option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option>
+          <option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option>
+          <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
+        </select>
+      </div>
+      <div class="ff"><label>WhatsApp *</label><input id="perfil-whatsapp" placeholder="(xx) xxxxx-xxxx" inputmode="tel" maxlength="15" oninput="if(typeof aucOnPhoneInput==='function')aucOnPhoneInput(this)"></div>
+      <button class="btn-add" onclick="saveUserProfile()">✓ Salvar Perfil</button>
+      <div id="perfil-status" style="font-size:10px;color:var(--teal);font-family:'IBM Plex Mono',monospace;margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- ESTILOS DA CONTAGEM REGRESSIVA + ROLETA DO SORTEIO (28/08/2026):
+       pedido do Eduardo — letreiro grande com contagem regressiva visível
+       pra todo mundo, números maiores/animados nos últimos 10s, e uma
+       roleta estilo "show de TV" que gira só entre os números vendidos e
+       vai freando até parar exatamente no número sorteado. -->
+  <style>
+    .rif-countdown-banner{
+      margin-top:10px;padding:12px 14px;border-radius:10px;
+      background:linear-gradient(135deg,rgba(230,57,70,.12),rgba(6,214,160,.08));
+      border:1px solid var(--border);text-align:center;transition:all .3s ease;
+    }
+    .rif-countdown-label{font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:.5px;margin-bottom:4px}
+    .rif-countdown-clock{font-size:26px;font-weight:800;font-family:'Space Mono',monospace;color:var(--accent);letter-spacing:1px;transition:all .25s ease}
+    .rif-countdown-banner.rif-hot{
+      background:linear-gradient(135deg,rgba(255,209,102,.22),rgba(230,57,70,.18));
+      border-color:var(--gold);animation:rifHotPulse .6s ease-in-out infinite;
+    }
+    .rif-countdown-banner.rif-hot .rif-countdown-clock{
+      font-size:46px;color:var(--gold);text-shadow:0 0 18px rgba(255,209,102,.6);
+    }
+    @keyframes rifHotPulse{
+      0%,100%{transform:scale(1)}
+      50%{transform:scale(1.035)}
+    }
+    .rif-reel-wrap{
+      position:relative;margin:14px auto;width:100%;max-width:420px;height:110px;
+      overflow:hidden;border-radius:12px;background:var(--surface2);
+      border:2px solid var(--gold);
+    }
+    .rif-reel-wrap::before,.rif-reel-wrap::after{
+      content:'';position:absolute;top:0;bottom:0;width:36px;z-index:2;pointer-events:none;
+    }
+    .rif-reel-wrap::before{left:0;background:linear-gradient(90deg,var(--surface2),transparent)}
+    .rif-reel-wrap::after{right:0;background:linear-gradient(-90deg,var(--surface2),transparent)}
+    .rif-reel-marker{
+      position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--accent);
+      transform:translateX(-50%);z-index:3;box-shadow:0 0 8px var(--accent);
+    }
+    .rif-reel-track{display:flex;align-items:center;height:100%;will-change:transform}
+    .rif-reel-tile{
+      flex:0 0 90px;height:80px;margin:0 5px;border-radius:10px;background:var(--surface);
+      border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+      font-size:34px;font-weight:800;font-family:'Space Mono',monospace;color:var(--text);
+    }
+    .rif-reel-tile.rif-reel-winner{
+      background:linear-gradient(135deg,var(--gold),#fff3c4);color:#1a1200;
+      box-shadow:0 0 24px rgba(255,209,102,.75);
+    }
+    .rif-reel-track.rif-reel-spinning{
+      transition:transform 4.2s cubic-bezier(.1,.85,.25,1);
+    }
+    .rif-reveal-winner-number{
+      font-size:15px;font-weight:700;color:var(--gold);text-align:center;margin-top:14px;
+      animation:rifWinnerFadeIn .4s ease;
+    }
+    @keyframes rifWinnerFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  </style>
 
   <!-- ===== ABA ADMIN (11/08/2026) =====
        Painel único pro Eduardo — reúne tudo que antes ficava misturado nas
@@ -1487,6 +1900,10 @@
      por ele) e antes de leilao.js. Ver [[project_price_history_book]] na memória do projeto. -->
 <script defer src="price_history.js"></script>
 <script defer src="leilao.js"></script>
+<!-- rifa.js (24/08/2026): aba de Rifas, reaproveita estado/funções globais do
+     leilao.js (aucIsLeilaoAdmin, compressAuctionPhoto, uploadAuctionPhotos,
+     etc.) — por isso precisa carregar DEPOIS dele. -->
+<script defer src="rifa.js"></script>
 <script defer src="loja.js"></script>
 <script defer src="positivo.js"></script>
 <script defer src="lojas_store_vespa.js"></script>
