@@ -2887,6 +2887,8 @@ function openLeiloeiroOnboardingModal(){
   AUC_SELLER_CHECK_IDS.forEach(id=>{const el=document.getElementById(id);if(el)el.checked=false;});
   const btn=document.getElementById('leilao-seller-accept-btn');
   if(btn)btn.disabled=true;
+  const statusEl=document.getElementById('leilao-seller-status');
+  if(statusEl)statusEl.textContent='';
   if(typeof openModal==='function')openModal('leilao-seller-onboarding-ov');
 }
 
@@ -2897,11 +2899,25 @@ function toggleSellerOnboardingAccept(){
 }
 
 async function acceptSellerTerms(){
-  if(!uid())return;
+  // 29/08/2026 — BUG REAL encontrado: auction_seller_acceptance é
+  // insert-only de propósito (leilao_seller_onboarding_setup.sql não tem
+  // policy de UPDATE, só select/insert — histórico nunca é sobrescrito).
+  // O upsert() do supabase-js, sem ignoreDuplicates, monta um
+  // "ON CONFLICT ... DO UPDATE" — se já existisse uma linha pra esse
+  // user_id+terms_version (ex: uma tentativa anterior que já tinha
+  // gravado, mesmo que a pessoa não tenha visto confirmação por causa do
+  // badge do minigame cobrindo o botão), o UPDATE era barrado pela RLS e
+  // o erro ficava escondido no status-txt do cabeçalho (atrás do modal).
+  // Resultado: clicar "parecia" não fazer nada, sempre, depois da
+  // primeira vez. ignoreDuplicates:true faz DO NOTHING em vez de UPDATE —
+  // bate com o "insert-only" que o banco já espera.
+  const statusEl=document.getElementById('leilao-seller-status');
+  if(!uid()){if(statusEl)statusEl.textContent='Sua sessão caiu — recarregue a página e faça login de novo.';return;}
   const ok=AUC_SELLER_CHECK_IDS.every(id=>document.getElementById(id)?.checked);
-  if(!ok)return;
+  if(!ok){if(statusEl)statusEl.textContent='Marque as 3 caixinhas acima antes de continuar.';return;}
   const btn=document.getElementById('leilao-seller-accept-btn');
   if(btn){btn.disabled=true;btn.textContent='Salvando...';}
+  if(statusEl)statusEl.textContent='';
 
   const now=new Date().toISOString();
   const{error}=await sbClient.from('auction_seller_acceptance')
@@ -2912,11 +2928,12 @@ async function acceptSellerTerms(){
       terms_accepted_at:now,
       fees_accepted_at:now,
       user_agent:navigator.userAgent||null
-    },{onConflict:'user_id,terms_version'});
+    },{onConflict:'user_id,terms_version',ignoreDuplicates:true});
 
   if(error){
     console.error('[leilao] acceptSellerTerms',error);
     if(btn){btn.disabled=false;btn.textContent='✓ Aceitar e continuar';}
+    if(statusEl)statusEl.textContent=`Erro ao registrar aceite: ${error.message||'tente de novo em alguns segundos.'}`;
     setStatus('Erro ao registrar aceite. Verifique se rodou leilao_seller_onboarding_setup.sql no Supabase.','err');
     return;
   }

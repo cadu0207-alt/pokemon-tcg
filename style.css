@@ -1373,7 +1373,13 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
   background: rgba(0,0,0,.88);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  z-index: 1000;
+  /* 29/08/2026: precisa ficar ACIMA do badge fixo do minigame Wild Pokémon
+     (.wp-badge, z-index:9997 em wild_pokemon.js) — com z-index:1000 o badge
+     ficava por cima de qualquer modal aberto (.ov), sobrepondo e roubando
+     o clique de botões como "Aceitar e continuar" no Compromisso do
+     Leiloeiro. Maior que o wp-modal-backdrop (10001) também, de propósito:
+     um modal comum do site nunca deve ficar atrás de widget nenhum. */
+  z-index: 10050;
   display: none;
   align-items: center;
   justify-content: center;
