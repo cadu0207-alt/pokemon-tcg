@@ -1108,9 +1108,12 @@ async function renderRafflePaymentsReview(){
         </div>
       </div>
       <div id="rif-review-actions-${p.id}" style="display:flex;gap:8px;flex-wrap:wrap">
-        ${missing>0?`<button class="btn-add" onclick="openRifFixPaymentNumbers(${p.id},${p.raffle_id},${missing},'${esc(p.buyer_name||'esse pagamento').replace(/'/g,"\\'")}')">🔢 Completar ${missing} número(s)</button>`
-          :`<button class="btn-add" onclick="confirmRifPayment(${p.id})">✓ Confirmar pagamento</button>`}
-        <button class="cv-item-remove" onclick="rejectRifPayment(${p.id})">✕ Rejeitar</button>
+        ${p.user_id===uid()
+          ? `<div class="cv-item-empty" style="padding:0;text-align:left;color:var(--muted)">⏳ Esse pagamento é seu — só outro admin pode confirmar/rejeitar (evita autoconfirmação).</div>`
+            ? `<button class="btn-add" onclick="openRifFixPaymentNumbers(${p.id},${p.raffle_id},${missing},'${esc(p.buyer_name||'esse pagamento').replace(/'/g,"\\'")}')">🔢 Completar ${missing} número(s)</button>`
+            : `<button class="btn-add" onclick="confirmRifPayment(${p.id})">✓ Confirmar pagamento</button>`
+        }
+        ${p.user_id===uid()?'':`<button class="cv-item-remove" onclick="rejectRifPayment(${p.id})">✕ Rejeitar</button>`}
       </div>
     </div>`;
   }));
@@ -1176,17 +1179,19 @@ async function rejectRifPayment(paymentId){
 // Pedido do Eduardo: visão de tudo — nome de quem pagou, quantidade,
 // números, confirmado ou não — mais o financeiro consolidado, pra pegar
 // na hora um pagamento "travado" sem número (relato do PIX recebido sem
-// os números aparecerem). RLS (seção 10) já garante que só vêm
-// pagamentos das rifas que o próprio rifeiro criou.
+// os números aparecerem).
+// ATUALIZADO 29/08/2026: separado entre rifas ocorrendo (aberta) e
+// fechadas (sorteada/cancelada/arquivada), e dentro de cada uma, por
+// rifeiro — via get_raffle_tracking_overview() (rifa_setup.sql seção
+// 17), que devolve só as próprias rifas de quem chama, OU as de TODO
+// MUNDO se a pessoa tiver a visualização geral (is_auction_viewer(),
+// mesma permissão do Leilão) — decidido no banco, não aqui.
 async function renderRifTracking(){
   const summaryBox=document.getElementById('rif-tracking-summary');
   const listBox=document.getElementById('rif-tracking-list');
   if(!summaryBox||!listBox||!aucIsLeilaoAdmin)return;
 
-  const{data,error}=await sbClient.from('raffle_payments')
-    .select('*, raffles!inner(title,created_by,status), raffle_numbers(number)')
-    .eq('raffles.created_by',uid())
-    .order('created_at',{ascending:false});
+  const{data,error}=await sbClient.rpc('get_raffle_tracking_overview');
   if(error){
     console.error('[rifa] renderRifTracking',error);
     listBox.innerHTML=`<div class="cv-item-empty">Erro ao carregar acompanhamento.</div>`;
@@ -1196,11 +1201,10 @@ async function renderRifTracking(){
 
   const confirmados=payments.filter(p=>p.status==='confirmado');
   const pendentes=payments.filter(p=>p.status==='pendente');
-  const rejeitados=payments.filter(p=>p.status==='rejeitado');
   const totalConfirmado=confirmados.reduce((s,p)=>s+Number(p.total_amount||0),0);
   const totalPendente=pendentes.reduce((s,p)=>s+Number(p.total_amount||0),0);
   const numerosConfirmados=confirmados.reduce((s,p)=>s+p.quantity,0);
-  const semNumeroCompleto=payments.filter(p=>p.status!=='rejeitado'&&(p.raffle_numbers||[]).length<p.quantity).length;
+  const semNumeroCompleto=payments.filter(p=>p.status!=='rejeitado'&&(p.numbers||[]).length<p.quantity).length;
 
   summaryBox.innerHTML=[
     {label:'💰 Recebido (confirmado)',val:`R$ ${fmtR(totalConfirmado)}`,color:'var(--teal)'},
@@ -1214,24 +1218,55 @@ async function renderRifTracking(){
 
   if(!payments.length){listBox.innerHTML=`<div class="cv-item-empty">Nenhum pagamento registrado ainda.</div>`;return;}
 
+  // Só mostra o cabeçalho "👤 rifeiro" quando tem mais de um rifeiro nos
+  // resultados (visualização geral) — pra quem só vê as próprias rifas
+  // fica igual antes, sem cabeçalho repetindo o próprio nome à toa.
+  const isMulti=new Set(payments.map(p=>p.creator_id)).size>1;
+
   const STATUS_LBL={pendente:['⏳ Pendente','var(--gold)'],confirmado:['✓ Confirmado','var(--teal)'],rejeitado:['✕ Rejeitado','var(--muted)']};
-  listBox.innerHTML=payments.map(p=>{
-    const have=(p.raffle_numbers||[]).length;
+  const rowHTML=p=>{
+    const have=(p.numbers||[]).length;
     const missing=p.quantity-have;
     const[lbl,color]=STATUS_LBL[p.status]||[p.status,'var(--muted)'];
     const dt=new Date(p.created_at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
-    const nums=(p.raffle_numbers||[]).map(n=>n.number).sort((a,b)=>a-b).join(', ')||'—';
+    const nums=(p.numbers||[]).slice().sort((a,b)=>a-b).join(', ')||'—';
+    const isOwn=p.creator_id===uid();
     return`<div class="cv-item" style="cursor:default;flex-direction:column;align-items:stretch;gap:6px">
       <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
         <div style="font-weight:700">${esc(p.buyer_name||'(sem nome)')}${p.is_manual?' <span style="font-size:9px;color:var(--muted);font-weight:400">· manual</span>':''}</div>
         <div style="font-size:11px;font-weight:700;color:${color}">${lbl}</div>
       </div>
-      <div style="font-size:10.5px;color:var(--muted)">${esc(p.raffles?.title||'Rifa')} · ${dt}</div>
+      <div style="font-size:10.5px;color:var(--muted)">${esc(p.raffle_title||'Rifa')} · ${dt}</div>
       <div style="font-size:11px">${p.quantity} número(s) — R$ ${fmtR(p.total_amount)}</div>
       <div style="font-size:11px;color:${missing>0&&p.status!=='rejeitado'?'var(--accent)':'var(--muted)'}">Números: ${nums}${missing>0&&p.status!=='rejeitado'?` ⚠️ faltam ${missing}`:''}</div>
-      ${missing>0&&p.status==='pendente'?`<button class="btn-add" style="align-self:flex-start" onclick="openRifFixPaymentNumbers(${p.id},${p.raffle_id},${missing},'${esc(p.buyer_name||'esse pagamento').replace(/'/g,"\\'")}')">🔢 Completar ${missing} número(s)</button>`:''}
+      ${missing>0&&p.status==='pendente'&&isOwn?`<button class="btn-add" style="align-self:flex-start" onclick="openRifFixPaymentNumbers(${p.payment_id},${p.raffle_id},${missing},'${esc(p.buyer_name||'esse pagamento').replace(/'/g,"\\'")}')">🔢 Completar ${missing} número(s)</button>`:''}
     </div>`;
-  }).join('');
+  };
+
+  // Agrupa por rifeiro (só monta o cabeçalho se isMulti) e junta em uma
+  // seção "🟢 em andamento" / "🔒 fechadas".
+  const groupByRifeiro=rows=>{
+    const order=[];
+    const byId={};
+    rows.forEach(p=>{
+      if(!byId[p.creator_id]){byId[p.creator_id]={name:p.creator_name,rows:[]};order.push(p.creator_id);}
+      byId[p.creator_id].rows.push(p);
+    });
+    return order.map(id=>byId[id]);
+  };
+  const renderSection=(title,rows)=>{
+    if(!rows.length)return'';
+    const groups=groupByRifeiro(rows);
+    const body=groups.map(g=>{
+      const header=isMulti?`<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;padding-top:10px;border-top:1px solid var(--border)">👤 ${esc(g.name)} · ${g.rows.length} pagamento(s)</div>`:'';
+      return header+g.rows.map(rowHTML).join('');
+    }).join('');
+    return`<div class="sec-title" style="margin-top:18px">${title} (${rows.length})</div>${body}`;
+  };
+
+  const ocorrendo=payments.filter(p=>p.raffle_status==='aberta');
+  const fechadas=payments.filter(p=>p.raffle_status!=='aberta');
+  listBox.innerHTML=renderSection('🟢 Rifas em andamento',ocorrendo)+renderSection('🔒 Rifas fechadas',fechadas);
 }
 
 // ── SORTEIO ──────────────────────────────────────────────────────
