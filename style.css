@@ -565,7 +565,12 @@ h1, .hlogo {
 
 /* ─── TABS ───────────────────────────────────────────── */
 .tabs {
-  display: flex;
+  /* 29/08/2026: substituída no mobile pela .mnav (barra inferior estilo
+     app, ver bloco "MENU MOBILE" mais abaixo) — ficava comprida e feia
+     com 13 botões em scroll horizontal. display:none sempre agora (o
+     .tdesk já cuidava do desktop); continua no DOM só como fonte de
+     verdade pros ids nav-tab-* que go()/goToTab() usam. */
+  display: none;
   gap: 2px;
   padding: 8px 32px;
   background: rgba(255,255,255,.96);
@@ -577,6 +582,99 @@ h1, .hlogo {
   scrollbar-width: none;
 }
 .tabs::-webkit-scrollbar { display: none; }
+
+/* ═══════════════════════════════════════════════════════
+   MENU MOBILE — barra inferior estilo app (.mnav) — 29/08/2026
+   Substitui a .tabs no mobile. 4 destinos fixos (Início, Fichário,
+   Leilão, Rifas — os que o Eduardo mais usa) + "Mais" abre uma folha
+   (.msheet) com o resto, agrupado igual o .tdesk do desktop. Só existe
+   ≤900px — acima disso o .tdesk já resolve, então nem renderiza.
+   ═══════════════════════════════════════════════════════ */
+.mnav { display: none; }
+.msheet-backdrop { display: none; }
+
+@media (max-width: 900px) {
+  .mnav {
+    display: flex;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 400; /* acima da .tabs (some de qualquer forma), abaixo do .top-fixed-actions (999) e de qualquer .ov (modal) */
+    padding: 4px 2px calc(6px + env(safe-area-inset-bottom, 0px));
+    background: rgba(255,255,255,.96);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -6px 20px rgba(28,34,56,.1);
+  }
+  [data-theme="dark"] .mnav { background: rgba(17,20,34,.96); box-shadow: 0 -6px 20px rgba(0,0,0,.4); }
+}
+
+.mnav-btn {
+  flex: 1;
+  appearance: none; -webkit-appearance: none;
+  border: none; background: transparent; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 7px 2px 5px;
+  min-height: 44px; /* alvo de toque WCAG/HIG, mesmo padrão já usado em .tab */
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; font-weight: 700; letter-spacing: .3px;
+  border-radius: 10px;
+  transition: color .15s ease;
+}
+.mnav-btn .mnav-ic { font-size: 19px; line-height: 1; }
+.mnav-btn.active { color: var(--accent); }
+.mnav-btn:active { background: rgba(var(--accent-rgb),.08); }
+.mnav-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ── folha "Mais" (bottom sheet) ─────────────────────── */
+@media (max-width: 900px) {
+  .msheet-backdrop {
+    display: block;
+    position: fixed; inset: 0; z-index: 900; /* abaixo de .ov (modais reais) */
+    background: rgba(5,6,10,.55);
+    opacity: 0; visibility: hidden;
+    transition: opacity .2s ease, visibility .2s;
+  }
+  .msheet-backdrop.show { opacity: 1; visibility: visible; }
+  .msheet {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: var(--surface);
+    border-radius: 18px 18px 0 0;
+    border: 1px solid var(--border); border-bottom: none;
+    padding: 12px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+    max-height: 76vh; overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform .26s cubic-bezier(.32,.72,0,1);
+    box-shadow: 0 -14px 40px rgba(0,0,0,.25);
+  }
+  .msheet-backdrop.show .msheet { transform: translateY(0); }
+}
+.msheet-handle { width: 36px; height: 4px; border-radius: 3px; background: var(--border2); margin: 0 auto 12px; }
+.msheet-label {
+  font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted);
+  margin: 14px 2px 8px;
+}
+.msheet-label:first-of-type { margin-top: 0; }
+.msheet-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.msheet-item {
+  appearance: none; -webkit-appearance: none; border: 1px solid transparent;
+  background: var(--surface2); cursor: pointer; border-radius: 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 4px 10px; min-height: 44px;
+  transition: all .12s ease;
+}
+.msheet-item:active, .msheet-item:focus-visible { background: rgba(var(--accent-rgb),.1); border-color: rgba(var(--accent-rgb),.25); }
+.msheet-item.active { background: rgba(var(--accent-rgb),.12); border-color: rgba(var(--accent-rgb),.3); }
+.msheet-ic { font-size: 20px; line-height: 1; }
+.msheet-lb {
+  font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 600;
+  color: var(--text2); text-align: center; line-height: 1.25;
+}
+.msheet-item.active .msheet-lb { color: var(--accent); }
+.msheet-cta { background: linear-gradient(135deg,#7b2ff722,#f107a318); }
+.msheet-cta .msheet-lb { color: #c084fc; }
+.msheet-admin.active, .msheet-admin:active { background: rgba(var(--gold-rgb),.14); border-color: rgba(var(--gold-rgb),.35); }
+.msheet-admin.active .msheet-lb { color: var(--gold); }
 .tab {
   padding: 8px 18px;
   font-family: 'IBM Plex Mono', monospace;
@@ -792,6 +890,13 @@ h1, .hlogo {
 .tdrop-item.fic-empty-note:hover { background: transparent; color: var(--text2); }
 
 .pane { display: none; padding: 32px 40px; }
+/* espaço extra embaixo do conteúdo pra nada ficar escondido atrás da .mnav
+   (barra inferior fixa do menu mobile, ~54px + safe-area) — precisa vir
+   DEPOIS da regra .pane acima (mesma especificidade, quem vem por último
+   na cascata vence) pra cobrir toda a faixa <=900px, não só 768/600px. */
+@media (max-width: 900px) {
+  .pane { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+}
 .pane.active { display: block; }
 
 /* ─── SIDEBAR DESKTOP — layout (24/08/2026) ─────────────
@@ -1667,6 +1772,11 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
 
 @media (max-width: 768px) {
   .pane { padding: 20px 18px; }
+  /* CORRIGIDO 29/08/2026: esse padding shorthand zerava de volta o
+     padding-bottom extra que a regra da .mnav (mais acima) reserva pra
+     barra fixa não tampar o fim do conteúdo — like 768px é a faixa onde a
+     .mnav realmente aparece, então precisa repetir a reserva aqui. */
+  .pane { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
   header { padding: 16px 18px 12px; gap: 8px; }
   .hstatus { font-size: 9px; gap: 4px; flex-wrap: wrap; }
   .modal { padding: 22px 18px; }
@@ -1681,6 +1791,9 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
 
 @media (max-width: 600px) {
   .pane   { padding: 16px 14px; }
+  /* mesma correção da regra de 768px acima, senão essa também some com a
+     reserva de espaço pra .mnav. */
+  .pane   { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
   header  { padding: 14px 16px; }
   .tabs   { padding: 6px 14px; top: 60px; }
   /* ADICIONADO 30/07/2026 (pedido do Eduardo: "no mobile está muito grande,
@@ -1825,6 +1938,8 @@ option { background: var(--surface2); color: var(--text); }
 
 /* Modo visitante de link compartilhado: só o fichário, sem edição */
 body.share-view .tabs,
+body.share-view .mnav,
+body.share-view .msheet-backdrop,
 body.share-view #fic-share,
 body.share-view .btn-add { display: none !important; }
 
@@ -2660,6 +2775,11 @@ body.share-view .btn-add { display: none !important; }
   gap: 8px;
   align-items: center;
   pointer-events: none;
+}
+/* 29/08/2026: sobe acima da .mnav (barra inferior fixa) — senão o toast
+   nascia por baixo dela no mobile. */
+@media (max-width: 900px) {
+  #md-toast-wrap { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
 }
 .md-toast {
   font-family: 'DM Sans', sans-serif;

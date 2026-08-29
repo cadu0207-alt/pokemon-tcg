@@ -47,9 +47,11 @@ let rifArchiveConfirmFor=null;      // id da rifa com o "tem certeza?" de arquiv
 async function updateRifasTabVisibility(){
   const btn=document.getElementById('nav-tab-rifas');
   const deskBtn=document.getElementById('desk-tab-rifas');
+  const mBtn=document.getElementById('mnav-tab-rifas'); // ESPELHO 29/08/2026: botão fixo do menu mobile (.mnav)
   const show=!!uid();
   if(btn)btn.style.display=show?'':'none';
   if(deskBtn)deskBtn.style.display=show?'':'none';
+  if(mBtn)mBtn.style.display=show?'':'none';
   if(!show){
     const pane=document.getElementById('rifas');
     if(pane&&pane.classList.contains('active')&&typeof goToTab==='function')goToTab('dash');

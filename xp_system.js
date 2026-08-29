@@ -576,6 +576,7 @@ document.addEventListener('DOMContentLoaded', function () {
 .xp-skel-block{height:120px;margin-top:8px;}
 @keyframes xpSkelWave{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .xp-toast{position:fixed;bottom:20px;right:20px;background:var(--text);color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:10000;max-width:300px;animation:xpToastIn .3s ease;}
+@media (max-width:900px){.xp-toast{bottom:calc(70px + env(safe-area-inset-bottom, 0px));}}
 @keyframes xpToastIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
 .xp-particle{position:fixed;width:6px;height:6px;border-radius:50%;pointer-events:none;z-index:10001;animation:xpParticleFly .65s ease-out forwards;}
 @keyframes xpParticleFly{to{transform:translate(var(--dx),var(--dy));opacity:0;}}

@@ -133,6 +133,10 @@ async function updateLeilaoTabVisibility(){
   // de "COMPRA E VENDA E LEILÃO"), senão ele nunca aparece lá.
   const deskBtn=document.getElementById('desk-tab-leilao');
   if(deskBtn)deskBtn.style.display=show?'':'none';
+  // ESPELHO 29/08/2026: mesmo toggle no botão fixo do menu mobile novo
+  // (.mnav) — é um dos 4 destinos primários da barra inferior.
+  const mBtn=document.getElementById('mnav-tab-leilao');
+  if(mBtn)mBtn.style.display=show?'':'none';
   if(!show){
     const pane=document.getElementById('leilao');
     if(pane&&pane.classList.contains('active')&&typeof goToTab==='function')goToTab('dash');

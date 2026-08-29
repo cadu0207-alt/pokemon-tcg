@@ -268,7 +268,11 @@ function fmInjectRarityBulk(){
 function fmShowToast(msg){
   const t=document.createElement('div');
   t.textContent=msg;
-  t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:12px 20px;border-radius:8px;font-size:12px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);max-width:90vw;text-align:center';
+  // 29/08/2026: bottom sobe no mobile pra não nascer atrás da .mnav (barra
+  // inferior fixa do menu novo) — window.innerWidth porque esse toast é
+  // posicionado via cssText direto (sem classe própria pra usar @media).
+  const mobileBottom=window.innerWidth<=900?'calc(70px + env(safe-area-inset-bottom, 0px))':'20px';
+  t.style.cssText='position:fixed;bottom:'+mobileBottom+';left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;padding:12px 20px;border-radius:8px;font-size:12px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);max-width:90vw;text-align:center';
   document.body.appendChild(t);
   setTimeout(()=>{ t.style.transition='opacity .4s'; t.style.opacity='0'; setTimeout(()=>t.remove(),400); },5000);
 }

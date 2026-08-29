@@ -311,6 +311,76 @@
     <button type="button" class="tab" onclick="window.open('simulador.html','_blank')" style="background:linear-gradient(90deg,#7b2ff744,#f107a322);color:#c084fc">🎰 Simulador</button>
   </nav>
 
+  <!-- MENU MOBILE (barra inferior estilo app) — 29/08/2026, pedido do Eduardo
+       depois de testar um protótipo: a .tabs de cima (13 botões, scroll
+       horizontal) ficava comprida e feia no celular. Só aparece ≤900px — a
+       .tabs original vira display:none permanente (ver regra dela em
+       style.css) e continua no DOM só como fonte de verdade pros ids
+       nav-tab-*; o .tdesk acima cuida do desktop, sem mudança nenhuma lá.
+       4 destinos fixos (os que o Eduardo mais usa) + "Mais" abre uma folha
+       com o resto, agrupado igual o .tdesk (MYDECK / COMPRA E VENDA).
+       mNav()/goToTab() reaproveitam o go() de sempre — toda a lógica de
+       renderX()/active state/hash já existente não muda nada. syncMobileNav()
+       (app.js) espelha o estado 'active' aqui a cada navegação, chamada de
+       dentro de go() igual syncDesktopNav(). -->
+  <nav class="mnav" aria-label="Navegação mobile" id="mnav">
+    <button type="button" class="mnav-btn active" id="mnav-tab-inicio" data-tab="inicio" onclick="mNav('inicio')"><span class="mnav-ic">🏠</span>Início</button>
+    <button type="button" class="mnav-btn" id="mnav-tab-fichario" data-tab="fichario" onclick="mNav('fichario')"><span class="mnav-ic">📚</span>Fichário</button>
+    <!-- espelha #nav-tab-leilao: leilao.js mostra pra qualquer usuário
+         logado (updateLeilaoTabVisibility, show=!!uid()) — não é só admin,
+         só o painel interno do leiloeiro que é restrito. -->
+    <button type="button" class="mnav-btn" id="mnav-tab-leilao" data-tab="leilao" style="display:none" onclick="mNav('leilao')"><span class="mnav-ic">🔨</span>Leilão</button>
+    <!-- espelha #nav-tab-rifas: mesma regra do leilão (rifa.js,
+         updateRifasTabVisibility). -->
+    <button type="button" class="mnav-btn" id="mnav-tab-rifas" data-tab="rifas" style="display:none" onclick="mNav('rifas')"><span class="mnav-ic">🎟️</span>Rifas</button>
+    <button type="button" class="mnav-btn" id="mnav-more-btn" onclick="toggleMSheet()" aria-expanded="false" aria-controls="msheetBackdrop"><span class="mnav-ic">☰</span>Mais</button>
+  </nav>
+
+  <div class="msheet-backdrop" id="msheetBackdrop" onclick="if(event.target===this)closeMSheet()">
+    <div class="msheet" role="dialog" aria-label="Mais opções">
+      <div class="msheet-handle"></div>
+      <div class="msheet-label">MyDeck</div>
+      <div class="msheet-grid">
+        <button type="button" class="msheet-item" data-tab="dash" onclick="mNav('dash')"><span class="msheet-ic">📊</span><span class="msheet-lb">Dashboard</span></button>
+        <button type="button" class="msheet-item" data-tab="gastos" onclick="mNav('gastos')"><span class="msheet-ic">💸</span><span class="msheet-lb">Gastos</span></button>
+        <button type="button" class="msheet-item" data-tab="preco" onclick="mNav('preco')"><span class="msheet-ic">💰</span><span class="msheet-lb">Preço Justo</span></button>
+        <button type="button" class="msheet-item" data-tab="centralizacao" onclick="mNav('centralizacao')"><span class="msheet-ic">🎯</span><span class="msheet-lb">Centralização</span></button>
+      </div>
+      <div class="msheet-label">Compra &amp; Venda</div>
+      <div class="msheet-grid">
+        <button type="button" class="msheet-item" data-tab="cartas" onclick="mNav('cartas')"><span class="msheet-ic">📈</span><span class="msheet-lb">Venda de Produtos</span></button>
+        <button type="button" class="msheet-item" data-tab="lojas" onclick="mNav('lojas')"><span class="msheet-ic">🛍️</span><span class="msheet-lb">Lojas &amp; Ofertas</span></button>
+        <button type="button" class="msheet-item" data-tab="mercado" onclick="mNav('mercado')"><span class="msheet-ic">🏪</span><span class="msheet-lb">Lojas Confiáveis</span></button>
+        <button type="button" class="msheet-item" data-tab="positivo" onclick="mNav('positivo')"><span class="msheet-ic">✅</span><span class="msheet-lb">Cadastro Positivo</span></button>
+      </div>
+      <div class="msheet-label">&nbsp;</div>
+      <div class="msheet-grid">
+        <button type="button" class="msheet-item" data-tab="iniciantes" onclick="mNav('iniciantes')"><span class="msheet-ic">🔰</span><span class="msheet-lb">Iniciantes</span></button>
+        <button type="button" class="msheet-item msheet-cta" onclick="closeMSheet();window.open('simulador.html','_blank')"><span class="msheet-ic">🎰</span><span class="msheet-lb">Simulador</span></button>
+        <!-- espelha #nav-tab-admin: admin_panel.js mostra só pro Eduardo
+             (updateAdminTabVisibility, isAdmin()). -->
+        <button type="button" class="msheet-item msheet-admin" id="msheet-tab-admin" data-tab="admin" style="display:none" onclick="mNav('admin')"><span class="msheet-ic">🔐</span><span class="msheet-lb">Admin</span></button>
+      </div>
+    </div>
+  </div>
+  <script>
+  // Abre/fecha a folha "Mais" (mesmo padrão do tdeskToggleDrop acima,
+  // adaptado pra bottom sheet). mNav() é o que os botões chamam pra navegar
+  // — fecha a folha (se tava aberta) e delega pro goToTab() de sempre.
+  function openMSheet(){
+    document.getElementById('msheetBackdrop').classList.add('show');
+    document.getElementById('mnav-more-btn').setAttribute('aria-expanded','true');
+  }
+  function closeMSheet(){
+    document.getElementById('msheetBackdrop').classList.remove('show');
+    document.getElementById('mnav-more-btn').setAttribute('aria-expanded','false');
+  }
+  function toggleMSheet(){
+    document.getElementById('msheetBackdrop').classList.contains('show') ? closeMSheet() : openMSheet();
+  }
+  function mNav(id){ closeMSheet(); goToTab(id); }
+  </script>
+
   <!-- INÍCIO 23/08/2026: nova página inicial da coleção — ver inicio.js.
        Novidades reaproveita site_updates (mesma tabela do updates-log-wrap
        do Dashboard, mostrada aqui numa vitrine simples); Notícias/Vídeos/

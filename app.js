@@ -930,6 +930,7 @@ function go(id,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(id).classList.add('active');el.classList.add('active');
   syncDesktopNav(id);
+  syncMobileNav(id);
   if(id==='fichario'){
     // Restaura controles se estava em fichário personalizado
     const bctl=document.querySelector('.bctl');if(bctl)bctl.style.display='';
@@ -988,6 +989,27 @@ function syncDesktopNav(id){
   item.classList.add('active');
   const group=item.closest('.tdrop');
   if(group){const btn=group.querySelector('.tdrop-btn');if(btn)btn.classList.add('active');}
+}
+// NOVO 29/08/2026 (menu mobile): espelha o estado "active" na .mnav (barra
+// inferior) e na folha "Mais" (.msheet) — mesmo padrão do syncDesktopNav()
+// acima, chamado junto dele de dentro de go(). Se a aba ativa é um dos 4
+// botões fixos, marca ele; senão marca o item correspondente dentro da
+// folha e acende o botão "Mais" (pra indicar "a aba atual mora aqui dentro").
+function syncMobileNav(id){
+  document.querySelectorAll('.mnav-btn.active,.msheet-item.active')
+    .forEach(el=>el.classList.remove('active'));
+  const moreBtn=document.getElementById('mnav-more-btn');
+  const primary=document.querySelector('.mnav-btn[data-tab="'+id+'"]');
+  if(primary){
+    primary.classList.add('active');
+    if(moreBtn)moreBtn.classList.remove('active');
+    return;
+  }
+  if(moreBtn)moreBtn.classList.remove('active');
+  const item=document.querySelector('.msheet-item[data-tab="'+id+'"]');
+  if(!item)return;
+  item.classList.add('active');
+  if(moreBtn)moreBtn.classList.add('active');
 }
 function renderAll(){renderDash();renderGastos();renderCartas();updateDashProgress();if(typeof renderEvolucao==='function')renderEvolucao();renderPatrimonio();}
 
