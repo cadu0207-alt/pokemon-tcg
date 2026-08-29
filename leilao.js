@@ -2477,6 +2477,8 @@ function openLeilaoRulesModal(){
   if(check)check.checked=false;
   const btn=document.getElementById('leilao-rules-accept-btn');
   if(btn)btn.disabled=true;
+  const statusEl=document.getElementById('leilao-rules-status');
+  if(statusEl)statusEl.textContent='';
   if(typeof openModal==='function')openModal('leilao-rules-ov');
 }
 
@@ -2487,11 +2489,19 @@ function toggleLeilaoRulesAccept(){
 }
 
 async function acceptLeilaoRules(){
-  if(!uid())return;
+  // Erro visível DENTRO do modal (18/08/2026): antes só chamava setStatus(),
+  // que escreve num status-txt lá no header — invisível atrás do overlay
+  // (.ov tem z-index alto), então em caso de erro (RLS, tabela não
+  // migrada etc) a pessoa via o botão "travar" em Salvando... e voltar,
+  // sem entender por quê. Agora escreve a mensagem aqui embaixo do botão
+  // também, onde dá pra ver de verdade.
+  const statusEl=document.getElementById('leilao-rules-status');
+  if(!uid()){if(statusEl)statusEl.textContent='Sua sessão caiu — recarregue a página e faça login de novo.';return;}
   const check=document.getElementById('leilao-rules-check');
-  if(!check?.checked)return;
+  if(!check?.checked){if(statusEl)statusEl.textContent='Marque a caixinha acima antes de continuar.';return;}
   const btn=document.getElementById('leilao-rules-accept-btn');
   if(btn){btn.disabled=true;btn.textContent='Salvando...';}
+  if(statusEl)statusEl.textContent='';
 
   const{error}=await sbClient.from('auction_rules_acceptance')
     .upsert({user_id:uid(),rules_version:AUC_RULES_VERSION,accepted_at:new Date().toISOString()},{onConflict:'user_id'});
@@ -2499,6 +2509,7 @@ async function acceptLeilaoRules(){
   if(error){
     console.error('[leilao] acceptLeilaoRules',error);
     if(btn){btn.disabled=false;btn.textContent='✓ Li e aceito as regras';}
+    if(statusEl)statusEl.textContent=`Erro ao registrar aceite: ${error.message||'tente de novo em alguns segundos.'}`;
     setStatus('Erro ao registrar aceite. Verifique se rodou leilao_setup.sql no Supabase.','err');
     return;
   }
