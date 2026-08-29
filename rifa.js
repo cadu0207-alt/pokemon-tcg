@@ -1110,6 +1110,7 @@ async function renderRafflePaymentsReview(){
       <div id="rif-review-actions-${p.id}" style="display:flex;gap:8px;flex-wrap:wrap">
         ${p.user_id===uid()
           ? `<div class="cv-item-empty" style="padding:0;text-align:left;color:var(--muted)">⏳ Esse pagamento é seu — só outro admin pode confirmar/rejeitar (evita autoconfirmação).</div>`
+          : missing>0
             ? `<button class="btn-add" onclick="openRifFixPaymentNumbers(${p.id},${p.raffle_id},${missing},'${esc(p.buyer_name||'esse pagamento').replace(/'/g,"\\'")}')">🔢 Completar ${missing} número(s)</button>`
             : `<button class="btn-add" onclick="confirmRifPayment(${p.id})">✓ Confirmar pagamento</button>`
         }
