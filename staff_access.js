@@ -14,8 +14,9 @@
 // remove_staff_member + policies adicionais nas tabelas de cada área).
 //
 // Áreas com permissão granular hoje: lojas, feedback, marketplace,
-// positivo, updates, inicio. "leilao" fica de fora de propósito (mexe
-// com lances/pagamentos reais — precisa de revisão própria antes).
+// positivo, updates, inicio, leilao (visualização geral, adicionada
+// 29/08/2026 — dá pra ver tudo no Leilão/Loja do Leiloeiro, mas não
+// edita/exclui carta ou pedido de outro leiloeiro).
 // ================================================================
 
 window.__staffPerms = [];
@@ -27,7 +28,8 @@ const STAFF_AREAS = [
   { key: 'marketplace', label: '🏪 Lojas Confiáveis', hint: 'aprovar/rejeitar cadastro de lojas (não edita CNPJ/comissão)' },
   { key: 'positivo', label: '✅ Cadastro Positivo', hint: 'aprovar/rejeitar indicações de lojas' },
   { key: 'updates', label: '📢 Atualizações', hint: 'publicar no mural de novidades (apagar continua só do Eduardo)' },
-  { key: 'inicio', label: '🏠 Início', hint: 'publicar notícias, vídeos da comunidade, links úteis e artigos da Revista MyDeck na aba Início' }
+  { key: 'inicio', label: '🏠 Início', hint: 'publicar notícias, vídeos da comunidade, links úteis e artigos da Revista MyDeck na aba Início' },
+  { key: 'leilao', label: '🏆 Leilão (visualização geral)', hint: '29/08/2026 — ver TODAS as cartas, pedidos, valores e comissão de TODOS os leiloeiros (igual o Eduardo enxerga) — não libera editar/excluir carta ou pedido de outro leiloeiro, isso continua só de quem cadastrou' }
 ];
 
 async function loadMyStaffAccess() {

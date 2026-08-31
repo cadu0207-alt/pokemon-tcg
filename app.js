@@ -110,7 +110,12 @@ async function signInGoogle(){
 async function signOut(){
   await sbClient.auth.signOut();
   currentUser=null;
-  _showAuth(true);
+  // 29/08/2026: não força mais o overlay de login na cara — a Início é
+  // pública, então quem sai da conta só volta pra ela (visitante comum).
+  // O overlay só aparece se a pessoa tentar entrar numa aba pessoal.
+  const inicioBtn=document.getElementById('nav-tab-inicio');
+  if(typeof go==='function'&&inicioBtn) go('inicio',inicioBtn);
+  _showAuth(false);
 }
 
 // ── LOGIN/CADASTRO POR EMAIL+SENHA (18/08/2026) ────────────────────
@@ -270,7 +275,16 @@ if(sbClient){
         document.addEventListener('DOMContentLoaded',()=>loadAll().then(()=>{ if(_rifWasActive&&typeof renderRifasTab==='function')renderRifasTab(); }));
       }
     }else{
-      _showAuth(true);
+      // 29/08/2026 (Opção 1): sem sessão, só mostra o overlay se a aba
+      // ativa no momento for uma aba pessoal — a Início fica visível
+      // (renderInicio() já roda pelo hook em inicio.js, via
+      // _updateUserChip). Cobre tanto a carga inicial (visitante sem
+      // conta cai direto na Início, sem tela de login) quanto um logout
+      // acontecendo enquanto a pessoa estava numa aba pessoal (aí sim
+      // pede login, sem trocar de aba escondido).
+      const activePane=document.querySelector('.pane.active');
+      const activeId=activePane?activePane.id:'inicio';
+      _showAuth(tabRequiresAuth(activeId));
     }
   });
 } else {
@@ -833,7 +847,7 @@ async function loadAll(){
     setStatus('Online ✓','ok');
   }
   fetchCambio();  // atualiza USD_BRL e EUR_BRL para conversão de preços
-  renderAll();updateHomeStats();
+  renderAll();
   loadCustomBinders();
   renderTabs();
   if(typeof initFichario==='function')initFichario();
@@ -920,16 +934,33 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 // ── PÁGINAS / ABAS ───────────────────────────────────────────────
+// 29/08/2026: só existe uma página agora (pg-app) — a antiga pg-home foi
+// removida (ver [[project_pagina_inicial_unificada]]). goPage() ficou como
+// função de compatibilidade pros call sites antigos (loadSharedBinder etc.)
+// que ainda chamam goPage('app').
 function goPage(id){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById(id==='home'?'pg-home':'pg-app').classList.add('active');
   if(id==='app') window.scrollTo(0,0);
 }
+
+// Abas que qualquer visitante pode ver sem login — hoje só a Início
+// (conteúdo público: novidades/notícias/vídeos/links/revista + atalhos).
+// Todo o resto exige conta (Opção 1 — ver conversa de 29/08/2026).
+const PUBLIC_TABS = new Set(['inicio']);
+function tabRequiresAuth(id){ return !PUBLIC_TABS.has(id); }
 function go(id,el){
+  // GATE 29/08/2026 (Opção 1): abas pessoais exigem login — sem sair da
+  // Início, só mostra o overlay por cima. shareMode (link público de
+  // fichário compartilhado) tem fluxo próprio, sem login, e não é afetado
+  // aqui (loadSharedBinder não passa por go() pra abrir o fichário).
+  if(!shareMode && tabRequiresAuth(id) && !uid()){
+    _showAuth(true);
+    return;
+  }
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(id).classList.add('active');el.classList.add('active');
   syncDesktopNav(id);
+  syncMobileNav(id);
   if(id==='fichario'){
     // Restaura controles se estava em fichário personalizado
     const bctl=document.querySelector('.bctl');if(bctl)bctl.style.display='';
@@ -989,6 +1020,27 @@ function syncDesktopNav(id){
   const group=item.closest('.tdrop');
   if(group){const btn=group.querySelector('.tdrop-btn');if(btn)btn.classList.add('active');}
 }
+// NOVO 29/08/2026 (menu mobile): espelha o estado "active" na .mnav (barra
+// inferior) e na folha "Mais" (.msheet) — mesmo padrão do syncDesktopNav()
+// acima, chamado junto dele de dentro de go(). Se a aba ativa é um dos 4
+// botões fixos, marca ele; senão marca o item correspondente dentro da
+// folha e acende o botão "Mais" (pra indicar "a aba atual mora aqui dentro").
+function syncMobileNav(id){
+  document.querySelectorAll('.mnav-btn.active,.msheet-item.active')
+    .forEach(el=>el.classList.remove('active'));
+  const moreBtn=document.getElementById('mnav-more-btn');
+  const primary=document.querySelector('.mnav-btn[data-tab="'+id+'"]');
+  if(primary){
+    primary.classList.add('active');
+    if(moreBtn)moreBtn.classList.remove('active');
+    return;
+  }
+  if(moreBtn)moreBtn.classList.remove('active');
+  const item=document.querySelector('.msheet-item[data-tab="'+id+'"]');
+  if(!item)return;
+  item.classList.add('active');
+  if(moreBtn)moreBtn.classList.add('active');
+}
 function renderAll(){renderDash();renderGastos();renderCartas();updateDashProgress();if(typeof renderEvolucao==='function')renderEvolucao();renderPatrimonio();}
 
 // ── UTILS ────────────────────────────────────────────────────────
@@ -1020,48 +1072,9 @@ const barHTML=(lbl,v,max,color,txt,dot='')=>{const w=max>0?Math.round(v/max*100)
   return`<div class="brow"><div class="blbl">${dot}${lbl}</div><div class="btrack"><div class="bfill" style="width:${w}%;background:${color}">${txt}</div></div></div>`;};
 function safeJSON(obj){return JSON.stringify(obj).replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
-// ── HOME STATS ───────────────────────────────────────────────────
-function updateHomeStats(){
-  const invested=purchases.reduce((s,p)=>s+Number(p.price),0);
-  const pull=pulledCards.reduce((s,c)=>s+Number(c.price||0),0);
-  const el=document.getElementById('home-stats');
-  if(el) el.textContent=`R$${fmtR(invested)} investidos · ${pulledCards.length} cartas tiradas · R$${fmtR(pull)} em valor`;
-}
-
-// ── PARTÍCULAS ───────────────────────────────────────────────────
-// AJUSTADO: 35 partículas coloridas (confete arco-íris) era o tell clássico
-// de "hero section gerado por IA". Reduzido pra 10, tom único (dourado
-// desbotado, remete a poeira/brilho de card foil, não confete de festa).
-function initParticles(){
-  const c=document.getElementById('particles');if(!c)return;
-  for(let i=0;i<10;i++){
-    const p=document.createElement('div');p.className='particle';
-    const sz=1+Math.random()*1.8;
-    p.style.cssText=`left:${Math.random()*100}%;width:${sz}px;height:${sz}px;`+
-      `animation-duration:${12+Math.random()*16}s;animation-delay:${-Math.random()*22}s;`+
-      `background:#c8960a;opacity:.5;border-radius:50%`;
-    c.appendChild(p);
-  }
-}
-
-// ── 3D CARDS HOME ────────────────────────────────────────────────
-function init3DCards(){
-  document.querySelectorAll('.hset-wrap').forEach(wrap=>{
-    wrap.addEventListener('mousemove',e=>{
-      const rect=wrap.getBoundingClientRect();
-      const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
-      const dx=(e.clientX-cx)/rect.width*2;
-      const dy=(e.clientY-cy)/rect.height*2;
-      const rotX=-dy*18,rotY=dx*18;
-      wrap.style.transform=`perspective(800px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale(1.06)`;
-    });
-    wrap.addEventListener('mouseleave',()=>{
-      wrap.style.transform='perspective(800px) rotateX(0deg) rotateY(0deg) scale(1)';
-      wrap.style.transition='transform .5s ease';
-    });
-    wrap.addEventListener('mouseenter',()=>{wrap.style.transition='transform .1s ease';});
-  });
-}
+// (29/08/2026: updateHomeStats()/initParticles()/init3DCards() removidas —
+// só existiam pra alimentar a antiga pg-home, página de entrada separada
+// que foi eliminada. Ver [[project_pagina_inicial_unificada]].)
 
 // ── VALOR DO FICHÁRIO ────────────────────────────────────────────
 // CORRIGIDO 27/07/2026: antes somava só getAllCardsWithSet() (escopado a
@@ -4008,130 +4021,23 @@ async function cbConfirmSave(editId){
 /* ═══════════════════════════════════════════════════════════════
    HOME PAGE — CARD ROTATION (top 3 por preço de cada coleção)
    ═══════════════════════════════════════════════════════════════ */
-(function initHomeRotation(){
-  const INTERVAL = 30000; // ms entre cada card (30s — antes 3.8s, ajustado a pedido do Eduardo em 22/08)
-
-  // Formata preço BR
-  function fmtPriceBR(p){
-    if(p>=1000) return 'R$ '+Math.round(p).toLocaleString('pt-BR');
-    if(p>=100)  return 'R$ '+p.toFixed(0);
-    return 'R$ '+p.toFixed(2).replace('.',',');
-  }
-
-  function setupRotation(el){
-    // Guard de re-execução (auditoria 03/08/2026): setupRotation agora roda de
-    // novo depois do lazy load dos sets (evento lazy-sets-loaded) — sem isso,
-    // cada re-render criaria um segundo interval no mesmo card.
-    if(el._rotWired) return;
-    el._rotWired=true;
-    let raw;
-    try{ raw=JSON.parse(el.dataset.cards); }catch(e){ return; }
-    if(!raw||raw.length<2) return;
-
-    const setId   = el.dataset.setid;
-    const imgEl   = el.querySelector('.hset-img-wrap img');
-    const badgeEl = el.querySelector('.hset-price-badge');
-    const rankEl  = el.querySelector('.hset-rank-badge');
-    const nameEl  = el.querySelector('.hset-card-name');
-    const dots    = el.querySelectorAll('.hset-dot');
-
-    let idx = 0;
-
-    function showCard(i, animate){
-      const c = raw[i];
-      // thumb (/small) — carrossel da home renderiza ~150px, /large era desperdício
-      const url = imgThumb(homeImg(setId, c.n)); // suporta ME (scrydex) e SV (pokemontcg.io)
-
-      if(animate && imgEl){
-        // PRELOAD (auditoria 03/08/2026): antes o src trocava no meio do fade e a
-        // moldura ficava vazia por segundos até a imagem nova baixar. Agora só
-        // troca depois que a próxima imagem já está no cache.
-        const pre=new Image();
-        let _swapped=false;
-        const doSwap=()=>{
-          if(_swapped)return;_swapped=true;
-          imgEl.classList.add('fading');
-          setTimeout(()=>{
-            imgEl.src = url;
-            imgEl.alt = c.name||'';
-            imgEl.classList.remove('fading');
-          }, 480);
-        };
-        pre.onload=doSwap;
-        pre.onerror=doSwap; // mesmo se falhar, mantém o carrossel girando
-        pre.src=url;
-        if(pre.complete)doSwap();
-      } else if(imgEl){
-        imgEl.src = url;
-        imgEl.alt = c.name||'';
-      }
-
-      if(badgeEl) badgeEl.textContent = fmtPriceBR(c.price);
-      if(rankEl)  rankEl.textContent  = i+1;
-      if(nameEl)  nameEl.textContent  = c.name;
-
-      dots.forEach((d,di)=>{
-        d.classList.toggle('active', di===i);
-      });
-    }
-
-    // Clique nos dots para navegar manualmente
-    dots.forEach((d,di)=>{
-      d.addEventListener('click', (e)=>{
-        e.stopPropagation();
-        idx=di;
-        showCard(idx, true);
-      });
-    });
-
-    const rotTimer=setInterval(()=>{
-      // Se o card saiu do DOM (re-render da home), mata o interval — senão
-      // ele ficaria pra sempre baixando imagens num nó morto.
-      if(!el.isConnected){clearInterval(rotTimer);return;}
-      idx = (idx+1) % raw.length;
-      showCard(idx, true);
-    }, INTERVAL + Math.random()*600); // offset aleatório para não sincroni­zar
-
-    // Ouve preços ao vivo vindos de initHomePrices()
-    el.addEventListener('pricesUpdated', e=>{
-      raw = e.detail.raw;
-      idx = 0;
-      showCard(0, false);
-    });
-  }
-
+// ── INIT DE HEADER (29/08/2026) ───────────────────────────────────
+// Antes esse IIFE também tocava o carrossel "Mega Evolução — Série Atual"
+// da antiga pg-home (initHomeRotation + renderHomeSets, removidos junto
+// com a página — ver [[project_pagina_inicial_unificada]]). Só sobrou o
+// que ainda é usado de verdade fora dela: a busca global do header e o
+// subtítulo dinâmico com os sets marcados.
+(function(){
   function init(){
-    renderHomeSets();                 // gera cards da home a partir dos cards_*.js
-    document.querySelectorAll('.hset[data-cards]').forEach(setupRotation);
-    initParticles();init3DCards();    // antes nunca eram chamadas
     initGlobalSearch();
     updateHsub();
   }
-
-  // Quando os sets SV/legados chegam (lazy load — fim do app.js), a home é
-  // re-renderizada com os sets novos e os carrosséis/tilt são religados.
-  // setupRotation tem guard (_rotWired), então não duplica interval.
-  document.addEventListener('lazy-sets-loaded',()=>{
-    renderHomeSets();
-    document.querySelectorAll('.hset[data-cards]').forEach(setupRotation);
-    if(typeof init3DCards==='function')init3DCards();
-  });
-
-  // Aguarda DOM pronto
   if(document.readyState==='loading'){
     document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
   }
 })();
-
-/* ═══════════════════════════════════════════════════════════════
-   HOME DINÂMICA (jul/2026) — substitui o HTML hardcoded.
-   Fonte única: SET_CATALOG + SET_CARDS_MAP. Preço = BR praticado (Liga).
-   A antiga initHomePrices (média EUR/USD ×0.67) foi removida: derrubava
-   os preços para ~1/6 do mercado BR.
-   ═══════════════════════════════════════════════════════════════ */
-async function initHomePrices(){/* desativada — ver renderHomeSets() */}
 
 function homeImg(setId,n){
   const legacy={me1:'meg',me2:'me02',me3:'me03',me4:'me04',me5:'me05',me6:'me06'};
@@ -4158,97 +4064,11 @@ function _fmtBadge(p){
   return'R$ '+p.toFixed(2).replace('.',',');
 }
 
-// PERF 18/08/2026 (dados móveis): a home tinha TODAS as linhas de era
-// (Mega Evolução, Escarlate&Violeta, Espada&Escudo, Sol&Lua...) montadas de
-// uma vez no innerHTML, com <img loading="lazy"> em cada carta — mas
-// loading="lazy" nativo só considera distância vertical até o viewport,
-// não o clipping horizontal de containers com overflow-x (carrossel). Ou
-// seja: TODAS as linhas, mesmo as "escondidas" pelo scroll horizontal,
-// contavam como "visíveis" e baixavam a imagem de cara. Resultado: ~150
-// sets × imagem de carta = dezenas de MB só de abrir a home, antes do
-// usuário rolar um pixel sequer (reportado: ~370MB só pra criar conta e
-// logar, em rede móvel).
-// Fix: cada linha de era vira um placeholder leve (só o título, sem
-// nenhuma <img>) até entrar na margem de segurança do IntersectionObserver
-// abaixo — só então o HTML real (com as imagens) é injetado. Rolar rápido
-// não "pula" cartas: HOME_ROW_SAFETY_MARGIN dá um respiro antes da linha
-// ficar visível de fato, pra imagem já estar carregada quando ela aparece.
-var HOME_ROW_SAFETY_MARGIN = '900px 0px 900px 0px';
-var _homeRowObserver = null;
-
-function _homeRowCardHtml(cat,meta,top3,id,code,name){
-  if(cat.upcoming||!top3.length){
-    const hero=meta?meta.imgFn(meta.heroCard):(top3[0]?homeImg(id,top3[0].n):'');
-    return`<div class="hset-wrap" data-tilt><div class="hset" style="border-color:${cat.color}88">
-      <div class="hset-glow" style="background:radial-gradient(circle at 50% 50%,${cat.color},transparent 70%)"></div>
-      <div class="hset-img-wrap">${hero?`<img loading="lazy" decoding="async" src="${imgThumb(hero)}" alt="${code}" onerror="this.style.opacity='.25'">`:''}</div>
-      <div style="position:absolute;top:10px;right:10px;background:#f0932b;color:#fff;font-size:8px;padding:2px 8px;border-radius:4px;font-family:'Space Mono',monospace;z-index:4">EM BREVE</div>
-      <div class="hset-info"><div class="hset-name">${name}</div>
-      <div class="hset-code">${code}${meta&&meta.releaseDate?' · '+meta.releaseDate:''}</div></div>
-    </div></div>`;
-  }
-  const c0=top3[0];
-  return`<div class="hset-wrap" data-tilt>
-    <div class="hset" id="hset-${id}" data-setid="${id}" data-cards="${safeJSON(top3)}" style="border-color:${cat.color}88">
-      <div class="hset-glow" style="background:radial-gradient(circle at 50% 50%,${cat.color},transparent 70%)"></div>
-      <div class="hset-img-wrap"><img loading="lazy" decoding="async" src="${imgThumb(homeImg(id,c0.n))}" alt="${code}" onerror="this.style.opacity='.25'"></div>
-      <div class="hset-price-badge">${_fmtBadge(c0.price)}</div>
-      <div class="hset-rank-badge">1</div>
-      <div class="hset-dots">${top3.map((_,i)=>`<span class="hset-dot${i===0?' active':''}"></span>`).join('')}</div>
-      <div class="hset-info">
-        <div class="hset-name">${name}</div>
-        <div class="hset-code">${code} · ${cat.cards} cartas</div>
-        <div class="hset-card-name">${c0.name}</div>
-      </div>
-    </div></div>`;
-}
-
-function renderHomeSets(){
-  const box=document.getElementById('home-sets');
-  if(!box)return;
-  const seriesOrder=Object.keys(SERIES_META);
-  const groups=seriesOrder
-    .map(sr=>({t:(SERIES_META[sr]||{}).t||sr,ids:SET_CATALOG.filter(s=>s.series===sr).map(s=>s.id)}))
-    .filter(g=>g.ids.length);
-
-  if(_homeRowObserver){ _homeRowObserver.disconnect(); _homeRowObserver=null; }
-
-  let html='';
-  groups.forEach((g,gi)=>{
-    // Linha 0 (primeira era, sempre "acima da dobra") renderiza na hora —
-    // sem isso o primeiro paint ficaria vazio. As demais entram via observer.
-    html+=`<div class="hsec-title">${g.t}</div><div class="home-row" id="home-row-${gi}" data-group="${gi}"${gi===0?'':' data-lazy-row="1"'}>`
-        + (gi===0? _buildRowCardsHtml(g):'')
-        + `</div>`;
-  });
-  box.innerHTML=html;
-
-  const lazyRows=box.querySelectorAll('[data-lazy-row="1"]');
-  if(!lazyRows.length)return;
-  _homeRowObserver=new IntersectionObserver((entries)=>{
-    entries.forEach(entry=>{
-      if(!entry.isIntersecting)return;
-      const el=entry.target;
-      const gi=parseInt(el.dataset.group,10);
-      const g=groups[gi];
-      if(g) el.innerHTML=_buildRowCardsHtml(g);
-      el.removeAttribute('data-lazy-row');
-      _homeRowObserver.unobserve(el);
-    });
-  },{root:null,rootMargin:HOME_ROW_SAFETY_MARGIN,threshold:0});
-  lazyRows.forEach(el=>_homeRowObserver.observe(el));
-}
-
-function _buildRowCardsHtml(g){
-  return g.ids.map(id=>{
-    const cat=SET_CATALOG.find(s=>s.id===id);if(!cat)return'';
-    const meta=(typeof SET_META!=='undefined'&&SET_META[id])||null;
-    const top3=_topCards(id,3);
-    const name=cat.label.split('—')[1]?.trim().toUpperCase()||cat.label;
-    const code=cat.label.split('—')[0].trim();
-    return _homeRowCardHtml(cat,meta,top3,id,code,name);
-  }).join('');
-}
+// (29/08/2026: HOME_ROW_SAFETY_MARGIN/_homeRowCardHtml/renderHomeSets/
+// _buildRowCardsHtml removidas — só existiam pro carrossel de sets da
+// antiga pg-home, eliminada junto com a página de entrada separada.
+// homeImg()/_topCards()/chaseFor()/_fmtBadge() acima continuam vivas:
+// usadas pelo "Chase" do Dashboard e pela busca global do header.)
 
 // ── HEADER: subtítulo dinâmico ───────────────────────────────────
 // 20/08/2026: com muitas coleções marcadas essa linha ficava poluída
@@ -4631,10 +4451,11 @@ function loadLazySets(){
     if(--pending>0)return;
     _lazySetsLoaded=true;_lazySetsLoading=false;
     _registerLazySets();
-    // Re-renderiza o que depende dos dados novos (tudo guarded). A home
-    // (renderHomeSets + carrosséis) é religada pelo listener de
-    // 'lazy-sets-loaded' dentro do IIFE initHomeRotation — não chamar aqui
-    // pra não renderizar duas vezes.
+    // Re-renderiza o que depende dos dados novos (tudo guarded).
+    // (29/08/2026: o listener de 'lazy-sets-loaded' que religava o
+    // carrossel da antiga pg-home foi removido junto com ela — o dispatch
+    // abaixo ficou sem ouvinte, inofensivo, deixado por segurança caso
+    // algo volte a escutar esse evento no futuro.)
     try{
       if(currentUser){
         if(typeof renderDash==='function')renderDash();

@@ -864,3 +864,182 @@ as $$
 $$;
 
 grant execute on function get_raffle_number_counts(bigint[]) to authenticated;
+
+-- ================================================================
+-- 16. BLOQUEIA AUTO-CONFIRMAÇÃO DE PAGAMENTO (29/08/2026)
+-- Bug reportado pelo Eduardo: confirm_raffle_payment/reject_raffle_payment
+-- (seções 6 e 13 acima) só checam se quem chama é o CRIADOR da rifa
+-- (v_owner = r.created_by) — não checam se quem chama é também o
+-- COMPRADOR daquele pagamento específico (raffle_payments.user_id). Se o
+-- rifeiro compra um número na própria rifa, ele conseguia confirmar o
+-- próprio pagamento sozinho, sem ninguém de fora verificar se o PIX
+-- realmente caiu — justamente o que a revisão de pagamento existe pra
+-- evitar. Devia poder só o admin (outra pessoa) ou o rifeiro — nunca o
+-- próprio comprador confirmando a própria compra.
+--
+-- Correção: além do dono da rifa, agora is_auction_super_admin() (só
+-- Eduardo, mesma função que leilao_leiloeiro_privacidade_setup.sql já usa
+-- pra separar leiloeiros) também pode confirmar/rejeitar QUALQUER rifa —
+-- é o fallback pra revisar exatamente esse caso (rifeiro comprou o
+-- próprio número). E, novo: se quem está chamando é o COMPRADOR daquele
+-- pagamento, a função barra sempre — mesmo sendo o rifeiro ou o admin
+-- principal. Ninguém confirma a própria compra.
+--
+-- Redefine is_auction_super_admin() aqui de novo (idêntica à de
+-- leilao_leiloeiro_privacidade_setup.sql) só de proteção — create or
+-- replace é idempotente, então não tem problema se esse arquivo rodar
+-- antes ou depois daquele.
+-- ================================================================
+create or replace function is_auction_super_admin(p_uid uuid default auth.uid())
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select p_uid = 'eb9da0ad-9877-4f17-ac5a-6f1da5eebc9b';
+$$;
+grant execute on function is_auction_super_admin(uuid) to authenticated;
+
+create or replace function confirm_raffle_payment(p_payment_id bigint)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_owner uuid; v_buyer uuid; v_qty int; v_have int;
+begin
+  select r.created_by, rp.user_id, rp.quantity into v_owner, v_buyer, v_qty
+    from raffle_payments rp join raffles r on r.id = rp.raffle_id
+    where rp.id = p_payment_id;
+  if v_owner is null then
+    raise exception 'Pagamento não encontrado.';
+  end if;
+  if v_buyer = auth.uid() then
+    raise exception 'Você não pode confirmar o próprio pagamento — peça pro admin revisar.';
+  end if;
+  if v_owner <> auth.uid() and not is_auction_super_admin() then
+    raise exception 'Só o rifeiro que criou essa rifa (ou o admin) pode confirmar esse pagamento.';
+  end if;
+
+  select count(*) into v_have from raffle_numbers where payment_id = p_payment_id;
+  if v_have < v_qty then
+    raise exception 'Esse pagamento ainda não tem todos os números escolhidos (% de %) — complete os números antes de confirmar.', v_have, v_qty;
+  end if;
+
+  update raffle_payments
+    set status = 'confirmado', reviewed_by = auth.uid(), reviewed_at = now()
+    where id = p_payment_id and status = 'pendente';
+end;
+$$;
+
+create or replace function reject_raffle_payment(p_payment_id bigint, p_reason text default null)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare v_owner uuid; v_buyer uuid;
+begin
+  select r.created_by, rp.user_id into v_owner, v_buyer
+    from raffle_payments rp join raffles r on r.id = rp.raffle_id
+    where rp.id = p_payment_id;
+  if v_owner is null then
+    raise exception 'Pagamento não encontrado.';
+  end if;
+  if v_buyer = auth.uid() then
+    raise exception 'Você não pode rejeitar o próprio pagamento — peça pro admin revisar.';
+  end if;
+  if v_owner <> auth.uid() and not is_auction_super_admin() then
+    raise exception 'Só o rifeiro que criou essa rifa (ou o admin) pode rejeitar esse pagamento.';
+  end if;
+  update raffle_payments
+    set status = 'rejeitado', reviewed_by = auth.uid(), reviewed_at = now(), reject_reason = p_reason
+    where id = p_payment_id and status = 'pendente';
+  update raffle_numbers set payment_id = null, claimed_at = null where payment_id = p_payment_id;
+end;
+$$;
+
+-- ================================================================
+-- 17. ACOMPANHAMENTO: SEPARAR OCORRENDO/FECHADAS + POR RIFEIRO (29/08/2026)
+-- Pedido do Eduardo: a aba Acompanhamento deve separar rifas em
+-- andamento (status 'aberta') das fechadas (sorteada/cancelada/
+-- arquivada), e dentro de cada uma, separar por rifeiro.
+--
+-- Hoje (seção 13) a aba só mostra as PRÓPRIAS rifas de quem está logado
+-- (`.eq('raffles.created_by',uid())` no client) — nesse modo só existe
+-- UM rifeiro pra separar, então "separado por rifeiro" só faz sentido
+-- numa visão geral. Reaproveitando o mesmo padrão que já existe pro
+-- Leilão (leilao_admins_gerais_setup.sql, is_auction_viewer() = admin
+-- principal OU staff com a permissão 'leilao' marcada — a MESMA
+-- permissão que já cobre rifa, ver comentário no topo de rifa.js): quem
+-- tem essa visualização geral enxerga o acompanhamento de TODOS os
+-- rifeiros aqui; quem não tem, continua vendo só o que criou (mesmo
+-- comportamento de antes).
+--
+-- Nova RPC security definer em vez de SELECT direto: assim dá pra
+-- resolver o nome do rifeiro (user_addresses.full_name) sem precisar
+-- abrir a RLS de user_addresses pra terceiros — a função já roda com
+-- privilégio elevado e decide sozinha o que cada chamador pode ver.
+--
+-- Redefine is_auction_viewer() aqui de novo (idêntica à de
+-- leilao_admins_gerais_setup.sql) só de proteção, igual já foi feito
+-- com is_auction_super_admin() na seção 16 — create or replace é
+-- idempotente. Depende de staff_access (staff_access_setup.sql) já
+-- rodado; se ainda não rodou, a criação da função funciona igual (só
+-- resolve o nome da tabela na hora de CHAMAR, não na hora de criar) —
+-- mas is_auction_viewer() vai falhar ao ser chamada até rodar aquele
+-- arquivo. Até lá, esta aba só continua mostrando "as próprias rifas",
+-- que já é o comportamento de hoje.
+-- ================================================================
+create or replace function is_auction_viewer(p_uid uuid default auth.uid())
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select is_auction_super_admin(p_uid)
+      or exists(
+        select 1 from staff_access
+        where uid = p_uid and 'leilao' = any(permissions)
+      );
+$$;
+grant execute on function is_auction_viewer(uuid) to authenticated;
+
+create or replace function get_raffle_tracking_overview()
+returns table(
+  payment_id     bigint,
+  raffle_id      bigint,
+  raffle_title   text,
+  raffle_status  text,
+  creator_id     uuid,
+  creator_name   text,
+  buyer_name     text,
+  quantity       integer,
+  total_amount   numeric,
+  status         text,
+  is_manual      boolean,
+  created_at     timestamptz,
+  numbers        integer[]
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    rp.id, rp.raffle_id, r.title, r.status,
+    r.created_by, coalesce(nullif(trim(ua.full_name), ''), 'Rifeiro'),
+    rp.buyer_name, rp.quantity, rp.total_amount, rp.status, rp.is_manual, rp.created_at,
+    coalesce(array_agg(rn.number order by rn.number) filter (where rn.number is not null), '{}')
+  from raffle_payments rp
+  join raffles r on r.id = rp.raffle_id
+  left join user_addresses ua on ua.user_id = r.created_by
+  left join raffle_numbers rn on rn.payment_id = rp.id
+  where is_auction_admin()
+    and (r.created_by = auth.uid() or is_auction_viewer())
+  group by rp.id, r.title, r.status, r.created_by, ua.full_name
+  order by rp.created_at desc;
+$$;
+grant execute on function get_raffle_tracking_overview() to authenticated;

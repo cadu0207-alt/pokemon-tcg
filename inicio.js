@@ -117,7 +117,12 @@ function inicioReloadTiktokEmbed() {
 }
 
 async function renderInicio() {
-  if (!sbClient || !currentUser) return;
+  // 29/08/2026 (Opção 1 — Início pública): antes exigia currentUser; agora
+  // qualquer visitante (logado ou não) vê o feed. Login só é pedido pra
+  // interagir (comentar) ou pra entrar nas abas pessoais — ver o gate em
+  // go()/app.js e as policies de leitura pública em
+  // inicio_publico_setup.sql.
+  if (!sbClient) return;
   renderInicioHero();
   loadInicioUpdates();
   loadInicioFeed();
@@ -582,13 +587,14 @@ window.deleteInicioComment = deleteInicioComment;
     const original = window._updateUserChip;
     window._updateUserChip = function (user) {
       original(user);
-      if (user) renderInicio(); else {
-        closeInicioArticle();
-        if (inicioFeedObserver) { inicioFeedObserver.disconnect(); inicioFeedObserver = null; }
-        INICIO_FEED_ITEMS = []; INICIO_FEED_RENDERED = 0;
-        ['inicio-hero-wrap', 'inicio-updates-wrap', 'inicio-feed-wrap']
-          .forEach(function (id) { const el = document.getElementById(id); if (el) el.innerHTML = ''; });
-      }
+      // 29/08/2026: a Início é pública agora — renderiza pra qualquer
+      // visitante, logado ou não (antes só renderizava com user, e
+      // limpava tudo no logout). Fecha modal/observer de uma sessão
+      // anterior antes de recarregar, pra não vazar estado (ex.: botão
+      // de apagar em comentário que não é mais "meu").
+      closeInicioArticle();
+      if (inicioFeedObserver) { inicioFeedObserver.disconnect(); inicioFeedObserver = null; }
+      renderInicio();
     };
   }
   tryHook();

@@ -643,6 +643,11 @@
     .wp-badge .wp-sound-btn:hover, .wp-badge .wp-power-btn:hover { opacity: 1; }
     .wp-badge.wp-badge-off { opacity: .55; }
     .wp-badge.wp-badge-off .wp-power-btn { opacity: 1; }
+    /* 29/08/2026: sobe acima da .mnav (barra inferior fixa do menu mobile
+       novo) — senão a bolinha ficava atrás/colada nela no celular. */
+    @media (max-width: 900px) {
+      .wp-badge { bottom: calc(66px + env(safe-area-inset-bottom, 0px)); }
+    }
     .wp-modal-backdrop {
       position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 10001;
       display: flex; align-items: center; justify-content: center; padding: 24px;
