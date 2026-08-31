@@ -828,36 +828,43 @@ h1 {
   padding: 0 14px; cursor: pointer; appearance: none;
 }
 
-/* ─── .tdesk como SIDEBAR (24/08/2026) — ajustes de eixo só pra dentro
-   dela: os botões (.tdesk-link/.tdrop-btn/.tdesk-cta) e o menu suspenso
-   (.tdrop-menu) eram desenhados pra barra horizontal de cima; aqui viram
-   linhas cheias na vertical e o flyout abre pro lado (não mais pra baixo).
-   Tudo escopado em ".tdesk X" — não toca .fic-tdesk, que reaproveita as
-   mesmas classes .tdrop/.tdrop-menu/.tdrop-item pro menu do Fichário
-   (esse continua horizontal, embutido no conteúdo, sem mudança). */
-@media (min-width: 901px) {
-  .tdesk .tdrop { display: block; width: 100%; }
-  .tdesk .tdrop::after { content: none; } /* sem flyout, sem precisar de ponte de hover */
-  .tdesk .tdrop-btn, .tdesk .tdesk-link {
-    width: 100%; justify-content: space-between; margin: 0 0 2px; padding: 10px 12px;
-  }
-  /* CORRIGIDO 24/08/2026: era flyout por hover (position:absolute; left:100%) —
-     trocado por acordeão dentro da própria coluna (clique, ver tdeskToggleDrop
-     no index.html). Some/aparece por display, não mais opacity/hover — evita
-     o menu "fantasma" ocupando espaço enquanto fechado. */
-  .tdesk .tdrop-menu {
-    position: static; display: none; opacity: 1; visibility: visible; transform: none;
-    min-width: 0; width: 100%; margin: 2px 0 6px; padding: 6px 0 6px 14px;
-    border: none; border-left: 2px solid var(--border); border-radius: 0;
-    box-shadow: none; background: transparent;
-  }
-  .tdesk .tdrop.tdrop-open .tdrop-menu { display: flex; }
-  .tdesk .tdrop.tdrop-open .tdrop-btn { color: var(--text2); }
-  .tdesk .tdrop.tdrop-open .tdrop-caret { transform: rotate(180deg); }
-  .tdesk .tdrop-item { white-space: normal; }
-  .tdesk .tdesk-cta { margin: 10px 0 2px; width: 100%; justify-content: center; }
-  .tdesk .tdesk-admin { margin-top: auto; }
+/* ─── .tdesk ACHATADA — estilo "menu de app" (31/08/2026) ───────────
+   Substituiu o acordeão (MYDECK / COMPRA E VENDA E LEILÃO clicáveis) por
+   lista fixa: todo item sempre visível, com um ícone num "selo" arredondado
+   (.tdesk-icon) igual menu de app mobile, e texto em caixa normal (não mais
+   tudo maiúsculo/monoespaçado como o resto do site) pra ficar mais
+   confortável de escanear numa lista longa. .tdesk-label é só um rótulo,
+   não um botão (substitui o antigo .tdrop-btn "COMPRA E VENDA E LEILÃO").
+   Escopado em ".tdesk-flat X" — não toca .fic-tdesk (menu do Fichário),
+   que continua com o visual antigo de .tdrop/.tdrop-menu, sem mudança. */
+.tdesk-flat .tdesk-link,
+.tdesk-flat .tdesk-cta {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 600; letter-spacing: normal; text-transform: none;
+  width: 100%; justify-content: flex-start; margin: 0 0 2px; padding: 8px 10px;
+  color: var(--text2);
 }
+.tdesk-flat .tdesk-link.active { font-weight: 700; }
+.tdesk-flat .tdesk-cta { color: #c084fc; background: transparent; }
+.tdesk-flat .tdesk-cta:hover { background: rgba(123,47,247,.1); }
+.tdesk-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; margin-right: 10px; flex-shrink: 0;
+  font-size: 14px; border-radius: 8px;
+  background: rgba(0,0,0,.05);
+}
+[data-theme="dark"] .tdesk-icon { background: rgba(255,255,255,.07); }
+.tdesk-flat .tdesk-link.active .tdesk-icon { background: rgba(230,57,70,.16); }
+.tdesk-flat .tdesk-admin.active .tdesk-icon,
+.tdesk-flat .tdesk-admin:hover .tdesk-icon { background: rgba(255,209,102,.18); }
+.tdesk-label {
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase; color: var(--muted);
+  padding: 14px 10px 6px; margin-top: 8px; border-top: 1px solid var(--border);
+}
+/* empurra Simulador/Alpha Lorcana pro fim da coluna, deixando o resto
+   colado no topo mesmo quando a lista principal é curta */
+.tdesk-spacer { flex: 1 1 auto; }
 
 /* ─── MENU DESKTOP DO FICHÁRIO — 12/08/2026 ─────────────
    Mesmo padrão visual do .tdesk (topo do site), reaproveitando .tdrop/
@@ -961,8 +968,16 @@ h1 {
   /* A logo pequena + os botões que ficavam no topo da aba Início somem no
      desktop — viraram redundantes (logo grande no header, botões no
      cluster fixo acima). No mobile essa linha continua exatamente como
-     antes, sem essa regra ela nem é tocada. */
-  .inicio-brand-row { display: none; }
+     antes, sem essa regra ela nem é tocada.
+     CORRIGIDO 31/08/2026: "`.inicio-brand-row { display: none }`" sozinho
+     NÃO escondia nada — a regra base ".inicio-brand-row { display:flex;
+     ...}" (mais abaixo no arquivo, fora de media query) tem a MESMA
+     especificidade (uma classe só) e vem depois na cascata, então ela
+     ganhava e a linha continuava aparecendo (exatamente o "botões
+     repetidos" que o Eduardo reportou). "#inicio .inicio-brand-row" (id +
+     classe) tem mais peso e resolve isso de vez, não importa a ordem no
+     arquivo — mesmo problema, mesma solução do bug da logo duplicada. */
+  #inicio .inicio-brand-row { display: none; }
 }
 
 /* ─── KPI CARDS ──────────────────────────────────────── */

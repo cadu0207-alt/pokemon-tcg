@@ -187,84 +187,43 @@
        de renderX()/active state já existente em go() continua funcionando
        sem duplicar nada. syncDesktopNav() (app.js) espelha o estado 'active'
        aqui a cada navegação, venha ela de onde vier. -->
-  <nav class="tdesk" aria-label="Seções do site (desktop)">
-    <!-- INÍCIO 23/08/2026: página inicial da coleção, primeiro item do menu —
-         ver inicio.js. Fica sozinho (não dentro de um dropdown) igual
-         "iniciantes", só que na frente de tudo. -->
-    <button type="button" class="tdesk-link active" data-tab="inicio" onclick="goToTab('inicio')">🏠 INÍCIO</button>
-    <div class="tdrop">
-      <!-- CORRIGIDO 24/08/2026: era hover-only (funcionava na barra horizontal
-           de cima, onde o flyout abria pra baixo bem colado no botão). Virando
-           sidebar vertical, o flyout passou a abrir pro lado — pra alcançar um
-           item mais embaixo no menu o mouse tinha que atravessar uma faixa sem
-           nada por baixo (fora do botão, fora do flyout), então o hover
-           "soltava" no meio do caminho e o menu fechava antes de dar pra
-           clicar. Eduardo reportou "muita coisa não clica". Trocado por
-           clique (tdeskToggleDrop, expande dentro da própria sidebar em vez
-           de flutuar) — sem esse problema de trajeto do mouse. -->
-      <button type="button" class="tdrop-btn" data-group="mydeck" onclick="tdeskToggleDrop(this)" aria-expanded="false">MYDECK
-        <svg class="tdrop-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
-      </button>
-      <div class="tdrop-menu">
-        <button type="button" class="tdrop-item" data-tab="dash" onclick="goToTab('dash')">📊 Dashboard</button>
-        <button type="button" class="tdrop-item" data-tab="fichario" onclick="goToTab('fichario')">📚 Fichário</button>
-        <button type="button" class="tdrop-item" data-tab="gastos" onclick="goToTab('gastos')">💸 Gastos</button>
-        <div class="tdrop-label">Ferramentas</div>
-        <button type="button" class="tdrop-item" data-tab="preco" onclick="goToTab('preco')">💰 Preço Justo</button>
-        <button type="button" class="tdrop-item" data-tab="centralizacao" onclick="goToTab('centralizacao')">🎯 Avaliação de Centralização</button>
-      </div>
-    </div>
-    <div class="tdrop">
-      <button type="button" class="tdrop-btn" data-group="cv" onclick="tdeskToggleDrop(this)" aria-expanded="false">COMPRA E VENDA E LEILÃO
-        <svg class="tdrop-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
-      </button>
-      <div class="tdrop-menu">
-        <button type="button" class="tdrop-item" data-tab="cartas" onclick="goToTab('cartas')">📈 Venda de Produtos</button>
-        <button type="button" class="tdrop-item" data-tab="lojas" onclick="goToTab('lojas')">🛍️ Lojas & Ofertas</button>
-        <button type="button" class="tdrop-item" data-tab="mercado" onclick="goToTab('mercado')">🏪 Lojas Confiáveis</button>
-        <button type="button" class="tdrop-item" data-tab="positivo" onclick="goToTab('positivo')">✅ Cadastro Positivo</button>
-        <!-- espelha nav-tab-leilao: só admin vê (updateLeilaoTabVisibility em leilao.js) -->
-        <button type="button" class="tdrop-item" id="desk-tab-leilao" style="display:none" data-tab="leilao" onclick="goToTab('leilao')">🔨 Leilão</button>
-        <!-- RIFAS (24/08/2026): mesma visibilidade do leilão — qualquer usuário
-             logado vê (updateRifasTabVisibility em rifa.js); painel de rifeiro
-             usa a MESMA permissão do leiloeiro (aucIsLeilaoAdmin). -->
-        <button type="button" class="tdrop-item" id="desk-tab-rifas" style="display:none" data-tab="rifas" onclick="goToTab('rifas')">🎟️ Rifas</button>
-      </div>
-    </div>
-    <button type="button" class="tdesk-link" data-tab="iniciantes" onclick="goToTab('iniciantes')">🔰 INICIANTES</button>
-    <button type="button" class="tdesk-cta" onclick="window.open('simulador.html','_blank')">🎰 Simulador</button>
+  <!-- REDESENHADO 31/08/2026 (pedido do Eduardo — "imitando um app mobile"):
+       os dois grupos que abriam/fechavam com clique (MYDECK, COMPRA E VENDA
+       E LEILÃO) viraram lista achatada — todo item sempre visível, sem
+       acordeão. "MyDeck" nem virou rótulo (os itens emendam direto depois
+       do Início, igual o mockup); "Compra & Venda" ganhou um rótulo simples
+       só pra separar visualmente (.tdesk-label, não é botão). tdeskToggleDrop()
+       saiu (não tem mais nada pra expandir aqui) — o Fichário (.fic-tdesk)
+       usa as mesmas classes .tdrop/.tdrop-menu só que em modo hover, sem
+       relação com essa função, então remover ela daqui não afeta lá. -->
+  <nav class="tdesk tdesk-flat" aria-label="Seções do site (desktop)">
+    <button type="button" class="tdesk-link active" data-tab="inicio" onclick="goToTab('inicio')"><span class="tdesk-icon">🏠</span>Início</button>
+    <button type="button" class="tdesk-link" data-tab="dash" onclick="goToTab('dash')"><span class="tdesk-icon">📊</span>Dashboard</button>
+    <button type="button" class="tdesk-link" data-tab="fichario" onclick="goToTab('fichario')"><span class="tdesk-icon">📚</span>Fichários</button>
+    <button type="button" class="tdesk-link" data-tab="gastos" onclick="goToTab('gastos')"><span class="tdesk-icon">💸</span>Gastos</button>
+    <button type="button" class="tdesk-link" data-tab="preco" onclick="goToTab('preco')"><span class="tdesk-icon">💰</span>Preço Justo</button>
+    <button type="button" class="tdesk-link" data-tab="centralizacao" onclick="goToTab('centralizacao')"><span class="tdesk-icon">🎯</span>Centralização</button>
+
+    <div class="tdesk-label">Compra &amp; Venda</div>
+    <button type="button" class="tdesk-link" data-tab="cartas" onclick="goToTab('cartas')"><span class="tdesk-icon">📈</span>Venda de Produtos</button>
+    <button type="button" class="tdesk-link" data-tab="lojas" onclick="goToTab('lojas')"><span class="tdesk-icon">🛍️</span>Lojas & Ofertas</button>
+    <button type="button" class="tdesk-link" data-tab="mercado" onclick="goToTab('mercado')"><span class="tdesk-icon">🏪</span>Lojas Confiáveis</button>
+    <button type="button" class="tdesk-link" data-tab="positivo" onclick="goToTab('positivo')"><span class="tdesk-icon">✅</span>Cadastro Positivo</button>
+    <!-- espelha nav-tab-leilao: só admin vê (updateLeilaoTabVisibility em leilao.js) -->
+    <button type="button" class="tdesk-link" id="desk-tab-leilao" style="display:none" data-tab="leilao" onclick="goToTab('leilao')"><span class="tdesk-icon">🔨</span>Leilão</button>
+    <!-- RIFAS (24/08/2026): mesma visibilidade do leilão — qualquer usuário
+         logado vê (updateRifasTabVisibility em rifa.js); painel de rifeiro
+         usa a MESMA permissão do leiloeiro (aucIsLeilaoAdmin). -->
+    <button type="button" class="tdesk-link" id="desk-tab-rifas" style="display:none" data-tab="rifas" onclick="goToTab('rifas')"><span class="tdesk-icon">🎟️</span>Rifas</button>
+
+    <button type="button" class="tdesk-link" data-tab="iniciantes" onclick="goToTab('iniciantes')"><span class="tdesk-icon">🔰</span>Iniciantes</button>
     <!-- espelha nav-tab-admin: só Eduardo vê (updateAdminTabVisibility em admin_panel.js) -->
-    <button type="button" class="tdesk-link tdesk-admin" id="desk-tab-admin" style="display:none" data-tab="admin" onclick="goToTab('admin')">🔐 Admin</button>
+    <button type="button" class="tdesk-link tdesk-admin" id="desk-tab-admin" style="display:none" data-tab="admin" onclick="goToTab('admin')"><span class="tdesk-icon">🔐</span>Admin</button>
+
+    <div class="tdesk-spacer"></div>
+    <button type="button" class="tdesk-link tdesk-cta" onclick="window.open('simulador.html','_blank')"><span class="tdesk-icon">🎰</span>Simulador</button>
+    <button type="button" class="tdesk-link tdesk-cta" onclick="window.open('lorcana.html','_blank')"><span class="tdesk-icon">✨</span>Alpha Lorcana</button>
   </nav>
-  <script>
-  // Sidebar (24/08/2026): abre/fecha o grupo (MYDECK / COMPRA E VENDA E LEILÃO)
-  // por clique, um de cada vez (clicar num grupo aberto fecha; clicar noutro
-  // fecha o anterior e abre o novo). Só existe dentro de .tdesk (sidebar) —
-  // o menu do Fichário (.fic-tdesk) continua hover, sem essa função.
-  function tdeskToggleDrop(btn) {
-    var wrap = btn.closest('.tdrop');
-    if (!wrap) return;
-    var isOpen = wrap.classList.contains('tdrop-open');
-    document.querySelectorAll('.tdesk .tdrop.tdrop-open').forEach(function (el) {
-      el.classList.remove('tdrop-open');
-      var b = el.querySelector('.tdrop-btn');
-      if (b) b.setAttribute('aria-expanded', 'false');
-    });
-    if (!isOpen) {
-      wrap.classList.add('tdrop-open');
-      btn.setAttribute('aria-expanded', 'true');
-    }
-  }
-  // Clicar fora da sidebar fecha qualquer grupo aberto.
-  document.addEventListener('click', function (e) {
-    if (e.target.closest('.tdesk .tdrop')) return;
-    document.querySelectorAll('.tdesk .tdrop.tdrop-open').forEach(function (el) {
-      el.classList.remove('tdrop-open');
-      var b = el.querySelector('.tdrop-btn');
-      if (b) b.setAttribute('aria-expanded', 'false');
-    });
-  });
-  </script>
 
   <!-- ids nav-tab-* adicionados 02/08/2026 — permitem goToTab(id) (app.js) navegar
        pra aba certa a partir de qualquer clique fora do <nav> (cards do Dashboard
