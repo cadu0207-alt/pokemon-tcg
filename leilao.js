@@ -931,7 +931,7 @@ async function loadMyAuctionOrders(){
   aucBlockedReason=flag?.reason||'';
   aucRulesAccepted=rules?.rules_version===AUC_RULES_VERSION;
   if(aucMyOrders.length){
-    const{data:items}=await sbClient.from('auction_order_items').select('*, auctions(card_name,image_url,set_id,card_n,version)').in('order_id',aucMyOrders.map(o=>o.id));
+    const{data:items}=await sbClient.from('auction_order_items').select('*, auctions(card_name,image_url,set_id,card_n,version,package_type)').in('order_id',aucMyOrders.map(o=>o.id));
     aucMyOrderItems=Array.isArray(items)?items:[];
   }else aucMyOrderItems=[];
 }
@@ -1887,6 +1887,11 @@ async function saveLeilaoAddress(){
   aucAddress=Array.isArray(data)?data[0]:aucAddress;
   if(statusEl)statusEl.textContent='✓ Endereço e WhatsApp salvos.';
   setStatus('Endereço de entrega salvo','ok');
+  if(aucPendingAddressAction){
+    const fn=aucPendingAddressAction;
+    aucPendingAddressAction=null;
+    fn();
+  }
 }
 
 // ── PAGAMENTO ONLINE (Mercado Pago Checkout Pro) ──────────────────
@@ -2041,6 +2046,19 @@ function aucWinnerWhatsappBlockHtml(o){
 }
 
 // ── MEUS PEDIDOS (carrinho consolidado por rodada) ────────────────
+// Pedido de leilão pode ter mais de uma carta; a cotação de frete usa
+// um único "tipo de pacote" pro pedido inteiro — pega o mais "pesado"
+// entre os itens (heurística simples, ver PACKAGE_TYPES em frete.js).
+const AUC_PACKAGE_WEIGHT_ORDER=['avulsa','quadripack','etb','displaybox'];
+function aucOrderPackageType(items){
+  let best='avulsa';
+  (items||[]).forEach(it=>{
+    const t=it.auctions?.package_type;
+    if(t&&AUC_PACKAGE_WEIGHT_ORDER.indexOf(t)>AUC_PACKAGE_WEIGHT_ORDER.indexOf(best))best=t;
+  });
+  return best;
+}
+
 function renderMyBidsAndOrders(){
   fillLeilaoAddressForm();
   const wrap=document.getElementById('leilao-my-orders');
@@ -2067,6 +2085,7 @@ function renderMyBidsAndOrders(){
       <div style="font-size:12px;font-weight:700;border-top:1px solid var(--border);padding-top:6px">Total: <span style="color:var(--teal)">R$ ${fmtR(o.amount)}</span></div>
       ${o.payment_due_at?`<div style="font-size:10.5px;color:${overdue?'var(--accent)':'var(--muted)'};margin-top:4px">Prazo de pagamento: ${new Date(o.payment_due_at).toLocaleString('pt-BR')}</div>`:''}
       ${aucFicharioBlockHtml(o,items)}
+      ${freteQuoteBlockHtml('auc-order-'+o.id,{context:'auction_round',context_id:o.round_id,package_type:aucOrderPackageType(items),quantity:items.length||1,initialCep:aucAddress?.cep})}
       ${aucWinnerWhatsappBlockHtml(o)}
       ${aucShippingHoldBlockHtml(o)}
       ${o.tracking_code?`<div style="font-size:11px;margin-top:6px">📦 Rastreio: <b>${esc(o.tracking_code)}</b></div>`:''}
@@ -2258,6 +2277,7 @@ async function releaseShippingHold(orderId){
 async function createAuctionRound(){
   if(!aucIsLeilaoAdmin)return;
   if(!requireSellerAcceptance(createAuctionRound))return;
+  if(!requireSellerAddress(createAuctionRound))return;
   const statusEl=document.getElementById('leilao-round-status');
   const title=(document.getElementById('leilao-round-title')?.value||'').trim();
   const startAt=document.getElementById('leilao-round-inicio')?.value;
@@ -2648,6 +2668,7 @@ function clearAuctionCardSelection(){
 async function publishAuction(){
   if(!aucIsLeilaoAdmin)return;
   if(!requireSellerAcceptance(publishAuction))return;
+  if(!requireSellerAddress(publishAuction))return;
   const statusEl=document.getElementById('leilao-admin-status');
   const roundId=parseInt(document.getElementById('leilao-admin-round')?.value);
   const cardName=(document.getElementById('leilao-admin-nome')?.value||'').trim();
@@ -2659,6 +2680,7 @@ async function publishAuction(){
   const reserveRaw=document.getElementById('leilao-admin-reserva')?.value;
   const reservePrice=reserveRaw?parseFloat(reserveRaw):null;
   const antiSnipe=parseInt(document.getElementById('leilao-admin-antisnipe')?.value)||3;
+  const packageType=document.getElementById('leilao-admin-pacote')?.value||'avulsa';
 
   if(!roundId){if(statusEl)statusEl.textContent='Crie ou selecione uma rodada primeiro.';return;}
   const round=aucRoundById(roundId);
@@ -2700,6 +2722,7 @@ async function publishAuction(){
     starting_price:startingPrice,
     reserve_price:reservePrice,
     anti_snipe_minutes:antiSnipe,
+    package_type:packageType,
     start_at:round.start_at,
     end_at:round.end_at,
     status:round.status==='ativo'?'ativo':'agendado'
@@ -2982,6 +3005,29 @@ function requireSellerAcceptance(pendingFn){
   if(aucSellerAccepted)return true;
   aucPendingSellerAction=pendingFn;
   openLeiloeiroOnboardingModal();
+  return false;
+}
+
+// ── ENDEREÇO/CEP DE ORIGEM OBRIGATÓRIO ANTES DE VENDER (31/08/2026) ──
+// Reaproveita 100% o formulário/tabela de sempre (user_addresses, aba
+// "Meus Arremates" — mesmo endereço que já serve pra receber cartas
+// compradas). A diferença é que agora, pra CRIAR rodada ou publicar
+// carta, o CEP+endereço completos passam a ser exigidos — é o CEP de
+// ORIGEM que a cotação de frete (frete.js/superfrete-quote) usa depois
+// pra cotar em nome desse leiloeiro. Mesmo espírito de
+// requireSellerAcceptance acima, só que sem popup — manda a pessoa
+// pra aba onde ela já preenche esse dado.
+let aucPendingAddressAction=null;
+
+function aucHasCompleteAddress(){
+  return!!(aucAddress&&aucAddress.cep&&aucAddress.logradouro&&aucAddress.numero&&aucAddress.cidade&&aucAddress.uf);
+}
+
+function requireSellerAddress(pendingFn){
+  if(aucHasCompleteAddress())return true;
+  aucPendingAddressAction=pendingFn;
+  switchLeilaoSubtab('meus-arremates');
+  setStatus('Complete seu endereço e CEP antes de criar rodadas/cartas — é o CEP de origem usado pra cotar frete pros compradores.','err');
   return false;
 }
 

@@ -762,6 +762,17 @@
             </select>
           </div>
           <div style="font-size:9.5px;color:var(--muted);margin-bottom:8px">Informar o tipo já mostra pros participantes e evita perguntar depois na hora de incluir a carta arrematada no fichário de quem ganhar.</div>
+          <!-- Tipo de pacote pra cotação de frete (frete.js) — 31/08/2026.
+               Quase toda carta é "avulsa"; os outros tipos são pra quando o
+               leiloeiro vende produto lacrado dentro de uma rodada. -->
+          <div class="ff"><label>Tipo de pacote (pra cotação de frete)</label>
+            <select id="leilao-admin-pacote">
+              <option value="avulsa">Carta avulsa (toploader + envelope)</option>
+              <option value="quadripack">Quadripack / blister pequeno</option>
+              <option value="etb">Elite Trainer Box (ETB)</option>
+              <option value="displaybox">Display Box (booster box)</option>
+            </select>
+          </div>
           <div class="ff"><label>Descrição (opcional)</label><textarea id="leilao-admin-desc" rows="2" placeholder="Estado, detalhes, centralização..."></textarea></div>
           <div class="ff"><label>Preço inicial (R$) *</label><input type="number" id="leilao-admin-preco" step="0.01" min="0.01"></div>
           <div style="font-size:9.5px;color:var(--muted);margin-bottom:8px">Incremento mínimo entre lances é automático: até R$10 → R$0,50 · até R$50 → R$1 · acima disso → 2% do valor atual.</div>
@@ -1950,6 +1961,10 @@
      por carta — encadeia depois de marketplace.js (openBinderModal já vem monkey-patched
      por ele) e antes de leilao.js. Ver [[project_price_history_book]] na memória do projeto. -->
 <script defer src="price_history.js"></script>
+<!-- frete.js (31/08/2026): módulo compartilhado de cotação de frete
+     (SuperFrete) — usado por leilao.js/rifa.js hoje, marketplace depois.
+     Precisa carregar ANTES do leilao.js. -->
+<script defer src="frete.js"></script>
 <script defer src="leilao.js"></script>
 <!-- rifa.js (24/08/2026): aba de Rifas, reaproveita estado/funções globais do
      leilao.js (aucIsLeilaoAdmin, compressAuctionPhoto, uploadAuctionPhotos,
