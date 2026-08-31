@@ -157,6 +157,12 @@ body, .panel, .kpi, .tab, header, .home-bg, input, select, textarea {
 .wa-community-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(15,30,20,.22); }
 .wa-community-btn .wa-icon { font-size: 17px; line-height: 1; }
 
+/* .tfa-row (31/08/2026): agrupa WhatsApp+Tema numa linha só — no mobile é a
+   única linha do cluster; no desktop (≥901px) vira a linha de cima de uma
+   coluna, com Simulador/Alpha Lorcana "grudando" embaixo (ver bloco SIDEBAR
+   DESKTOP mais abaixo). */
+.tfa-row { display: flex; align-items: center; gap: 10px; }
+
 @media (max-width: 640px) {
   .top-fixed-actions { top: 54px; right: 8px; gap: 6px; }
   .theme-toggle-btn { padding: 6px 10px 6px 9px; font-size: 10px; }
@@ -501,31 +507,13 @@ header {
   flex-shrink: 0;
 }
 .back-btn:hover { background: rgba(0,0,0,.08); color: var(--text); border-color: var(--muted2); }
-.hbadge {
-  background: var(--accent);
-  color: #fff;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 9px;
-  font-weight: 700;
-  padding: 3px 9px;
-  letter-spacing: 2.5px;
-  border-radius: 2px;
-  margin-bottom: 6px;
-  display: inline-block;
-  text-transform: uppercase;
-}
-/* .hlogo = logo do app (pg-app) — mesmo visual do h1, mas sem ser um segundo
-   <h1> no DOM (SEO/a11y: só a landing tem h1 agora — auditoria 03/08/2026) */
-h1, .hlogo {
+/* .hbadge / .hlogo (texto) / .hsub foram removidos do header em 31/08/2026
+   (ver comentário no header em index.html) — a regra h1 (landing/SEO) fica,
+   só perdeu o ", .hlogo" que não existe mais como texto no DOM. */
+h1 {
   font-family: 'Fraunces', sans-serif;
   font-size: clamp(26px, 4vw, 50px);
   letter-spacing: 3.5px;
-  /* 20/08/2026: era .88 — como a cor vem do gradiente "pintado" só dentro
-     da caixa da linha (background-clip:text), um line-height menor que 1
-     deixava a área de descendentes (o "rabinho" do y) fora dessa caixa,
-     então o gradiente não pintava ali e a letra parecia cortada. 1.05 dá
-     espaço de sobra sem alterar a altura visual do texto (compensado pela
-     margem negativa abaixo). */
   line-height: 1.05;
   margin-bottom: -4px;
   background: linear-gradient(135deg, #1c1f2e 40%, #5a6180 100%);
@@ -533,13 +521,16 @@ h1, .hlogo {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
-.hsub {
-  font-size: 10px;
-  color: var(--muted);
-  font-family: 'IBM Plex Mono', monospace;
-  margin-top: 6px;
-  letter-spacing: 1.5px;
-}
+/* ─── LOGO DO HEADER (31/08/2026) ────────────────────────
+   Substitui o antigo texto "MyDeck" pela logo oficial (com o Rayquaza do
+   letreiro) — mesmo par de imagens/classes home-logo-light/dark usado no
+   resto do site pra trocar de tema (regra base em .home-logo-light/dark
+   mais acima). Tamanho pequeno aqui é a base (mobile); cresce bastante no
+   desktop (ver bloco SIDEBAR DESKTOP mais abaixo, onde o header vira uma
+   faixa cheia no topo, acima da sidebar). */
+.hdr-logo-block { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.hdr-logo-link { display: flex; align-items: center; line-height: 0; }
+.hdr-logo-img { height: 40px; width: auto; display: block; }
 .hstatus {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 10px;
@@ -730,7 +721,11 @@ h1, .hlogo {
     border-right: 1px solid var(--border);
     position: fixed;
     left: 0;
-    top: 0;
+    /* 31/08/2026: era top:0 (sidebar cobria a tela toda, header ficava ao
+       lado dela). Agora o header virou uma faixa cheia por cima de tudo —
+       a sidebar começa logo abaixo dela (ver --topbar-h no bloco SIDEBAR
+       DESKTOP — layout, mais abaixo). */
+    top: var(--topbar-h, 104px);
     bottom: 0;
     z-index: 250;
     overflow-y: auto;
@@ -899,18 +894,53 @@ h1, .hlogo {
 }
 .pane.active { display: block; }
 
-/* ─── SIDEBAR DESKTOP — layout (24/08/2026) ─────────────
+/* ─── SIDEBAR DESKTOP — layout (24/08/2026, redesenhado 31/08/2026) ─────
    .tdesk virou uma coluna fixa à esquerda (ver bloco "MENU DESKTOP" acima)
-   — sem isso, header/conteúdo ficariam por baixo dela. Só ≥901px (abaixo
-   disso .tdesk nem aparece, continua tudo empilhado como sempre). Não
-   mexe em #pg-home (página de entrada, fora de #pg-app, sem .tdesk). */
+   — sem isso, conteúdo ficaria por baixo dela. Só ≥901px (abaixo disso
+   .tdesk nem aparece, continua tudo empilhado como sempre). Não mexe em
+   #pg-home (página de entrada, fora de #pg-app, sem .tdesk).
+   31/08/2026 (pedido do Eduardo — "a barra lateral deve iniciar logo abaixo
+   do perfil superior, que vai cobrir toda a parte de cima"): o header
+   deixou de ter margin-left — agora é uma faixa cheia (edge-to-edge) por
+   cima de TUDO, inclusive da sidebar, que passou a começar em
+   top:var(--topbar-h) em vez de top:0 (ver .tdesk acima). Só o conteúdo
+   abaixo do header (.stripe, banners, .pane) continua com margin-left pra
+   não ficar embaixo da coluna da sidebar. --topbar-h precisa bater com a
+   altura real do header nesta faixa de largura — se o header mudar de
+   altura (novo elemento, padding etc.), ajustar aqui também. */
 @media (min-width: 901px) {
-  #pg-app header,
+  :root { --topbar-h: 104px; }
+  #pg-app > header { margin-left: 0; }
   #pg-app > .stripe,
   #pg-app > #feedback-bar-wrap,
   #pg-app > #global-ctcg-banner-wrap,
   #pg-app .pane {
     margin-left: var(--tdesk-w, 224px);
+  }
+
+  /* Logo cresce bastante nessa largura — vira a peça central do header,
+     ocupando bem mais espaço que o antigo texto "MyDeck". */
+  .hdr-logo-img { height: 68px; }
+
+  /* Cluster fixo (WhatsApp/Tema) vira coluna — Simulador/Alpha Lorcana
+     (position:fixed, ver .inicio-quick-actions abaixo) encostam embaixo
+     dela, alinhados na mesma borda direita. */
+  .top-fixed-actions { flex-direction: column; align-items: flex-end; gap: 8px; }
+
+  /* A logo pequena que ficava no topo da aba Início (.inicio-brand) some —
+     virou redundante com a logo grande do header. Os botões de atalho
+     (.inicio-quick-actions) continuam no DOM da Início, só que "descolam"
+     do fluxo normal da página e ficam fixos no viewport, encostados no
+     cluster do WhatsApp/Tema — por isso .inicio-brand-row (o wrapper dos
+     dois) perde a margem/altura reservada, senão sobrava um vão vazio. */
+  .inicio-brand { display: none; }
+  .inicio-brand-row { margin-bottom: 0; min-height: 0; }
+  .inicio-quick-actions {
+    position: fixed;
+    top: calc(var(--topbar-h) + 10px);
+    right: 14px;
+    z-index: 999;
+    margin: 0;
   }
 }
 
@@ -1801,9 +1831,8 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
      e no mobile, desproporcional num card de só 72px de largura) */
   :root { --cw: 72px; --ch: 101px; --dotsize: 12px; }
 
-  h1, .hlogo { font-size: 26px; letter-spacing: 2px; }
-  .hbadge { font-size: 8px; padding: 2px 7px; }
-  .hsub { font-size: 9px; }
+  h1 { font-size: 26px; letter-spacing: 2px; }
+  .hdr-logo-img { height: 30px; }
   .back-btn { width: 32px; height: 32px; font-size: 15px; }
 
   .kpi { padding: 14px 16px; }
@@ -2870,10 +2899,10 @@ body.share-view .btn-add { display: none !important; }
   .tabs .tab { min-height: 44px; display: inline-flex; align-items: center; }
 
   /* Header colapsa após o primeiro scroll (classe hdr-compact via app.js) —
-     antes o bloco logo+badge+busca comia ~270px de uma tela de 844px. */
-  #pg-app header.hdr-compact .hbadge,
-  #pg-app header.hdr-compact .hsub { display: none; }
-  #pg-app header.hdr-compact .hlogo { font-size: 18px; letter-spacing: 2px; }
+     antes o bloco logo+badge+busca comia ~270px de uma tela de 844px.
+     31/08/2026: badge/subtítulo já não existem mais (viraram permanentes,
+     não só ao rolar — ver header em index.html), só a logo encolhe. */
+  #pg-app header.hdr-compact .hdr-logo-img { height: 26px; }
   #pg-app header.hdr-compact { padding: 8px 14px; }
   #pg-app header.hdr-compact #gsearch-wrap { margin: 4px 0; }
   #pg-app header { transition: padding .2s ease; }

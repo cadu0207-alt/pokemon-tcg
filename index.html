@@ -112,13 +112,20 @@
 </head>
 <body>
 
+<!-- REDESENHADO 31/08/2026: no desktop (≥901px) esse cluster fixo virou uma
+     coluna (ver .top-fixed-actions em style.css) — a linha do WhatsApp/Tema
+     fica em cima, e os atalhos de Simulador/Alpha Lorcana (antes soltos no
+     topo da aba Início, ver .inicio-quick-actions) agora "encostam" embaixo
+     dela via position:fixed, sem sair do DOM da Início. -->
 <div class="top-fixed-actions">
-  <a class="wa-community-btn" href="https://chat.whatsapp.com/KAEFJ5pGZrsDZeusCE0Sxs?s=cl&p=i&ilr=4&amv=2" target="_blank" rel="noopener" title="Grupo da Comunidade MyDeck no WhatsApp">
-    <span class="wa-icon">💬</span><span class="wa-label">Grupo da Comunidade MyDeck</span>
-  </a>
-  <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Alternar tema claro/escuro">
-    <span class="tt-icon" id="theme-toggle-icon">🌙</span><span id="theme-toggle-label">Tema</span>
-  </button>
+  <div class="tfa-row">
+    <a class="wa-community-btn" href="https://chat.whatsapp.com/KAEFJ5pGZrsDZeusCE0Sxs?s=cl&p=i&ilr=4&amv=2" target="_blank" rel="noopener" title="Grupo da Comunidade MyDeck no WhatsApp">
+      <span class="wa-icon">💬</span><span class="wa-label">Grupo da Comunidade MyDeck</span>
+    </a>
+    <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Alternar tema claro/escuro">
+      <span class="tt-icon" id="theme-toggle-icon">🌙</span><span id="theme-toggle-label">Tema</span>
+    </button>
+  </div>
 </div>
 
 <!-- ===== APP =====
@@ -135,13 +142,19 @@
 <div id="pg-app" class="page active">
   <div id="app-mosaic"></div>
   <header>
-    <div style="display:flex;align-items:center;gap:14px">
+    <!-- REDESENHADO 31/08/2026: badge "MyDeck • Pokémon TCG" + wordmark em
+         texto ("MyDeck") + subtítulo dinâmico (siglas dos sets marcados)
+         saíram — essa info já aparece no Fichário/Simulador/Alpha Lorcana,
+         então aqui virava repetição. A logo oficial (com o Rayquaza do
+         letreiro) virou a identidade visual do topo, maior, no lugar do
+         texto. updateHsub() (app.js) continua existindo mas vira no-op
+         inofensivo (só escreve em #hsub-dyn se o elemento existir). -->
+    <div class="hdr-logo-block">
       <button class="back-btn" onclick="goToTab('inicio')" title="Início">⌂</button>
-      <div>
-        <div class="hbadge">MyDeck • Pokémon TCG</div>
-        <div class="hlogo">MyDeck</div>
-        <div class="hsub" id="hsub-dyn">MASTER SET TRACKER</div>
-      </div>
+      <a href="#" class="hdr-logo-link" title="Início" onclick="goToTab('inicio');return false;">
+        <img class="hdr-logo-img home-logo-light" src="logo-mydeck.webp" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil">
+        <img class="hdr-logo-img home-logo-dark" src="logo-mydeck-dark.webp" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil">
+      </a>
     </div>
     <div class="hstatus">
       <span id="status-dot" class="dot dot-warning"></span>
