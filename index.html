@@ -112,11 +112,13 @@
 </head>
 <body>
 
-<!-- REDESENHADO 31/08/2026: no desktop (≥901px) esse cluster fixo virou uma
-     coluna (ver .top-fixed-actions em style.css) — a linha do WhatsApp/Tema
-     fica em cima, e os atalhos de Simulador/Alpha Lorcana (antes soltos no
-     topo da aba Início, ver .inicio-quick-actions) agora "encostam" embaixo
-     dela via position:fixed, sem sair do DOM da Início. -->
+<!-- CORRIGIDO 31/08/2026: a 1ª versão desse redesenho deixava os botões de
+     Simulador/Alpha Lorcana com position:fixed calculado em cima da altura
+     do header — colidia com a barra de feedback ("Fale com o MyDeck"), que
+     tem altura variável. Agora os botões vivem de verdade dentro desse
+     cluster (que já é fixo e nunca colide com nada da página), como uma
+     2ª linha só visível no desktop (.tfa-row-quick, ver style.css) — no
+     mobile eles continuam só dentro da Início, como sempre (.inicio-quick-actions). -->
 <div class="top-fixed-actions">
   <div class="tfa-row">
     <a class="wa-community-btn" href="https://chat.whatsapp.com/KAEFJ5pGZrsDZeusCE0Sxs?s=cl&p=i&ilr=4&amv=2" target="_blank" rel="noopener" title="Grupo da Comunidade MyDeck no WhatsApp">
@@ -125,6 +127,10 @@
     <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Alternar tema claro/escuro">
       <span class="tt-icon" id="theme-toggle-icon">🌙</span><span id="theme-toggle-label">Tema</span>
     </button>
+  </div>
+  <div class="tfa-row tfa-row-quick">
+    <button type="button" class="inicio-quick-btn inicio-quick-sim" onclick="window.open('simulador.html','_blank')">🎰 Simulador de Packs</button>
+    <button type="button" class="inicio-quick-btn inicio-quick-lorcana" onclick="window.open('lorcana.html','_blank')">✨ Alpha Lorcana</button>
   </div>
 </div>
 

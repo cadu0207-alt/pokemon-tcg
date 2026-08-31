@@ -159,9 +159,14 @@ body, .panel, .kpi, .tab, header, .home-bg, input, select, textarea {
 
 /* .tfa-row (31/08/2026): agrupa WhatsApp+Tema numa linha só — no mobile é a
    única linha do cluster; no desktop (≥901px) vira a linha de cima de uma
-   coluna, com Simulador/Alpha Lorcana "grudando" embaixo (ver bloco SIDEBAR
-   DESKTOP mais abaixo). */
+   coluna, com Simulador/Alpha Lorcana embaixo (ver bloco SIDEBAR DESKTOP
+   mais abaixo). .tfa-row-quick (a 2ª linha, com esses dois botões) só
+   existe visualmente no desktop — no mobile os mesmos atalhos continuam
+   dentro da aba Início (.inicio-quick-actions), como sempre; evita ter os
+   4 botões empilhados tomando conta do canto da tela num celular. */
 .tfa-row { display: flex; align-items: center; gap: 10px; }
+.tfa-row-quick { display: none; }
+.tfa-row-quick .inicio-quick-btn { padding: 7px 12px; font-size: 10px; }
 
 @media (max-width: 640px) {
   .top-fixed-actions { top: 54px; right: 8px; gap: 6px; }
@@ -530,7 +535,18 @@ h1 {
    faixa cheia no topo, acima da sidebar). */
 .hdr-logo-block { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .hdr-logo-link { display: flex; align-items: center; line-height: 0; }
-.hdr-logo-img { height: 40px; width: auto; display: block; }
+.hdr-logo-img { height: 40px; width: auto; }
+/* CORRIGIDO 31/08/2026: a 1ª versão deixava "display:block" solto em
+   .hdr-logo-img — como essa regra vem DEPOIS de ".home-logo-dark{display:
+   none}" no arquivo e as duas têm a mesma especificidade (uma classe só),
+   quem vem por último na cascata ganha, então a logo dark NUNCA ficava
+   escondida (aparecia grudada do lado da light, dando efeito de "logo
+   duplicada"). Duas classes (.hdr-logo-img.home-logo-dark) tem mais peso
+   que uma só e resolve isso de vez, independente da ordem no arquivo —
+   mesmo padrão já usado em .inicio-brand-logo.home-logo-light/dark. */
+.hdr-logo-img.home-logo-dark { display: none; }
+[data-theme="dark"] .hdr-logo-img.home-logo-light { display: none; }
+[data-theme="dark"] .hdr-logo-img.home-logo-dark { display: inline-block; }
 .hstatus {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 10px;
@@ -917,31 +933,36 @@ h1 {
   #pg-app .pane {
     margin-left: var(--tdesk-w, 224px);
   }
-
   /* Logo cresce bastante nessa largura — vira a peça central do header,
      ocupando bem mais espaço que o antigo texto "MyDeck". */
   .hdr-logo-img { height: 68px; }
 
-  /* Cluster fixo (WhatsApp/Tema) vira coluna — Simulador/Alpha Lorcana
-     (position:fixed, ver .inicio-quick-actions abaixo) encostam embaixo
-     dela, alinhados na mesma borda direita. */
-  .top-fixed-actions { flex-direction: column; align-items: flex-end; gap: 8px; }
+  /* Cluster fixo (WhatsApp/Tema) vira coluna de 2 linhas — a 2ª linha
+     (Simulador/Alpha Lorcana, .tfa-row-quick) só aparece a partir daqui.
+     CORRIGIDO 31/08/2026: a 1ª versão usava position:fixed com um top:
+     calculado (var(--topbar-h)+10px) pra "grudar" os botões embaixo desse
+     cluster — só que esse valor colidia com a barra de feedback ("Fale com
+     o MyDeck"), que é conteúdo normal da página (não fixo) e cuja altura
+     varia. Resultado: botões e barra de feedback se sobrepondo. Agora os
+     botões vivem DENTRO do próprio cluster fixo (ver index.html) — não tem
+     como colidir com mais nada da página, não depende de nenhum cálculo.
+     Além disso, com o header mais baixo (104px, era 131px), o top:64px
+     original (pensado pro header antigo) deixava esse cluster de 2 linhas
+     invadir a barra de feedback — por isso top:58px + gap menor aqui, e um
+     empurrão a mais na barra de feedback (margin-top) logo abaixo. */
+  .top-fixed-actions { top: 58px; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .tfa-row-quick { display: flex; }
+  /* no .feedback-bar/.feedback-reply-bar (não no wrapper — ele fica vazio
+     quando não há nada pra mostrar, e margin no wrapper vazio ainda abriria
+     um vão em branco indevido nesse caso). */
+  #pg-app > #feedback-bar-wrap .feedback-bar,
+  #pg-app > #feedback-bar-wrap .feedback-reply-bar { margin-top: 34px; }
 
-  /* A logo pequena que ficava no topo da aba Início (.inicio-brand) some —
-     virou redundante com a logo grande do header. Os botões de atalho
-     (.inicio-quick-actions) continuam no DOM da Início, só que "descolam"
-     do fluxo normal da página e ficam fixos no viewport, encostados no
-     cluster do WhatsApp/Tema — por isso .inicio-brand-row (o wrapper dos
-     dois) perde a margem/altura reservada, senão sobrava um vão vazio. */
-  .inicio-brand { display: none; }
-  .inicio-brand-row { margin-bottom: 0; min-height: 0; }
-  .inicio-quick-actions {
-    position: fixed;
-    top: calc(var(--topbar-h) + 10px);
-    right: 14px;
-    z-index: 999;
-    margin: 0;
-  }
+  /* A logo pequena + os botões que ficavam no topo da aba Início somem no
+     desktop — viraram redundantes (logo grande no header, botões no
+     cluster fixo acima). No mobile essa linha continua exatamente como
+     antes, sem essa regra ela nem é tocada. */
+  .inicio-brand-row { display: none; }
 }
 
 /* ─── KPI CARDS ──────────────────────────────────────── */
