@@ -3248,6 +3248,42 @@ body.share-view .btn-add { display: none !important; }
    --teal/--gold/--muted/--text/--border) — sem paleta nova.
    ================================================================ */
 
+/* IDENTIDADE VISUAL + ATALHOS (29/08/2026) — a antiga pg-home (página de
+   entrada separada, com a logo grande e os botões Entrar/Simulador/
+   Lorcana) foi removida. A logo agora é só um cabeçalho de marca, discreto,
+   no topo da própria Início — não tenta recriar aquele hero cheio de tela.
+   Reaproveita .home-logo-img (largura/mask/troca dark-light) só ajustando
+   o tamanho pra caber como cabeçalho de aba, não de página inteira. */
+.inicio-brand { text-align: center; margin-bottom: 18px; }
+.inicio-brand-logo {
+  width: min(280px, 70%); height: auto;
+  filter: drop-shadow(0 2px 10px rgba(0,0,0,.18));
+}
+[data-theme="dark"] .inicio-brand-logo.home-logo-light { display: none; }
+.inicio-brand-logo.home-logo-dark { display: none; }
+[data-theme="dark"] .inicio-brand-logo.home-logo-dark { display: inline-block; }
+
+.inicio-quick-actions {
+  display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+  margin-bottom: 26px;
+}
+.inicio-quick-btn {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; font-weight: 700;
+  letter-spacing: .03em; color: #fff; border: 1px solid transparent; border-radius: 10px;
+  padding: 11px 18px; cursor: pointer; transition: transform .15s, box-shadow .15s;
+}
+.inicio-quick-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,.24); }
+.inicio-quick-btn:active { transform: translateY(-1px); }
+.inicio-quick-sim { background: linear-gradient(135deg,#7b2ff7,#f107a3); border-color: #9b4fff; }
+.inicio-quick-lorcana { background: linear-gradient(135deg,#3a1a5e,#8a6dcf); border-color: #c9a35c; }
+
+.inicio-legal-footer {
+  margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border);
+  text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  color: var(--muted); opacity: .75; letter-spacing: .5px;
+}
+.inicio-legal-footer a { color: inherit; text-decoration: underline; }
+
 .inicio-hero {
   border-radius: 16px; padding: 24px 26px; margin-bottom: 22px;
   background: linear-gradient(150deg, var(--surface2, var(--surface)) 0%, var(--surface) 70%);
