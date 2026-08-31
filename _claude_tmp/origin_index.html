@@ -361,23 +361,20 @@
        Links/Revista são conteúdo novo, publicado só pela aba Admin
        (hasPerm('inicio'), home_content_admin.js). -->
   <div id="inicio" class="pane active">
-    <!-- IDENTIDADE VISUAL + ATALHOS 31/08/2026 (pedido do Eduardo): logo e os
-         2 botões viviam empilhados e centralizados, ocupando bastante altura
-         antes das Novidades. Viraram uma faixa só: logo à esquerda (menor,
-         reaproveita .home-logo-light/.home-logo-dark) e os botões — também
-         menores — à direita, aproveitando a largura em vez da altura. -->
-    <div class="inicio-brand-row">
-      <div class="inicio-brand">
-        <img class="inicio-brand-logo home-logo-light" src="logo-mydeck.webp" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil" width="1800" height="572">
-        <img class="inicio-brand-logo home-logo-dark" src="logo-mydeck-dark.webp" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil" width="1800" height="572">
-      </div>
-      <!-- ATALHOS 29/08/2026: Simulador de Packs e Alpha Lorcana migraram da
-           antiga pg-home pra cá. Simulador também segue disponível no menu
-           (desktop/mobile) como já era — aqui é só mais um acesso rápido. -->
-      <div class="inicio-quick-actions">
-        <button type="button" class="inicio-quick-btn inicio-quick-sim" onclick="window.open('simulador.html','_blank')">🎰 Simulador de Packs</button>
-        <button type="button" class="inicio-quick-btn inicio-quick-lorcana" onclick="window.open('lorcana.html','_blank')">✨ Alpha Lorcana</button>
-      </div>
+    <!-- IDENTIDADE VISUAL 29/08/2026: logo do MyDeck que antes vivia sozinha
+         na página de entrada (pg-home, removida) — ver troca dark/light já
+         existente em .home-logo-light/.home-logo-dark (style.css). -->
+    <div class="inicio-brand">
+      <img class="inicio-brand-logo home-logo-light" src="logo-mydeck.webp" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil" width="1800" height="572">
+      <img class="inicio-brand-logo home-logo-dark" src="logo-mydeck-dark.webp" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil" width="1800" height="572">
+    </div>
+
+    <!-- ATALHOS 29/08/2026: Simulador de Packs e Alpha Lorcana migraram da
+         antiga pg-home pra cá. Simulador também segue disponível no menu
+         (desktop/mobile) como já era — aqui é só mais um acesso rápido. -->
+    <div class="inicio-quick-actions">
+      <button type="button" class="inicio-quick-btn inicio-quick-sim" onclick="window.open('simulador.html','_blank')">🎰 Simulador de Packs</button>
+      <button type="button" class="inicio-quick-btn inicio-quick-lorcana" onclick="window.open('lorcana.html','_blank')">✨ Alpha Lorcana</button>
     </div>
 
     <div id="inicio-hero-wrap"></div>
