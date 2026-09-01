@@ -811,7 +811,7 @@
           <div class="ff"><label>Descrição (opcional)</label><textarea id="leilao-admin-desc" rows="2" placeholder="Estado, detalhes, centralização..."></textarea></div>
           <div class="ff"><label>Preço inicial (R$) *</label><input type="number" id="leilao-admin-preco" step="0.01" min="0.01"></div>
           <div style="font-size:9.5px;color:var(--muted);margin-bottom:8px">Incremento mínimo entre lances é automático: até R$10 → R$0,50 · até R$50 → R$1 · acima disso → 2% do valor atual.</div>
-          <div class="ff"><label>Preço de reserva (opcional — mínimo pra vender, fica oculto)</label><input type="number" id="leilao-admin-reserva" step="0.01"></div>
+          <div class="ff"><label>Preço de arremate (opcional — se um lance bater esse valor, o leilão encerra na hora e o comprador leva. Fica visível pra quem estiver dando lance)</label><input type="number" id="leilao-admin-arremate" step="0.01"></div>
           <div class="ff"><label>Extensão anti-sniping (min. antes do fim que estende o prazo)</label><input type="number" id="leilao-admin-antisnipe" value="3" min="0" max="30"></div>
           <div style="font-size:9.5px;color:var(--muted);margin-bottom:8px">A carta herda o início/término da rodada escolhida acima.</div>
           <button class="btn-add" onclick="publishAuction()">🔨 Adicionar Carta à Rodada</button>

@@ -1389,6 +1389,8 @@ function aucInfoBlockHtml(a,idSuffix){
         <div style="font-size:17px;font-weight:700;color:var(--teal)">R$ ${fmtR(a.current_bid||a.starting_price)}</div></div>
       <div><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">LANCES</div>
         <div style="font-size:17px;font-weight:700">${a.bid_count||0}</div></div>
+      ${a.buy_now_price&&isActive?`<div><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">ARREMATE</div>
+        <div style="font-size:17px;font-weight:700;color:var(--gold)">R$ ${fmtR(a.buy_now_price)}</div></div>`:''}
       ${isActive?`<div><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">PRAZO</div>
         <div style="font-size:13px;font-weight:600;color:var(--gold)">${aucCountdown(a.end_at)}</div></div>`:''}
     </div>
@@ -1397,6 +1399,7 @@ function aucInfoBlockHtml(a,idSuffix){
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
         <button class="btn-add" onclick="quickBid(${a.id},'${idSuffix}','min')">⚡ R$ ${fmtR(aucMinNext(a))} <span style="opacity:.75;font-weight:400">(mínimo)</span></button>
         <button class="btn-add" onclick="quickBid(${a.id},'${idSuffix}','plus')">⚡ R$ ${fmtR(aucMinPlus(a))} <span style="opacity:.75;font-weight:400">(com folga)</span></button>
+        ${a.buy_now_price&&a.buy_now_price>aucMinNext(a)?`<button class="btn-add" style="background:var(--gold);color:#1c1f2e" onclick="quickBid(${a.id},'${idSuffix}','buynow')">🎯 Arremate Já — R$ ${fmtR(a.buy_now_price)}</button>`:''}
       </div>
       <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;align-items:center">
         <input type="number" id="auc-bid-${a.id}${idSuffix}" placeholder="Outro valor" step="0.01" style="width:150px" class="cv-select">
@@ -1745,7 +1748,7 @@ function quickBid(auctionId,idSuffix,kind){
   idSuffix=idSuffix||'';
   const a=aucAuctions.find(x=>x.id===auctionId);
   if(!a)return;
-  const amount=kind==='plus'?aucMinPlus(a):aucMinNext(a);
+  const amount=kind==='plus'?aucMinPlus(a):(kind==='buynow'?a.buy_now_price:aucMinNext(a));
   const input=document.getElementById(`auc-bid-${auctionId}${idSuffix}`);
   if(input)input.value=amount;
   submitBid(auctionId,idSuffix);
@@ -2471,8 +2474,8 @@ function renderAuctionEditContent(a){
       <input type="number" id="leilao-edit-preco" step="0.01" min="0.01" value="${a.starting_price}" ${hasBids?'disabled':''}>
     </div>
     ${hasBids?`<div style="font-size:9.5px;color:var(--muted);margin-bottom:8px">Esse leilão já tem ${a.bid_count} lance(s) — mudar o preço inicial agora seria injusto com quem já deu lance. Cancele e recrie se precisar mesmo mudar.</div>`:''}
-    <div class="ff"><label>Preço de reserva (R$, opcional — fica oculto pro comprador)</label>
-      <input type="number" id="leilao-edit-reserva" step="0.01" value="${a.reserve_price??''}">
+    <div class="ff"><label>Preço de arremate (R$, opcional — visível pro comprador; se um lance bater aqui, o leilão encerra na hora)</label>
+      <input type="number" id="leilao-edit-arremate" step="0.01" value="${a.buy_now_price??''}">
     </div>
     <div class="ff"><label>Condição</label>
       <select id="leilao-edit-cond">
@@ -2570,9 +2573,9 @@ async function saveAuctionEdit(){
     startingPrice=parseFloat(document.getElementById('leilao-edit-preco')?.value);
     if(!startingPrice||startingPrice<=0){if(statusEl)statusEl.textContent='Informe um preço inicial válido.';return;}
   }
-  const reservaRaw=document.getElementById('leilao-edit-reserva')?.value;
-  const reservePrice=reservaRaw?parseFloat(reservaRaw):null;
-  if(reservePrice&&reservePrice<startingPrice){if(statusEl)statusEl.textContent='O preço de reserva não pode ser menor que o inicial.';return;}
+  const arremateRaw=document.getElementById('leilao-edit-arremate')?.value;
+  const buyNowPrice=arremateRaw?parseFloat(arremateRaw):null;
+  if(buyNowPrice&&buyNowPrice<startingPrice){if(statusEl)statusEl.textContent='O preço de arremate não pode ser menor que o inicial.';return;}
   const condition=document.getElementById('leilao-edit-cond')?.value||a.condition;
   const description=(document.getElementById('leilao-edit-desc')?.value||'').trim();
 
@@ -2594,7 +2597,7 @@ async function saveAuctionEdit(){
 
   const payload={
     starting_price:startingPrice,
-    reserve_price:reservePrice,
+    buy_now_price:buyNowPrice,
     condition,
     description:description||null,
     image_url:finalPhotos[0]||null,
@@ -2677,8 +2680,8 @@ async function publishAuction(){
   const versao=document.getElementById('leilao-admin-versao')?.value||null;
   const description=(document.getElementById('leilao-admin-desc')?.value||'').trim();
   const startingPrice=parseFloat(document.getElementById('leilao-admin-preco')?.value);
-  const reserveRaw=document.getElementById('leilao-admin-reserva')?.value;
-  const reservePrice=reserveRaw?parseFloat(reserveRaw):null;
+  const buyNowRaw=document.getElementById('leilao-admin-arremate')?.value;
+  const buyNowPrice=buyNowRaw?parseFloat(buyNowRaw):null;
   const antiSnipe=parseInt(document.getElementById('leilao-admin-antisnipe')?.value)||3;
   const packageType=document.getElementById('leilao-admin-pacote')?.value||'avulsa';
 
@@ -2687,7 +2690,7 @@ async function publishAuction(){
   if(!round){if(statusEl)statusEl.textContent='Rodada inválida — recarregue a aba.';return;}
   if(!cardName){if(statusEl)statusEl.textContent='Informe o nome da carta (ou selecione uma na busca).';return;}
   if(!startingPrice||startingPrice<=0){if(statusEl)statusEl.textContent='Informe um preço inicial válido.';return;}
-  if(reservePrice&&reservePrice<startingPrice){if(statusEl)statusEl.textContent='O preço de reserva não pode ser menor que o inicial.';return;}
+  if(buyNowPrice&&buyNowPrice<startingPrice){if(statusEl)statusEl.textContent='O preço de arremate não pode ser menor que o inicial.';return;}
 
   const all=typeof getAllCatalogCards==='function'?getAllCatalogCards():[];
   const matchedCard=aucSelectedCard?all.find(cc=>cc._setId===aucSelectedCard.setId&&cc.n===aucSelectedCard.n):null;
@@ -2720,7 +2723,7 @@ async function publishAuction(){
     condition,language,
     description:description||null,
     starting_price:startingPrice,
-    reserve_price:reservePrice,
+    buy_now_price:buyNowPrice,
     anti_snipe_minutes:antiSnipe,
     package_type:packageType,
     start_at:round.start_at,
@@ -2734,7 +2737,7 @@ async function publishAuction(){
   if(statusEl)statusEl.textContent='✓ Carta adicionada à rodada!';
   clearAuctionCardSelection();
   clearAuctionPhotoPick();
-  ['leilao-admin-desc','leilao-admin-preco','leilao-admin-reserva']
+  ['leilao-admin-desc','leilao-admin-preco','leilao-admin-arremate']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const versaoEl=document.getElementById('leilao-admin-versao');if(versaoEl)versaoEl.value='';
   setStatus('Carta publicada no leilão','ok');

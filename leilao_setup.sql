@@ -182,7 +182,7 @@ create table if not exists auctions (
   description       text,
   starting_price    numeric not null check (starting_price > 0),
   min_increment     numeric not null default 5 check (min_increment > 0),
-  reserve_price     numeric check (reserve_price is null or reserve_price >= starting_price),
+  buy_now_price     numeric check (buy_now_price is null or buy_now_price >= starting_price), -- "preço de arremate" (01/09/2026): visível pro comprador, se um lance bater aqui o leilão encerra na hora
   current_bid       numeric,
   current_bidder    uuid references auth.users(id),
   bid_count         integer not null default 0,
@@ -494,11 +494,73 @@ begin
   where id = p_auction_id
   returning * into v_auction;
 
+  -- "Preço de arremate" (01/09/2026): se o leiloeiro definiu um valor e
+  -- o lance atingiu ele, o leilão encerra NA HORA com esse lance como
+  -- vencedor — visível pro comprador (diferente do antigo "preço de
+  -- reserva", que era oculto e só bloqueava a venda se não fosse batido).
+  if v_auction.buy_now_price is not null and p_amount >= v_auction.buy_now_price then
+    perform close_auction_as_sold(p_auction_id);
+    select * into v_auction from auctions where id = p_auction_id;
+  end if;
+
   return v_auction;
 end;
 $$;
 
 grant execute on function place_bid(bigint, numeric) to authenticated;
+
+-- ── 6b. close_auction_as_sold — fecha UM leilão como vendido (ou sem
+-- vencedor, se ninguém deu lance). Usado tanto pelo fim de prazo normal
+-- (close_round, abaixo) quanto pelo gatilho de arremate imediato
+-- (place_bid, acima) — um só lugar cria o pedido, em vez de duplicar.
+create or replace function close_auction_as_sold(p_auction_id bigint)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_auction  auctions%rowtype;
+  v_round    auction_rounds%rowtype;
+  v_addr     jsonb;
+  v_email    text;
+  v_order_id bigint;
+begin
+  select * into v_auction from auctions where id = p_auction_id for update;
+  if not found or v_auction.status <> 'ativo' then
+    return; -- já processado (idempotente) ou não existe
+  end if;
+
+  if v_auction.current_bidder is null then
+    update auctions set status = 'encerrado', updated_at = now() where id = p_auction_id;
+    return;
+  end if;
+
+  select * into v_round from auction_rounds where id = v_auction.round_id;
+
+  update auctions set
+    status = 'encerrado', winner_id = v_auction.current_bidder, winning_bid = v_auction.current_bid,
+    updated_at = now()
+  where id = p_auction_id;
+
+  select to_jsonb(a) into v_addr from user_addresses a where a.user_id = v_auction.current_bidder;
+  select email into v_email from auth.users where id = v_auction.current_bidder;
+
+  -- upsert do carrinho (rodada, comprador) — soma o valor dessa carta
+  insert into auction_orders (round_id, buyer_id, amount, payment_due_at, buyer_email, shipping_snapshot)
+  values (v_auction.round_id, v_auction.current_bidder, v_auction.current_bid, v_round.payment_due_at, v_email, v_addr)
+  on conflict (round_id, buyer_id) do update set
+    amount = auction_orders.amount + excluded.amount,
+    updated_at = now()
+  returning id into v_order_id;
+
+  insert into auction_order_items (order_id, auction_id, amount)
+  values (v_order_id, p_auction_id, v_auction.current_bid)
+  on conflict (auction_id) do nothing;
+end;
+$$;
+
+grant execute on function close_auction_as_sold(bigint) to authenticated;
 
 -- ── 7. RPC close_round — fecha os leilões vencidos de UMA rodada e
 -- consolida os arremates de cada comprador em UM pedido (carrinho) ──
@@ -511,10 +573,6 @@ set search_path = public
 as $$
 declare
   r_auction    record;
-  v_has_winner boolean;
-  v_addr       jsonb;
-  v_email      text;
-  v_order_id   bigint;
   v_round      auction_rounds%rowtype;
   v_still_open boolean;
 begin
@@ -522,36 +580,11 @@ begin
   if not found then raise exception 'Rodada não encontrada.'; end if;
 
   for r_auction in
-    select * from auctions
+    select id from auctions
     where round_id = p_round_id and status = 'ativo' and now() > end_at
     for update
   loop
-    v_has_winner := r_auction.current_bidder is not null
-      and (r_auction.reserve_price is null or r_auction.current_bid >= r_auction.reserve_price);
-
-    if v_has_winner then
-      update auctions set
-        status = 'encerrado', winner_id = r_auction.current_bidder, winning_bid = r_auction.current_bid,
-        updated_at = now()
-      where id = r_auction.id;
-
-      select to_jsonb(a) into v_addr from user_addresses a where a.user_id = r_auction.current_bidder;
-      select email into v_email from auth.users where id = r_auction.current_bidder;
-
-      -- upsert do carrinho (rodada, comprador) — soma o valor dessa carta
-      insert into auction_orders (round_id, buyer_id, amount, payment_due_at, buyer_email, shipping_snapshot)
-      values (p_round_id, r_auction.current_bidder, r_auction.current_bid, v_round.payment_due_at, v_email, v_addr)
-      on conflict (round_id, buyer_id) do update set
-        amount = auction_orders.amount + excluded.amount,
-        updated_at = now()
-      returning id into v_order_id;
-
-      insert into auction_order_items (order_id, auction_id, amount)
-      values (v_order_id, r_auction.id, r_auction.current_bid)
-      on conflict (auction_id) do nothing;
-    else
-      update auctions set status = 'encerrado', updated_at = now() where id = r_auction.id;
-    end if;
+    perform close_auction_as_sold(r_auction.id);
   end loop;
 
   -- fecha a rodada quando não sobrar leilão 'ativo' dentro dela
