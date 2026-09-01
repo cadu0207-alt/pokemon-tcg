@@ -243,6 +243,15 @@
     masterball: { comum: 1,   rara: 1,   especial: 1,   ultra_rara: 1   },
   };
 
+  // ── Mochila: stats individuais (01/09/2026) ─────────────────────
+  // Cada captura bem-sucedida também vira 1 indivíduo em wild_backpack,
+  // com 5 stats rolados no servidor (catch_wild_pokemon, ver
+  // wild_backpack_setup.sql) — o client aqui só busca/exibe, nunca rola
+  // nem edita stat nenhum.
+  const WP_STAT_ORDER = ['hp', 'atk', 'def', 'spd', 'crit'];
+  const WP_STAT_LABELS = { hp: 'HP', atk: 'Ataque', def: 'Defesa', spd: 'Agilidade', crit: 'Crítico' };
+  const WP_BACKPACK_CAP_DEFAULT = 20; // só o valor inicial de exibição antes da 1ª resposta da RPC/consulta
+
   // Desenha a pokébola em CSS (sem depender de imagem externa) — metade
   // colorida por tier + tarja preta + botão central, igual ao formato
   // real de cada bola (Great Ball com friso vermelho, Ultra com dourado,
@@ -307,6 +316,14 @@
   let wpBalls = wpLoadJSON(WP_STORAGE_BALLS, { pokeball: 5, greatball: 2, ultraball: 1, masterball: 0 });
   let wpSoundOn = wpLoadJSON(WP_STORAGE_SOUND, false);
   let wpEnabled = wpLoadJSON(WP_STORAGE_ENABLED, true);
+
+  // Mochila — sem cache em localStorage (só existe pra quem está logado;
+  // sempre vem fresca do Supabase, é a fonte da verdade). wpBackpackCap
+  // é só o que a última resposta da RPC informou (ou o default acima
+  // antes da 1ª captura/consulta).
+  let wpBackpack = []; // [{ id, pokemon_slug, dex, rarity, hp, atk, def, spd, crit, exceptional, nickname, caught_at }]
+  let wpBackpackCap = WP_BACKPACK_CAP_DEFAULT;
+  let wpBackpackLoaded = false;
 
   // ── Sync com Supabase (conta do usuário) ────────────────────────
   // Mesmo padrão de segurança do xp_system.js: sbClient/currentUser são
@@ -485,6 +502,45 @@
     } catch (e) {
       console.warn('[wp] falha ao sincronizar com Supabase:', e);
     }
+  }
+
+  // ── Mochila: busca/libera/renomeia (sempre via Supabase — sem
+  // fallback local, porque sem login não faz sentido ter mochila) ────
+  async function wpFetchBackpack() {
+    if (!wpHasClient() || !wpUid()) { wpBackpack = []; wpBackpackLoaded = true; return; }
+    const { data, error } = await sbClient
+      .from('wild_backpack')
+      .select('id,pokemon_slug,dex,rarity,hp,atk,def,spd,crit,exceptional,nickname,caught_at')
+      .eq('user_id', wpUid())
+      .order('caught_at', { ascending: false });
+    if (error) { console.warn('[wp] falha ao buscar mochila:', error.message); return; }
+    wpBackpack = data || [];
+    wpBackpackLoaded = true;
+    wpUpdateBadge();
+  }
+
+  async function wpReleaseBackpack(id) {
+    if (!wpHasClient() || !wpUid()) return false;
+    const { data, error } = await sbClient.rpc('release_wild_pokemon', { p_backpack_id: id });
+    if (error) { console.warn('[wp] falha ao liberar:', error.message); return false; }
+    if (data) wpBackpack = wpBackpack.filter(b => b.id !== id);
+    wpUpdateBadge();
+    return !!data;
+  }
+
+  async function wpRenameBackpack(id, nickname) {
+    if (!wpHasClient() || !wpUid()) return false;
+    const { data, error } = await sbClient.rpc('rename_wild_pokemon', { p_backpack_id: id, p_nickname: nickname });
+    if (error) { console.warn('[wp] falha ao renomear:', error.message); return false; }
+    const rec = wpBackpack.find(b => b.id === id);
+    if (rec) rec.nickname = (nickname || '').trim() || null;
+    return !!data;
+  }
+
+  function wpBackpackDisplayName(entry) {
+    if (entry.nickname) return entry.nickname;
+    const mon = WP_KANTO151.find(m => m.s === entry.pokemon_slug);
+    return mon ? mon.n : entry.pokemon_slug;
   }
 
   // ── Som (Web Audio API — sem depender de arquivo externo) ─────
@@ -673,6 +729,40 @@
     .wp-cell.wp-got .wp-n { color: #06d6a0; }
     .wp-cell .wp-r { font-size: 8.5px; text-transform: uppercase; letter-spacing: .5px; }
     .wp-close { float: right; background: none; border: none; color: #9aa0c0; font-size: 20px; cursor: pointer; }
+
+    /* ── Mochila ──────────────────────────────────────────────── */
+    .wp-bp-cell { cursor: pointer; position: relative; transition: transform .15s, border-color .15s; }
+    .wp-bp-cell:hover { transform: translateY(-2px); border-color: #ffd16655; }
+    .wp-bp-cell img { opacity: 1; filter: none; }
+    .wp-bp-cell .wp-bp-nick { font-size: 10px; margin-top: 4px; color: #f2f2f2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wp-bp-cell.wp-bp-exceptional { border-color: #ffd166aa; box-shadow: 0 0 14px #ffd16655; }
+    .wp-bp-exceptional-tag { position: absolute; top: 2px; right: 4px; font-size: 12px; }
+    .wp-bp-empty { color: #9aa0c0; font-size: 13px; text-align: center; padding: 20px 10px; }
+    .wp-statbar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .wp-statbar-label { width: 68px; font-size: 12px; color: #9aa0c0; flex-shrink: 0; }
+    .wp-statbar-track { flex: 1; height: 8px; background: #181c2e; border-radius: 4px; overflow: hidden; }
+    .wp-statbar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #06d6a0, #4cc9f0); }
+    .wp-statbar-val { width: 28px; text-align: right; font-family: 'Space Mono', monospace; font-size: 12px; color: #f2f2f2; }
+    .wp-bp-detail-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+    .wp-bp-detail-head img { width: 72px; height: 72px; object-fit: contain; }
+    .wp-bp-nick-input {
+      background: #111422; border: 1px solid #52597a55; border-radius: 8px; color: #f2f2f2;
+      font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 6px 10px; width: 100%; margin-top: 4px;
+    }
+    .wp-bp-nick-input:focus { outline: none; border-color: #ffd16688; }
+    .wp-bp-actions { display: flex; gap: 8px; margin-top: 16px; }
+    .wp-bp-btn {
+      flex: 1; text-align: center; padding: 10px; border-radius: 10px; cursor: pointer;
+      font-family: 'DM Sans', sans-serif; font-size: 13px; border: 1px solid #ffffff14; background: #111422; color: #f2f2f2;
+    }
+    .wp-bp-btn:hover { border-color: #ffffff33; }
+    .wp-bp-btn-danger { color: #e63946; }
+    .wp-bp-btn-danger.wp-bp-confirm { background: #e6394622; border-color: #e6394666; }
+    .wp-bp-btn-back { flex: 0 0 auto; padding: 10px 14px; }
+    .wp-bp-full-banner {
+      background: #ffd16618; border: 1px solid #ffd16655; border-radius: 10px; padding: 10px 14px;
+      font-size: 13px; margin-bottom: 12px; color: #ffd166;
+    }
   `;
   document.head.appendChild(wpStyle);
 
@@ -914,10 +1004,32 @@
       wpCatches[mon.s].firstCaughtAt = wpCatches[mon.s].firstCaughtAt || Date.now();
       wpSaveCatches();
 
+      // Mochila — o indivíduo já rolado/persistido volta pronto no
+      // mesmo retorno da RPC (ver wild_backpack_setup.sql); só
+      // atualiza o cache local, sem rolar nem inserir nada daqui.
+      if (result.backpack_entry) {
+        wpBackpack.unshift({
+          id: result.backpack_entry.id, pokemon_slug: mon.s, dex: mon.d, rarity: mon.r,
+          hp: result.backpack_entry.hp, atk: result.backpack_entry.atk, def: result.backpack_entry.def,
+          spd: result.backpack_entry.spd, crit: result.backpack_entry.crit,
+          exceptional: result.backpack_entry.exceptional, nickname: null, caught_at: new Date().toISOString(),
+        });
+        wpBackpackLoaded = true;
+      }
+      if (typeof result.backpack_cap === 'number') wpBackpackCap = result.backpack_cap;
+      wpUpdateBadge();
+
       el.classList.add('wp-caught');
       setTimeout(() => el.remove(), 500);
       wpSoundCatch();
-      wpToastCatch(mon, true);
+      if (result.backpack_entry && result.backpack_entry.exceptional) {
+        wpToastRaw('💠', `Espécime PERFEITO! ${mon.n} rolou os 5 stats altos — abra a mochila pra ver.`, true);
+      } else {
+        wpToastCatch(mon, true);
+      }
+      if (result.backpack_full) {
+        setTimeout(() => wpToastRaw('🎒', `Mochila cheia (${result.backpack_count}/${result.backpack_cap}) — abra e libere algum Pokémon quando quiser.`, false), 1600);
+      }
 
       // Reflete XP/nível/conquistas novas no painel do Dashboard e no
       // badge do header, do mesmo jeito que toggleSlot() já faz hoje
@@ -1005,8 +1117,9 @@
     const totalCaught = Object.keys(wpCatches).length;
     const totalBalls = WP_BALL_ORDER.reduce((s, t) => s + (wpBalls[t] || 0), 0);
     wpBadgeEl.classList.toggle('wp-badge-off', !wpEnabled);
+    const bagPart = wpBackpackLoaded ? ` · 🎒 ${wpBackpack.length}/${wpBackpackCap}` : '';
     wpBadgeEl.querySelector('.wp-badge-text').textContent = wpEnabled
-      ? `🎒 ${totalBalls} · 🐾 ${totalCaught}/${WP_KANTO151.length}`
+      ? `⚾ ${totalBalls} · 🐾 ${totalCaught}/${WP_KANTO151.length}${bagPart}`
       : `Minigame desligado`;
     const powerBtn = wpBadgeEl.querySelector('.wp-power-btn');
     if (powerBtn) { powerBtn.textContent = wpEnabled ? '🎮' : '🚫'; powerBtn.title = wpEnabled ? 'Desligar minigame' : 'Ligar minigame'; }
@@ -1066,14 +1179,17 @@
       <div class="wp-sub">${totalCaught}/${WP_KANTO151.length} capturados — flagre os Pokémon que aparecem espiando pelo site</div>
       <div class="wp-tabs">
         <div class="wp-tab" data-tab="dex">Pokédex</div>
+        <div class="wp-tab" data-tab="mochila">Mochila</div>
         <div class="wp-tab" data-tab="inv">Inventário</div>
       </div>
-      <div class="wp-panel-dex" style="display:${tab === 'dex' ? 'grid' : 'none'}" class="wp-grid">${dexHtml}</div>
+      <div class="wp-panel-dex wp-grid" style="display:${tab === 'dex' ? 'grid' : 'none'}">${dexHtml}</div>
+      <div class="wp-panel-mochila" style="display:${tab === 'mochila' ? 'block' : 'none'}"></div>
       <div class="wp-panel-inv" style="display:${tab === 'inv' ? 'block' : 'none'}">${invHtml}</div>
     </div>`;
 
     document.body.appendChild(backdrop);
-    backdrop.querySelector('.wp-panel-dex').classList.add('wp-grid');
+    const mochilaPanel = backdrop.querySelector('.wp-panel-mochila');
+
     backdrop.querySelector('.wp-close').addEventListener('click', () => backdrop.remove());
     backdrop.querySelectorAll('.wp-tab').forEach(t => {
       t.classList.toggle('wp-tab-active', t.dataset.tab === tab);
@@ -1081,7 +1197,101 @@
         backdrop.querySelectorAll('.wp-tab').forEach(x => x.classList.remove('wp-tab-active'));
         t.classList.add('wp-tab-active');
         backdrop.querySelector('.wp-panel-dex').style.display = t.dataset.tab === 'dex' ? 'grid' : 'none';
+        backdrop.querySelector('.wp-panel-mochila').style.display = t.dataset.tab === 'mochila' ? 'block' : 'none';
         backdrop.querySelector('.wp-panel-inv').style.display = t.dataset.tab === 'inv' ? 'block' : 'none';
+        if (t.dataset.tab === 'mochila') wpRenderMochilaGrid(mochilaPanel);
+      });
+    });
+
+    if (tab === 'mochila') wpRenderMochilaGrid(mochilaPanel);
+  }
+
+  // ── Mochila: grid de indivíduos + detalhe de stats ──────────────
+  async function wpRenderMochilaGrid(container) {
+    if (!wpHasClient() || !wpUid()) {
+      container.innerHTML = `<div class="wp-bp-empty">Faça login pra ter uma mochila — ela vive na sua conta, não no aparelho.</div>`;
+      return;
+    }
+    container.innerHTML = `<div class="wp-bp-empty">Carregando…</div>`;
+    if (!wpBackpackLoaded) await wpFetchBackpack();
+
+    if (wpBackpack.length === 0) {
+      container.innerHTML = `<div class="wp-bp-empty">Sua mochila está vazia — capture algum Pokémon pra guardar o primeiro aqui.</div>`;
+      return;
+    }
+
+    const fullBanner = wpBackpack.length > wpBackpackCap
+      ? `<div class="wp-bp-full-banner">🎒 Mochila cheia (${wpBackpack.length}/${wpBackpackCap}) — clique em algum pra liberar espaço.</div>`
+      : '';
+
+    container.innerHTML = fullBanner + `<div class="wp-grid">${wpBackpack.map(entry => {
+      const meta = WP_RARITY_META[entry.rarity];
+      return `<div class="wp-cell wp-bp-cell ${entry.exceptional ? 'wp-bp-exceptional' : ''}" data-id="${entry.id}">
+        ${entry.exceptional ? '<span class="wp-bp-exceptional-tag">💠</span>' : ''}
+        <img src="${wpSpriteUrl(entry.dex)}" alt="">
+        <div class="wp-bp-nick">${wpBackpackDisplayName(entry)}</div>
+        <div class="wp-r" style="color:${meta.color}">${meta.label}</div>
+      </div>`;
+    }).join('')}</div>`;
+
+    container.querySelectorAll('.wp-bp-cell').forEach(cell => {
+      cell.addEventListener('click', () => {
+        const entry = wpBackpack.find(b => b.id === cell.dataset.id);
+        if (entry) wpRenderBackpackDetail(container, entry);
+      });
+    });
+  }
+
+  function wpRenderBackpackDetail(container, entry) {
+    const meta = WP_RARITY_META[entry.rarity];
+    const statsHtml = WP_STAT_ORDER.map(k => `<div class="wp-statbar-row">
+      <span class="wp-statbar-label">${WP_STAT_LABELS[k]}</span>
+      <span class="wp-statbar-track"><span class="wp-statbar-fill" style="width:${entry[k]}%"></span></span>
+      <span class="wp-statbar-val">${entry[k]}</span>
+    </div>`).join('');
+    const caughtDate = new Date(entry.caught_at).toLocaleDateString('pt-BR');
+
+    container.innerHTML = `
+      <div class="wp-bp-detail-head">
+        <img src="${wpSpriteUrl(entry.dex)}" alt="">
+        <div style="flex:1">
+          <input class="wp-bp-nick-input" maxlength="24" value="${wpBackpackDisplayName(entry)}" placeholder="Apelido">
+          <div class="wp-sub" style="margin:4px 0 0"><span style="color:${meta.color}">${meta.label}</span> · capturado em ${caughtDate}</div>
+        </div>
+      </div>
+      ${entry.exceptional ? `<div class="wp-bp-full-banner">💠 Espécime Excepcional — os 5 stats vieram altos. Raríssimo!</div>` : ''}
+      ${statsHtml}
+      <div class="wp-bp-actions">
+        <div class="wp-bp-btn wp-bp-btn-back" data-act="back">← Voltar</div>
+        <div class="wp-bp-btn wp-bp-btn-danger" data-act="release">Liberar</div>
+      </div>
+    `;
+
+    const nickInput = container.querySelector('.wp-bp-nick-input');
+    nickInput.addEventListener('blur', async () => {
+      const val = nickInput.value.trim();
+      if (val === wpBackpackDisplayName(entry)) return;
+      await wpRenameBackpack(entry.id, val);
+    });
+    nickInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') nickInput.blur(); });
+
+    container.querySelector('[data-act="back"]').addEventListener('click', () => wpRenderMochilaGrid(container));
+
+    const releaseBtn = container.querySelector('[data-act="release"]');
+    releaseBtn.addEventListener('click', () => {
+      if (!releaseBtn.classList.contains('wp-bp-confirm')) {
+        releaseBtn.classList.add('wp-bp-confirm');
+        releaseBtn.textContent = 'Confirmar? Não dá pra desfazer';
+        return;
+      }
+      releaseBtn.textContent = 'Liberando…';
+      wpReleaseBackpack(entry.id).then((ok) => {
+        if (ok) {
+          wpToastRaw('🎒', `${wpBackpackDisplayName(entry)} voltou pra natureza.`, true);
+          wpRenderMochilaGrid(container);
+        } else {
+          wpToastRaw('⚠️', 'Não deu pra liberar agora, tenta de novo.', false);
+        }
       });
     });
   }
@@ -1143,6 +1353,7 @@
   async function wpDailyBootSequence() {
     await wpSyncFromCloud();
     wpCheckDailyLoginBonus();
+    wpFetchBackpack(); // não bloqueia o boot — só pra badge/mochila já vir preenchida
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
