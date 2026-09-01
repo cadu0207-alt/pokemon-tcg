@@ -46,6 +46,7 @@ set search_path = public
 as $$
 declare
   v_team_ids uuid[];
+  v_len      int;
   v_count    int;
 begin
   if auth.uid() is null then raise exception 'Você precisa estar logado.'; end if;
@@ -56,16 +57,23 @@ begin
     raise exception 'Esse Pokémon não está na sua mochila.';
   end if;
 
+  -- Aceita times PARCIAIS (0 a 3) — o app adiciona 1 de cada vez ao
+  -- clicar em "🛡️ Equipe" (0→1→2→3), então exigir exatamente 3 aqui
+  -- travaria a 1ª e a 2ª adição. Quem exige os 3 completos pra valer é
+  -- só a hora de batalhar (battle_random_opponent).
   v_team_ids := coalesce(p_team_ids, '{}');
-  if array_length(v_team_ids, 1) is not null then
-    if array_length(v_team_ids, 1) <> 3 then
-      raise exception 'A equipe precisa ter exatamente 3 Pokémon.';
-    end if;
-    if (select count(distinct x) from unnest(v_team_ids) x) <> 3 then
-      raise exception 'A equipe precisa ter 3 Pokémon diferentes.';
+  v_len := coalesce(array_length(v_team_ids, 1), 0);
+
+  if v_len > 3 then
+    raise exception 'A equipe pode ter no máximo 3 Pokémon.';
+  end if;
+
+  if v_len > 0 then
+    if (select count(distinct x) from unnest(v_team_ids) x) <> v_len then
+      raise exception 'A equipe não pode ter o mesmo Pokémon repetido.';
     end if;
     select count(*) into v_count from wild_backpack where id = any(v_team_ids) and user_id = auth.uid();
-    if v_count <> 3 then
+    if v_count <> v_len then
       raise exception 'Algum Pokémon da equipe não está na sua mochila.';
     end if;
   end if;
