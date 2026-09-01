@@ -724,6 +724,7 @@
       <button type="button" class="btn-add leilao-subtab-btn" data-sub="meus-arremates" onclick="switchLeilaoSubtab('meus-arremates')">🏆 Meus Arremates</button>
       <button type="button" class="btn-add leilao-subtab-btn" data-sub="loja" onclick="switchLeilaoSubtab('loja')">🏪 Loja do Leiloeiro</button>
       <button type="button" id="leilao-tab-cadastro" class="btn-add leilao-subtab-btn" data-sub="cadastro" onclick="switchLeilaoSubtab('cadastro')" style="display:none">➕ Cadastro</button>
+      <button type="button" id="leilao-tab-pedidos" class="btn-add leilao-subtab-btn" data-sub="pedidos" onclick="switchLeilaoSubtab('pedidos')" style="display:none">📬 Pedidos &amp; Envios</button>
       <button type="button" id="leilao-tab-estoque" class="btn-add leilao-subtab-btn" data-sub="estoque" onclick="switchLeilaoSubtab('estoque')" style="display:none">📦 Estoque da Loja</button>
       <button type="button" id="leilao-tab-analises" class="btn-add leilao-subtab-btn" data-sub="analises" onclick="switchLeilaoSubtab('analises')" style="display:none">📊 Análises</button>
       <button type="button" id="leilao-tab-arquivo" class="btn-add leilao-subtab-btn" data-sub="arquivo" onclick="switchLeilaoSubtab('arquivo')" style="display:none">🗄️ Arquivo</button>
@@ -836,6 +837,17 @@
     </div>
 
     <!-- ── ANÁLISES (leiloeiro/admin) ──────────────────────────────── -->
+    <!-- ── PEDIDOS & ENVIOS (31/08/2026) ───────────────────────────
+         Tudo que o leiloeiro precisa pra resolver uma rodada encerrada
+         num só lugar: resumo do pedido, endereço do comprador, simulação
+         de frete (frete.js) e o botão de chamar no WhatsApp — antes
+         ficava misturado no meio dos gráficos de Análises. -->
+    <div id="leilao-sub-pedidos" style="display:none">
+      <div class="sec-title" style="margin-top:0">📬 Pedidos / Carrinhos do Leilão</div>
+      <div style="font-size:10.5px;color:var(--muted);margin-bottom:14px">Resumo de cada rodada arrematada, endereço de entrega, simulação de frete e o botão pra chamar o comprador no WhatsApp e combinar pagamento/envio.</div>
+      <div id="leilao-admin-orders"></div>
+    </div>
+
     <div id="leilao-sub-analises" style="display:none">
       <div class="kpi-grid" id="leilao-analises-kpis" style="margin-bottom:24px"></div>
       <div id="leilao-analises-countdown" style="margin-bottom:24px"></div>
@@ -847,8 +859,6 @@
       <div id="leilao-analises-ultimos-lances" style="margin-bottom:24px"></div>
       <div class="sec-title" style="margin-top:0">💰 Comissão MyDeck (mês)</div>
       <div id="leilao-analises-comissao" style="margin-bottom:24px"></div>
-      <div class="sec-title" style="margin-top:0">📦 Pedidos / Carrinhos do Leilão</div>
-      <div id="leilao-admin-orders"></div>
 
       <!-- ── LOJA — integrado na mesma aba Análises, 19/08/2026 ────── -->
       <div class="sec-title">🏪 Loja do Leiloeiro</div>

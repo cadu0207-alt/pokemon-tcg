@@ -165,7 +165,7 @@ async function renderLeilaoTab(){
   // "Meus Arremates" e, desde 19/08/2026, "Loja do Leiloeiro"); só os botões de
   // gestão (Cadastro/Estoque/Análises/Arquivo/Financeiro) continuam escondidos
   // de quem não é leiloeiro.
-  ['leilao-tab-cadastro','leilao-tab-estoque','leilao-tab-analises','leilao-tab-arquivo','leilao-tab-financeiro'].forEach(id=>{
+  ['leilao-tab-cadastro','leilao-tab-pedidos','leilao-tab-estoque','leilao-tab-analises','leilao-tab-arquivo','leilao-tab-financeiro'].forEach(id=>{
     const btn=document.getElementById(id);
     if(btn)btn.style.display=aucIsLeilaoAdmin?'':'none';
   });
@@ -175,7 +175,7 @@ async function renderLeilaoTab(){
   // outras sub-abas nem aparecem no menu pra ele); leiloeiro mantém a última
   // sub-aba escolhida.
   const allowed=aucIsLeilaoAdmin
-    ?['leiloes','meus-arremates','loja','cadastro','estoque','analises','arquivo','financeiro']
+    ?['leiloes','meus-arremates','loja','cadastro','pedidos','estoque','analises','arquivo','financeiro']
     :['leiloes','meus-arremates','loja'];
   switchLeilaoSubtab(allowed.includes(aucActiveSubtab)?aucActiveSubtab:'leiloes');
 
@@ -254,7 +254,7 @@ async function renderLeilaoTab(){
 let aucActiveSubtab='leiloes';
 function switchLeilaoSubtab(name){
   aucActiveSubtab=name;
-  ['leiloes','meus-arremates','loja','cadastro','estoque','analises','arquivo','financeiro'].forEach(n=>{
+  ['leiloes','meus-arremates','loja','cadastro','pedidos','estoque','analises','arquivo','financeiro'].forEach(n=>{
     const pane=document.getElementById('leilao-sub-'+n);
     if(pane)pane.style.display=(n===name)?'':'none';
     const btn=document.querySelector(`.leilao-subtab-btn[data-sub="${n}"]`);
@@ -941,7 +941,7 @@ async function loadAdminAuctionOrders(){
   if(error){console.error('[leilao] admin orders',error);aucAdminOrders=[];aucAdminOrderItems=[];return;}
   aucAdminOrders=Array.isArray(orders)?orders:[];
   if(aucAdminOrders.length){
-    const{data:items}=await sbClient.from('auction_order_items').select('*, auctions(card_name,image_url,set_id,card_n,version,created_by)').in('order_id',aucAdminOrders.map(o=>o.id));
+    const{data:items}=await sbClient.from('auction_order_items').select('*, auctions(card_name,image_url,set_id,card_n,version,created_by,package_type)').in('order_id',aucAdminOrders.map(o=>o.id));
     aucAdminOrderItems=Array.isArray(items)?items:[];
   }else aucAdminOrderItems=[];
 }
@@ -2821,6 +2821,7 @@ function renderAdminOrders(){
       ${o.shipping_hold?`<div class="mkt-note" style="margin-bottom:8px;border-color:var(--gold);color:var(--gold)">
         🕐 <b>Comprador pediu pra segurar o envio</b>${o.shipping_hold_note?`: "${esc(o.shipping_hold_note)}"`:''} — combine com ele antes de despachar, se preferir.
       </div>`:''}
+      ${freteQuoteBlockHtml('auc-admin-order-'+o.id,{context:'auction_round',context_id:o.round_id,package_type:aucOrderPackageType(items),quantity:items.length||1,initialCep:addr.cep})}
       <div style="margin-bottom:8px">
         ${addr.whatsapp?`<button class="cv-item-remove" style="color:var(--teal);border-color:var(--teal);font-size:10.5px" onclick="contactBuyerWhatsapp(${o.id})">💬 Chamar no WhatsApp (${esc(addr.whatsapp)})</button>`
           :`<div style="font-size:10px;color:var(--muted)">Comprador sem WhatsApp cadastrado (pedido anterior a essa opção).</div>`}
