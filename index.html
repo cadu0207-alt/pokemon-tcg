@@ -94,17 +94,17 @@
 .amrow.paused { animation-play-state: paused !important; }
 #pg-app .pane {
   position: relative; z-index: 1;
-  /* MARCA D'ÁGUA 01/09/2026: Rayquaza (mesma arte gerada pro header) no
-     canto inferior direito de toda aba, bem discreto — o PNG já vem com
-     opacidade baixa embutida (fundo transparente), então aqui só posiciona.
-     Troca de imagem por tema via [data-theme="dark"] abaixo (mesmo padrão
-     de .home-logo-light/dark). background:var(--bg) fica no shorthand pra
-     não perder a cor de fundo de cada tema. min-height garante que abas com
-     pouco conteúdo (ex: Início) ainda tenham altura de tela cheia, senão o
-     "bottom" fica colado embaixo do próprio conteúdo curto, em vez do fundo
-     real da tela, colidindo com os botões fixos do topo. */
+  /* MARCA D'ÁGUA 01/09/2026: Rayquaza (mesma arte gerada pro header) como
+     decoração de fundo — grande, centralizada e TRAVADA na tela (background-
+     attachment:fixed), então não se move quando rola a página; fica atrás
+     de tudo (o PNG já vem com opacidade baixa embutida e fundo transparente,
+     então não compete visualmente com botões/imagens). Troca de imagem por
+     tema via [data-theme="dark"] abaixo (mesmo padrão de .home-logo-light/
+     dark). background:var(--bg) fica no shorthand pra não perder a cor de
+     fundo de cada tema. min-height garante que abas com pouco conteúdo
+     (ex: Início) ainda preencham a tela toda. */
   min-height: calc(100vh - var(--topbar-h, 104px));
-  background: var(--bg) url('rayquaza-watermark-light.png') no-repeat right bottom / 380px auto;
+  background: var(--bg) url('rayquaza-watermark-light.png') no-repeat center center / 720px auto fixed;
 }
 [data-theme="dark"] #pg-app .pane { background-image: url('rayquaza-watermark-dark.png'); }
 /* Mobile: tira a marca d'água (economiza banda e evita brigar com a mnav
