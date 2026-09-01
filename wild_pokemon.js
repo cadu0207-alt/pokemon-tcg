@@ -714,6 +714,7 @@
     .wp-ball-btn .wp-ball-qty { font-family: 'Space Mono', monospace; color: #9aa0c0; }
     .wp-ball-disabled { opacity: .3; cursor: not-allowed; }
     .wp-ball-icon { object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); }
+    .wp-badge .wp-ball-icon { vertical-align: -3px; }
     .wp-thrown-ball {
       position: fixed; z-index: 9999; pointer-events: none;
       transition: left .4s cubic-bezier(.3,.6,.4,1), top .4s cubic-bezier(.3,.6,.4,1);
@@ -1216,8 +1217,11 @@
     const totalBalls = WP_BALL_ORDER.reduce((s, t) => s + (wpBalls[t] || 0), 0);
     wpBadgeEl.classList.toggle('wp-badge-off', !wpEnabled);
     const bagPart = wpBackpackLoaded ? ` · 🎒 ${wpBackpack.length}/${wpBackpackCap}` : '';
-    wpBadgeEl.querySelector('.wp-badge-text').textContent = wpEnabled
-      ? `⚾ ${totalBalls} · 🐾 ${totalCaught}/${WP_KANTO151.length}${bagPart}`
+    // Não existe emoji de pokébola de verdade no Unicode — reaproveita o
+    // mesmo ícone (imagem) já usado no seletor de bola/inventário, só que
+    // pequeno, em vez de usar um emoji genérico (bola de basebol) no lugar.
+    wpBadgeEl.querySelector('.wp-badge-text').innerHTML = wpEnabled
+      ? `${wpBallIconHtml('pokeball', 13)} ${totalBalls} · 🐾 ${totalCaught}/${WP_KANTO151.length}${bagPart}`
       : `Minigame desligado`;
     const powerBtn = wpBadgeEl.querySelector('.wp-power-btn');
     if (powerBtn) { powerBtn.textContent = wpEnabled ? '🎮' : '🚫'; powerBtn.title = wpEnabled ? 'Desligar minigame' : 'Ligar minigame'; }
