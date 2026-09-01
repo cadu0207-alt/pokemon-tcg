@@ -386,10 +386,24 @@
     <!-- FEED ÚNICO 24/08/2026 (pedido do Eduardo): Notícias, Vídeos, Links e
          Revista deixaram de ser seções separadas — agora é uma linha do tempo
          só, ordenada por data (mais novo primeiro), com scroll infinito (ver
-         loadInicioFeed()/inicioRenderFeedPage() em inicio.js). -->
-    <div class="sec-title">📰 Feed do Mundo Pokémon</div>
-    <div id="inicio-feed-wrap"></div>
-    <div id="inicio-feed-sentinel" style="display:none"></div>
+         loadInicioFeed()/inicioRenderFeedPage() em inicio.js).
+
+         RANKING 01/09/2026 (pedido do Eduardo): o feed sempre teve um espaço
+         vazio à direita em telas largas (.inicio-feed tem max-width:720px,
+         ver style.css) — vira uma coluna lateral com o Ranking de Batalhas
+         (ver inicio_ranking.js). Em telas estreitas (≤1100px) a coluna some
+         e o ranking desce pra baixo do feed, empilhado. -->
+    <div class="inicio-main-grid">
+      <div class="inicio-main-col">
+        <div class="sec-title">📰 Feed do Mundo Pokémon</div>
+        <div id="inicio-feed-wrap"></div>
+        <div id="inicio-feed-sentinel" style="display:none"></div>
+      </div>
+      <div class="inicio-side-col">
+        <div class="sec-title">🏆 Ranking de Batalhas</div>
+        <div id="inicio-ranking-wrap"></div>
+      </div>
+    </div>
 
     <!-- RODAPÉ LEGAL 29/08/2026: Termos/Privacidade viviam só na pg-home
          removida — precisam continuar acessíveis mesmo sem login. -->
@@ -2009,6 +2023,7 @@
 <script defer src="admin_panel.js"></script>
 <script defer src="xp_system.js"></script>
 <script defer src="wild_pokemon.js"></script>
+<script defer src="inicio_ranking.js"></script>
 <script>
 // Renderizar EV ao abrir a aba Preco Justo (após scripts deferidos)
 document.addEventListener('DOMContentLoaded', function(){

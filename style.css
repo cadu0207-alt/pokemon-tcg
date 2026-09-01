@@ -3492,6 +3492,40 @@ body.inicio-modal-open { overflow: hidden; }
    tipo) ocupa a largura inteira da coluna, então o vídeo sai maior que no
    grid antigo (pedido do Eduardo) sem precisar de classe própria de
    tamanho. */
+/* RANKING 01/09/2026: o feed (max-width:720px logo abaixo) sempre deixou
+   um espaço vazio à direita em telas largas — vira uma coluna lateral com
+   o Ranking de Batalhas (ver inicio_ranking.js). ≤1100px a coluna some e
+   o ranking empilha embaixo do feed (mesmo texto, sem grid). */
+.inicio-main-grid { display: grid; grid-template-columns: 1fr 320px; gap: 28px; align-items: start; }
+.inicio-main-col { min-width: 0; }
+.inicio-side-col { position: sticky; top: 20px; }
+@media (max-width: 1100px) {
+  .inicio-main-grid { grid-template-columns: 1fr; }
+  .inicio-side-col { position: static; }
+}
+
+.inicio-ranking-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+.inicio-ranking-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.inicio-ranking-tab {
+  flex: 1; text-align: center; padding: 7px 6px; border-radius: 8px; cursor: pointer;
+  font-size: 12px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap;
+}
+.inicio-ranking-tab.inicio-ranking-tab-active { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.inicio-ranking-row { display: flex; align-items: center; gap: 10px; padding: 7px 4px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.inicio-ranking-row:last-child { border-bottom: none; }
+.inicio-ranking-pos { width: 22px; text-align: center; font-family: 'Space Mono', monospace; color: var(--muted); flex-shrink: 0; }
+.inicio-ranking-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.inicio-ranking-wins { font-family: 'Space Mono', monospace; color: var(--accent); flex-shrink: 0; }
+.inicio-ranking-row.inicio-ranking-me { background: color-mix(in srgb, var(--accent) 8%, transparent); border-radius: 8px; }
+.inicio-ranking-empty { color: var(--muted); font-size: 12.5px; text-align: center; padding: 16px 6px; }
+.inicio-ranking-name-form { display: flex; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.inicio-ranking-name-input {
+  flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: 12.5px; padding: 7px 9px;
+}
+.inicio-ranking-name-save { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 7px 12px; font-size: 12.5px; cursor: pointer; white-space: nowrap; }
+.inicio-ranking-name-hint { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
 .inicio-feed { display: flex; flex-direction: column; gap: 16px; max-width: 720px; }
 .inicio-feed-item-foot { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 4px; }
 .inicio-feed-video-card { padding-bottom: 12px; }
