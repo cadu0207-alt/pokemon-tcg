@@ -325,6 +325,13 @@
   let wpBackpackCap = WP_BACKPACK_CAP_DEFAULT;
   let wpBackpackLoaded = false;
 
+  // ── Batalhas (01/09/2026): Principal + Equipe de 3, sorteadas contra
+  // outro jogador qualquer que também já tenha os dois definidos. Igual
+  // à mochila, sem cache local — sempre busca fresco do Supabase.
+  let wpLoadout = { principal_id: null, team_ids: [] };
+  let wpLoadoutLoaded = false;
+  let wpBattleBusy = false;
+
   // ── Sync com Supabase (conta do usuário) ────────────────────────
   // Mesmo padrão de segurança do xp_system.js: sbClient/currentUser são
   // const/let no topo de app.js, então window.sbClient NÃO funciona —
@@ -543,6 +550,55 @@
     return mon ? mon.n : entry.pokemon_slug;
   }
 
+  // ── Loadout: Principal + Equipe ─────────────────────────────────
+  async function wpFetchLoadout() {
+    if (!wpHasClient() || !wpUid()) { wpLoadout = { principal_id: null, team_ids: [] }; wpLoadoutLoaded = true; return; }
+    const { data, error } = await sbClient
+      .from('wild_loadout')
+      .select('principal_id,team_ids,wins,losses')
+      .eq('user_id', wpUid())
+      .maybeSingle();
+    if (error) { console.warn('[wp] falha ao buscar loadout:', error.message); return; }
+    wpLoadout = data || { principal_id: null, team_ids: [] };
+    wpLoadoutLoaded = true;
+    wpUpdateArenaButton();
+  }
+
+  function wpLoadoutReady() {
+    return !!wpLoadout.principal_id && (wpLoadout.team_ids || []).length === 3;
+  }
+
+  async function wpSetLoadout(principalId, teamIds) {
+    if (!wpHasClient() || !wpUid()) return false;
+    const { data, error } = await sbClient.rpc('set_wild_loadout', { p_principal_id: principalId, p_team_ids: teamIds });
+    if (error) { wpToastRaw('⚠️', error.message, false); return false; }
+    wpLoadout.principal_id = data.principal_id;
+    wpLoadout.team_ids = data.team_ids || [];
+    wpUpdateArenaButton();
+    return true;
+  }
+
+  async function wpTogglePrincipal(entryId) {
+    const next = wpLoadout.principal_id === entryId ? null : entryId;
+    const ok = await wpSetLoadout(next, wpLoadout.team_ids);
+    if (ok) wpToastRaw('⭐', next ? 'Definido como Principal.' : 'Não é mais o Principal.', true);
+    return ok;
+  }
+
+  async function wpToggleTeamMember(entryId) {
+    const cur = wpLoadout.team_ids || [];
+    if (cur.includes(entryId)) {
+      return wpSetLoadout(wpLoadout.principal_id, cur.filter(id => id !== entryId));
+    }
+    if (cur.length >= 3) {
+      wpToastRaw('🛡️', 'Sua equipe já tem 3 — tire alguém antes de adicionar outro.', false);
+      return false;
+    }
+    const ok = await wpSetLoadout(wpLoadout.principal_id, [...cur, entryId]);
+    if (ok) wpToastRaw('🛡️', 'Adicionado à Equipe.', true);
+    return ok;
+  }
+
   // ── Som (Web Audio API — sem depender de arquivo externo) ─────
   let wpAudioCtx = null;
   function wpAudio() {
@@ -573,6 +629,9 @@
   function wpSoundCatch() { wpBeep(523, 0, 0.12); wpBeep(659, 0.12, 0.12); wpBeep(784, 0.24, 0.28); }
   function wpSoundFlee() { wpBeep(300, 0, 0.1, 'sawtooth', 0.08); wpBeep(180, 0.1, 0.25, 'sawtooth', 0.08); }
   function wpSoundBall() { wpBeep(660, 0, 0.08, 'triangle', 0.06); wpBeep(990, 0.08, 0.14, 'triangle', 0.06); }
+  function wpSoundHit(crit) { wpBeep(crit ? 200 : 140, 0, crit ? 0.18 : 0.1, 'square', crit ? 0.12 : 0.08); }
+  function wpSoundVictory() { wpBeep(523, 0, 0.12); wpBeep(659, 0.12, 0.12); wpBeep(784, 0.24, 0.12); wpBeep(1047, 0.36, 0.3); }
+  function wpSoundDefeat() { wpBeep(400, 0, 0.2, 'sawtooth', 0.08); wpBeep(280, 0.2, 0.2, 'sawtooth', 0.08); wpBeep(180, 0.4, 0.4, 'sawtooth', 0.08); }
 
   // ── CSS ──────────────────────────────────────────────────────
   const wpStyle = document.createElement('style');
@@ -763,6 +822,45 @@
       background: #ffd16618; border: 1px solid #ffd16655; border-radius: 10px; padding: 10px 14px;
       font-size: 13px; margin-bottom: 12px; color: #ffd166;
     }
+    .wp-bp-tag-row { display: flex; gap: 6px; margin-top: 8px; }
+    .wp-bp-tag-btn {
+      flex: 1; text-align: center; padding: 8px; border-radius: 10px; cursor: pointer; font-size: 12px;
+      border: 1px solid #ffffff14; background: #111422; color: #9aa0c0;
+    }
+    .wp-bp-tag-btn.wp-bp-tag-active { border-color: #ffd166aa; color: #ffd166; background: #ffd16614; }
+    .wp-bp-cell-tags { position: absolute; top: 2px; left: 4px; font-size: 11px; display: flex; gap: 2px; }
+
+    /* ── Arena (batalhas) ─────────────────────────────────────── */
+    .wp-arena-btn {
+      position: fixed; left: 14px; bottom: 64px; z-index: 9997;
+      background: linear-gradient(135deg, #2a0f14, #111422); border: 1px solid #e6394666;
+      color: #f2f2f2; font-family: 'Space Mono', monospace; font-size: 12.5px;
+      padding: 8px 14px; border-radius: 999px; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0,0,0,.4); transition: border-color .15s, transform .15s;
+    }
+    .wp-arena-btn:hover { border-color: #e63946; transform: translateY(-2px); }
+    .wp-arena-btn.wp-arena-disabled { opacity: .55; }
+    @media (max-width: 900px) {
+      .wp-arena-btn { bottom: calc(116px + env(safe-area-inset-bottom, 0px)); }
+    }
+    .wp-battle-modal { max-width: 460px; }
+    .wp-battle-format { text-align: center; color: #9aa0c0; font-size: 12px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; }
+    .wp-battle-duel { margin-bottom: 22px; }
+    .wp-battle-vs { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .wp-battle-side { flex: 1; text-align: center; }
+    .wp-battle-side img { width: 56px; height: 56px; object-fit: contain; transition: transform .15s, filter .15s; }
+    .wp-battle-side.wp-battle-hit img { transform: scale(.85); filter: brightness(1.6); }
+    .wp-battle-vs-label { font-family: 'Bebas Neue', sans-serif; color: #52597a; font-size: 18px; }
+    .wp-battle-hpbar-track { height: 10px; background: #181c2e; border-radius: 5px; overflow: hidden; margin-top: 6px; }
+    .wp-battle-hpbar-fill { height: 100%; background: linear-gradient(90deg, #06d6a0, #4cc9f0); transition: width .35s ease; }
+    .wp-battle-hpbar-fill.wp-battle-low { background: linear-gradient(90deg, #e63946, #ffd166); }
+    .wp-battle-dmg { font-family: 'Space Mono', monospace; font-size: 12px; color: #e63946; height: 16px; margin-top: 2px; }
+    .wp-battle-dmg.wp-battle-crit { color: #ffd166; font-weight: 700; }
+    .wp-battle-duel-result { text-align: center; font-size: 12px; color: #9aa0c0; margin-top: 4px; }
+    .wp-battle-banner { text-align: center; padding: 16px; border-radius: 12px; margin-top: 6px; font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: .5px; }
+    .wp-battle-banner.wp-win { background: #06d6a022; border: 1px solid #06d6a066; color: #06d6a0; }
+    .wp-battle-banner.wp-lose { background: #e6394622; border: 1px solid #e6394666; color: #e63946; }
+    .wp-battle-record { text-align: center; font-size: 12px; color: #9aa0c0; margin-top: 6px; }
   `;
   document.head.appendChild(wpStyle);
 
@@ -1224,10 +1322,16 @@
       ? `<div class="wp-bp-full-banner">🎒 Mochila cheia (${wpBackpack.length}/${wpBackpackCap}) — clique em algum pra liberar espaço.</div>`
       : '';
 
+    if (!wpLoadoutLoaded) await wpFetchLoadout();
+
     container.innerHTML = fullBanner + `<div class="wp-grid">${wpBackpack.map(entry => {
       const meta = WP_RARITY_META[entry.rarity];
+      const isPrincipal = wpLoadout.principal_id === entry.id;
+      const isTeam = (wpLoadout.team_ids || []).includes(entry.id);
+      const tags = (isPrincipal ? '⭐' : '') + (isTeam ? '🛡️' : '');
       return `<div class="wp-cell wp-bp-cell ${entry.exceptional ? 'wp-bp-exceptional' : ''}" data-id="${entry.id}">
         ${entry.exceptional ? '<span class="wp-bp-exceptional-tag">💠</span>' : ''}
+        ${tags ? `<span class="wp-bp-cell-tags">${tags}</span>` : ''}
         <img src="${wpSpriteUrl(entry.dex)}" alt="">
         <div class="wp-bp-nick">${wpBackpackDisplayName(entry)}</div>
         <div class="wp-r" style="color:${meta.color}">${meta.label}</div>
@@ -1261,11 +1365,24 @@
       </div>
       ${entry.exceptional ? `<div class="wp-bp-full-banner">💠 Espécime Excepcional — os 5 stats vieram altos. Raríssimo!</div>` : ''}
       ${statsHtml}
+      <div class="wp-bp-tag-row">
+        <div class="wp-bp-tag-btn ${wpLoadout.principal_id === entry.id ? 'wp-bp-tag-active' : ''}" data-act="principal">⭐ Principal (1x1)</div>
+        <div class="wp-bp-tag-btn ${(wpLoadout.team_ids || []).includes(entry.id) ? 'wp-bp-tag-active' : ''}" data-act="team">🛡️ Equipe (3x3)</div>
+      </div>
       <div class="wp-bp-actions">
         <div class="wp-bp-btn wp-bp-btn-back" data-act="back">← Voltar</div>
         <div class="wp-bp-btn wp-bp-btn-danger" data-act="release">Liberar</div>
       </div>
     `;
+
+    container.querySelector('[data-act="principal"]').addEventListener('click', async () => {
+      await wpTogglePrincipal(entry.id);
+      wpRenderBackpackDetail(container, entry);
+    });
+    container.querySelector('[data-act="team"]').addEventListener('click', async () => {
+      await wpToggleTeamMember(entry.id);
+      wpRenderBackpackDetail(container, entry);
+    });
 
     const nickInput = container.querySelector('.wp-bp-nick-input');
     nickInput.addEventListener('blur', async () => {
@@ -1294,6 +1411,178 @@
         }
       });
     });
+  }
+
+  // ── Arena: botão + batalha ──────────────────────────────────────
+  let wpArenaEl = null;
+
+  function wpBuildArenaButton() {
+    if (wpArenaEl) return;
+    wpArenaEl = document.createElement('div');
+    wpArenaEl.className = 'wp-arena-btn';
+    wpArenaEl.textContent = '⚔️ Batalhar';
+    wpArenaEl.addEventListener('click', wpStartBattle);
+    document.body.appendChild(wpArenaEl);
+    wpUpdateArenaButton();
+  }
+
+  function wpUpdateArenaButton() {
+    if (!wpArenaEl) return;
+    if (!wpHasClient() || !wpUid()) {
+      wpArenaEl.textContent = '⚔️ Faça login pra batalhar';
+      wpArenaEl.classList.add('wp-arena-disabled');
+      return;
+    }
+    if (!wpLoadoutLoaded) {
+      wpArenaEl.textContent = '⚔️ Batalhar';
+      wpArenaEl.classList.remove('wp-arena-disabled');
+      return;
+    }
+    if (!wpLoadoutReady()) {
+      wpArenaEl.textContent = '⚔️ Defina sua Equipe';
+      wpArenaEl.classList.add('wp-arena-disabled');
+    } else {
+      const record = (wpLoadout.wins != null) ? ` (${wpLoadout.wins}V-${wpLoadout.losses}D)` : '';
+      wpArenaEl.textContent = `⚔️ Batalhar${record}`;
+      wpArenaEl.classList.remove('wp-arena-disabled');
+    }
+  }
+
+  async function wpStartBattle() {
+    if (wpBattleBusy) return;
+    if (!wpHasClient() || !wpUid()) { wpToastRaw('⚔️', 'Faça login pra batalhar.', false); return; }
+    if (!wpLoadoutLoaded) await wpFetchLoadout();
+    if (!wpLoadoutReady()) {
+      wpToastRaw('🛡️', 'Defina seu Pokémon Principal e sua Equipe de 3 na mochila primeiro.', false);
+      wpOpenDex('mochila');
+      return;
+    }
+
+    wpBattleBusy = true;
+    const original = wpArenaEl.textContent;
+    wpArenaEl.textContent = '⚔️ Buscando rival…';
+    wpArenaEl.classList.add('wp-arena-disabled');
+
+    const { data, error } = await sbClient.rpc('battle_random_opponent');
+
+    wpBattleBusy = false;
+    if (error) {
+      wpToastRaw('⚠️', error.message, false);
+      wpUpdateArenaButton();
+      return;
+    }
+    wpLoadout.wins = data.my_record.wins;
+    wpLoadout.losses = data.my_record.losses;
+    wpUpdateArenaButton();
+    wpOpenBattleModal(data);
+  }
+
+  // ── Modal de batalha: anima cada duelo rodada a rodada ──────────
+  function wpOpenBattleModal(result) {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'wp-modal-backdrop';
+
+    backdrop.innerHTML = `<div class="wp-modal wp-battle-modal">
+      <button class="wp-close" aria-label="Fechar">×</button>
+      <h3>⚔️ Arena</h3>
+      <div class="wp-battle-format">${result.format === '1x1' ? 'Duelo 1x1' : 'Batalha em Equipe 3x3'}</div>
+      <div class="wp-battle-list"></div>
+      <div class="wp-battle-final" style="display:none"></div>
+    </div>`;
+    document.body.appendChild(backdrop);
+    backdrop.querySelector('.wp-close').addEventListener('click', () => backdrop.remove());
+
+    const list = backdrop.querySelector('.wp-battle-list');
+    result.duels.forEach((_, i) => {
+      const d = document.createElement('div');
+      d.className = 'wp-battle-duel';
+      d.dataset.idx = i;
+      list.appendChild(d);
+    });
+
+    wpPlayDuelsSequentially(backdrop, result, 0);
+  }
+
+  function wpPlayDuelsSequentially(backdrop, result, idx) {
+    if (idx >= result.duels.length) {
+      wpShowBattleFinal(backdrop, result);
+      return;
+    }
+    const duel = result.duels[idx];
+    const el = backdrop.querySelector(`.wp-battle-duel[data-idx="${idx}"]`);
+    const aName = duel.a.slug, bName = duel.b.slug;
+    const aMonName = (WP_KANTO151.find(m => m.s === aName) || {}).n || aName;
+    const bMonName = (WP_KANTO151.find(m => m.s === bName) || {}).n || bName;
+    const aHpMax = duel.a.hp * 3, bHpMax = duel.b.hp * 3;
+
+    el.innerHTML = `
+      <div class="wp-battle-vs">
+        <div class="wp-battle-side" data-side="a">
+          <img src="${wpSpriteUrl(duel.a.dex)}" alt="">
+          <div class="wp-n">Você — ${aMonName}</div>
+          <div class="wp-battle-hpbar-track"><div class="wp-battle-hpbar-fill" style="width:100%"></div></div>
+        </div>
+        <div class="wp-battle-vs-label">VS</div>
+        <div class="wp-battle-side" data-side="b">
+          <img src="${wpSpriteUrl(duel.b.dex)}" alt="">
+          <div class="wp-n">Rival — ${bMonName}</div>
+          <div class="wp-battle-hpbar-track"><div class="wp-battle-hpbar-fill" style="width:100%"></div></div>
+        </div>
+      </div>
+      <div class="wp-battle-dmg">&nbsp;</div>
+      <div class="wp-battle-duel-result"></div>
+    `;
+
+    const barA = el.querySelector('[data-side="a"] .wp-battle-hpbar-fill');
+    const barB = el.querySelector('[data-side="b"] .wp-battle-hpbar-fill');
+    const dmgEl = el.querySelector('.wp-battle-dmg');
+    const log = duel.result.log;
+    let step = 0;
+
+    function playStep() {
+      if (step >= log.length) {
+        const resEl = el.querySelector('.wp-battle-duel-result');
+        resEl.textContent = duel.result.winner === 'a' ? 'Você venceu este duelo!' : 'O rival venceu este duelo.';
+        setTimeout(() => wpPlayDuelsSequentially(backdrop, result, idx + 1), 900);
+        return;
+      }
+      const hit = log[step];
+      const sideEl = el.querySelector(`[data-side="${hit.side}"]`);
+      sideEl.classList.add('wp-battle-hit');
+      wpSoundHit(hit.crit);
+      dmgEl.textContent = `${hit.crit ? 'CRÍTICO! ' : ''}-${hit.dmg}`;
+      dmgEl.classList.toggle('wp-battle-crit', !!hit.crit);
+
+      if (hit.side === 'a') {
+        const pct = Math.max(0, Math.min(100, (hit.hp_b / bHpMax) * 100));
+        barB.style.width = pct + '%';
+        barB.classList.toggle('wp-battle-low', pct < 30);
+      } else {
+        const pct = Math.max(0, Math.min(100, (hit.hp_a / aHpMax) * 100));
+        barA.style.width = pct + '%';
+        barA.classList.toggle('wp-battle-low', pct < 30);
+      }
+      setTimeout(() => sideEl.classList.remove('wp-battle-hit'), 200);
+      step++;
+      setTimeout(playStep, 550);
+    }
+    playStep();
+  }
+
+  function wpShowBattleFinal(backdrop, result) {
+    const won = result.overall === 'a';
+    const finalEl = backdrop.querySelector('.wp-battle-final');
+    finalEl.style.display = 'block';
+    finalEl.innerHTML = `
+      <div class="wp-battle-banner ${won ? 'wp-win' : 'wp-lose'}">${won ? 'VITÓRIA!' : 'DERROTA'}</div>
+      <div class="wp-battle-record">Seu retrospecto: ${result.my_record.wins}V - ${result.my_record.losses}D</div>
+    `;
+    if (won) wpSoundVictory(); else wpSoundDefeat();
+    if (typeof xpFetchAll === 'function') {
+      xpFetchAll().then(() => {
+        if (typeof xpRenderBadge === 'function' && typeof currentUser !== 'undefined') xpRenderBadge(currentUser);
+      });
+    }
   }
 
   // ── Timer base ───────────────────────────────────────────────
@@ -1336,6 +1625,7 @@
   // ── Boot ─────────────────────────────────────────────────────
   function wpInit() {
     wpBuildBadge();
+    wpBuildArenaButton();
     wpScheduleBase();
   }
   if (document.readyState === 'loading') {
@@ -1354,6 +1644,7 @@
     await wpSyncFromCloud();
     wpCheckDailyLoginBonus();
     wpFetchBackpack(); // não bloqueia o boot — só pra badge/mochila já vir preenchida
+    wpFetchLoadout();  // idem, pro botão de Batalhar já vir com o rótulo certo
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
