@@ -92,7 +92,27 @@
   transition: opacity .3s;
 }
 .amrow.paused { animation-play-state: paused !important; }
-#pg-app .pane { position: relative; z-index: 1; background: var(--bg); }
+#pg-app .pane {
+  position: relative; z-index: 1;
+  /* MARCA D'ÁGUA 01/09/2026: Rayquaza (mesma arte gerada pro header) no
+     canto inferior direito de toda aba, bem discreto — o PNG já vem com
+     opacidade baixa embutida (fundo transparente), então aqui só posiciona.
+     Troca de imagem por tema via [data-theme="dark"] abaixo (mesmo padrão
+     de .home-logo-light/dark). background:var(--bg) fica no shorthand pra
+     não perder a cor de fundo de cada tema. min-height garante que abas com
+     pouco conteúdo (ex: Início) ainda tenham altura de tela cheia, senão o
+     "bottom" fica colado embaixo do próprio conteúdo curto, em vez do fundo
+     real da tela, colidindo com os botões fixos do topo. */
+  min-height: calc(100vh - var(--topbar-h, 104px));
+  background: var(--bg) url('rayquaza-watermark-light.png') no-repeat right bottom / 380px auto;
+}
+[data-theme="dark"] #pg-app .pane { background-image: url('rayquaza-watermark-dark.png'); }
+/* Mobile: tira a marca d'água (economiza banda e evita brigar com a mnav
+   fixa no rodapé) — mantém só a cor sólida de fundo, sem mexer no min-height
+   acima (útil também no mobile pra abas curtas não ficarem "cortadas"). */
+@media (max-width: 900px) {
+  #pg-app .pane { background-image: none; }
+}
 /* CORRIGIDO 18/08/2026: .stripe, #feedback-bar-wrap e #global-ctcg-banner-wrap
    ficam FORA de .pane no DOM, então (sem position própria) eram pintados
    ANTES do #app-mosaic na stacking order — o overlay quase-opaco do mosaico
