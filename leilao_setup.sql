@@ -560,7 +560,11 @@ begin
 end;
 $$;
 
-grant execute on function close_auction_as_sold(bigint) to authenticated;
+-- 02/09/2026: NAO conceder a authenticated/anon — close_auction_as_sold
+-- nao valida quem chama, e so deve ser executada internamente (por
+-- place_bid() e pelos varredores de rodada expirada), nunca via RPC
+-- publico. Ver claude/analise-seguranca-performance-supabase-02set2026.md.
+revoke execute on function close_auction_as_sold(bigint) from public, anon, authenticated;
 
 -- ── 7. RPC close_round — fecha os leilões vencidos de UMA rodada e
 -- consolida os arremates de cada comprador em UM pedido (carrinho) ──

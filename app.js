@@ -775,7 +775,26 @@ async function fetchAllRows(queryFactory){
   }
   return{data:all,error:null};
 }
+// 02/09/2026 — guarda de reentrância: loadAll() é disparado toda vez que
+// onAuthStateChange recebe um evento que não seja TOKEN_REFRESHED (ex:
+// SIGNED_IN). Isso pode acontecer mais de uma vez em sequência rápida —
+// principalmente com várias abas do navegador logadas na mesma conta (o
+// supabase-js propaga o evento de sessão entre abas via localStorage) ou
+// durante uma reconexão instável. Sem essa guarda, cada disparo abria as 6
+// queries de novo (+ até 2 retries cada, se a conexão estivesse ruim),
+// multiplicando pedidos ao Supabase sem necessidade — foi um dos fatores
+// do pico de tráfego de 01/09. Mesmo padrão de INICIO_FEED_REQ (inicio.js).
+let _loadAllPromise = null;
 async function loadAll(){
+  if(_loadAllPromise) return _loadAllPromise;
+  _loadAllPromise = _loadAllImpl();
+  try{
+    return await _loadAllPromise;
+  } finally {
+    _loadAllPromise = null;
+  }
+}
+async function _loadAllImpl(){
   setStatus('Conectando...','warning');
   if(!uid()){setStatus('Faça login','warning');return;}
   if(!sbClient){

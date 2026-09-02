@@ -91,7 +91,11 @@ begin
 end;
 $$;
 
-grant execute on function close_auction_as_sold(bigint) to authenticated;
+-- 02/09/2026: NAO conceder a authenticated/anon — close_auction_as_sold
+-- nao valida quem chama, e so deve ser executada internamente (por
+-- place_bid() e pelos varredores de rodada expirada), nunca via RPC
+-- publico. Ver claude/analise-seguranca-performance-supabase-02set2026.md.
+revoke execute on function close_auction_as_sold(bigint) from public, anon, authenticated;
 
 -- ── 3. place_bid() — gatilho de arremate imediato ─────────────────
 create or replace function place_bid(p_auction_id bigint, p_amount numeric)
