@@ -169,7 +169,7 @@ body, .panel, .kpi, .tab, header, .home-bg, input, select, textarea {
 .tfa-row-quick .inicio-quick-btn { padding: 7px 12px; font-size: 10px; }
 
 @media (max-width: 640px) {
-  .top-fixed-actions { top: 54px; right: 8px; gap: 6px; }
+  .top-fixed-actions { top: 12px; right: 8px; gap: 6px; } /* CORRIGIDO 02/09/2026: estava top:54px, sobrepondo o user-chip/botão de sair que quebra linha no header no mobile — subiu pra ficar alinhado com a logo, na mesma faixa do topo do header (padding-top:16px + logo 40px), acima de onde o user-chip cai quando o header quebra linha. */
   .theme-toggle-btn { padding: 6px 10px 6px 9px; font-size: 10px; }
   .wa-community-btn { padding: 7px 12px 7px 10px; font-size: 10px; }
   .wa-community-btn .wa-label { display: none; } /* só o ícone no mobile, pra não apertar */
