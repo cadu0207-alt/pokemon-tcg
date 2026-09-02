@@ -329,6 +329,14 @@
       <div class="msheet-grid">
         <button type="button" class="msheet-item" data-tab="iniciantes" onclick="mNav('iniciantes')"><span class="msheet-ic">🔰</span><span class="msheet-lb">Iniciantes</span></button>
         <button type="button" class="msheet-item msheet-cta" onclick="closeMSheet();window.open('simulador.html','_blank')"><span class="msheet-ic">🎰</span><span class="msheet-lb">Simulador</span></button>
+        <!-- 02/09/2026 (pedido do Eduardo): Alpha Lorcana entra aqui no
+             mobile porque a faixa de logo+atalhos que ficava no topo da
+             Início (.inicio-brand-row) saiu pra dar lugar aos feeds de
+             compra/venda (ver mais abaixo) — esse era o único acesso a
+             Alpha Lorcana que existia no mobile. No desktop continua
+             disponível no .tdesk e no cluster fixo (.tfa-row-quick), sem
+             mudança nenhuma lá. -->
+        <button type="button" class="msheet-item msheet-cta" onclick="closeMSheet();window.open('lorcana.html','_blank')"><span class="msheet-ic">✨</span><span class="msheet-lb">Alpha Lorcana</span></button>
         <!-- espelha #nav-tab-admin: admin_panel.js mostra só pro Eduardo
              (updateAdminTabVisibility, isAdmin()). -->
         <button type="button" class="msheet-item msheet-admin" id="msheet-tab-admin" data-tab="admin" style="display:none" onclick="mNav('admin')"><span class="msheet-ic">🔐</span><span class="msheet-lb">Admin</span></button>
@@ -364,19 +372,17 @@
          antes das Novidades. Viraram uma faixa só: logo à esquerda (menor,
          reaproveita .home-logo-light/.home-logo-dark) e os botões — também
          menores — à direita, aproveitando a largura em vez da altura. -->
-    <div class="inicio-brand-row">
-      <div class="inicio-brand">
-        <img class="inicio-brand-logo home-logo-light" src="logo-mydeck.webp" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil" width="1800" height="572">
-        <img class="inicio-brand-logo home-logo-dark" src="logo-mydeck-dark.webp" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil" width="1800" height="572">
-      </div>
-      <!-- ATALHOS 29/08/2026: Simulador de Packs e Alpha Lorcana migraram da
-           antiga pg-home pra cá. Simulador também segue disponível no menu
-           (desktop/mobile) como já era — aqui é só mais um acesso rápido. -->
-      <div class="inicio-quick-actions">
-        <button type="button" class="inicio-quick-btn inicio-quick-sim" onclick="window.open('simulador.html','_blank')">🎰 Simulador de Packs</button>
-        <button type="button" class="inicio-quick-btn inicio-quick-lorcana" onclick="window.open('lorcana.html','_blank')">✨ Alpha Lorcana</button>
-      </div>
-    </div>
+    <!-- MUDOU 02/09/2026 (pedido do Eduardo): a faixa de logo+atalhos
+         (.inicio-brand-row, já era invisível no desktop desde 31/08 — ver
+         "#inicio .inicio-brand-row{display:none}" no style.css) saiu de
+         vez também do mobile. No print que ele mandou, essa faixa some no
+         mobile porque o back-btn+logo do <header> (sempre visível, todas
+         as abas) já cobre a identidade visual; Simulador/Alpha Lorcana
+         viraram atalhos no menu "Mais" (ver msheet-cta em index.html).
+         No lugar dela entram os feeds de Compra/Venda (ver
+         .inicio-market-feed-target / loadInicioMarketFeed() em inicio.js)
+         — só aparecem quando houver algum anúncio/ordem pra mostrar. -->
+    <div class="inicio-market-feed-target" id="inicio-market-feed-wrap-top"></div>
 
     <div id="inicio-hero-wrap"></div>
 
@@ -400,6 +406,13 @@
         <div id="inicio-feed-sentinel" style="display:none"></div>
       </div>
       <div class="inicio-side-col">
+        <!-- 02/09/2026 (pedido do Eduardo): no desktop os feeds de
+             Compra/Venda ficam aqui em cima, acima do Ranking — assim não
+             disputam espaço com o Feed do Mundo Pokémon na coluna
+             principal. Mesmo conteúdo do slot mobile (ver
+             .inicio-market-feed-target), só que um dos dois fica
+             escondido por CSS conforme a largura (ver style.css). -->
+        <div class="inicio-market-feed-target" id="inicio-market-feed-wrap-side"></div>
         <div class="sec-title">🏆 Ranking de Batalhas</div>
         <div id="inicio-ranking-wrap"></div>
       </div>

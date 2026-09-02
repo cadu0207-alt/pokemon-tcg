@@ -3359,6 +3359,75 @@ body.share-view .btn-add { display: none !important; }
   .inicio-quick-actions { justify-content: center; flex: 1 1 100%; }
 }
 
+/* ─── FEEDS DE COMPRA/VENDA NA INÍCIO (02/09/2026, pedido do Eduardo) ───
+   Substituem a antiga faixa de logo+atalhos no mobile (.inicio-brand-row,
+   removida do HTML — ver comentário em index.html). Duas fitas horizontais
+   com scroll automático via CSS (@keyframes, sem JS de animação, só
+   liga/desliga com display): "À venda" corre da direita pra esquerda,
+   "Procurando" corre da esquerda pra direita — pedido explícito do
+   Eduardo pra diferenciar visualmente os dois lados do book (ver
+   card_listings/buy_orders). Conteúdo populado por
+   loadInicioMarketFeed() (inicio.js), que injeta o MESMO html em todo
+   elemento .inicio-market-feed-target — existem dois no DOM (um no topo
+   da Início pro mobile, outro dentro da .inicio-side-col pro desktop,
+   acima do Ranking); qual dos dois aparece é resolvido só por CSS aqui
+   embaixo, então não tem select por JS, não tem re-fetch ao redimensionar
+   a janela. Cada trilha (.mkt-feed-track) tem os cards duplicados 2x no
+   HTML (ver inicioMarketRow() em inicio.js) pra loop sem salto: anima de
+   translateX(0) até -50% (ou o inverso), ou seja, sempre "anda" metade da
+   largura real do trilho — a outra metade é a cópia que entra por trás. */
+.inicio-market-feed-target:empty { display: none; }
+#inicio-market-feed-wrap-side { display: none; }
+.inicio-market-strip { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+.mkt-feed-block { min-width: 0; }
+.mkt-feed-label {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700;
+  letter-spacing: .04em; color: var(--muted); margin-bottom: 5px;
+}
+.mkt-feed-row {
+  overflow: hidden; position: relative; border-radius: 10px;
+  background: var(--surface2, var(--surface)); border: 1px solid var(--border);
+  padding: 8px 0;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+}
+.mkt-feed-track { display: flex; gap: 12px; width: max-content; padding: 0 12px; }
+.mkt-feed-row-sell .mkt-feed-track { animation: mktFeedScrollL 46s linear infinite; }
+.mkt-feed-row-buy .mkt-feed-track { animation: mktFeedScrollR 46s linear infinite; }
+/* pausa a rolagem enquanto o dedo/mouse está em cima — evita "fugir" da
+   carta que a pessoa tava tentando tocar. */
+.mkt-feed-row:hover .mkt-feed-track,
+.mkt-feed-track:active { animation-play-state: paused; }
+@keyframes mktFeedScrollL { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes mktFeedScrollR { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+.mkt-feed-card {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  width: 60px; flex-shrink: 0; background: none; border: none; cursor: pointer;
+  padding: 0; font-family: 'IBM Plex Mono', monospace;
+}
+.mkt-feed-card img {
+  width: 50px; height: auto; border-radius: 5px; background: var(--border);
+  box-shadow: 0 2px 6px rgba(0,0,0,.16);
+}
+.mkt-feed-name {
+  font-size: 8px; color: var(--text2, var(--text)); max-width: 60px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mkt-feed-price { font-size: 9.5px; font-weight: 700; }
+.mkt-feed-row-sell .mkt-feed-price { color: #16a34a; }
+.mkt-feed-row-buy .mkt-feed-price { color: #2563eb; }
+
+/* ≥901px: mesmo breakpoint do resto do layout desktop (.tdesk, sidebar
+   fixa, .inicio-brand-row já escondida aqui). O slot do topo (mobile)
+   some e o de dentro da .inicio-side-col (acima do Ranking) aparece. */
+@media (min-width: 901px) {
+  #inicio-market-feed-wrap-top { display: none; }
+  #inicio-market-feed-wrap-side:not(:empty) { display: block; }
+  .mkt-feed-card { width: 52px; }
+  .mkt-feed-card img { width: 44px; }
+  .mkt-feed-name, .mkt-feed-price { max-width: 52px; }
+}
+
 .inicio-legal-footer {
   margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border);
   text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px;

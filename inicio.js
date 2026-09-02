@@ -126,6 +126,7 @@ async function renderInicio() {
   renderInicioHero();
   loadInicioUpdates();
   loadInicioFeed();
+  loadInicioMarketFeed();
 }
 
 // Mesma lógica de "número de geração" do loadInicioFeed() — evita que uma
@@ -226,6 +227,95 @@ let inicioFeedObserver = null;
 // pegou ao entrar; se ele mudou (uma chamada mais nova já começou) antes
 // de mexer no DOM, a chamada velha desiste em vez de escrever por cima.
 let INICIO_FEED_REQ = 0;
+
+// ── FEEDS DE COMPRA/VENDA (02/09/2026, pedido do Eduardo) ───────────
+// Duas fitas com scroll automático (CSS puro, ver style.css): cartas à
+// venda (card_listings) e ordens de compra ativas (buy_orders) — os dois
+// lados do "book" que já existe na aba Venda de Produtos (marketplace.js/
+// price_history.js). Aqui é só vitrine, sem paginação/infinite scroll —
+// pega as N mais recentes de cada lado. Mesmo padrão de "número de
+// geração" do loadInicioFeed()/renderInicioHero() acima, pela mesma razão
+// (renderInicio() pode disparar mais de uma vez em sequência no login).
+let INICIO_MARKET_REQ = 0;
+const INICIO_MARKET_LIMIT = 24;
+
+async function loadInicioMarketFeed() {
+  const targets = document.querySelectorAll('.inicio-market-feed-target');
+  if (!targets.length || !sbClient) return;
+  const reqId = ++INICIO_MARKET_REQ;
+
+  const [sellRes, buyRes] = await Promise.all([
+    sbClient.from('card_listings')
+      .select('set_id,card_n,card_name,price,created_at')
+      .order('created_at', { ascending: false })
+      .limit(INICIO_MARKET_LIMIT),
+    sbClient.from('buy_orders')
+      .select('set_id,card_n,card_name,max_price,created_at')
+      .eq('status', 'ativa')
+      .order('created_at', { ascending: false })
+      .limit(INICIO_MARKET_LIMIT),
+  ]);
+  if (reqId !== INICIO_MARKET_REQ) return; // uma chamada mais nova já ganhou
+
+  if (sellRes.error) console.error('[inicio market feed] card_listings', sellRes.error);
+  if (buyRes.error) console.error('[inicio market feed] buy_orders', buyRes.error);
+  const sellItems = sellRes.data || [];
+  const buyItems = buyRes.data || [];
+
+  if (!sellItems.length && !buyItems.length) {
+    targets.forEach(el => { el.innerHTML = ''; });
+    return;
+  }
+
+  const html =
+    '<div class="inicio-market-strip">' +
+      inicioMarketRow(sellItems, 'sell', '🟢 À venda agora') +
+      inicioMarketRow(buyItems, 'buy', '🔵 Procurando comprar') +
+    '</div>';
+  targets.forEach(el => { el.innerHTML = html; });
+}
+
+function inicioMarketRow(items, kind, label) {
+  if (!items.length) return '';
+  // duplica a lista uma vez: a trilha anima de 0 até -50% (ou o inverso),
+  // então a "metade real" e a "metade cópia" se emendam sem salto visível.
+  const cardsHtml = items.map(it => inicioMarketCardHtml(it, kind)).join('');
+  return (
+    '<div class="mkt-feed-block">' +
+      '<div class="mkt-feed-label">' + label + '</div>' +
+      '<div class="mkt-feed-row mkt-feed-row-' + kind + '">' +
+        '<div class="mkt-feed-track">' + cardsHtml + cardsHtml + '</div>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function inicioMarketCardHtml(it, kind) {
+  const price = kind === 'sell' ? it.price : it.max_price;
+  const priceTxt = 'R$ ' + Number(price || 0).toFixed(2).replace('.', ',');
+  const name = inicioEsc(inicioTruncate(it.card_name || '', 16));
+  // 02/09/2026 (pedido do Eduardo): reduzir o peso de dados no mobile — os
+  // cards aqui são minúsculos (44-52px), então usar a imagem /large de
+  // sempre é desperdício de banda. imgThumb() (app.js) já existe pra isso
+  // (troca scrydex /large por /small, ~10x mais leve — mesmo padrão usado
+  // nos grids do Fichário, ver comentário "PERF 03/08/2026" em app.js);
+  // pokemontcg.io (sv/legacy) e pkmncards.com (mep) não têm variante menor
+  // disponível nessas URLs, então passam direto por imgThumb() sem efeito.
+  let img = '';
+  try {
+    if (typeof getBinderImg === 'function') {
+      img = getBinderImg({ n: it.card_n }, it.set_id) || '';
+      if (img && typeof imgThumb === 'function') img = imgThumb(img);
+    }
+  } catch (e) { img = ''; }
+  return (
+    '<button type="button" class="mkt-feed-card" onclick="goToTab(\'cartas\')" title="' + inicioEsc(it.card_name || '') + ' — ' + priceTxt + '">' +
+      (img ? '<img src="' + img + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '') +
+      '<span class="mkt-feed-name">' + name + '</span>' +
+      '<span class="mkt-feed-price">' + priceTxt + '</span>' +
+    '</button>'
+  );
+}
 
 async function loadInicioFeed() {
   const holder = document.getElementById('inicio-feed-wrap');
