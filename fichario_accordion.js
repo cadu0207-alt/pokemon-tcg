@@ -43,6 +43,25 @@ document.addEventListener('click', function(e){
   menu.classList.remove('open');
 });
 
+// NOVO 02/09/2026 (pedido do Eduardo — ver fichario_masterdex.js): dropdown
+// próprio pro Pokédex (Master Set Nacional + regionais) na barra de abas
+// mobile, sempre visível (não depende de pinnedBinders como o de "📚
+// Fichários" logo abaixo) — mesmo padrão de toggle.
+function fmTogglePokedexTabMenu(e){
+  if(e) e.stopPropagation();
+  const menu=document.getElementById('fic-tabs-pokedex-menu');
+  if(!menu) return;
+  menu.classList.toggle('open');
+}
+window.fmTogglePokedexTabMenu=fmTogglePokedexTabMenu;
+document.addEventListener('click', function(e){
+  const menu=document.getElementById('fic-tabs-pokedex-menu');
+  const btn=document.getElementById('fic-tabs-pokedex-btn');
+  if(!menu||!menu.classList.contains('open')) return;
+  if(e.target===btn||(btn&&btn.contains(e.target))||menu.contains(e.target)) return;
+  menu.classList.remove('open');
+});
+
 window.renderTabs=function(){
   const container=document.getElementById('binder-tabs');
   if(!container)return;
@@ -53,6 +72,32 @@ window.renderTabs=function(){
     onclick="switchSet('__custom__',this)"
     style="${cur==='__custom__'?'border-bottom:2px solid #a855f7;color:#a855f7':''}">
     ✨ Meus <span class="ctab-n">Fichários</span></div>`;
+
+  // NOVO 02/09/2026: item de primeiro nível pro Pokédex — antes só existia
+  // escondido dentro de "✨ Meus Fichários → Coleções Gerais" (ver análise
+  // 23/08/2026, seção 4.1). Lê os itens prontos de fmMdexNavItems() pra não
+  // duplicar a lógica de quais regionais existem (mesma fonte do menu
+  // desktop, fichario_nav_desktop.js).
+  if(typeof window.fmMdexNavItems==='function'){
+    const mdexItems=window.fmMdexNavItems();
+    const activeMdex=mdexItems.find(it=>it.tabId&&it.tabId===cur);
+    html+=`<div style="position:relative;flex-shrink:0">
+      <div class="ctab${activeMdex?' active':''}" id="fic-tabs-pokedex-btn"
+        onclick="fmTogglePokedexTabMenu(event)"
+        style="display:flex;align-items:center;gap:5px;${activeMdex?`border-bottom:2px solid ${activeMdex.color};color:${activeMdex.color}`:''}">
+        ${activeMdex?`${activeMdex.emoji} ${activeMdex.label}`:'🌐 Pokédex'} ▾</div>
+      <div id="fic-tabs-pokedex-menu" class="fic-more-menu">
+        ${mdexItems.map(it=>{
+          if(it.create){
+            return`<button class="fic-more-item" style="opacity:.75" onclick="${it.onclickFn};fmTogglePokedexTabMenu()">${it.emoji} + ${it.label}</button>`;
+          }
+          const isActive=it.tabId===cur;
+          return`<button class="fic-more-item" style="${isActive?`color:${it.color};font-weight:700`:''}"
+            onclick="switchSet('${it.tabId}',null);fmTogglePokedexTabMenu()">${it.emoji} ${it.label}</button>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
 
   // Dropdown único pra fichários personalizados fixados — antes cada um virava
   // uma aba própria (pinnedBinders.forEach), crescia sem limite conforme

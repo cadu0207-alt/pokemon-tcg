@@ -175,6 +175,42 @@ async function fmMdexCreateRegional(gen){
 }
 window.fmMdexCreateRegional=fmMdexCreateRegional;
 
+// NOVO 02/09/2026 (pedido do Eduardo: "o master set nacional esta
+// disponivel para todos? nao estou achando nem ele nem o regional") — dados
+// compartilhados pra dar ao Pokédex (Nacional + regionais) um item de
+// PRIMEIRO NÍVEL nos menus de navegação (mobile: fichario_accordion.js,
+// desktop: fichario_nav_desktop.js), em vez de só existir escondido dentro
+// de "Coleções Gerais" (ver análise 23/08/2026, seção 4.1). Cada item já
+// existente vira um atalho direto pro binder (tabId '__cb__<id>'); cada um
+// que falta vira um botão de criar (mesma fmMdexCreate/fmMdexCreateRegional
+// de sempre) — assim os dois arquivos de menu só leem esta lista, sem
+// duplicar a lógica de "quais regionais existem"/cores/emojis.
+function fmMdexNavItems(){
+  const existingAll=fmMdexAllBinders();
+  const items=[];
+  const nacional=existingAll.find(b=>!b.filter_config.dexFrom&&!b.filter_config.dexTo);
+  if(nacional){
+    items.push({tabId:'__cb__'+nacional.id,label:nacional.name,emoji:nacional.emoji||'🌐',
+      color:nacional.cover_color||'#118ab2',create:false});
+  }else{
+    items.push({tabId:null,label:'Criar Master Set Nacional (1–1025)',emoji:'🌐',color:'#118ab2',
+      create:true,onclickFn:'fmMdexCreate()'});
+  }
+  (typeof POKEDEX_GEN_RANGES!=='undefined'?POKEDEX_GEN_RANGES:[]).forEach(g=>{
+    const existing=existingAll.find(b=>b.filter_config.dexFrom===g.from&&b.filter_config.dexTo===g.to);
+    const meta=FM_MDEX_REGION_META[g.gen]||{emoji:'🗺️',color:'#118ab2'};
+    if(existing){
+      items.push({tabId:'__cb__'+existing.id,label:existing.name,emoji:existing.emoji||meta.emoji,
+        color:existing.cover_color||meta.color,create:false});
+    }else{
+      items.push({tabId:null,label:`Criar Master Set ${g.label} (#${g.from}-${g.to})`,
+        emoji:meta.emoji,color:meta.color,create:true,onclickFn:`fmMdexCreateRegional(${g.gen})`});
+    }
+  });
+  return items;
+}
+window.fmMdexNavItems=fmMdexNavItems;
+
 // ── getBinderCards: resolve 'masterdex' a partir do catálogo INTEIRO ────────
 if(typeof window.getBinderCards==='function'){
   const _fmOrigGetBinderCards=window.getBinderCards;

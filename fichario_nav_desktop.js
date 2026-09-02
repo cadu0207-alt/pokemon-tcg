@@ -95,6 +95,31 @@
     </div>`;
   }
 
+  // NOVO 02/09/2026 (pedido do Eduardo — ver fichario_masterdex.js): grupo
+  // de primeiro nível pro Pokédex (Master Set Nacional + regionais), lendo
+  // os itens já prontos de window.fmMdexNavItems() em vez de duplicar a
+  // lógica de quais regionais existem.
+  function fmPokedexGroup(cur){
+    if(typeof window.fmMdexNavItems!=='function')return'';
+    const items=window.fmMdexNavItems();
+    const groupActive=items.some(it=>it.tabId&&it.tabId===cur);
+    const itemsHtml=items.map(it=>{
+      if(it.create){
+        return`<button type="button" class="tdrop-item" style="opacity:.75;border-left:2px dashed ${it.color}"
+          onclick="${it.onclickFn}">${it.emoji} + ${esc(it.label)}</button>`;
+      }
+      const isActive=it.tabId===cur;
+      return`<button type="button" class="tdrop-item${isActive?' active':''}" data-tab="${it.tabId}"
+        onclick="switchSet('${it.tabId}',null)">${it.emoji} ${esc(it.label)}</button>`;
+    }).join('');
+    return`<div class="tdrop">
+      <button type="button" class="tdrop-btn${groupActive?' active':''}">🌐 POKÉDEX
+        <svg class="tdrop-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="tdrop-menu">${itemsHtml}</div>
+    </div>`;
+  }
+
   function fmSeriesGroup(sr,cur){
     const sets=(typeof SET_CATALOG!=='undefined'?SET_CATALOG:[]).filter(s=>s.series===sr);
     if(!sets.length)return'';
@@ -141,6 +166,7 @@
     if(!host)return;
     const cur=typeof currentSet!=='undefined'?currentSet:null;
     let html=fmMeusFicharioisGroup(cur);
+    html+=fmPokedexGroup(cur);
     Object.keys(typeof SERIES_META!=='undefined'?SERIES_META:{}).forEach(sr=>{
       html+=fmSeriesGroup(sr,cur);
     });
