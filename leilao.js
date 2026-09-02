@@ -1792,9 +1792,9 @@ async function submitBid(auctionId,idSuffix){
   // não dava nenhum feedback, e ele não tinha como saber se o lance foi
   // registrado ou não.
   if(statusEl)statusEl.textContent='Enviando lance...';
-  let error;
+  let error,bidResult;
   try{
-    ({error}=await sbClient.rpc('place_bid',{p_auction_id:auctionId,p_amount:amount}));
+    ({data:bidResult,error}=await sbClient.rpc('place_bid',{p_auction_id:auctionId,p_amount:amount}));
   }catch(e){
     console.error('[leilao] submitBid — falha de conexão',e);
     if(statusEl)statusEl.textContent='Falha de conexão ao enviar o lance — confira se ele foi registrado antes de tentar de novo.';
@@ -1825,6 +1825,26 @@ async function submitBid(auctionId,idSuffix){
     // o lance já foi salvo (chegamos aqui só depois do rpc dar certo) —
     // uma falha ao recarregar a lista não deve parecer que o lance falhou.
     console.error('[leilao] submitBid — falha ao recarregar lista após lance',e);
+  }
+
+  // 02/09/2026 — Arremate imediato (preço de arremate batido): o lance
+  // pode ter fechado o leilão NA HORA (close_auction_as_sold rodando
+  // dentro de place_bid) e criado um pedido de verdade — mas até aqui só
+  // a lista de leilões foi recarregada. Sem isto, 'Meus Arremates' (e o
+  // painel de Pedidos do leiloeiro) só mostravam o pedido novo depois de
+  // sair e voltar pra aba Leilão inteira (renderLeilaoTab do zero) —
+  // bug real encontrado testando o preço de arremate em produção.
+  if(bidResult&&bidResult.status==='encerrado'){
+    try{
+      await loadMyAuctionOrders();
+      renderMyBidsAndOrders();
+      if(aucIsLeilaoAdmin){
+        await loadAdminAuctionOrders();
+        renderAdminOrders();
+      }
+    }catch(e){
+      console.error('[leilao] submitBid — falha ao recarregar pedidos após arremate imediato',e);
+    }
   }
 }
 
