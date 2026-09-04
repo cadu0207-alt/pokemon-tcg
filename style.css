@@ -1387,6 +1387,19 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
   white-space: nowrap;
 }
 
+/* Dashboard do set (04/09/2026) — chips de contagem por versão (N/F/RH/SP),
+   abaixo do kpi-grid em renderFicDashboard() (fichario_patch.js). */
+.fic-dash-vercounts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.fic-dash-verchip {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.fic-dash-verchip b { font-weight: 700; }
+
 /* Menu 'Mais ações' — dropdown simples, sem lib externa */
 .fic-more-menu {
   display: none;

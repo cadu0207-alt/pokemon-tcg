@@ -207,26 +207,30 @@ function switchFicSet(setId) {
 }
 
 function setFicView(mode, onRefresh, ids) {
-  // ids opcional: {grid,binder,controls} — permite reusar esta função em toolbars
-  // de fichário personalizado/Master Set que têm seus próprios ids de botão
-  // (retrocompat: sem 'ids', usa os ids do fichário oficial, comportamento igual a antes)
+  // ids opcional: {grid,binder,dash,controls} — permite reusar esta função em
+  // toolbars de fichário personalizado/Master Set que têm seus próprios ids de
+  // botão (retrocompat: sem 'ids', usa os ids do fichário oficial, comportamento
+  // igual a antes). 'dash' (04/09/2026): 3º modo, sem botão próprio nos
+  // fichários que não passam 'ids' com um — getElementById some/vira no-op,
+  // então não quebra Master Set/fichário personalizado/Lorcana.
   ficViewMode = mode;
-  const gid = (ids && ids.grid) || 'fic-view-grid';
-  const bid = (ids && ids.binder) || 'fic-view-binder';
+  const gid = (ids && ids.grid)  || 'fic-view-grid';
+  const bid = (ids && ids.binder)|| 'fic-view-binder';
+  const did = (ids && ids.dash)  || 'fic-view-dash';
   const cid = (ids && ids.controls) || 'fic-binder-controls';
   const gBtn = document.getElementById(gid);
   const bBtn = document.getElementById(bid);
+  const dBtn = document.getElementById(did);
   const ctrl = document.getElementById(cid);
-  if (gBtn) {
-    gBtn.style.background  = mode === 'grid' ? 'var(--accent)' : 'var(--surface)';
-    gBtn.style.color       = mode === 'grid' ? '#fff' : 'var(--muted)';
-    gBtn.style.borderColor = mode === 'grid' ? 'var(--accent)' : 'var(--border)';
-  }
-  if (bBtn) {
-    bBtn.style.background  = mode === 'binder' ? 'var(--accent)' : 'var(--surface)';
-    bBtn.style.color       = mode === 'binder' ? '#fff' : 'var(--muted)';
-    bBtn.style.borderColor = mode === 'binder' ? 'var(--accent)' : 'var(--border)';
-  }
+  const styleBtn = (btn, active) => {
+    if (!btn) return;
+    btn.style.background  = active ? 'var(--accent)' : 'var(--surface)';
+    btn.style.color       = active ? '#fff' : 'var(--muted)';
+    btn.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+  };
+  styleBtn(gBtn, mode === 'grid');
+  styleBtn(bBtn, mode === 'binder');
+  styleBtn(dBtn, mode === 'dash');
   // CORRIGIDO: era classList.toggle('hidden') — o elemento usa style="display:none"
   if (ctrl) ctrl.style.display = mode === 'binder' ? 'flex' : 'none';
   if (typeof onRefresh === 'function') onRefresh(); else renderBinder();
@@ -308,6 +312,10 @@ function renderBinder() {
 
   if (ficViewMode === 'grid') {
     wrap.innerHTML = renderGridView(filtered);
+  } else if (ficViewMode === 'dash') {
+    // Dashboard usa TODAS as cartas do set (cards), não o `filtered` da busca/
+    // checkboxes acima — é um resumo do set inteiro, não da busca no momento.
+    wrap.innerHTML = renderFicDashboard(cards);
   } else {
     wrap.innerHTML = renderBinderView(filtered);
   }
@@ -327,6 +335,55 @@ function renderBinder() {
     });
     wrap._ficDelegated = true;
   }
+}
+
+/* ─────────────────────────────────────────────
+   RENDER — MODO DASHBOARD (04/09/2026, pedido do Eduardo)
+   Resumo do set aberto: valor da coleção, quanto falta pra fechar, carta
+   mais valiosa (sua e a que falta) e quantidade por versão. Usa getSlots()
+   igual o resto do arquivo — cada versão (N/F/RH/SP) tem preço próprio
+   (ver getSlots em app.js: RH costuma valer mais que N, por exemplo), então
+   o valor é somado por SLOT, não por carta.
+───────────────────────────────────────────── */
+function renderFicDashboard(cards) {
+  let ownedValue = 0, missingValue = 0, ownedCount = 0, missingCount = 0;
+  let bestOwned = null, bestMissing = null;
+  const verCounts = {};
+  cards.forEach(c => {
+    getSlots(c, currentSet).forEach(s => {
+      const key   = `${currentSet}:${c.n}:${s.ver}`;
+      const price = s.price || 0;
+      if (collected.has(key)) {
+        ownedValue += price; ownedCount++;
+        verCounts[s.ver] = (verCounts[s.ver] || 0) + 1;
+        if (!bestOwned || price > bestOwned.price) bestOwned = { card: c, ver: s.ver, price };
+      } else {
+        missingValue += price; missingCount++;
+        if (!bestMissing || price > bestMissing.price) bestMissing = { card: c, ver: s.ver, price };
+      }
+    });
+  });
+  const totalValue = ownedValue + missingValue;
+  const pctValue = totalValue ? Math.round(ownedValue / totalValue * 100) : 0;
+  const verLabel = v => (VERSIONS.find(x => x.code === v) || {}).label || v;
+
+  const tiles = [
+    kpiHTML('teal',  '💰 Valor da Coleção',   'R$' + fmtR(ownedValue),   ownedCount + ' slot' + (ownedCount === 1 ? '' : 's') + ' que você tem'),
+    kpiHTML('red',   '🎯 Falta pra Fechar',   'R$' + fmtR(missingValue), missingCount + ' slot' + (missingCount === 1 ? '' : 's') + ' faltando'),
+    kpiHTML('gold',  '📦 Valor Total do Set', 'R$' + fmtR(totalValue),   pctValue + '% do valor já é seu'),
+  ];
+  if (bestOwned)   tiles.push(kpiHTML('blue',   '⭐ Sua Carta Mais Valiosa', 'R$' + fmtR(bestOwned.price),   bestOwned.card.name   + ' #' + bestOwned.card.n   + ' · ' + verLabel(bestOwned.ver)));
+  if (bestMissing) tiles.push(kpiHTML('orange', '💸 Falta Mais Cara',        'R$' + fmtR(bestMissing.price), bestMissing.card.name + ' #' + bestMissing.card.n + ' · ' + verLabel(bestMissing.ver)));
+
+  const verChips = Object.keys(verCounts).length
+    ? `<div class="fic-dash-vercounts">${
+        VERSIONS.filter(vc => verCounts[vc.code]).map(vc =>
+          `<span class="fic-dash-verchip" style="border-color:${vc.color};color:${vc.color}">${vc.label}: <b>${verCounts[vc.code]}</b></span>`
+        ).join('')
+      }</div>`
+    : '';
+
+  return `<div class="kpi-grid">${tiles.join('')}</div>${verChips}`;
 }
 
 /* ─────────────────────────────────────────────
@@ -862,6 +919,7 @@ function renderFicharioUI() {
 // Expor globalmente
 window.initFichario      = initFichario;
 window.renderBinder      = renderBinder;
+window.renderFicDashboard = renderFicDashboard;
 window.switchFicSet      = switchFicSet;
 window.setFicView        = setFicView;
 window.setBinderSize     = setBinderSize;
