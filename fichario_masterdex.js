@@ -262,6 +262,12 @@ function fmMdexBuildGridHtml(species,bySpecies,color,binderId){
   if(!species.length){
     return `<div style="padding:30px;text-align:center;color:var(--muted);font-size:11px">Nenhuma espécie encontrada com esses filtros.</div>`;
   }
+  // Dashboard (04/09/2026, pedido do Eduardo: "no fichário nacional/regional
+  // não tem dashboard igual o dos outros") — mesmo 3º modo do fichário oficial,
+  // mas adaptado: aqui é 1 carta por ESPÉCIE (não por versão N/F/RH/SP), então
+  // o valor soma por vaga preenchida, e vagas vazias (sem carta escolhida)
+  // viram um contador à parte em vez de entrar na conta de "falta".
+  if((window._fmMdexViewMode||'grid')==='dash') return fmMdexRenderDashboard(species,bySpecies);
   const slotHtml=(sp)=>window._fmMdexSlotHtml(sp,bySpecies,color,binderId);
   if((window._fmMdexViewMode||'grid')==='binder'){
     const n=window._fmMdexPageSize||3;
@@ -277,11 +283,58 @@ function fmMdexBuildGridHtml(species,bySpecies,color,binderId){
         </div>
       </div>`).join('');
   }
-  return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px">
+  // CORRIGIDO 04/09/2026 (pedido do Eduardo: "o fichário nacional/regional
+  // está com tamanho diferente dos outros fichários") — minmax(80px,...)
+  // fixo ignorava a var(--cw) que TODO fichário oficial usa (112px desktop/
+  // 72px mobile, com breakpoints próprios) — resultado: cartas menores que
+  // as dos outros fichários no desktop, maiores no mobile. Trocado pela
+  // mesma classe .bgrid que renderGridView() usa, em vez de reinventar.
+  return `<div class="bgrid">
     ${species.map(slotHtml).join('')}
   </div>`;
 }
 window.fmMdexBuildGridHtml=fmMdexBuildGridHtml;
+
+// ── Dashboard (04/09/2026) — mesmo conceito do fichário oficial
+// (renderFicDashboard, fichario_patch.js), mas por ESPÉCIE em vez de por
+// slot/versão: cada vaga preenchida tem 1 carta escolhida (fmMdexPickDefault
+// já favorece a mais valiosa que você tem, ou a mais barata disponível se
+// não tiver nenhuma). Vaga vazia não entra na soma de valor (não tem carta
+// escolhida pra precificar) — vira só uma contagem à parte.
+function fmMdexRenderDashboard(species,bySpecies){
+  let ownedValue=0,missingValue=0,ownedCount=0,missingCount=0,emptyCount=0;
+  let bestOwned=null,bestMissing=null;
+  species.forEach(sp=>{
+    const c=bySpecies[sp.dex];
+    if(!c){ emptyCount++; return; }
+    const priceRaw=fmMdexPrice(c);
+    const price=isFinite(priceRaw)?priceRaw:0;
+    if(fmMdexIsOwned(c._setId,c)){
+      ownedValue+=price; ownedCount++;
+      if(!bestOwned||price>bestOwned.price) bestOwned={card:c,price};
+    }else{
+      missingValue+=price; missingCount++;
+      if(!bestMissing||price>bestMissing.price) bestMissing={card:c,price};
+    }
+  });
+  const totalValue=ownedValue+missingValue;
+  const pctValue=totalValue?Math.round(ownedValue/totalValue*100):0;
+
+  const tiles=[
+    kpiHTML('teal','💰 Valor da Coleção','R$'+fmtR(ownedValue),ownedCount+' espécie'+(ownedCount===1?'':'s')+' que você tem'),
+    kpiHTML('red','🎯 Falta pra Fechar','R$'+fmtR(missingValue),missingCount+' espécie'+(missingCount===1?'':'s')+' com vaga escolhida, faltando'),
+    kpiHTML('gold','📦 Valor Total (vagas preenchidas)','R$'+fmtR(totalValue),pctValue+'% do valor já é seu'),
+  ];
+  if(bestOwned)   tiles.push(kpiHTML('blue',  '⭐ Sua Carta Mais Valiosa','R$'+fmtR(bestOwned.price),  bestOwned.card.name  +' #'+bestOwned.card.n  +' ('+bestOwned.card._setId.toUpperCase()+')'));
+  if(bestMissing) tiles.push(kpiHTML('orange','💸 Falta Mais Cara',       'R$'+fmtR(bestMissing.price),bestMissing.card.name+' #'+bestMissing.card.n+' ('+bestMissing.card._setId.toUpperCase()+')'));
+  if(emptyCount)  tiles.push(kpiHTML('',      '⬜ Vagas Vazias',          String(emptyCount),           'sem carta escolhida ainda — não entram na conta de valor'));
+
+  return `<div class="kpi-grid">${tiles.join('')}</div>
+    <div style="font-size:9px;color:var(--muted);margin-top:10px">
+      Valor calculado só sobre as vagas já preenchidas (a carta escolhida pra cada espécie) — vagas vazias não têm carta definida pra precificar.
+    </div>`;
+}
+window.fmMdexRenderDashboard=fmMdexRenderDashboard;
 
 // Alterna Grade/Fichário físico; re-renderiza a tela inteira (igual troca de
 // layout nos outros fichários) pra reconstruir a toolbar (some/aparece o
@@ -424,7 +477,12 @@ function fmMdexRender(binder,keepFilters){
       style="padding:6px 10px;border-radius:6px;border:1px solid ${fmViewMode==='binder'?color:'var(--border)'};
              background:${fmViewMode==='binder'?color:'var(--surface2)'};
              color:${fmViewMode==='binder'?'#fff':'var(--muted)'};font-family:'Space Mono',monospace;font-size:10px;
-             cursor:pointer;font-weight:${fmViewMode==='binder'?700:400};white-space:nowrap">📖 Fichário físico</button>`;
+             cursor:pointer;font-weight:${fmViewMode==='binder'?700:400};white-space:nowrap">📖 Fichário físico</button>
+    <button onclick="fmMdexSetView('dash','${binder.id}')"
+      style="padding:6px 10px;border-radius:6px;border:1px solid ${fmViewMode==='dash'?color:'var(--border)'};
+             background:${fmViewMode==='dash'?color:'var(--surface2)'};
+             color:${fmViewMode==='dash'?'#fff':'var(--muted)'};font-family:'Space Mono',monospace;font-size:10px;
+             cursor:pointer;font-weight:${fmViewMode==='dash'?700:400};white-space:nowrap">📊 Dashboard</button>`;
   const fmPageSizeBtns=fmViewMode==='binder'?[2,3,4].map(n=>`<button onclick="fmMdexSetPageSize(${n},'${binder.id}')"
     style="padding:5px 10px;border-radius:6px;border:1px solid ${n===fmPageSize?'var(--gold)':'var(--border)'};
            background:var(--surface2);color:${n===fmPageSize?'var(--gold)':'var(--muted)'};
