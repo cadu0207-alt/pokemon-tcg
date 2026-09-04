@@ -2645,12 +2645,19 @@ async function saveAuctionEdit(){
 
 // ── CADASTRAR CARTA (dentro de uma rodada) ────────────────────
 function searchAuctionCards(){
-  const q=(document.getElementById('leilao-admin-search')?.value||'').trim().toLowerCase();
+  const raw=(document.getElementById('leilao-admin-search')?.value||'').trim();
+  const q=raw.toLowerCase();
   const box=document.getElementById('leilao-admin-search-results');
   if(!box)return;
   if(q.length<2){box.innerHTML='';return;}
-  const all=typeof getAllCatalogCards==='function'?getAllCatalogCards():[];
-  const matches=all.filter(c=>c.name.toLowerCase().includes(q)||c.n.includes(q)).slice(0,25);
+  // Busca por código impresso (04/09/2026, pedido do Eduardo: "implementa
+  // essa busca no leilão também") — mesma função de app.js usada na busca
+  // global (searchCardsByCode); "001/086" ou parcial ("001", "001/0" etc.)
+  // acha a carta pelo número + set base, sem precisar digitar o nome.
+  const codeResults=typeof searchCardsByCode==='function'?searchCardsByCode(raw,25):null;
+  const matches=codeResults
+    ? codeResults.map(({set,c})=>({...c,_setId:set.id}))
+    : (typeof getAllCatalogCards==='function'?getAllCatalogCards():[]).filter(c=>c.name.toLowerCase().includes(q)||c.n.includes(q)).slice(0,25);
   if(!matches.length){box.innerHTML=`<div class="cv-item-empty">Nenhuma carta encontrada.</div>`;return;}
   box.innerHTML=matches.map(c=>{
     const img=typeof getBinderImg==='function'?getBinderImg(c,c._setId):null;

@@ -1378,6 +1378,42 @@ const SERIES_META={
   SET_CATALOG.push({id:ls.id,label:ls.label,emoji:ls.emoji,cards:ls.cards,color:ls.color,series:ls.series});
 });
 
+// ── BUSCA POR CÓDIGO IMPRESSO NA CARTA (04/09/2026, pedido do Eduardo) ──
+// "001/086" acha a carta #001 em toda coleção cujo SET BASE (sem
+// secretas) tem exatamente 086 cartas — igual o código físico impresso
+// no canto da carta. 086 é o total de cartas com base!==false, NÃO
+// set.cards (que inclui as secretas — ex: ME04 tem cards:122 no
+// catálogo, mas checklist base é 086; secretas #087+ ainda usam /086 no
+// código impresso, então casa pelo mesmo denominador).
+// Denominador é OPCIONAL e PARCIAL — "001" sozinho já mostra a carta #001
+// de toda coleção (sem filtro); "001/0" restringe a sets cujo total (com
+// 3 dígitos, ex: "086") COMEÇA com "0"; "001/08" restringe mais; só
+// quando bate 100% vira o match exato. Não precisa digitar o /086
+// inteiro pra já ver resultado.
+// Compartilhada entre a busca global (initGlobalSearch) e a busca de
+// carta pro leilão (searchAuctionCards, leilao.js) — mesmo comportamento
+// nos dois lugares, sem duplicar a lógica.
+const CARD_CODE_RE = /^(\d{1,4})(?:\s*\/\s*(\d{0,4}))?$/;
+function searchCardsByCode(raw, limit){
+  const m=(raw||'').trim().match(CARD_CODE_RE);
+  if(!m)return null; // não parece um código — quem chamou decide o fallback (busca por nome)
+  const n=parseInt(m[1],10), denomPrefix=m[2]||'';
+  const cap=limit||24;
+  const out=[];
+  for(const s of SET_CATALOG){
+    const cards=SET_CARDS_MAP[s.id]?.()||[];
+    if(!cards.length)continue;
+    const setBaseTotal=cards.filter(c=>c.base!==false).length;
+    // "086" é sempre 3 dígitos no impresso — padStart(3,'0') deixa "8"
+    // virar "008" pra comparar prefixo igual a pessoa digitando vê na
+    // própria carta (total com 4+ dígitos não é truncado, só não some).
+    if(!String(setBaseTotal).padStart(3,'0').startsWith(denomPrefix))continue;
+    const card=cards.find(c=>parseInt(c.n,10)===n);
+    if(card){ out.push({set:s,c:card}); if(out.length>=cap)break; }
+  }
+  return out;
+}
+
 function _loadMyCollections(){
   try{const v=JSON.parse(localStorage.getItem('myCollections'));
     return Array.isArray(v)&&v.length?v:['me06','me2pt5','me05','me04','me03','me02','meg','mep'];}
@@ -4141,34 +4177,13 @@ function initGlobalSearch(){
   });
   document.addEventListener('click',e=>{if(!wrap.contains(e.target))dd.style.display='none';});
 
-  // Busca por código impresso na carta (04/09/2026, pedido do Eduardo):
-  // "001/086" acha a carta #001 em toda coleção cujo SET BASE (sem
-  // secretas) tem exatamente 086 cartas — igual o código físico impresso
-  // no canto da carta. 086 é o total de cartas com base!==false, NÃO
-  // set.cards (que inclui as secretas — ex: ME04 tem cards:122 no
-  // catálogo, mas checklist base é 086; secretas #087+ ainda usam /086
-  // no código impresso, então casa pelo mesmo denominador).
-  const CODE_RE = /^(\d{1,4})\s*\/\s*(\d{1,4})$/;
-  function runCodeSearch(n, baseTotal){
-    const out=[];
-    for(const s of SET_CATALOG){
-      const cards=SET_CARDS_MAP[s.id]?.()||[];
-      if(!cards.length)continue;
-      const setBaseTotal=cards.filter(c=>c.base!==false).length;
-      if(setBaseTotal!==baseTotal)continue;
-      const card=cards.find(c=>parseInt(c.n,10)===n);
-      if(card){ out.push({set:s,c:card}); if(out.length>=24)break; }
-    }
-    return out;
-  }
-
   function run(){
     const raw=inp.value.trim();
     const q=raw.toLowerCase();
     if(q.length<2){dd.style.display='none';return;}
-    const codeMatch=raw.match(CODE_RE);
-    const out=codeMatch
-      ? runCodeSearch(parseInt(codeMatch[1],10),parseInt(codeMatch[2],10))
+    const codeResults=searchCardsByCode(raw);
+    const out=codeResults
+      ? codeResults
       : (()=>{
           const r=[];
           for(const s of SET_CATALOG){
