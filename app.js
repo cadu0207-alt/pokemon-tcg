@@ -4141,20 +4141,48 @@ function initGlobalSearch(){
   });
   document.addEventListener('click',e=>{if(!wrap.contains(e.target))dd.style.display='none';});
 
-  function run(){
-    const q=inp.value.trim().toLowerCase();
-    if(q.length<2){dd.style.display='none';return;}
+  // Busca por código impresso na carta (04/09/2026, pedido do Eduardo):
+  // "001/086" acha a carta #001 em toda coleção cujo SET BASE (sem
+  // secretas) tem exatamente 086 cartas — igual o código físico impresso
+  // no canto da carta. 086 é o total de cartas com base!==false, NÃO
+  // set.cards (que inclui as secretas — ex: ME04 tem cards:122 no
+  // catálogo, mas checklist base é 086; secretas #087+ ainda usam /086
+  // no código impresso, então casa pelo mesmo denominador).
+  const CODE_RE = /^(\d{1,4})\s*\/\s*(\d{1,4})$/;
+  function runCodeSearch(n, baseTotal){
     const out=[];
     for(const s of SET_CATALOG){
       const cards=SET_CARDS_MAP[s.id]?.()||[];
-      for(const c of cards){
-        if(c.name.toLowerCase().includes(q)){
-          out.push({set:s,c});
-          if(out.length>=24)break;
-        }
-      }
-      if(out.length>=24)break;
+      if(!cards.length)continue;
+      const setBaseTotal=cards.filter(c=>c.base!==false).length;
+      if(setBaseTotal!==baseTotal)continue;
+      const card=cards.find(c=>parseInt(c.n,10)===n);
+      if(card){ out.push({set:s,c:card}); if(out.length>=24)break; }
     }
+    return out;
+  }
+
+  function run(){
+    const raw=inp.value.trim();
+    const q=raw.toLowerCase();
+    if(q.length<2){dd.style.display='none';return;}
+    const codeMatch=raw.match(CODE_RE);
+    const out=codeMatch
+      ? runCodeSearch(parseInt(codeMatch[1],10),parseInt(codeMatch[2],10))
+      : (()=>{
+          const r=[];
+          for(const s of SET_CATALOG){
+            const cards=SET_CARDS_MAP[s.id]?.()||[];
+            for(const c of cards){
+              if(c.name.toLowerCase().includes(q)){
+                r.push({set:s,c});
+                if(r.length>=24)break;
+              }
+            }
+            if(r.length>=24)break;
+          }
+          return r;
+        })();
     if(!out.length){dd.innerHTML='<div class="gs-empty">Nenhuma carta encontrada</div>';dd.style.display='block';return;}
     dd.innerHTML=out.map(({set,c})=>`
       <div class="gs-item" onclick="gsGo('${set.id}','${String(c.n)}')">
