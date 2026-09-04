@@ -556,14 +556,19 @@ function ficCardHtml(c, setId) {
         <div style="font-size:6px;color:var(--muted)">${c.type||''}</div>
         <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:${c.color||'#666'}"></div>
       </div>
-      <!-- dots de versão (data-dotswrap: marcador estável pra fmInjectQuickToggleDots achar isto sem depender do texto do style) -->
-      <div data-dotswrap="1" style="position:absolute;bottom:3px;left:3px;display:flex;gap:4px">${dots}</div>
       <!-- check completo -->
       ${allCol?`<div style="position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;
         background:var(--teal);color:var(--bg);font-size:11px;display:flex;align-items:center;
         justify-content:center;font-weight:900;box-shadow:0 2px 8px rgba(6,214,160,.6)">✓</div>`:''}
       ${isImp&&!hasAny?`<div style="position:absolute;top:3px;right:4px;font-size:11px;color:var(--gold)">★</div>`:''}
     </div>
+    <!-- CORRIGIDO 04/09/2026 (pedido do Eduardo: "espaço abaixo da carta,
+         imagens ficam apagadas") — dots de versão saíram de cima da imagem
+         (que fica escurecida quando falta) pra essa faixa própria embaixo,
+         mesma ideia já aplicada no PDF (printBinder). data-dotswrap:
+         marcador estável pra fmInjectQuickToggleDots achar isto sem
+         depender do texto do style. -->
+    <div data-dotswrap="1" style="display:flex;gap:4px;justify-content:center;padding-top:4px;width:var(--cw,90px)">${dots}</div>
     <!-- tooltip -->
     <div class="tip" style="position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
          background:rgba(8,9,13,.96);border:1px solid var(--border);border-radius:6px;padding:8px 11px;
@@ -662,18 +667,22 @@ function renderBinderView(cards, setIdOf) {
           <div style="font-size:${cellSize>90?7:5}px;font-weight:700;color:var(--text);line-height:1.1">${c.name}</div>
           <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:${c.color||'#666'}"></div>
         </div>
-        <!-- badge versão/raridade -->
-        <div title="${vc.label}" style="position:absolute;top:2px;left:2px;font-size:7px;padding:1px 4px;border-radius:3px;
-             background:${vc.color};color:${ink};font-family:'Space Mono',monospace;font-weight:700">${vc.code}</div>
         ${qty>1?`<div style="position:absolute;top:2px;right:2px;font-size:8px;font-weight:900;
           color:${vc.color};background:rgba(0,0,0,.7);padding:1px 3px;border-radius:3px">×${qty}</div>`:''}
         ${isCollected?`<div style="position:absolute;bottom:2px;right:2px;width:14px;height:14px;border-radius:50%;
           background:${vc.color};color:#000;font-size:8px;display:flex;align-items:center;
           justify-content:center;font-weight:900">✓</div>`:''}
       </div>
-      <div style="font-size:${cellSize>90?7:6}px;color:var(--muted);text-align:center;margin-top:2px;
-           font-family:'Space Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-           width:${cellSize}px">${c.n}</div>
+      <!-- CORRIGIDO 04/09/2026 (pedido do Eduardo: "espaço abaixo da carta,
+           imagens ficam apagadas") — badge de versão/raridade saiu de cima
+           da imagem (que fica escurecida quando falta) pra essa faixa
+           embaixo, junto do número — mesma ideia já aplicada no PDF. -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:4px;margin-top:2px;width:${cellSize}px">
+        <div title="${vc.label}" style="font-size:${cellSize>90?7:6}px;padding:1px 4px;border-radius:3px;flex-shrink:0;
+             background:${vc.color};color:${ink};font-family:'Space Mono',monospace;font-weight:700">${vc.code}</div>
+        <div style="font-size:${cellSize>90?7:6}px;color:var(--muted);
+             font-family:'Space Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.n}</div>
+      </div>
     </div>`;
   }
 
@@ -948,9 +957,17 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
   }
 
   const slotsPerPage = N * N;
-  const CARD_W_MM = 63, CARD_H_MM = 88, GAP_MM = 3;
+  // CORRIGIDO 04/09/2026 (pedido do Eduardo: "colocar um espaço logo abaixo
+  // da carta, pois as imagens ficam muito apagadas") — badge e número
+  // viviam OVERLAY em cima da imagem (que já fica escurecida/dessaturada
+  // pra carta faltante — ver grayFilter abaixo); a etiqueta competindo
+  // visualmente com uma imagem apagada ficava difícil de ler e feio.
+  // LABEL_H_MM abre uma faixa branca FORA da imagem (não em cima) só pro
+  // badge + número — a imagem em si fica intocada, sem nada sobreposto.
+  const CARD_W_MM = 63, CARD_H_MM = 88, LABEL_H_MM = 6, GAP_MM = 3;
+  const SLOT_H_MM = CARD_H_MM + LABEL_H_MM;
   const PAGE_W = N * CARD_W_MM + (N - 1) * GAP_MM + 20;
-  const PAGE_H = N * CARD_H_MM + (N - 1) * GAP_MM + 20;
+  const PAGE_H = N * SLOT_H_MM + (N - 1) * GAP_MM + 20;
 
   const popup = window.open('', '_blank');
   if (!popup) { alert('Permita pop-ups para imprimir.'); return; }
@@ -961,14 +978,17 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
     body { background:#fff; font-family:sans-serif; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
     .page { width:${PAGE_W}mm; height:${PAGE_H}mm; display:grid;
       grid-template-columns:repeat(${N},${CARD_W_MM}mm);
-      grid-template-rows:repeat(${N},${CARD_H_MM}mm);
+      grid-template-rows:repeat(${N},${SLOT_H_MM}mm);
       gap:${GAP_MM}mm; padding:10mm; page-break-after:always; break-after:page; }
-    .slot { width:${CARD_W_MM}mm; height:${CARD_H_MM}mm; border:0.5px solid #ccc;
-      border-radius:3mm; overflow:hidden; position:relative; background:#f5f5f5; }
+    .slot { width:${CARD_W_MM}mm; height:${SLOT_H_MM}mm; border:0.5px solid #ccc;
+      border-radius:3mm; overflow:hidden; background:#f5f5f5; display:flex; flex-direction:column; }
+    .slot .imgwrap { width:100%; height:${CARD_H_MM}mm; position:relative; overflow:hidden; flex-shrink:0; }
     .slot img { width:100%; height:100%; object-fit:cover; }
+    .slot .label { height:${LABEL_H_MM}mm; flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
+      gap:1mm; padding:0 1.5mm; background:#fff; border-top:0.5px solid #eee; }
     .slot .empty { display:flex;align-items:center;justify-content:center;height:100%;color:#ccc;font-size:8pt; }
-    .slot .badge { position:absolute;top:1mm;left:1mm;font-size:6pt;padding:.5mm 1.5mm;border-radius:1mm;font-weight:bold; }
-    .slot .num { position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:5pt;color:#666;background:rgba(255,255,255,.7);padding:.5mm; }
+    .slot .badge { font-size:6pt;padding:.5mm 1.5mm;border-radius:1mm;font-weight:bold;line-height:1.4;white-space:nowrap; }
+    .slot .num { font-size:6pt;color:#666;white-space:nowrap; }
     /* CORRIGIDO 18/08/2026 (pedido de usuário: "uma lojinha me pediu pra imprimir
        a lista de faltantes colorida, facilita a identificação das cartas"):
        -webkit-print-color-adjust/print-color-adjust garantem que a maioria dos
@@ -1014,10 +1034,14 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
       const grayFilter = (qty > 0 || onlyState) ? '' : 'filter:grayscale(100%) opacity(0.4);';
       popup.document.write(`
       <div class="slot">
-        <img src="${(typeof imgMedium === 'function') ? imgMedium(imgUrl(c.n, setId)) : imgUrl(c.n, setId)}" alt="${c.name}" style="${grayFilter}"
-             onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=empty>${c.n}<br>${c.name}</div>')">
-        <div class="badge" title="${badge.label}" style="background:${badge.color};color:${ink}">${badge.code}${qty>1?' ×'+qty:''}</div>
-        <div class="num">${c.n}</div>
+        <div class="imgwrap">
+          <img src="${(typeof imgMedium === 'function') ? imgMedium(imgUrl(c.n, setId)) : imgUrl(c.n, setId)}" alt="${c.name}" style="${grayFilter}"
+               onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=empty>${c.n}<br>${c.name}</div>')">
+        </div>
+        <div class="label">
+          <div class="badge" title="${badge.label}" style="background:${badge.color};color:${ink}">${badge.code}${qty>1?' ×'+qty:''}</div>
+          <div class="num">#${c.n}</div>
+        </div>
       </div>`);
     });
     popup.document.write(`</div>`);
