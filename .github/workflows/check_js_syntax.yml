@@ -1,0 +1,37 @@
+name: Checagem de Sintaxe JS
+
+# Rede de seguranca minima (auditoria 04/09/2026): o site carrega dezenas de
+# arquivos .js direto em producao via <script defer>, sem build/bundler e sem
+# suite de testes. Um erro de sintaxe hoje so aparece quando alguem relata o
+# bug. Isso so roda "node --check" em cada .js do repo — nao substitui testes
+# de verdade, so pega erro de sintaxe antes do deploy.
+on:
+  push:
+    branches: [Rotower, main]
+  pull_request:
+    branches: [Rotower, main]
+  workflow_dispatch:
+
+jobs:
+  check-syntax:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: node --check em cada .js do repo
+        run: |
+          status=0
+          while IFS= read -r -d '' file; do
+            if ! node --check "$file"; then
+              echo "::error file=$file::Erro de sintaxe"
+              status=1
+            fi
+          done < <(find . -name '*.js' -not -path './node_modules/*' -not -path './.git/*' -print0)
+          exit $status

@@ -1844,7 +1844,15 @@ details[open] summary { border-radius: 6px 6px 0 0; border-bottom-color: transpa
      .mnav realmente aparece, então precisa repetir a reserva aqui. */
   .pane { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
   header { padding: 16px 18px 12px; gap: 8px; }
-  .hstatus { font-size: 9px; gap: 4px; flex-wrap: wrap; }
+  /* CORRIGIDO 04/09/2026: .hstatus (status "Conectando...", relógio USD/BRL,
+     user-chip) ficava na mesma linha da logo, colado na borda direita do
+     header (justify-content:space-between) — exatamente onde o
+     .top-fixed-actions (posição fixa, WhatsApp+Tema) flutua nesse mesmo
+     breakpoint (ver regra em max-width:640px). Os dois brigavam pelo canto
+     superior direito e o texto do status ficava cortado atrás dos botões.
+     flex-basis:100% força o .hstatus pra própria linha, abaixo da logo —
+     mesmo comportamento de quebra que o header já usa pro user-chip. */
+  .hstatus { font-size: 9px; gap: 4px; flex-wrap: wrap; flex-basis: 100%; }
   .modal { padding: 22px 18px; }
   .modal-wide { width: 95vw; }
   .mact { flex-wrap: wrap; }

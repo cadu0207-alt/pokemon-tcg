@@ -247,6 +247,10 @@ if(sbClient){
     _updateUserChip(currentUser);
     if(currentUser){
       _showAuth(false);
+      // Sessão logada: Dashboard/Fichário vão precisar dos sets SV/legados
+      // mais cedo ou mais tarde, então dispara o lazy-load aqui em vez de
+      // esperar o visitante clicar em algo (idempotente — ver loadLazySets).
+      if(typeof loadLazySets==='function')loadLazySets();
       // TOKEN_REFRESHED (20/08/2026): o Supabase renova o JWT sozinho de tempo
       // em tempo (a cada ~1h de sessão aberta) e dispara esse mesmo evento —
       // sem isso, loadAll() rodava de novo a cada renovação e re-renderizava
@@ -4126,6 +4130,10 @@ function initGlobalSearch(){
 
   const inp=wrap.querySelector('#gsearch'),dd=wrap.querySelector('#gsearch-dd');
   let deb=null;
+  // Visitante anônimo na Início não recebe o auto-load dos sets SV/legados
+  // (ver gate perto de loadLazySets) — a busca global é a única coisa
+  // pública que precisa deles, então dispara aqui no primeiro uso.
+  inp.addEventListener('focus',()=>{if(typeof loadLazySets==='function')loadLazySets();},{once:true});
   inp.addEventListener('input',()=>{clearTimeout(deb);deb=setTimeout(run,160);});
   inp.addEventListener('keydown',e=>{if(e.key==='Escape'){dd.style.display='none';inp.blur();}});
   document.addEventListener('keydown',e=>{
@@ -4499,11 +4507,21 @@ function loadLazySets(){
   });
 }
 
-// Dispara depois do load + folga, sem atrapalhar o primeiro paint.
+// Dispara depois do load + folga, sem atrapalhar o primeiro paint — mas só
+// automático pra quem já tem sessão (currentUser) ou tá vendo um fichário
+// compartilhado (shareMode): são os únicos casos que HOJE mesmo vão pedir
+// esses dados (Dashboard/Fichário exigem login — PUBLIC_TABS só tem
+// 'inicio' — ver tabRequiresAuth). Visitante anônimo na Início não paga
+// os ~2,2MB à toa; se ele usar a busca global, o próprio input dispara
+// (ver initGlobalSearch). Login chegando depois também dispara sozinho
+// (ver onAuthStateChange). Auditoria 04/09/2026.
+function _autoLoadLazySetsIfNeeded(){
+  if(shareMode||currentUser)loadLazySets();
+}
 if(document.readyState==='complete'){
-  setTimeout(loadLazySets,600);
+  setTimeout(_autoLoadLazySetsIfNeeded,600);
 }else{
-  window.addEventListener('load',()=>setTimeout(loadLazySets,600));
+  window.addEventListener('load',()=>setTimeout(_autoLoadLazySetsIfNeeded,600));
 }
 
 // ── Header compacto no scroll (mobile) — auditoria 03/08/2026 ──────
