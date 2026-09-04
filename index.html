@@ -1996,8 +1996,18 @@
 <script defer src="pull_rates.js"></script>
 <script defer src="price_updated_at.js"></script>
 <script defer src="app.js"></script>
+<!-- fichario_patch.js (auditoria 04/09/2026 — comentario so documenta uma
+     dependencia que ja existia, nao muda comportamento): implementacao atual
+     do Fichario, carrega DEPOIS de app.js (usa currentSet/collected/
+     purchases[]/sb dele) e ANTES de fichario_melhorias_23jul.js, que
+     monkey-patcha funcoes definidas aqui. Motivo de nao estar dentro do
+     app.js: truncamento de Edit/Write em arquivos grandes — ver
+     [[feedback_coding]] e o cabecalho do proprio arquivo. -->
 <script defer src="fichario_patch.js"></script>
 <script defer src="pokedex_nacional.js"></script>
+<!-- fichario_melhorias_23jul.js: monkey-patch sobre app.js/fichario_patch.js/
+     pokedex_nacional.js (nessa ordem) — mesmo motivo do comentario acima.
+     Ver cabecalho do proprio arquivo. -->
 <script defer src="fichario_melhorias_23jul.js"></script>
 <script defer src="fichario_masterdex.js"></script>
 <script defer src="fichario_accordion.js"></script>
@@ -2012,6 +2022,11 @@
      hasPerm() em resposta a clique (marketplace.js, positivo.js, feedback.js,
      updates.js, admin_panel.js). Ver staff_access_setup.sql pro back-end. -->
 <script defer src="staff_access.js"></script>
+<!-- lojas_fix_latest_price.js (auditoria 04/09/2026, so documentando):
+     redefine renderProductCard() por cima da versao de lojas.js — precisa
+     carregar DEPOIS dele. Motivo de nao editar lojas.js direto: arquivo
+     grande, historico de truncamento de Edit/Write no mount do sandbox —
+     ver [[feedback_coding]] e o cabecalho do proprio arquivo. -->
 <script defer src="lojas_fix_latest_price.js"></script>
 <script defer src="marketplace.js"></script>
 <!-- price_history.js (19/08/2026): gráfico de histórico de preço + book de compra/venda
