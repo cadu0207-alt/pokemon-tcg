@@ -34,6 +34,110 @@ const VERSIONS = [
 ];
 
 /* ─────────────────────────────────────────────
+   BADGE DE RARIDADE (04/09/2026, pedido do Eduardo)
+   getSlots() (app.js) joga QUALQUER carta que não seja N/F/RH simples no
+   slot genérico "SP" — Full Art, Illustration Rare, Ultra Rara, ACE SPEC,
+   Promo, Secreta etc. viravam todas o mesmo badge laranja "SP", sem
+   diferenciação nenhuma no fichário/PDF.
+   slotBadge(card,ver) resolve isso SÓ NA EXIBIÇÃO (não muda getSlots, não
+   muda slotKey/collected — zero risco pra coleção já salva de ninguém):
+   pra N/F/RH devolve exatamente o que já existia; pra SP, olha o campo
+   `card.rare` de verdade e devolve um badge específico.
+   Auditoria 04/09/2026 encontrou o MESMO conceito escrito de formas
+   diferentes em coleções diferentes (ex: Illustration Rare aparece como
+   "Rara Ilustrada" no SV, "Ilustr. Rara" no ME, "Ilustração Rara (IR)" no
+   MEP) — RARITY_BADGE_MAP normaliza tudo isso pro mesmo badge "IR". A
+   tabela cobre toda raridade encontrada nos ~90 arquivos de carta hoje;
+   rarityBadge() tem um fallback por trecho de texto (igual getSlots() já
+   faz) pra não quebrar se aparecer uma raridade nova/inesperada amanhã. */
+const RARITY_BADGE_MAP = {
+  // Full Art
+  'rara preto e branco':        { code: 'FA',    label: 'Full Art',                     color: '#f4a261' },
+  // Illustration Rare — 3 grafias diferentes já encontradas nos dados
+  'rara ilustrada':              { code: 'IR',    label: 'Illustration Rare',            color: '#e9c46a' },
+  'ilustr. rara':                { code: 'IR',    label: 'Illustration Rare',            color: '#e9c46a' },
+  'ilustração rara (ir)':        { code: 'IR',    label: 'Illustration Rare',            color: '#e9c46a' },
+  // Special Illustration Rare
+  'rara ilustrada especial':     { code: 'SIR',   label: 'Special Illustration Rare',    color: '#e76f51' },
+  'ilustr. esp. rara':           { code: 'SIR',   label: 'Special Illustration Rare',    color: '#e76f51' },
+  // Ultra Rara
+  'ultra rara':                  { code: 'UR',    label: 'Ultra Rara',                   color: '#9d4edd' },
+  'rara ultra':                  { code: 'UR',    label: 'Ultra Rara',                   color: '#9d4edd' },
+  // Hyper Rara
+  'hiper rara':                  { code: 'HR',    label: 'Hyper Rara',                   color: '#f72585' },
+  'hiper rara mega':             { code: 'HR',    label: 'Hyper Rara',                   color: '#f72585' },
+  'mega hyper rare':             { code: 'HR',    label: 'Hyper Rara',                   color: '#f72585' },
+  'ultra rara brilhante':        { code: 'HR',    label: 'Hyper Rara',                   color: '#f72585' },
+  // Shiny / Brilhante
+  'rara brilhante':              { code: 'SH',    label: 'Shiny/Brilhante',              color: '#ffd60a' },
+  'rara shiny':                  { code: 'SH',    label: 'Shiny/Brilhante',              color: '#ffd60a' },
+  'rara shiny gx':               { code: 'SH',    label: 'Shiny/Brilhante',              color: '#ffd60a' },
+  // Radiant / Radiante
+  'rara radiante':               { code: 'RAD',   label: 'Radiante',                     color: '#ff5400' },
+  // ACE SPEC
+  'ace spec':                    { code: 'ACE',   label: 'ACE SPEC',                     color: '#3a86ff' },
+  // Secreta / Rainbow
+  'rara secreta':                { code: 'SEC',   label: 'Secreta',                      color: '#d00000' },
+  'rara rainbow':                { code: 'RB',    label: 'Rainbow',                      color: '#ff70a6' },
+  // Mega Ataque (coleções ME)
+  'mega attack rare':            { code: 'MEGA',  label: 'Mega Ataque',                  color: '#7209b7' },
+  'rara mega ataque':            { code: 'MEGA',  label: 'Mega Ataque',                  color: '#7209b7' },
+  // Vintage/especiais (raras o bastante pra compartilhar cor — o texto do
+  // badge já diferencia cada uma)
+  'legend':                      { code: 'LEGEND',label: 'LEGEND',                       color: '#6c757d' },
+  'prism star':                  { code: 'PRISM', label: 'Prism Star',                   color: '#6c757d' },
+  'rara break':                  { code: 'BREAK', label: 'BREAK',                        color: '#6c757d' },
+  'rara star':                   { code: 'STAR',  label: 'Star',                         color: '#6c757d' },
+  'rara prime':                  { code: 'PRIME', label: 'Prime',                        color: '#6c757d' },
+  'rara incrível':               { code: 'INC',   label: 'Incrível',                     color: '#6c757d' },
+  'galeria de treinador':        { code: 'TG',    label: 'Trainer Gallery',              color: '#6c757d' },
+  'coleção clássica':            { code: 'CC',    label: 'Coleção Clássica',             color: '#6c757d' },
+  // Holo única por mecânica (legado) — mostra a própria mecânica no badge
+  'rara holo ex':                { code: 'EX',    label: 'EX',                           color: '#495057' },
+  'rara holo gx':                { code: 'GX',    label: 'GX',                           color: '#495057' },
+  'rara holo v':                 { code: 'V',     label: 'V',                            color: '#495057' },
+  'rara holo vmax':              { code: 'VMAX',  label: 'VMAX',                         color: '#495057' },
+  'rara holo vstar':             { code: 'VSTAR', label: 'VSTAR',                        color: '#495057' },
+  'rara holo lv.x':              { code: 'LVX',   label: 'LV.X',                         color: '#495057' },
+};
+function rarityBadge(card) {
+  const raw  = (card && card.rare || '').trim();
+  const norm = raw.toLowerCase();
+  if (RARITY_BADGE_MAP[norm]) return RARITY_BADGE_MAP[norm];
+  // Fallback por trecho de texto — mesma ideia de getSlots() (app.js), pra
+  // raridade que não bateu exato na tabela (grafia nova, set futuro etc.)
+  if (norm.startsWith('promo'))                          return { code: 'PROMO', label: 'Promo',                  color: '#8ecae6' };
+  if (norm.includes('ilustrada especial') || norm.includes('esp. rara')) return { code: 'SIR', label: 'Special Illustration Rare', color: '#e76f51' };
+  if (norm.includes('ilustr'))                            return { code: 'IR',    label: 'Illustration Rare',      color: '#e9c46a' };
+  if (norm.includes('ultra'))                             return { code: 'UR',    label: 'Ultra Rara',             color: '#9d4edd' };
+  if (norm.includes('hiper') || norm.includes('hyper'))   return { code: 'HR',    label: 'Hyper Rara',             color: '#f72585' };
+  if (norm.includes('brilhante') || norm.includes('shiny')) return { code: 'SH', label: 'Shiny/Brilhante',        color: '#ffd60a' };
+  if (norm.includes('radiante') || norm.includes('radiant')) return { code: 'RAD', label: 'Radiante',              color: '#ff5400' };
+  if (norm.includes('secreta') || norm.includes('secret')) return { code: 'SEC',  label: 'Secreta',                color: '#d00000' };
+  if (norm.includes('rainbow'))                           return { code: 'RB',    label: 'Rainbow',                color: '#ff70a6' };
+  // Raridade não reconhecida (ou "—"/vazia): mantém o comportamento de
+  // antes (badge "Especial" genérico), só que mostrando o texto real
+  // quando existir, em vez de sumir com a informação.
+  return { code: (raw && raw !== '—' ? raw.slice(0, 6).toUpperCase() : 'SP'), label: raw || 'Especial', color: '#6c757d' };
+}
+// Resolve o badge de UM slot (card+versão): N/F/RH ficam exatamente como
+// sempre foram (VERSIONS); só SP passa a virar a raridade específica.
+function slotBadge(card, ver) {
+  if (ver !== 'SP') return VERSIONS.find(x => x.code === ver) || VERSIONS[3];
+  return rarityBadge(card);
+}
+// Preto ou branco por cima de cada cor de badge, pelo contraste (luminância
+// relativa) — em vez de fixar branco pra todo mundo, o que ficava ilegível
+// nas cores mais claras (SH #ffd60a, IR #e9c46a etc.), o mesmo problema de
+// legibilidade que a mudança inteira tá tentando resolver.
+function _badgeInk(hex) {
+  const h = (hex || '#6c757d').replace('#', '');
+  const r = parseInt(h.substr(0, 2), 16), g = parseInt(h.substr(2, 2), 16), b = parseInt(h.substr(4, 2), 16);
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return lum > 0.6 ? '#14151a' : '#ffffff';
+}
+
+/* ─────────────────────────────────────────────
    ESTADO LOCAL (view mode e size)
 ───────────────────────────────────────────── */
 let ficViewMode   = 'grid'; // 'grid' | 'binder'
@@ -418,13 +522,17 @@ function ficCardHtml(c, setId) {
   // toma muita tela") — tamanho agora usa var(--dotsize) em vez de px fixo,
   // que o style.css encolhe pra 12px no media query mobile (@600px), igual
   // já é feito com --cw/--ch (tamanho do card) pro mesmo breakpoint.
+  // CORRIGIDO 04/09/2026: dot de SP usava sempre a cor genérica "Especial"
+  // (VERSIONS) — agora usa slotBadge(c,v), que devolve a cor/label da
+  // raridade específica da carta (Full Art, Illustration Rare, ACE SPEC
+  // etc.) quando o slot é SP; N/F/RH continuam exatamente como sempre foram.
   const dots = vers.map(v => {
     const key = `${setId}:${c.n}:${v}`;
     const qty = ficCollection[key]?.qty || (collected.has(key) ? 1 : 0);
-    const vc  = VERSIONS.find(x => x.code === v);
+    const vc  = slotBadge(c, v);
     return `<div data-ver="${v}" style="width:var(--dotsize,20px);height:var(--dotsize,20px);border-radius:5px;
       background:${qty>0?vc.color:'var(--border)'};flex-shrink:0;position:relative;box-shadow:0 1px 3px rgba(0,0,0,.4)"
-      title="${v}×${qty} — clique pra marcar/desmarcar 1 cópia">
+      title="${vc.label} ×${qty} — clique pra marcar/desmarcar 1 cópia">
       ${qty>1?`<span style="position:absolute;top:-6px;right:-6px;font-size:9px;color:${vc.color};font-weight:900;
         text-shadow:0 0 2px rgba(0,0,0,.8)">×${qty}</span>`:''}
     </div>`;
@@ -528,7 +636,13 @@ function renderBinderView(cards, setIdOf) {
     const key = `${setId}:${c.n}:${v}`;
     const isCollected = collected.has(key);
     const qty = ficCollection[key]?.qty || (isCollected ? 1 : 0);
-    const vc  = VERSIONS.find(x => x.code === v);
+    // CORRIGIDO 04/09/2026: SP usava sempre a cor genérica "Especial" — agora
+    // slotBadge(c,v) devolve a raridade específica quando o slot é SP (N/F/RH
+    // continuam idênticos a sempre). ink = texto claro/escuro pelo contraste,
+    // pro badge de fundo sólido logo abaixo (era ${vc.bg} a ~15% de opacidade
+    // — mesmo problema de legibilidade do PDF, só que na tela).
+    const vc  = slotBadge(c, v);
+    const ink = _badgeInk(vc.color);
     const imgFilter  = isCollected ? 'none' : 'grayscale(100%) brightness(.5)';
     const borderColor = isCollected ? vc.color : 'var(--border)';
     const glow       = isCollected ? `0 0 10px ${vc.color}55` : 'none';
@@ -548,9 +662,9 @@ function renderBinderView(cards, setIdOf) {
           <div style="font-size:${cellSize>90?7:5}px;font-weight:700;color:var(--text);line-height:1.1">${c.name}</div>
           <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:${c.color||'#666'}"></div>
         </div>
-        <!-- badge versão -->
-        <div style="position:absolute;top:2px;left:2px;font-size:7px;padding:1px 4px;border-radius:3px;
-             background:${vc.bg};color:${vc.color};font-family:'Space Mono',monospace;font-weight:700">${v}</div>
+        <!-- badge versão/raridade -->
+        <div title="${vc.label}" style="position:absolute;top:2px;left:2px;font-size:7px;padding:1px 4px;border-radius:3px;
+             background:${vc.color};color:${ink};font-family:'Space Mono',monospace;font-weight:700">${vc.code}</div>
         ${qty>1?`<div style="position:absolute;top:2px;right:2px;font-size:8px;font-weight:900;
           color:${vc.color};background:rgba(0,0,0,.7);padding:1px 3px;border-radius:3px">×${qty}</div>`:''}
         ${isCollected?`<div style="position:absolute;bottom:2px;right:2px;width:14px;height:14px;border-radius:50%;
@@ -874,8 +988,6 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
     <button onclick="window.close()" style="background:#1e2436;color:#aaa;border:none;padding:8px 12px;border-radius:6px;cursor:pointer">✕</button>
   </div>`);
 
-  const verColors = { N:'#7c5cff', F:'#118ab2', RH:'#06d6a0', SP:'#ff6b35' };
-
   for (let pi = 0; pi < Math.ceil(slots.length / slotsPerPage); pi++) {
     const page = slots.slice(pi * slotsPerPage, (pi + 1) * slotsPerPage);
     while (page.length < slotsPerPage) page.push(null);
@@ -885,7 +997,14 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
       const { card: c, ver: v, setId } = slot;
       const key = `${setId}:${c.n}:${v}`;
       const qty = ficCollection[key]?.qty || (collected.has(key) ? 1 : 0);
-      const col = verColors[v] || '#999';
+      // CORRIGIDO 04/09/2026 (pedido do Eduardo, mockup "antes/depois"): badge
+      // era um texto colorido sobre fundo quase transparente (${col}33 = ~20%
+      // opacidade) — ilegível, principalmente em P&B. Agora fundo SÓLIDO da
+      // cor do badge (slotBadge — específica por raridade quando é SP, não só
+      // o genérico "SP" laranja de sempre) com tinta clara/escura calculada
+      // pelo contraste (_badgeInk), igual a sugestão do mockup.
+      const badge = slotBadge(c, v);
+      const ink   = _badgeInk(badge.color);
       // CORRIGIDO 18/08/2026: quando a impressão já está filtrada por
       // "só faltantes"/"só coletadas" (onlyState), TODA carta da lista tem o
       // mesmo status por definição — aplicar o filtro cinza (que existe pra
@@ -897,7 +1016,7 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
       <div class="slot">
         <img src="${(typeof imgMedium === 'function') ? imgMedium(imgUrl(c.n, setId)) : imgUrl(c.n, setId)}" alt="${c.name}" style="${grayFilter}"
              onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=empty>${c.n}<br>${c.name}</div>')">
-        <div class="badge" style="background:${col}33;color:${col}">${v}${qty>1?' ×'+qty:''}</div>
+        <div class="badge" title="${badge.label}" style="background:${badge.color};color:${ink}">${badge.code}${qty>1?' ×'+qty:''}</div>
         <div class="num">${c.n}</div>
       </div>`);
     });

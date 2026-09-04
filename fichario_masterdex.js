@@ -399,7 +399,15 @@ function fmMdexSlotHtml(sp,bySpecies,color,binderId){
   // collected/Supabase — é o MESMO slot da coleção real, não uma cópia) via
   // fmMdexMarkOwned(); trocar qual carta representa a espécie virou uma ação
   // secundária (botão ⇄ no canto, só ele chama fmMdexOpenPicker).
-  return `<div onclick="fmMdexMarkOwned(${sp.dex},'${binderId}')" title="#${sp.dex} ${sp.name} (${c._setId.toUpperCase()} #${c.n}) — clique pra marcar se tem/versão"
+  // Badge de raridade (04/09/2026, pedido do Eduardo: mesmo badge do
+  // fichário oficial, também no Master Set) — rarityBadge/​_badgeInk vêm de
+  // fichario_patch.js (carrega antes). Mostra a raridade real da carta
+  // escolhida pra essa vaga (Illustration Rare, Ultra Rara, ACE SPEC...),
+  // não só "SP" genérico; raridades base (Comum/Incomum/Rara) caem no
+  // fallback cinza de rarityBadge(), mostrando o próprio nome.
+  const rb  = (typeof rarityBadge === 'function') ? rarityBadge(c) : null;
+  const rbInk = rb && typeof _badgeInk === 'function' ? _badgeInk(rb.color) : '#fff';
+  return `<div onclick="fmMdexMarkOwned(${sp.dex},'${binderId}')" title="#${sp.dex} ${sp.name} (${c._setId.toUpperCase()} #${c.n}${rb?' · '+rb.label:''}) — clique pra marcar se tem/versão"
     style="aspect-ratio:2/3;border-radius:8px;overflow:hidden;cursor:pointer;position:relative;
            border:1px solid ${owned?color:'var(--border)'};box-shadow:${owned?`0 0 10px ${color}55`:'none'};transition:all .15s"
     onmouseover="this.style.transform='translateY(-2px) scale(1.03)'" onmouseout="this.style.transform=''">
@@ -414,7 +422,8 @@ function fmMdexSlotHtml(sp,bySpecies,color,binderId){
              background:rgba(0,0,0,.65);color:#fff;font-size:9px;line-height:1;cursor:pointer;
              display:flex;align-items:center;justify-content:center;padding:0">⇄</button>
     <div style="position:absolute;bottom:0;left:0;right:0;padding:3px 20px 3px 4px;background:linear-gradient(transparent,rgba(0,0,0,.85));
-      font-size:6px;color:rgba(255,255,255,.7);font-family:'Space Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c._setId.toUpperCase()} #${c.n}</div>
+      font-size:6px;color:rgba(255,255,255,.7);font-family:'Space Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+      ${rb?`<span style="background:${rb.color};color:${rbInk};padding:0 3px;border-radius:2px;font-weight:700;margin-right:3px">${rb.code}</span>`:''}${c._setId.toUpperCase()} #${c.n}</div>
   </div>`;
 }
 window._fmMdexSlotHtml=fmMdexSlotHtml;
