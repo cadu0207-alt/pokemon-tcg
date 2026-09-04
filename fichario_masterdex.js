@@ -338,7 +338,15 @@ function fmMdexSlotHtml(sp,bySpecies,color,binderId){
   }
   const owned=fmMdexIsOwned(c._setId,c);
   const imgSrc=(typeof getBinderImg==='function')?getBinderImg(c,c._setId):'';
-  return `<div onclick="fmMdexOpenPicker(${sp.dex},'${binderId}')" title="#${sp.dex} ${sp.name} (${c._setId.toUpperCase()} #${c.n}) — clique pra trocar"
+  // CORRIGIDO 04/09/2026 (pedido do Eduardo): clique na vaga preenchida abria
+  // direto o picker de TROCAR carta — não dava pra marcar se tem/não tem (nem
+  // a versão N/F/RH/SP) sem sair da Pokédex e ir no fichário do set real.
+  // Agora o clique principal abre o mesmo modal de sempre (openSlotModal, o
+  // que já cuida de N/F/RH/SP + quantidade + origem e grava direto em
+  // collected/Supabase — é o MESMO slot da coleção real, não uma cópia) via
+  // fmMdexMarkOwned(); trocar qual carta representa a espécie virou uma ação
+  // secundária (botão ⇄ no canto, só ele chama fmMdexOpenPicker).
+  return `<div onclick="fmMdexMarkOwned(${sp.dex},'${binderId}')" title="#${sp.dex} ${sp.name} (${c._setId.toUpperCase()} #${c.n}) — clique pra marcar se tem/versão"
     style="aspect-ratio:2/3;border-radius:8px;overflow:hidden;cursor:pointer;position:relative;
            border:1px solid ${owned?color:'var(--border)'};box-shadow:${owned?`0 0 10px ${color}55`:'none'};transition:all .15s"
     onmouseover="this.style.transform='translateY(-2px) scale(1.03)'" onmouseout="this.style.transform=''">
@@ -348,11 +356,31 @@ function fmMdexSlotHtml(sp,bySpecies,color,binderId){
       display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:700">✓</div>`:''}
     <div style="position:absolute;top:3px;left:3px;background:rgba(0,0,0,.6);color:#fff;font-size:7px;
       padding:1px 4px;border-radius:4px;font-family:'Space Mono',monospace">#${sp.dex}</div>
-    <div style="position:absolute;bottom:0;left:0;right:0;padding:3px 4px;background:linear-gradient(transparent,rgba(0,0,0,.85));
-      font-size:6px;color:rgba(255,255,255,.7);font-family:'Space Mono',monospace">${c._setId.toUpperCase()} #${c.n}</div>
+    <button onclick="event.stopPropagation();fmMdexOpenPicker(${sp.dex},'${binderId}')" title="Trocar qual carta representa essa espécie"
+      style="position:absolute;bottom:3px;right:3px;width:16px;height:16px;border-radius:50%;border:none;z-index:1;
+             background:rgba(0,0,0,.65);color:#fff;font-size:9px;line-height:1;cursor:pointer;
+             display:flex;align-items:center;justify-content:center;padding:0">⇄</button>
+    <div style="position:absolute;bottom:0;left:0;right:0;padding:3px 20px 3px 4px;background:linear-gradient(transparent,rgba(0,0,0,.85));
+      font-size:6px;color:rgba(255,255,255,.7);font-family:'Space Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c._setId.toUpperCase()} #${c.n}</div>
   </div>`;
 }
 window._fmMdexSlotHtml=fmMdexSlotHtml;
+
+// Clique principal numa vaga preenchida: abre o MESMO modal de sempre
+// (openSlotModal, de fichario_patch.js) pra marcar tem/não-tem + versão
+// (N/F/RH/SP) + quantidade — grava direto no slot real da coleção
+// (collected/Supabase), então o que for marcado aqui aparece igual no
+// fichário normal do set (e vice-versa), sem estado duplicado.
+function fmMdexMarkOwned(dex,binderId){
+  const binder=fmMdexFindBinder(binderId);
+  if(!binder) return;
+  const cards=getBinderCards(binder);
+  const card=cards.find(c=>c._dex===dex);
+  if(!card){ fmMdexOpenPicker(dex,binderId); return; } // vaga vazia — cai pro picker de escolher carta
+  if(typeof openSlotModal!=='function') return;
+  openSlotModal(card.n, null, card._setId, card, ()=>fmMdexRefreshGrid());
+}
+window.fmMdexMarkOwned=fmMdexMarkOwned;
 
 // ── Render especial: grid de 1025 vagas fixas (preenchidas ou vazias) ───────
 function fmMdexRender(binder,keepFilters){
