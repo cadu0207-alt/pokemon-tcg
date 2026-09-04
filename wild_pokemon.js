@@ -252,6 +252,16 @@
   const WP_STAT_LABELS = { hp: 'HP', atk: 'Ataque', def: 'Defesa', spd: 'Agilidade', crit: 'Crítico' };
   const WP_BACKPACK_CAP_DEFAULT = 20; // só o valor inicial de exibição antes da 1ª resposta da RPC/consulta
 
+  // Média dos 5 stats (04/09/2026, pedido do Eduardo) — soma os 5 e divide
+  // por 5, um número só (0-100, mesma escala de cada stat individual) pra
+  // dar uma ideia rápida de "quão bom" o indivíduo é no geral, sem precisar
+  // ler as 5 barras uma por uma. Aparece no toast de captura (compacto) e
+  // na janela de stats da mochila (maior/destacado).
+  function wpStatAvg(entry) {
+    const sum = WP_STAT_ORDER.reduce((acc, k) => acc + (entry[k] || 0), 0);
+    return Math.round(sum / WP_STAT_ORDER.length);
+  }
+
   // Desenha a pokébola em CSS (sem depender de imagem externa) — metade
   // colorida por tier + tarja preta + botão central, igual ao formato
   // real de cada bola (Great Ball com friso vermelho, Ultra com dourado,
@@ -746,6 +756,11 @@
     .wp-toast b { font-family: 'Bebas Neue', sans-serif; letter-spacing: .5px; }
     .wp-toast.wp-fail { border-color: #e6394666; }
     .wp-toast.wp-fail b { color: #e63946; }
+    .wp-toast-avg {
+      display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px;
+      background: #ffd16622; border: 1px solid #ffd16666; color: #ffd166;
+      font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700; white-space: nowrap;
+    }
     .wp-badge {
       position: fixed; left: 14px; bottom: 14px; z-index: 9997;
       background: #111422; border: 1px solid #52597a55;
@@ -803,6 +818,14 @@
     .wp-statbar-track { flex: 1; height: 8px; background: #181c2e; border-radius: 4px; overflow: hidden; }
     .wp-statbar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #06d6a0, #4cc9f0); }
     .wp-statbar-val { width: 28px; text-align: right; font-family: 'Space Mono', monospace; font-size: 12px; color: #f2f2f2; }
+    .wp-bp-avg-card {
+      display: flex; align-items: center; justify-content: space-between;
+      background: linear-gradient(135deg, #ffd16622, #4cc9f022);
+      border: 1px solid #ffd16655; border-radius: 10px;
+      padding: 10px 16px; margin-bottom: 14px;
+    }
+    .wp-bp-avg-label { font-family: 'DM Sans', sans-serif; font-size: 13px; color: #f2f2f2; font-weight: 700; }
+    .wp-bp-avg-val { font-family: 'Bebas Neue', sans-serif; font-size: 30px; letter-spacing: 1px; color: #ffd166; }
     .wp-bp-detail-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
     .wp-bp-detail-head img { width: 72px; height: 72px; object-fit: contain; }
     .wp-bp-nick-input {
@@ -1124,7 +1147,7 @@
       if (result.backpack_entry && result.backpack_entry.exceptional) {
         wpToastRaw('💠', `Espécime PERFEITO! ${mon.n} rolou os 5 stats altos — abra a mochila pra ver.`, true);
       } else {
-        wpToastCatch(mon, true);
+        wpToastCatch(mon, true, null, result.backpack_entry);
       }
       if (result.backpack_full) {
         setTimeout(() => wpToastRaw('🎒', `Mochila cheia (${result.backpack_count}/${result.backpack_cap}) — abra e libere algum Pokémon quando quiser.`, false), 1600);
@@ -1159,13 +1182,17 @@
     setTimeout(() => { el.classList.remove('wp-show'); setTimeout(() => el.remove(), 350); }, 3400);
   }
 
-  function wpToastCatch(mon, success, tier) {
+  function wpToastCatch(mon, success, tier, entry) {
     const meta = WP_RARITY_META[mon.r];
     const el = document.createElement('div');
     el.className = `wp-toast ${success ? '' : 'wp-fail'}`;
     if (success) {
       const isNew = wpCatches[mon.s].count === 1;
-      el.innerHTML = `<img src="${wpSpriteUrl(mon.d)}" alt=""><span>${isNew ? 'Você pegou!!!' : 'De novo!'} <b style="color:${meta.color}">${mon.n}</b> · ${meta.label}</span>`;
+      // Média dos 5 stats no próprio toast (04/09/2026, pedido do Eduardo) —
+      // só aparece quando o backpack_entry veio junto (sempre vem numa
+      // captura normal; guard aqui é só defensivo).
+      const avgHtml = entry ? ` <span class="wp-toast-avg">Média ${wpStatAvg(entry)}</span>` : '';
+      el.innerHTML = `<img src="${wpSpriteUrl(mon.d)}" alt=""><span>${isNew ? 'Você pegou!!!' : 'De novo!'} <b style="color:${meta.color}">${mon.n}</b> · ${meta.label}${avgHtml}</span>`;
     } else {
       el.innerHTML = `<img src="${wpSpriteUrl(mon.d)}" alt=""><span><b>${mon.n}</b> fugiu com a ${WP_BALL_META[tier].label}! Foi por pouco.</span>`;
     }
@@ -1358,6 +1385,10 @@
       <span class="wp-statbar-val">${entry[k]}</span>
     </div>`).join('');
     const caughtDate = new Date(entry.caught_at).toLocaleDateString('pt-BR');
+    // Média geral (04/09/2026, pedido do Eduardo) — mesmo número do toast
+    // de captura, mas maior/destacado aqui: um card próprio acima das 5
+    // barras, não só mais uma linha igual às outras.
+    const avg = wpStatAvg(entry);
 
     container.innerHTML = `
       <div class="wp-bp-detail-head">
@@ -1368,6 +1399,10 @@
         </div>
       </div>
       ${entry.exceptional ? `<div class="wp-bp-full-banner">💠 Espécime Excepcional — os 5 stats vieram altos. Raríssimo!</div>` : ''}
+      <div class="wp-bp-avg-card">
+        <span class="wp-bp-avg-label">Média Geral</span>
+        <span class="wp-bp-avg-val">${avg}</span>
+      </div>
       ${statsHtml}
       <div class="wp-bp-tag-row">
         <div class="wp-bp-tag-btn ${wpLoadout.principal_id === entry.id ? 'wp-bp-tag-active' : ''}" data-act="principal">⭐ Principal (1x1)</div>
