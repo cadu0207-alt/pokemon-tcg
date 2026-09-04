@@ -132,13 +132,12 @@
 </head>
 <body>
 
-<!-- CORRIGIDO 31/08/2026: a 1ª versão desse redesenho deixava os botões de
-     Simulador/Alpha Lorcana com position:fixed calculado em cima da altura
-     do header — colidia com a barra de feedback ("Fale com o MyDeck"), que
-     tem altura variável. Agora os botões vivem de verdade dentro desse
-     cluster (que já é fixo e nunca colide com nada da página), como uma
-     2ª linha só visível no desktop (.tfa-row-quick, ver style.css) — no
-     mobile eles continuam só dentro da Início, como sempre (.inicio-quick-actions). -->
+<!-- CORRIGIDO 04/09/2026: os botões de Simulador/Alpha Lorcana viviam aqui
+     ATÉ EM DOBRO no desktop — já existiam como link no .tdesk (sidebar
+     esquerda), então essa 2ª linha (.tfa-row-quick) era pura duplicata.
+     Removida. Mobile não é afetado: nunca usou esse cluster (some
+     <901px) — o acesso lá é pela folha "Mais" (.msheet-item, ver
+     inicio.js/index.html mais abaixo). -->
 <div class="top-fixed-actions">
   <div class="tfa-row">
     <a class="wa-community-btn" href="https://chat.whatsapp.com/KAEFJ5pGZrsDZeusCE0Sxs?s=cl&p=i&ilr=4&amv=2" target="_blank" rel="noopener" title="Grupo da Comunidade MyDeck no WhatsApp">
@@ -147,10 +146,6 @@
     <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Alternar tema claro/escuro">
       <span class="tt-icon" id="theme-toggle-icon">🌙</span><span id="theme-toggle-label">Tema</span>
     </button>
-  </div>
-  <div class="tfa-row tfa-row-quick">
-    <button type="button" class="inicio-quick-btn inicio-quick-sim" onclick="window.open('simulador.html','_blank')">🎰 Simulador de Packs</button>
-    <button type="button" class="inicio-quick-btn inicio-quick-lorcana" onclick="window.open('lorcana.html','_blank')">✨ Alpha Lorcana</button>
   </div>
 </div>
 
@@ -334,8 +329,8 @@
              Início (.inicio-brand-row) saiu pra dar lugar aos feeds de
              compra/venda (ver mais abaixo) — esse era o único acesso a
              Alpha Lorcana que existia no mobile. No desktop continua
-             disponível no .tdesk e no cluster fixo (.tfa-row-quick), sem
-             mudança nenhuma lá. -->
+             disponível no .tdesk (o cluster fixo .tfa-row-quick, que
+             duplicava esse link, foi removido em 04/09/2026). -->
         <button type="button" class="msheet-item msheet-cta" onclick="closeMSheet();window.open('lorcana.html','_blank')"><span class="msheet-ic">✨</span><span class="msheet-lb">Alpha Lorcana</span></button>
         <!-- espelha #nav-tab-admin: admin_panel.js mostra só pro Eduardo
              (updateAdminTabVisibility, isAdmin()). -->

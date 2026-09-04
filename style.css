@@ -3573,12 +3573,21 @@ body.inicio-modal-open { overflow: hidden; }
    um espaço vazio à direita em telas largas — vira uma coluna lateral com
    o Ranking de Batalhas (ver inicio_ranking.js). ≤1100px a coluna some e
    o ranking empilha embaixo do feed (mesmo texto, sem grid). */
-.inicio-main-grid { display: grid; grid-template-columns: 1fr 320px; gap: 28px; align-items: start; }
+/* CORRIGIDO 04/09/2026: coluna do feed usava 1fr (elastica) mas o conteudo
+   de dentro (.inicio-feed) trava em max-width:720px alinhado a esquerda —
+   em telas largas isso deixava uma faixa de vazio ENTRE o fim do feed e a
+   .inicio-side-col, antes mesmo do gap. Trocado pra 720px fixo (bate exato
+   com .inicio-feed, sem sobra) e a coluna lateral (Ranking + cartas a
+   venda/compra) vira quem recebe o espaço extra (minmax(...,1fr)) —
+   fecha o vazio E usa melhor a largura da pagina em telas grandes. Borda
+   entre as colunas (dentro do proprio gap) so pra reforcar a separacao
+   visual agora que a lateral ficou mais larga/perto. */
+.inicio-main-grid { display: grid; grid-template-columns: minmax(640px, 800px) minmax(340px, 460px); gap: 32px; align-items: start; }
 .inicio-main-col { min-width: 0; }
-.inicio-side-col { position: sticky; top: 20px; }
+.inicio-side-col { position: sticky; top: 20px; min-width: 0; border-left: 1px solid var(--border); padding-left: 32px; }
 @media (max-width: 1100px) {
   .inicio-main-grid { grid-template-columns: 1fr; }
-  .inicio-side-col { position: static; }
+  .inicio-side-col { position: static; border-left: none; padding-left: 0; }
 }
 
 .inicio-ranking-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
@@ -3603,7 +3612,7 @@ body.inicio-modal-open { overflow: hidden; }
 .inicio-ranking-name-save { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 7px 12px; font-size: 12.5px; cursor: pointer; white-space: nowrap; }
 .inicio-ranking-name-hint { font-size: 11px; color: var(--muted); margin-top: 5px; }
 
-.inicio-feed { display: flex; flex-direction: column; gap: 16px; max-width: 720px; }
+.inicio-feed { display: flex; flex-direction: column; gap: 16px; max-width: 800px; }
 .inicio-feed-item-foot { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 4px; }
 .inicio-feed-video-card { padding-bottom: 12px; }
 
