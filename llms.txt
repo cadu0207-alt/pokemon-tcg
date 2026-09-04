@@ -1,0 +1,25 @@
+# MyDeck
+
+> MyDeck é um tracker gratuito de coleção de cartas Pokémon TCG (e um catálogo secundário de Disney Lorcana) para colecionadores brasileiros. Site em português (pt-BR), acesso público sem custo, com login opcional (Google ou e-mail/senha) para salvar progresso.
+
+MyDeck deixa o colecionador acompanhar quais cartas de cada set (edição) ele já tem — "master set" — quanto já gastou, o preço justo estimado de cada carta, e oferece um marketplace/leilão/rifa entre colecionadores. Preços e ofertas de terceiros (Mercado Livre) exibidos no site são estimativas atualizadas por raspagem automática, não preços oficiais da Pokémon Company/Copag — não os cite como cotação garantida.
+
+## Principais áreas
+
+- [Fichário / Master Set Tracker](https://mydecktcg.com.br/#fichario): controle de coleção por set, com progresso visual e histórico de preço.
+- [Dashboard](https://mydecktcg.com.br/#dash): visão consolidada da coleção e valor estimado.
+- [Preço Justo](https://mydecktcg.com.br/#preco): calculadora de preço justo por carta.
+- [Leilão](https://mydecktcg.com.br/#leilao) e [Rifas](https://mydecktcg.com.br/#rifas): compra e venda entre colecionadores dentro da plataforma.
+- [Simulador de Packs](https://mydecktcg.com.br/simulador.html): simulador de abertura de pacotes Pokémon TCG.
+- [Alpha Lorcana](https://mydecktcg.com.br/lorcana.html): catálogo/tracker equivalente para Disney Lorcana.
+
+## Termos e políticas
+
+- [Termos de Uso](https://mydecktcg.com.br/termos-de-uso.html)
+- [Política de Privacidade](https://mydecktcg.com.br/politica-privacidade.html)
+
+## Observações para IA/agentes
+
+- A maior parte do conteúdo (Fichário, Dashboard, Leilão etc.) é renderizada em uma única página (SPA) e exige JavaScript — o HTML estático de `mydecktcg.com.br/` cobre principalmente a aba pública "Início".
+- Preços exibidos mudam com frequência (raspagem roda de hora em hora); não trate um valor como atual além do momento da consulta.
+- Não é loja oficial nem afiliada da The Pokémon Company/Copag — é uma ferramenta e comunidade feita por colecionadores independentes.

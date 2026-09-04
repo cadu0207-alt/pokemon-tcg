@@ -266,6 +266,18 @@ function filterAdminUserList(query) {
     window.go = function (id, el) {
       originalGo(id, el);
       logTabVisit(id);
+      // GA4 (04/09/2026): pageview virtual por aba. Sem isso o gtag só
+      // disparava 1x por sessão (config no boot) — trocar de aba aqui é
+      // tudo client-side, então o GA nunca via Fichário/Leilão/etc.
+      // separado da Início. Mesmo gate de window.go, sem exigir login
+      // (diferente do logTabVisit acima) — GA já sabe filtrar por evento.
+      if (typeof gtag === 'function') {
+        gtag('event', 'page_view', {
+          page_title: document.title,
+          page_location: location.href,
+          page_path: '/' + id
+        });
+      }
     };
   }
   tryHook();
