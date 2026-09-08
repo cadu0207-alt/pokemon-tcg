@@ -4405,7 +4405,7 @@ function renderSharedCustomBinder(cardIds, binderName){
   const bstats=document.getElementById('binder-stats');
   if(bstats){
     bstats.style.display='flex';
-    bstats.innerHTML=`<div><div class="bsv" style="color:var(--purple)">${binderName}</div><div class="bsl">Fichário compartilhado</div></div>
+    bstats.innerHTML=`<div><div class="bsv" style="color:var(--purple)">${esc(binderName)}</div><div class="bsl">Fichário compartilhado</div></div>
       <div><div class="bsv">${pct}%</div><div class="bsl">Coletado</div></div>
       <div><div class="bsv">${got}/${total}</div><div class="bsl">Slots</div></div>`;
   }

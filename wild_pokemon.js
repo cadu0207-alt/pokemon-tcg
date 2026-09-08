@@ -1364,7 +1364,7 @@
         ${entry.exceptional ? '<span class="wp-bp-exceptional-tag">💠</span>' : ''}
         ${tags ? `<span class="wp-bp-cell-tags">${tags}</span>` : ''}
         <img src="${wpSpriteUrl(entry.dex)}" alt="">
-        <div class="wp-bp-nick">${wpBackpackDisplayName(entry)}</div>
+        <div class="wp-bp-nick">${esc(wpBackpackDisplayName(entry))}</div>
         <div class="wp-r" style="color:${meta.color}">${meta.label}</div>
       </div>`;
     }).join('')}</div>`;
@@ -1394,7 +1394,7 @@
       <div class="wp-bp-detail-head">
         <img src="${wpSpriteUrl(entry.dex)}" alt="">
         <div style="flex:1">
-          <input class="wp-bp-nick-input" maxlength="24" value="${wpBackpackDisplayName(entry)}" placeholder="Apelido">
+          <input class="wp-bp-nick-input" maxlength="24" value="${esc(wpBackpackDisplayName(entry))}" placeholder="Apelido">
           <div class="wp-sub" style="margin:4px 0 0"><span style="color:${meta.color}">${meta.label}</span> · capturado em ${caughtDate}</div>
         </div>
       </div>
@@ -1443,7 +1443,7 @@
       releaseBtn.textContent = 'Liberando…';
       wpReleaseBackpack(entry.id).then((ok) => {
         if (ok) {
-          wpToastRaw('🎒', `${wpBackpackDisplayName(entry)} voltou pra natureza.`, true);
+          wpToastRaw('🎒', `${esc(wpBackpackDisplayName(entry))} voltou pra natureza.`, true);
           wpRenderMochilaGrid(container);
         } else {
           wpToastRaw('⚠️', 'Não deu pra liberar agora, tenta de novo.', false);
