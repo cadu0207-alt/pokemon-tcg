@@ -315,6 +315,31 @@ function imgMe06(n){return`https://images.scrydex.com/pokemon/me6-${parseInt(n)}
 // me2pt5: slug confirmado direto na resposta da api.pokemontcg.io (campo images.large
 // de cada carta), diferente do padrão "me5-N" dos outros ME — aqui é "me2pt5-N" mesmo.
 function imgMe2pt5(n){return`https://images.scrydex.com/pokemon/me2pt5-${parseInt(n)}/large`;}
+// cel30: sem entrada no scrydex (set novo) — hotlink direto no CDN do
+// limitlesstcg.com/cards/30C (conferido 30/09/2026: padrao
+// 30C_<codigo>_R_EN_LG.png). Cartas normais/secretas usam o numero com 3
+// digitos (001, 023, 158); RGB usa a letra sozinha (G/R/B); a Coleção
+// Clássica guarda no `n` o codigo ORIGINAL do set de origem (ex "4/102"),
+// que não é o que o limitlesstcg usa na URL — por isso o mapa CEL30_CC_IMG
+// (mesmo mapeamento nome<->CC-index conferido na correção de 30/09/2026).
+const CEL30_CC_IMG={
+  '4/102':'CC2','5/109':'CC8','11/113':'CC11','11/101':'CC20','18/132':'CC3',
+  '19/109':'CC9','25/111':'CC5','33/181':'CC25','41/122':'CC22','43/146':'CC13',
+  '47/127':'CC14','050/185':'CC27','57/111':'CC24','58/102':'CC1','69/132':'CC4',
+  '85/124':'CC19','89/149':'CC23','94/102':'CC15','99/102':'CC16','100/102':'CC17',
+  '101/101':'CC18','106/106':'CC12','106/160':'CC21','106/105':'CC6','108/115':'CC10',
+  '114/264':'CC28','123/172':'CC29','138/202':'CC26','149/147':'CC7','203/193':'CC30',
+};
+function imgCel30(n){
+  let code;
+  if(CEL30_CC_IMG[n]) code=CEL30_CC_IMG[n];
+  else if(n==='R/RGB') code='R';
+  else if(n==='G/RGB') code='G';
+  else if(n==='B/RGB') code='B';
+  else if(/^MEE/.test(n)) return ''; // energias basicas nao tem carta propria no limitlesstcg
+  else code=String(parseInt(n)).padStart(3,'0');
+  return`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/30C/30C_${code}_R_EN_LG.png`;
+}
 function imgMeg(n) {return`https://images.scrydex.com/pokemon/me1-${parseInt(n)}/large`;}
 // LOGO DA COLEÇÃO (12/08/2026) — pedido do Eduardo: mostrar a arte oficial de
 // cada set em vez do código (ME06/SV10/etc). Confirmado na doc pública da
@@ -1283,6 +1308,7 @@ const GEN1=[
 
 // ── PROGRESS ────────────────────────────────────────────────────
 const SET_META={
+  cel30:{label:'🎉 CEL30 — Celebração de 30 Anos',color:'#FFD700',chase:'Mew ex Ultra Rare — R$568,40',heroCard:'158',imgFn:imgCel30,releaseDate:'16/set/2026'},
   me06:{label:'💎 ME06 — Esmeralda Tempestuosa',color:'#00c853',chase:'Mega Rayquaza ex Gold — R$1.500 (est.)',heroCard:1,imgFn:imgMe06,upcoming:true,releaseDate:'out/2026'},
   me2pt5:{label:'🦸 ME2.5(ASC) — Heróis Excelsos',color:'#5C6BC0',chase:'Mega Charizard Y ex Hiper Rara Mega — preço a confirmar',heroCard:294,imgFn:imgMe2pt5,releaseDate:'30/jan/2026'},
   me05:{label:'🌑 ME05(PBL) — Escuridão Absoluta',color:'#424242',chase:'Gladion\'s Showdown SAR — US$1.090',heroCard:118,imgFn:imgMe05,releaseDate:'17/jul/2026'},
@@ -2564,7 +2590,7 @@ function getSetData(){
   const me06c=typeof CARDS_ME06!=='undefined'?CARDS_ME06:[];
   const me2pt5c=typeof CARDS_ME2PT5!=='undefined'?CARDS_ME2PT5:[];
   const map={
-    cel30:{cards:typeof CARDS_CEL30!=='undefined'?CARDS_CEL30:[],label:'CEL30 — Celebração de 30 Anos',
+    cel30:{cards:typeof CARDS_CEL30!=='undefined'?CARDS_CEL30:[],imgFn:imgCel30,label:'CEL30 — Celebração de 30 Anos',
       sections:[{lbl:'📄 Base — 001 a 128',filter:c=>c.base},{lbl:'✨ Secretas, RGB, Clássica e Energias',filter:c=>!c.base}]},
     me06:{cards:me06c,imgFn:imgMe06,label:'ME06 — Esmeralda Tempestuosa',upcoming:true,
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Secretas',filter:c=>!c.base}]},
@@ -3261,7 +3287,7 @@ const BINDER_PRESETS=[
   {key:'tipo_metal',      name:'Aço Inabalável',      emoji:'🤖',desc:'Cartas de tipo Metal',               filter:c=>c.type==='Metal',                          color:'#8d96b5'},
 ];
 
-const IMG_FNS={me04:imgMe04,me03:imgMe03,me02:imgMe02,meg:imgMeg,mep:imgMep,me05:imgMe05,me06:imgMe06,me2pt5:imgMe2pt5};
+const IMG_FNS={me04:imgMe04,me03:imgMe03,me02:imgMe02,meg:imgMeg,mep:imgMep,me05:imgMe05,me06:imgMe06,me2pt5:imgMe2pt5,cel30:imgCel30};
 const CB_SET_LABELS={
   me04:'🔥 ME04(CRI) — Caos Ascendente',
   me03:'🔵 ME03(POR) — Equilíbrio Perfeito',
