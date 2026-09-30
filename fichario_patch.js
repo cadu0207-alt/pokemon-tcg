@@ -142,6 +142,10 @@ function _badgeInk(hex) {
 ───────────────────────────────────────────── */
 let ficViewMode   = 'grid'; // 'grid' | 'binder'
 let ficBinderSize = 3;      // 2, 3 ou 4
+// Idioma de exibição (30/09/2026, piloto cel30) — troca nome/arte/preço
+// exibidos por carta; NÃO afeta a coleção rastreada nem os totais em R$
+// (dashboard/gastos continuam em cima de c.price, igual sempre foi).
+let ficLang = localStorage.getItem('ficLang') || 'pt';
 
 // Camada de enriquecimento: qty > 1 e origens (localStorage only)
 // A fonte de verdade de "tem/não tem" é o `collected` Set do app.js
@@ -282,7 +286,7 @@ function imgUrl(n, setId) {
   const sid = setId || currentSet;
   // Delega para getBinderImg do app.js quando disponível (cobre todos os sets)
   if (typeof getBinderImg === 'function') {
-    return getBinderImg({ n }, sid);
+    return getBinderImg({ n }, sid, ficLang);
   }
   // Fallback inline (caso app.js ainda não tenha carregado)
   const num = parseInt(n, 10);
@@ -351,6 +355,45 @@ function setBinderSize(n, onRefresh, ids) {
     btn.style.fontWeight  = s === n ? '700' : '400';
   });
   if (typeof onRefresh === 'function') onRefresh(); else renderBinder();
+}
+
+function setFicLang(lang, onRefresh, ids) {
+  ficLang = lang;
+  try { localStorage.setItem('ficLang', lang); } catch (e) {}
+  const ptId = (ids && ids.pt) || 'fic-lang-pt';
+  const enId = (ids && ids.en) || 'fic-lang-en';
+  [[ptId, 'pt'], [enId, 'en']].forEach(([id, l]) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.classList.toggle('active', l === lang);
+  });
+  if (typeof onRefresh === 'function') onRefresh(); else renderBinder();
+}
+
+// Mostra/esconde o seletor de idioma — só aparece em sets com dados
+// traduzidos (qualquer card com nameEn ou priceUsd). Chamado por switchSet()
+// (app.js) toda vez que troca de coleção.
+function updateFicLangVisibility() {
+  const ctrl = document.getElementById('fic-lang-controls');
+  if (!ctrl) return;
+  const cards = getSetCards();
+  const hasI18n = Array.isArray(cards) && cards.some(c => c.nameEn || c.priceUsd != null);
+  ctrl.style.display = hasI18n ? 'flex' : 'none';
+  if (!hasI18n && ficLang !== 'pt') setFicLang('pt', () => {}); // volta pro padrão sem forçar redraw duplo
+}
+
+// Nome/preço exibidos de acordo com ficLang — cai no PT/BRL padrão quando a
+// carta não tem tradução (todo o resto do catálogo, por enquanto).
+function cardI18n(c, lang) {
+  const l = lang || ficLang;
+  if (l === 'en') {
+    return {
+      name: c.nameEn || c.name,
+      price: c.priceUsd != null ? c.priceUsd : c.price,
+      symbol: c.priceUsd != null ? '$' : 'R$',
+    };
+  }
+  return { name: c.name, price: c.price, symbol: 'R$' };
 }
 
 /* ─────────────────────────────────────────────
@@ -502,6 +545,7 @@ function renderFicDashboard(cards) {
 // abaixo (fichário oficial) e por openCustomBinderView em app.js (fichário
 // personalizado/fixado) — os dois produzem exatamente o mesmo HTML/CSS agora.
 function ficCardHtml(c, setId) {
+  const lc = cardI18n(c, ficLang);
   const slots  = getSlots(c, setId);
   const vers   = slots.map(s => s.ver);
   const allCol = vers.every(v => collected.has(`${setId}:${c.n}:${v}`));
@@ -546,13 +590,13 @@ function ficCardHtml(c, setId) {
        onmouseout="this.style.transform=''">
     <div style="width:var(--cw,90px);height:var(--ch,126px);border-radius:7px;border:${border};
          box-shadow:${glow};position:relative;overflow:hidden;background:#0a0b10">
-      <img src="${(typeof imgThumb==='function')?imgThumb(imgUrl(c.n, setId)):imgUrl(c.n, setId)}" alt="${c.name}" loading="lazy" decoding="async"
+      <img src="${(typeof imgThumb==='function')?imgThumb(imgUrl(c.n, setId)):imgUrl(c.n, setId)}" alt="${lc.name}" loading="lazy" decoding="async"
            style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:${imgFilter}"
            onerror="handleCardImgError(this,'${setId}','${c.n}')">
       <div style="display:none;flex-direction:column;align-items:center;justify-content:center;
            gap:3px;position:absolute;inset:0;padding:5px;text-align:center">
         <div style="font-family:'Space Mono',monospace;font-size:7px;color:var(--muted)">${c.n}</div>
-        <div style="font-size:7px;font-weight:700;color:var(--text);line-height:1.2">${c.name}</div>
+        <div style="font-size:7px;font-weight:700;color:var(--text);line-height:1.2">${lc.name}</div>
         <div style="font-size:6px;color:var(--muted)">${c.type||''}</div>
         <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:${c.color||'#666'}"></div>
       </div>
@@ -574,10 +618,10 @@ function ficCardHtml(c, setId) {
          background:rgba(8,9,13,.96);border:1px solid var(--border);border-radius:6px;padding:8px 11px;
          font-size:11px;white-space:nowrap;opacity:0;pointer-events:none;z-index:100;min-width:140px;
          transition:opacity .15s">
-      <div style="font-weight:700;color:var(--text)">${c.name}</div>
+      <div style="font-weight:700;color:var(--text)">${lc.name}</div>
       <div style="color:var(--muted);font-family:'Space Mono',monospace;font-size:9px">#${c.n} · ${c.type||''}</div>
       <div style="color:var(--accent2);font-size:9px;margin-top:2px">${c.rare||''}</div>
-      ${c.price?`<div style="color:var(--teal);font-size:10px;font-weight:700;margin-top:3px">R$${fmtR(c.price)}</div>`:''}
+      ${lc.price?`<div style="color:var(--teal);font-size:10px;font-weight:700;margin-top:3px">${lc.symbol}${fmtR(lc.price)}</div>`:''}
       <div style="margin-top:4px;display:flex;gap:4px">
         ${vers.map(v => {
           const key = `${setId}:${c.n}:${v}`;
@@ -638,6 +682,7 @@ function renderBinderView(cards, setIdOf) {
     if (!slot) return `<div style="width:${cellSize}px;height:${Math.round(cellSize*1.4)}px;
       border:2px dashed var(--border);border-radius:6px;opacity:.3"></div>`;
     const { card: c, ver: v, setId } = slot;
+    const lc = cardI18n(c, ficLang);
     const key = `${setId}:${c.n}:${v}`;
     const isCollected = collected.has(key);
     const qty = ficCollection[key]?.qty || (isCollected ? 1 : 0);
@@ -658,13 +703,13 @@ function renderBinderView(cards, setIdOf) {
          onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform=''">
       <div style="width:${cellSize}px;height:${Math.round(cellSize*1.4)}px;border-radius:6px;
            border:2px solid ${borderColor};box-shadow:${glow};background:#0a0b10;overflow:hidden;position:relative">
-        <img src="${(typeof imgThumb==='function')?imgThumb(imgUrl(c.n, setId)):imgUrl(c.n, setId)}" alt="${c.name}" loading="lazy" decoding="async"
+        <img src="${(typeof imgThumb==='function')?imgThumb(imgUrl(c.n, setId)):imgUrl(c.n, setId)}" alt="${lc.name}" loading="lazy" decoding="async"
              style="width:100%;height:100%;object-fit:cover;filter:${imgFilter}"
              onerror="handleCardImgError(this,'${setId}','${c.n}')">
         <div style="display:none;flex-direction:column;align-items:center;justify-content:center;
              gap:2px;position:absolute;inset:0;padding:4px;text-align:center">
           <div style="font-size:${cellSize>90?7:6}px;color:var(--muted);font-family:'Space Mono',monospace">${c.n}</div>
-          <div style="font-size:${cellSize>90?7:5}px;font-weight:700;color:var(--text);line-height:1.1">${c.name}</div>
+          <div style="font-size:${cellSize>90?7:5}px;font-weight:700;color:var(--text);line-height:1.1">${lc.name}</div>
           <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:${c.color||'#666'}"></div>
         </div>
         ${qty>1?`<div style="position:absolute;top:2px;right:2px;font-size:8px;font-weight:900;
@@ -730,6 +775,7 @@ async function openSlotModal(cardN, defaultVer, setIdOverride, cardOverride, onS
   const setId = setIdOverride || currentSet;
   const card  = cardOverride || getSetCards().find(c => c.n === cardN);
   if (!card) return;
+  const _lcCard = cardI18n(card, ficLang);
   _ficModalSetId   = setId;
   _ficModalCardObj = card;
   _ficModalOnSaved = onSaved || null;
@@ -798,13 +844,13 @@ async function openSlotModal(cardN, defaultVer, setIdOverride, cardOverride, onS
     <button onclick="closeSlotModal()" style="position:absolute;top:12px;right:12px;background:none;
       border:none;color:var(--muted);font-size:18px;cursor:pointer;z-index:2">✕</button>
     <div class="slot-modal-head">
-      <img class="slot-modal-img" src="${imgUrl(cardN, setId)}" alt="${card.name}"
+      <img class="slot-modal-img" src="${imgUrl(cardN, setId)}" alt="${_lcCard.name}"
            onerror="handleCardImgError(this,'${setId}','${cardN}')">
       <div class="slot-modal-info">
-        <div class="slot-modal-title">${card.name}</div>
+        <div class="slot-modal-title">${_lcCard.name}</div>
         <div class="slot-modal-sub">#${card.n} · ${card.type||''}</div>
         <div class="slot-modal-rare">${card.rare||''}</div>
-        ${card.price?`<div class="slot-modal-price">R$${fmtR(card.price)}</div>`:''}
+        ${_lcCard.price?`<div class="slot-modal-price">${_lcCard.symbol}${fmtR(_lcCard.price)}</div>`:''}
         ${card.important?'<div style="color:var(--gold);font-size:12px;margin-top:4px">★ Carta importante</div>':''}
       </div>
     </div>

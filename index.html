@@ -721,6 +721,16 @@
           <button id="fic-binder-4" class="fic-btn" onclick="setBinderSize(4)">4×4</button>
         </div>
 
+        <!-- Seletor de idioma (30/09/2026, piloto no cel30, pedido do Eduardo)
+             — só aparece quando o set atual tem dados traduzidos
+             (nameEn/priceUsd em algum card). Troca nome/preço/arte exibidos
+             sem mudar a coleção rastreada (mesmo card_n, mesma coleção). -->
+        <div id="fic-lang-controls" style="display:none;gap:4px;align-items:center">
+          <span class="fic-toolbar-lbl">IDIOMA:</span>
+          <button id="fic-lang-pt" class="fic-btn active" onclick="setFicLang('pt')">🇧🇷 PT</button>
+          <button id="fic-lang-en" class="fic-btn" onclick="setFicLang('en')">🇺🇸 EN</button>
+        </div>
+
         <span style="margin-left:auto"></span>
 
         <!-- Menu 'Mais ações' — agrupa copiar lista / imprimir / compartilhar,

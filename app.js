@@ -330,7 +330,11 @@ const CEL30_CC_IMG={
   '101/101':'CC18','106/106':'CC12','106/160':'CC21','106/105':'CC6','108/115':'CC10',
   '114/264':'CC28','123/172':'CC29','138/202':'CC26','149/147':'CC7','203/193':'CC30',
 };
-function imgCel30(n){
+// lang (30/09/2026, seletor de idioma do Fichário): 'pt'|'en'|'de'|'fr'|'es'|'it'
+// — os 6 confirmados no mesmo CDN pra este set (30C_<codigo>_R_<LANG>_LG.png,
+// todos retornam 200). Japonês/Chinês NÃO seguem este padrão — são sets com
+// numeração própria (M6a/30thC), ainda não integrados.
+function imgCel30(n,lang){
   let code;
   if(CEL30_CC_IMG[n]) code=CEL30_CC_IMG[n];
   else if(n==='R/RGB') code='R';
@@ -338,7 +342,8 @@ function imgCel30(n){
   else if(n==='B/RGB') code='B';
   else if(/^MEE/.test(n)) return ''; // energias basicas nao tem carta propria no limitlesstcg
   else code=String(parseInt(n)).padStart(3,'0');
-  return`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/30C/30C_${code}_R_EN_LG.png`;
+  const l=(lang||'en').toUpperCase();
+  return`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/30C/30C_${code}_R_${l}_LG.png`;
 }
 function imgMeg(n) {return`https://images.scrydex.com/pokemon/me1-${parseInt(n)}/large`;}
 // LOGO DA COLEÇÃO (12/08/2026) — pedido do Eduardo: mostrar a arte oficial de
@@ -498,7 +503,7 @@ function handleCardImgError(img,setId,n){
   img.style.display='none';
   if(img.nextElementSibling)img.nextElementSibling.style.display='flex';
 }
-function getBinderImg(c,setId){
+function getBinderImg(c,setId,lang){
   // CORRIGIDO 30/09/2026: cel30 não estava nesta lista — como o `n` das
   // cartas dele não é numérico puro (RGB, "4/102" da Coleção Clássica, "MEE
   // 009" das energias), a função caía direto no fallback genérico do fim
@@ -506,8 +511,10 @@ function getBinderImg(c,setId){
   // parseInt(c.n) reportado pelo Eduardo ("fotos buscando de caos
   // ascendente em vez da coleção de 30 anos"). imgCel30() já faz seu
   // próprio parsing (número com 3 dígitos / índice CC / letra RGB), então
-  // entra antes do parseInt(c.n) genérico abaixo.
-  if(setId==='cel30') return imgCel30(c.n);
+  // entra antes do parseInt(c.n) genérico abaixo. `lang` (piloto do seletor
+  // de idioma do Fichário) só é usado aqui — os outros sets nem têm arte
+  // multi-idioma ainda.
+  if(setId==='cel30') return imgCel30(c.n,lang);
   const n=parseInt(c.n);
   if(setId==='me2pt5') return imgMe2pt5(n);
   if(setId==='me06') return imgMe06(n);
@@ -2589,6 +2596,7 @@ function switchSet(id,el){
   if(binderCtrl)binderCtrl.style.display='';
   if(setInfo)setInfo.style.display='';
   if(bstats)bstats.style.display='';
+  if(typeof updateFicLangVisibility==='function')updateFicLangVisibility();
   renderBinder();
   const{cards:_sc}=getSetData();
   fetchLivePrices(id,_sc);
