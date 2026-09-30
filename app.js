@@ -1293,6 +1293,7 @@ const SET_META={
   mep: {label:'⭐ MEP(MEP) — Parceiros Iniciais',color:'#ffd166',chase:'Charmander MEP038 — R$36',heroCard:38,imgFn:imgMep},
 };
 const SET_CARDS_MAP={
+  cel30:()=>typeof CARDS_CEL30!=='undefined'?CARDS_CEL30:[],
   me06:()=>typeof CARDS_ME06!=='undefined'?CARDS_ME06:[],
   me2pt5:()=>typeof CARDS_ME2PT5!=='undefined'?CARDS_ME2PT5:[],
   me05:()=>typeof CARDS_ME05!=='undefined'?CARDS_ME05:[],
@@ -1325,6 +1326,7 @@ const SET_CARDS_MAP={
 
 // ── CATÁLOGO DE COLEÇÕES ─────────────────────────────────────────
 const SET_CATALOG=[
+  {id:'cel30',label:'CEL30 — Celebração de 30 Anos',emoji:'🎉',cards:typeof CARDS_CEL30!=='undefined'?CARDS_CEL30.length:199,color:'#FFD700',series:'ME'},
   {id:'me06',label:'ME06 — Esmeralda Tempestuosa',emoji:'💎',cards:0,  color:'#00c853',series:'ME',upcoming:true},
   {id:'me2pt5',label:'ME2.5(ASC) — Heróis Excelsos', emoji:'🦸',cards:typeof CARDS_ME2PT5!=='undefined'?CARDS_ME2PT5.length:295,color:'#5C6BC0',series:'ME'},
   {id:'me05',label:'ME05(PBL) — Escuridão Absoluta', emoji:'🌑',cards:typeof CARDS_ME05!=='undefined'?CARDS_ME05.length:120,color:'#757575',series:'ME'},
@@ -1416,8 +1418,8 @@ function searchCardsByCode(raw, limit){
 
 function _loadMyCollections(){
   try{const v=JSON.parse(localStorage.getItem('myCollections'));
-    return Array.isArray(v)&&v.length?v:['me06','me2pt5','me05','me04','me03','me02','meg','mep'];}
-  catch(e){return['me06','me2pt5','me05','me04','me03','me02','meg','mep'];}
+    return Array.isArray(v)&&v.length?v:['cel30','me06','me2pt5','me05','me04','me03','me02','meg','mep'];}
+  catch(e){return['cel30','me06','me2pt5','me05','me04','me03','me02','meg','mep'];}
 }
 let myCollections=_loadMyCollections();
 function saveMyCollections(){try{localStorage.setItem('myCollections',JSON.stringify(myCollections));}catch(e){}}
@@ -2562,6 +2564,8 @@ function getSetData(){
   const me06c=typeof CARDS_ME06!=='undefined'?CARDS_ME06:[];
   const me2pt5c=typeof CARDS_ME2PT5!=='undefined'?CARDS_ME2PT5:[];
   const map={
+    cel30:{cards:typeof CARDS_CEL30!=='undefined'?CARDS_CEL30:[],label:'CEL30 — Celebração de 30 Anos',
+      sections:[{lbl:'📄 Base — 001 a 128',filter:c=>c.base},{lbl:'✨ Secretas, RGB, Clássica e Energias',filter:c=>!c.base}]},
     me06:{cards:me06c,imgFn:imgMe06,label:'ME06 — Esmeralda Tempestuosa',upcoming:true,
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Secretas',filter:c=>!c.base}]},
     me2pt5:{cards:me2pt5c,imgFn:imgMe2pt5,label:'ME2.5(ASC) — Heróis Excelsos', // lançou 30/jan/2026

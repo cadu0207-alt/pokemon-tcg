@@ -8,7 +8,8 @@
     { "key": "me04",   "file": "cards_me04.js",   "groupId": 24655, "abbreviation": "CRI" },
     { "key": "me05",   "file": "cards_me05.js",   "groupId": 24688, "abbreviation": "PBL" },
     { "key": "me2pt5", "file": "cards_me2pt5.js", "groupId": 24541, "abbreviation": "ASC" },
-    { "key": "me06",   "file": "cards_me06.js",   "groupId": null,  "abbreviation": null, "obs": "não lançado ainda — sem Liga também. 'ME: 30th Celebration' (groupId 24722) pode vir a ser este, mas não confirmado — conferir nome oficial quando anunciado." },
+    { "key": "me06",   "file": "cards_me06.js",   "groupId": null,  "abbreviation": null, "obs": "não lançado ainda — sem Liga também (Esmeralda Tempestuosa, set diferente de cel30)." },
+    { "key": "cel30",  "file": "cards_cel30.js",  "groupId": 24722, "abbreviation": "30C", "obs": "groupId 'ME: 30th Celebration' — antes cogitado (sem confirmação) como possível match do me06; na verdade é este set (30th Celebration/Celebração de 30 Anos), confirmado 30/09/2026 contra ligapokemon.com.br (edid=804 ed=30C)." },
     { "key": "mep",    "file": "cards_mep.js",    "groupId": 24451, "abbreviation": "MEP" },
 
     { "key": "sv1",    "file": "cards_sv1.js",    "groupId": 22873, "abbreviation": "SVI" },

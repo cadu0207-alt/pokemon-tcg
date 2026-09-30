@@ -8,6 +8,7 @@
     { "key": "me05", "file": "cards_me05.js", "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=792%20ed=PBL" },
     { "key": "me2pt5", "file": "cards_me2pt5.js", "url": "https://www.ligapokemon.com.br/?view=cards/search&card=ed=ASC" },
     { "key": "me06", "file": "cards_me06.js", "url": "" },
+    { "key": "cel30", "file": "cards_cel30.js", "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=804%20ed=30C", "obs": "so cobre base+secretas (001-158, RGB). Colecao Classica tem listagem PROPRIA na Liga (edid=805 ed=30C-C) nao integrada aqui ainda — precos das 30 classicas continuam vindo do deckcerto.com ate alguem automatizar essa segunda fonte." },
     { "key": "mep",  "file": "cards_mep.js",  "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=733%20ed=MEP" },
 
     { "key": "sv1",    "file": "cards_sv1.js",    "url": "https://www.ligapokemon.com.br/?view=cards/search&card=edid=343%20ed=SV1" },
