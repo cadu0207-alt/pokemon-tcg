@@ -499,6 +499,15 @@ function handleCardImgError(img,setId,n){
   if(img.nextElementSibling)img.nextElementSibling.style.display='flex';
 }
 function getBinderImg(c,setId){
+  // CORRIGIDO 30/09/2026: cel30 não estava nesta lista — como o `n` das
+  // cartas dele não é numérico puro (RGB, "4/102" da Coleção Clássica, "MEE
+  // 009" das energias), a função caía direto no fallback genérico do fim
+  // (imgMe04, Caos Ascendente) pra TODAS as cartas do set, sem nem tentar o
+  // parseInt(c.n) reportado pelo Eduardo ("fotos buscando de caos
+  // ascendente em vez da coleção de 30 anos"). imgCel30() já faz seu
+  // próprio parsing (número com 3 dígitos / índice CC / letra RGB), então
+  // entra antes do parseInt(c.n) genérico abaixo.
+  if(setId==='cel30') return imgCel30(c.n);
   const n=parseInt(c.n);
   if(setId==='me2pt5') return imgMe2pt5(n);
   if(setId==='me06') return imgMe06(n);
