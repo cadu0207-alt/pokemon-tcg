@@ -27,7 +27,7 @@ const CARDS_MEP = [
   {n:'001',name:'Meganium',type:'Grama',color:'#4CAF50',rare:'Promo (Staff)',price:44.40,base:false,series:'Promos MEP 001–036'},
   {n:'002',name:'Inteleon',type:'Aquático',color:'#2196F3',rare:'Promo (Staff)',price:10.00,base:false,series:'Promos MEP 001–036'},
   {n:'003',name:'Alakazam',type:'Psíquico',color:'#9C27B0',rare:'Promo (Staff)',price:40.00,base:false,series:'Promos MEP 001–036'},
-  {n:'004',name:'Lunatone',type:'Lutador',color:'#795548',rare:'Promo (Staff)',price:33.00,base:false,series:'Promos MEP 001–036'},
+  {n:'004',name:'Lunatone',type:'Lutador',color:'#795548',rare:'Promo (Staff)',price:31.41,base:false,series:'Promos MEP 001–036'},
   {n:'005',name:'Drifloon',type:'Psíquico',color:'#9C27B0',rare:'Promo',price:0.40,base:false,series:'Promos MEP 001–036'},
   {n:'006',name:'Drifblim',type:'Psíquico',color:'#9C27B0',rare:'Promo',price:0.45,base:false,series:'Promos MEP 001–036'},
   {n:'007',name:'Psyduck',type:'Aquático',color:'#2196F3',rare:'Promo',price:1.50,base:false,series:'Promos MEP 001–036'},
@@ -62,18 +62,18 @@ const CARDS_MEP = [
   {n:'036',name:'Mega Feraligatr ex',type:'Aquático',color:'#2196F3',rare:'Promo (Jumbo)',price:2.90,base:false,important:true,series:'Promos MEP 001–036'},
   // SÉRIE 1 — Kanto (MEP037–039)
   // Charmander > Bulbasaur > Squirtle em popularidade; referência USD: ~$44/$37/$34
-  {n:'037',name:'Bulbasaur',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:108.00,base:true,important:true,series:'Série 1 — Kanto'},
+  {n:'037',name:'Bulbasaur',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:78.90,base:true,important:true,series:'Série 1 — Kanto'},
   {n:'038',name:'Charmander',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:115.00,base:true,important:true,series:'Série 1 — Kanto'},
   {n:'039',name:'Squirtle',type:'Aquático',color:'#2196F3',rare:'Ilustração Rara (IR)',price:90.00,base:true,important:true,series:'Série 1 — Kanto'},
   // SÉRIE 1 — Sinnoh (MEP040–042)
   // Piplup > Chimchar > Turtwig; Piplup tem maior fanbase
   {n:'040',name:'Turtwig',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:20.00,base:true,series:'Série 1 — Sinnoh'},
-  {n:'041',name:'Chimchar',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:29.00,base:true,series:'Série 1 — Sinnoh'},
-  {n:'042',name:'Piplup',type:'Aquático',color:'#2196F3',rare:'Ilustração Rara (IR)',price:35.67,base:true,important:true,series:'Série 1 — Sinnoh'},
+  {n:'041',name:'Chimchar',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:28.90,base:true,series:'Série 1 — Sinnoh'},
+  {n:'042',name:'Piplup',type:'Aquático',color:'#2196F3',rare:'Ilustração Rara (IR)',price:33.90,base:true,important:true,series:'Série 1 — Sinnoh'},
   // SÉRIE 1 — Alola (MEP043–045)
   // Os três têm demanda similar; Rowlet levemente à frente
-  {n:'043',name:'Rowlet',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:27.67,base:true,series:'Série 1 — Alola'},
-  {n:'044',name:'Litten',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:25.00,base:true,series:'Série 1 — Alola'},
+  {n:'043',name:'Rowlet',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:26.00,base:true,series:'Série 1 — Alola'},
+  {n:'044',name:'Litten',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:24.90,base:true,series:'Série 1 — Alola'},
   {n:'045',name:'Popplio',type:'Aquático',color:'#2196F3',rare:'Ilustração Rara (IR)',price:20.00,base:true,series:'Série 1 — Alola'},
   // SÉRIE 2 — Johto (MEP046–048) — lançamento 19/06/2026, 1 semana no mercado
   // Johto = mais procurado da S2; Cyndaquil/Totodile lideram; preços ainda voláteis
@@ -89,7 +89,7 @@ const CARDS_MEP = [
   // Menos nostalgia; Sobble tem maior seguimento individual; os três são os mais baratos da S2
   {n:'052',name:'Grookey',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:29.80,base:true,series:'Série 2 — Galar'},
   {n:'053',name:'Scorbunny',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:28.00,base:true,series:'Série 2 — Galar'},
-  {n:'054',name:'Sobble',type:'Aquático',color:'#2196F3',rare:'Ilustração Rara (IR)',price:28.70,base:true,series:'Série 2 — Galar'},
+  {n:'054',name:'Sobble',type:'Aquático',color:'#2196F3',rare:'Ilustração Rara (IR)',price:27.90,base:true,series:'Série 2 — Galar'},
   // SÉRIE 3 — Hoenn · Kalos · Paldea (MEP055–063) — confirmado via Serebii.net em 09/jul/2026,
   // preços ainda são estimativas (sem referência de venda BR no momento da inclusão)
   {n:'055',name:'Treecko',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:34.00,base:true,series:'Série 3 — Hoenn'},
@@ -98,7 +98,7 @@ const CARDS_MEP = [
   {n:'058',name:'Chespin',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:34.80,base:true,series:'Série 3 — Kalos'},
   {n:'059',name:'Fennekin',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:31.92,base:true,important:true,series:'Série 3 — Kalos'},
   {n:'060',name:'Froakie',type:'Incolor',color:'#9E9E9E',rare:'Ilustração Rara (IR)',price:24.90,base:true,series:'Série 3 — Kalos'},
-  {n:'061',name:'Sprigatito',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:33.00,base:true,important:true,series:'Série 3 — Paldea'},
+  {n:'061',name:'Sprigatito',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:33.89,base:true,important:true,series:'Série 3 — Paldea'},
   {n:'062',name:'Fuecoco',type:'Fogo',color:'#F44336',rare:'Ilustração Rara (IR)',price:32.00,base:true,series:'Série 3 — Paldea'},
   {n:'063',name:'Quaxly',type:'Aquático',color:'#2196F3',rare:'Ilustração Rara (IR)',price:29.90,base:true,series:'Série 3 — Paldea'},
   // ── PROMOS MEP064–081 (produtos de Equilíbrio Perfeito/ME03 e Caos Ascendente/ME04) ──
@@ -129,7 +129,7 @@ const CARDS_MEP = [
   // comentário do arquivo dizia "arte ainda não revelada", mas a carta já foi
   // lançada na Mega Greninja ex Premium Collection (~03/jul/2026). Confirmado
   // via PriceCharting/CardTrader/TCG Collector: holo "Double Rare", tipo Água.
-  {n:'081',name:'Mega Greninja ex',type:'Aquático',color:'#2196F3',rare:'Promo (Jumbo)',price:15.00,base:false,important:true,series:'Promos MEP 064–081'},
+  {n:'081',name:'Mega Greninja ex',type:'Aquático',color:'#2196F3',rare:'Promo (Jumbo)',price:14.99,base:false,important:true,series:'Promos MEP 064–081'},
   // ── PROMOS MEP082–110 (confirmado via Serebii.net, 09/jul/2026) ──
   // MEP089–091: existem no checklist oficial mas arte/nome ainda não revelados — não incluídos até confirmação.
   {n:'082',name:'Miraidon',type:'Raio',color:'#FFC107',rare:'Promo (Jumbo)',price:8.29,base:false,important:true,series:'Promos MEP 082–110'},
@@ -145,14 +145,14 @@ const CARDS_MEP = [
   {n:'088',name:'Zarude',type:'Escuridão',color:'#212121',rare:'Promo (Pokémon Center)',price:9.00,base:false,series:'Promos MEP 082–110'},
   {n:'092',name:'Paradise Resort',type:'Treinador',color:'#607D8B',rare:'Promo (Estádio)',price:5.00,base:false,series:'Promos MEP 082–110'},
   {n:'093',name:'Pikachu',type:'Raio',color:'#FFC107',rare:'Promo',price:99.67,base:false,series:'Promos MEP 082–110'},
-  {n:'094',name:'Alolan Exeggutor',type:'Grama',color:'#4CAF50',rare:'Promo (B&B)',price:1.00,base:false,series:'Promos MEP 082–110'},
-  {n:'095',name:'Lucario',type:'Lutador',color:'#795548',rare:'Promo (Staff)',price:1.50,base:false,series:'Promos MEP 082–110'},
-  {n:'096',name:'Moltres',type:'Fogo',color:'#F44336',rare:'Promo (Jumbo)',price:4.00,base:false,important:true,series:'Promos MEP 082–110'},
-  {n:'097',name:'Articuno',type:'Aquático',color:'#2196F3',rare:'Promo (Jumbo)',price:4.00,base:false,important:true,series:'Promos MEP 082–110'},
-  {n:'098',name:'Zapdos',type:'Raio',color:'#FFC107',rare:'Promo (Jumbo)',price:4.00,base:false,important:true,series:'Promos MEP 082–110'},
+  {n:'094',name:'Alolan Exeggutor',type:'Grama',color:'#4CAF50',rare:'Promo (B&B)',price:0.98,base:false,series:'Promos MEP 082–110'},
+  {n:'095',name:'Lucario',type:'Lutador',color:'#795548',rare:'Promo (Staff)',price:1.49,base:false,series:'Promos MEP 082–110'},
+  {n:'096',name:'Moltres',type:'Fogo',color:'#F44336',rare:'Promo (Jumbo)',price:3.99,base:false,important:true,series:'Promos MEP 082–110'},
+  {n:'097',name:'Articuno',type:'Aquático',color:'#2196F3',rare:'Promo (Jumbo)',price:3.99,base:false,important:true,series:'Promos MEP 082–110'},
+  {n:'098',name:'Zapdos',type:'Raio',color:'#FFC107',rare:'Promo (Jumbo)',price:3.99,base:false,important:true,series:'Promos MEP 082–110'},
   {n:'099',name:'Greninja ex',type:'Aquático',color:'#2196F3',rare:'Promo (Jumbo)',price:16.20,base:false,important:true,series:'Promos MEP 082–110'},
-  {n:'100',name:'Sylveon ex',type:'Psíquico',color:'#9C27B0',rare:'Promo (Jumbo)',price:17.00,base:false,important:true,series:'Promos MEP 082–110'},
-  {n:'101',name:'Nidorina',type:'Psíquico',color:'#9C27B0',rare:'Promo',price:49.50,base:false,series:'Promos MEP 082–110'},
+  {n:'100',name:'Sylveon ex',type:'Psíquico',color:'#9C27B0',rare:'Promo (Jumbo)',price:16.99,base:false,important:true,series:'Promos MEP 082–110'},
+  {n:'101',name:'Nidorina',type:'Psíquico',color:'#9C27B0',rare:'Promo',price:49.99,base:false,series:'Promos MEP 082–110'},
   {n:'102',name:'Victini',type:'Fogo',color:'#F44336',rare:'Promo (Pokémon Center)',price:20.00,base:false,series:'Promos MEP 082–110'},
   {n:'103',name:'Zeraora',type:'Raio',color:'#FFC107',rare:'Promo (Staff)',price:15.00,base:false,series:'Promos MEP 082–110'},
   {n:'104',name:'Mewtwo',type:'Psíquico',color:'#9C27B0',rare:'Promo (B&B)',price:15.00,base:false,series:'Promos MEP 082–110'},
