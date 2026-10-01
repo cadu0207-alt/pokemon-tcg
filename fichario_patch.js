@@ -626,7 +626,7 @@ function ficCardHtml(c, setId) {
        onmouseout="this.style.transform=''">
     <div style="width:var(--cw,90px);height:var(--ch,126px);border-radius:7px;border:${border};
          box-shadow:${glow};position:relative;overflow:hidden;background:#0a0b10">
-      <img src="${(typeof imgThumb==='function')?imgThumb(imgUrl(c.n, setId)):imgUrl(c.n, setId)}" alt="${lc.name}" loading="lazy" decoding="async"
+      <img src="${(typeof imgThumb==='function')?imgThumb(imgUrl(c.n, setId)):imgUrl(c.n, setId)}" alt="${lc.name}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
            style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:${imgFilter}"
            onerror="handleCardImgError(this,'${setId}','${c.n}')">
       <div style="display:none;flex-direction:column;align-items:center;justify-content:center;
@@ -755,7 +755,7 @@ function renderBinderView(cards, setIdOf) {
          onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform=''">
       <div style="width:${cellSize}px;height:${Math.round(cellSize*1.4)}px;border-radius:6px;
            border:2px solid ${borderColor};box-shadow:${glow};background:#0a0b10;overflow:hidden;position:relative">
-        <img src="${(typeof imgThumb==='function')?imgThumb(imgUrl(c.n, setId)):imgUrl(c.n, setId)}" alt="${lc.name}" loading="lazy" decoding="async"
+        <img src="${(typeof imgThumb==='function')?imgThumb(imgUrl(c.n, setId)):imgUrl(c.n, setId)}" alt="${lc.name}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
              style="width:100%;height:100%;object-fit:cover;filter:${imgFilter}"
              onerror="handleCardImgError(this,'${setId}','${c.n}')">
         <div style="display:none;flex-direction:column;align-items:center;justify-content:center;
@@ -896,7 +896,7 @@ async function openSlotModal(cardN, defaultVer, setIdOverride, cardOverride, onS
     <button onclick="closeSlotModal()" style="position:absolute;top:12px;right:12px;background:none;
       border:none;color:var(--muted);font-size:18px;cursor:pointer;z-index:2">✕</button>
     <div class="slot-modal-head">
-      <img class="slot-modal-img" src="${imgUrl(cardN, setId)}" alt="${_lcCard.name}"
+      <img class="slot-modal-img" src="${imgUrl(cardN, setId)}" alt="${_lcCard.name}" referrerpolicy="no-referrer"
            onerror="handleCardImgError(this,'${setId}','${cardN}')">
       <div class="slot-modal-info">
         <div class="slot-modal-title">${_lcCard.name}</div>
@@ -1133,7 +1133,7 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
       popup.document.write(`
       <div class="slot">
         <div class="imgwrap">
-          <img src="${(typeof imgMedium === 'function') ? imgMedium(imgUrl(c.n, setId)) : imgUrl(c.n, setId)}" alt="${c.name}" style="${grayFilter}"
+          <img src="${(typeof imgMedium === 'function') ? imgMedium(imgUrl(c.n, setId)) : imgUrl(c.n, setId)}" alt="${c.name}" style="${grayFilter}" referrerpolicy="no-referrer"
                onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=empty>${c.n}<br>${c.name}</div>')">
         </div>
         <div class="label">
