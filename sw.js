@@ -9,7 +9,15 @@
 // carta (home + fichario + impressao) -- forca quem ja tinha SW instalado a
 // pegar a versao nova do app.js/fichario_patch.js em vez de servir a versao
 // antiga (que ainda pedia /large em varios lugares) do cache local.
-const CACHE = 'mydeck-v4';
+// v5 (01/10/2026): mesmo motivo de sempre -- usuario com SW ja instalado de
+// antes ficou preso numa versao velha do fichario_patch.js/app.js (fichario
+// JP/CN do cel30 clicava mas continuava mostrando os dados do cel30 em
+// ingles/portugues, com a imagem tentando a pasta errada no CDN). Hard
+// refresh normal nao forca o browser a trocar um Service Worker ja ativo —
+// só o bump de CACHE (que muda o conteudo do proprio sw.js) faz o browser
+// perceber a atualização, instalar a nova versao e limpar o cache antigo
+// (activate acima já faz isso). Ver [[feedback_coding]].
+const CACHE = 'mydeck-v5';
 const STATIC = ['./', './index.html', './style.css', './app.js', './fichario_patch.js', './ev_calculator.js',
   './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
