@@ -382,10 +382,23 @@ function setBinderSize(n, onRefresh, ids) {
 // Anos", pra não inchar a lista principal a cada idioma de cada coleção
 // futura parecida.
 const FIC_LANG_REGION_SET = { jp: 'cel30jp', cn: 'cel30cn' };
-const FIC_LANG_FAMILY = ['cel30', 'cel30jp', 'cel30cn'];
+// SWITCH_FAMILY: só o cel30 precisa trocar de `setId` pra mostrar jp/cn,
+// porque lá são checklists DIFERENTES (cel30jp/cel30cn têm suas próprias
+// cards_*.js, numeração e contagem). Sets novos (01/10/2026, começando pela
+// ME2.5) guardam nameJp/img direto na MESMA carta — não precisam trocar de
+// set, só o idioma exibido (ver LANG_SETS logo abaixo).
+const FIC_LANG_SWITCH_FAMILY = ['cel30', 'cel30jp', 'cel30cn'];
+// Quais idiomas cada set mostra no seletor, e em que ordem os botões ficam
+// visíveis. Sets fora deste mapa não mostram o controle (comportamento
+// anterior, zero mudança pro resto do catálogo).
+const FIC_LANG_SETS = {
+  cel30: ['pt', 'en', 'jp', 'cn'], cel30jp: ['pt', 'en', 'jp', 'cn'], cel30cn: ['pt', 'en', 'jp', 'cn'],
+  // ME2.5(ASC): sem chinês confirmado ainda (ver header de cards_me2pt5.js)
+  me2pt5: ['pt', 'en', 'jp'],
+};
 
 function setFicLang(lang, onRefresh, ids) {
-  const regionSet = FIC_LANG_REGION_SET[lang];
+  const regionSet = FIC_LANG_SWITCH_FAMILY.includes(currentSet) ? FIC_LANG_REGION_SET[lang] : null;
   if (regionSet) {
     // JP/CN não têm conceito de EN separado — PT é sempre o texto exibido
     // (os arquivos já trazem name em português; nameEn é só metadado).
@@ -414,21 +427,26 @@ function syncFicLangButtons(ids) {
     cn: (ids && ids.cn) || 'fic-lang-cn',
   };
   const active = currentSet === 'cel30jp' ? 'jp' : currentSet === 'cel30cn' ? 'cn' : ficLang;
+  const supported = FIC_LANG_SETS[currentSet] || ['pt', 'en', 'jp', 'cn'];
   Object.entries(idOf).forEach(([key, id]) => {
     const btn = document.getElementById(id);
-    if (btn) btn.classList.toggle('active', key === active);
+    if (!btn) return;
+    btn.classList.toggle('active', key === active);
+    // esconde botão de idioma que este set não tem ainda (ex: CN na
+    // ME2.5) — evita mostrar um idioma que só cai no fallback PT silencioso
+    btn.style.display = supported.includes(key) ? '' : 'none';
   });
 }
 
-// Mostra/esconde o seletor de idioma — só aparece na família cel30 (por
-// enquanto a única com versões PT/EN/JP/CN). Chamado por switchSet()
-// (app.js) toda vez que troca de coleção.
+// Mostra/esconde o seletor de idioma — só aparece pros sets cadastrados em
+// FIC_LANG_SETS (cada um com seus próprios idiomas suportados). Chamado por
+// switchSet() (app.js) toda vez que troca de coleção.
 function updateFicLangVisibility() {
   const ctrl = document.getElementById('fic-lang-controls');
   if (!ctrl) return;
-  const inFamily = FIC_LANG_FAMILY.includes(currentSet);
-  ctrl.style.display = inFamily ? 'flex' : 'none';
-  if (inFamily) syncFicLangButtons();
+  const supported = FIC_LANG_SETS[currentSet];
+  ctrl.style.display = supported ? 'flex' : 'none';
+  if (supported) syncFicLangButtons();
 }
 
 // Nome/preço exibidos de acordo com ficLang — cai no PT/BRL padrão quando a
@@ -442,6 +460,12 @@ function cardI18n(c, lang) {
       symbol: c.priceUsd != null ? '$' : 'R$',
     };
   }
+  // 01/10/2026 — jp/cn genéricos (fora da família cel30, que já guarda o
+  // nome certo direto em `name`): troca só o nome exibido, preço continua
+  // em R$ igual ao PT (nenhuma das duas tem fonte de mercado própria ainda
+  // pros sets que não são o cel30).
+  if (l === 'jp') return { name: c.nameJp || c.nameEn || c.name, price: c.price, symbol: 'R$' };
+  if (l === 'cn') return { name: c.nameCn || c.name, price: c.price, symbol: 'R$' };
   return { name: c.name, price: c.price, symbol: 'R$' };
 }
 

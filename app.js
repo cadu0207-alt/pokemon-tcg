@@ -319,8 +319,21 @@ function imgMe06(n){return`https://images.scrydex.com/pokemon/me6-${parseInt(n)}
 // qualquer outra coisa (undefined incluso) cai em português — não precisa
 // de capitalização nem fallback especial porque tcgdex já usa esses 2
 // códigos exatamente (pt/en), confirmado card a card nesta sessão.
-function imgMe2pt5(n,lang){
+// JAPONÊS (01/10/2026): Ascended Heroes NÃO tem set japonês próprio — é uma
+// compilação de 27 (!) lançamentos JP diferentes (confirmado carta a carta
+// via limitlesstcg.com/cards/ASC, campo "JP. Prints"), cada carta com seu
+// próprio set/número de origem. Por isso, ao contrário de pt/en (onde a URL
+// é sempre calculável só com `n`), jp precisa da carta inteira — guarda a
+// URL pronta no campo `img` (hotlink direto no CDN do limitlesstcg, mesmo
+// provedor do cel30jp). Aceita `n` OU a carta completa no 1º parâmetro
+// pra não quebrar os 2 chamadores genéricos que só têm o número
+// (hero card e fallback de imgFn — nenhum dos dois pede jp).
+function imgMe2pt5(nOrCard,lang){
+  if(lang==='jp'){
+    return(nOrCard&&typeof nOrCard==='object'&&nOrCard.img)||'';
+  }
   const l=lang==='en'?'en':'pt';
+  const n=(nOrCard&&typeof nOrCard==='object')?nOrCard.n:nOrCard;
   const id=String(parseInt(n,10)).padStart(3,'0');
   return`https://assets.tcgdex.net/${l}/me/me02.5/${id}/high.png`;
 }
@@ -550,7 +563,7 @@ function getBinderImg(c,setId,lang){
   if(setId==='cel30jp') return imgCel30Jp(c.n);
   if(setId==='cel30cn') return c.img||'';
   const n=parseInt(c.n);
-  if(setId==='me2pt5') return imgMe2pt5(n,lang);
+  if(setId==='me2pt5') return imgMe2pt5(c,lang);
   if(setId==='me06') return imgMe06(n);
   if(setId==='me05') return imgMe05(n);
   if(setId==='me03') return imgMe03(n);
