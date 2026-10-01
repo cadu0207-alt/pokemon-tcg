@@ -230,12 +230,19 @@ const CARDS_CEL30 = [
   {n:'149/147',dex:249,artist:'Naoyo Kimura',name:'Lugia',type:'Incolor',color:'#9E9E9E',rare:'Coleção Clássica',price:832.49,priceUsd:323.83,base:false},
   {n:'203/193',dex:129,artist:'Shinji Kanda',name:'Magikarp',type:'Agua',color:'#2196F3',rare:'Coleção Clássica',price:500,priceUsd:123.3,base:false},
   // ── ENERGIAS BÁSICAS (8 cartas bonus, sem preco de mercado ainda) ──
-  {n:'MEE 009',name:'Energia de Planta Básica',type:'Energia',color:'#4CAF50',rare:'Comum',price:0,base:false},
-  {n:'MEE 010',name:'Energia de Fogo Básica',type:'Energia',color:'#F44336',rare:'Comum',price:0,base:false},
-  {n:'MEE 011',name:'Energia de Água Básica',type:'Energia',color:'#2196F3',rare:'Comum',price:0,base:false},
-  {n:'MEE 012',name:'Energia de Raio Básica',type:'Energia',color:'#FFC107',rare:'Comum',price:0,base:false},
-  {n:'MEE 013',name:'Energia Psíquica Básica',type:'Energia',color:'#9C27B0',rare:'Comum',price:0,base:false},
-  {n:'MEE 014',name:'Energia de Luta Básica',type:'Energia',color:'#FF6B35',rare:'Comum',price:0,base:false},
-  {n:'MEE 015',name:'Energia de Escuridão Básica',type:'Energia',color:'#212121',rare:'Comum',price:0,base:false},
-  {n:'MEE 016',name:'Energia de Metal Básica',type:'Energia',color:'#607D8B',rare:'Comum',price:0,base:false},
+  // CORRIGIDO 01/10/2026 (pedido do Eduardo: "procure as artes das
+  // energias") — achado: estas 8 cartas NÃO pertencem ao set "30C" no
+  // limitlesstcg, têm catálogo próprio "MEE" (Mega Evolution Energy,
+  // limitlesstcg.com/cards/MEE #9-16 — set perene, reaproveitado em vários
+  // produtos; a versão ilustrada por YOSHIROTTEN, #9-16, é a usada neste
+  // 30th Celebration). Artista confirmado lá; arte já liga via imgCel30()
+  // (app.js), que agora sabe rotear MEE pro set/pasta certos no CDN.
+  {n:'MEE 009',artist:'YOSHIROTTEN',name:'Energia de Planta Básica',type:'Energia',color:'#4CAF50',rare:'Comum',price:0,base:false},
+  {n:'MEE 010',artist:'YOSHIROTTEN',name:'Energia de Fogo Básica',type:'Energia',color:'#F44336',rare:'Comum',price:0,base:false},
+  {n:'MEE 011',artist:'YOSHIROTTEN',name:'Energia de Água Básica',type:'Energia',color:'#2196F3',rare:'Comum',price:0,base:false},
+  {n:'MEE 012',artist:'YOSHIROTTEN',name:'Energia de Raio Básica',type:'Energia',color:'#FFC107',rare:'Comum',price:0,base:false},
+  {n:'MEE 013',artist:'YOSHIROTTEN',name:'Energia Psíquica Básica',type:'Energia',color:'#9C27B0',rare:'Comum',price:0,base:false},
+  {n:'MEE 014',artist:'YOSHIROTTEN',name:'Energia de Luta Básica',type:'Energia',color:'#FF6B35',rare:'Comum',price:0,base:false},
+  {n:'MEE 015',artist:'YOSHIROTTEN',name:'Energia de Escuridão Básica',type:'Energia',color:'#212121',rare:'Comum',price:0,base:false},
+  {n:'MEE 016',artist:'YOSHIROTTEN',name:'Energia de Metal Básica',type:'Energia',color:'#607D8B',rare:'Comum',price:0,base:false},
 ];

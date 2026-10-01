@@ -335,14 +335,23 @@ const CEL30_CC_IMG={
 // todos retornam 200). Japonês/Chinês NÃO seguem este padrão — são sets com
 // numeração própria (M6a/30thC), ainda não integrados.
 function imgCel30(n,lang){
+  const l=(lang||'en').toUpperCase();
+  // CORRIGIDO 01/10/2026 (pedido do Eduardo: "procure as artes das
+  // energias") — as 8 Energias Básicas (MEE 009-016) NÃO pertencem ao set
+  // "30C" no limitlesstcg, têm catálogo próprio "MEE" (Mega Evolution
+  // Energy — set perene reaproveitado em vários produtos, #9-16 são a
+  // versão ilustrada por YOSHIROTTEN usada no 30th Celebration). Mesmo CDN,
+  // pasta/set diferente, número com 3 dígitos (ex "MEE 009" -> "009").
+  if(/^MEE/.test(n)){
+    const num=n.replace(/\D/g,'').padStart(3,'0');
+    return`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEE/MEE_${num}_R_${l}_LG.png`;
+  }
   let code;
   if(CEL30_CC_IMG[n]) code=CEL30_CC_IMG[n];
   else if(n==='R/RGB') code='R';
   else if(n==='G/RGB') code='G';
   else if(n==='B/RGB') code='B';
-  else if(/^MEE/.test(n)) return ''; // energias basicas nao tem carta propria no limitlesstcg
   else code=String(parseInt(n)).padStart(3,'0');
-  const l=(lang||'en').toUpperCase();
   return`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/30C/30C_${code}_R_${l}_LG.png`;
 }
 // cel30jp: set japones M6a (checklist DIFERENTE do cel30, nao e so tradução
