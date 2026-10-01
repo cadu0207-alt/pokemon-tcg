@@ -2666,7 +2666,7 @@ function getSetData(){
         {lbl:'🔋 Energias Básicas',      filter:c=>c.n.startsWith('MEE')},
       ]},
     cel30jp:{cards:typeof CARDS_CEL30JP!=='undefined'?CARDS_CEL30JP:[],imgFn:imgCel30Jp,label:'CEL30(JP) — 30th Celebration',
-      sections:[{lbl:'📄 Base — 001 a 103',filter:c=>c.base},{lbl:'✨ Energias Básicas',filter:c=>!c.base}]},
+      sections:[{lbl:'📄 Base — 001 a 103',filter:c=>c.base},{lbl:'✨ Coleção Clássica e Energias',filter:c=>!c.base}]},
     cel30cn:{cards:typeof CARDS_CEL30CN!=='undefined'?CARDS_CEL30CN:[],label:'CEL30(CN) — 30周年庆典',
       sections:[{lbl:'📄 Base — 001 a 103',filter:c=>c.base},{lbl:'✨ Secretas e Coleção Clássica',filter:c=>!c.base}]},
     me06:{cards:me06c,imgFn:imgMe06,label:'ME06 — Esmeralda Tempestuosa',upcoming:true,

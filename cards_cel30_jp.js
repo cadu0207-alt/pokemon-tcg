@@ -1,16 +1,31 @@
-// CEL30JP — 30th Celebration (M6a, japonês) — 111 cartas
-// Lancamento Japao: 16 set 2026. Fonte: limitlesstcg.com/cards/jp/M6a
+// CEL30JP — 30th Celebration (M6a, japonês) — 141 cartas (AMPLIADO 01/10/2026)
+// Lancamento Japao: 16 set 2026. Fonte base: limitlesstcg.com/cards/jp/M6a
 // (30/09/2026) — nome japones + tipo + ilustrador conferidos carta a carta;
 // SET DIFERENTE do cel30 em ingles/português (não é so uma tradução!):
-// 103 cartas numeradas (sem secretas acima do numero de regulacao, sem
-// Coleção Clássica, sem RGB Mew) + 8 Energias Básicas com letras
-// G/R/W/L/P/F/D/M (aqui SÃO as 8 energias elementares — não confundir com
-// as letras G/R/B do set em inglês, que lá são o trio ultra-raro do Mew).
+// 103 cartas numeradas (sem Coleção Clássica, sem RGB Mew) + 8 Energias
+// Básicas com letras G/R/W/L/P/F/D/M (aqui SÃO as 8 energias elementares —
+// não confundir com as letras G/R/B do set em inglês, que lá são o trio
+// ultra-raro do Mew).
 // Species selecionadas tambem sao um SUBCONJUNTO do set em ingles (faltam
 // ~22 pokemon que so existem na versao EN/PT, ex: Victini/Toxel/Zeraora/
 // Comfey/Marill/Azumarill/Cresselia/Murkrow/Zorua/Zoroark/Deino/Zweilous/
 // Hydreigon/Kangaskhan/Minior — conferido nome a nome contra a lista oficial
 // japonesa, nao e erro de captura).
+// AMPLIAÇÃO (01/10/2026): usuário pediu reconstrução a partir do dataset do
+// GitHub (tcgdex/cards-database, PR #2356 "Add Japanese M set M6a 30th
+// Celebration" — MERGEADA mas ainda não publicada na API pública do tcgdex),
+// que confirma o total oficial do set em 176 cartas (103 base + 32 secretas
+// 104-135 + 30 Coleção Clássica 136-165 + 3 RGB especiais B/G/R). Verificado
+// carta a carta contra o CDN de imagens do limitlesstcg (mesmo provedor já
+// usado nas 111 originais): as 30 cartas da COLEÇÃO CLÁSSICA (136-165) TÊM
+// imagem confirmada nesse CDN e foram adicionadas abaixo (nameJp/illustrator
+// vêm direto do tcgdex, name/type/color cruzados por dex contra o
+// cards_cel30.js EN/PT, mesmo método usado no cards_cel30_cn.js). As 32
+// secretas (104-135) e as 3 RGB (B/G/R) NÃO têm imagem nesse CDN (testado
+// numero a numero, nenhuma resposta valida) nem em nenhuma outra fonte
+// confirmada — ficaram de fora deste arquivo por enquanto pra não mostrar
+// carta quebrada; o tcgdex TEM o texto delas (dex/raridade/ilustrador) caso
+// uma fonte de imagem apareça depois.
 // RARIDADE: a fonte NÃO mostra raridade em texto pras cartas japonesas
 // (so teria via icone, sem alt-text acessivel) — inferida por cruzamento
 // de especie com a raridade ja confirmada no cards_cel30.js (mesma carta,
@@ -19,8 +34,8 @@
 // com price:0 até alguem achar uma fonte de preço JP confiável (Yahoo
 // Auctions Japan, cardrush.jp etc. — fora do alcance deste sandbox).
 // dex: reaproveitado do cards_cel30.js por espécie (mesmo Pokémon = mesmo
-// dex, independente de região/idioma). Artista: mesmo dado do limitlesstcg
-// (a arte é a mesma peça original, só o texto da carta muda por idioma).
+// dex, independente de região/idioma). Artista: mesmo dado do limitlesstcg/
+// tcgdex (a arte é a mesma peça original, só o texto da carta muda por idioma).
 const CARDS_CEL30JP = [
   // ── SET BASE 001–103 ─────────────────────────────────────
   {n:'001',dex:102,artist:'Nelnal',name:'Exeggcute',nameJp:'タマタマ',type:'Grama',color:'#4CAF50',rare:'Comum',price:0,base:true},
@@ -126,6 +141,37 @@ const CARDS_CEL30JP = [
   {n:'101',artist:'Yuka Morii',name:'Ultra Bola',nameEn:'Ultra Ball',nameJp:'ハイパーボール',type:'Treinador',color:'#607D8B',rare:'Comum',price:0,base:true},
   {n:'102',artist:'Yuka Morii',name:'Poké Tablet',nameEn:'Poké Pad',nameJp:'ポケパッド',type:'Treinador',color:'#607D8B',rare:'Comum',price:0,base:true},
   {n:'103',artist:'Yuka Morii',name:'Substituição',nameEn:'Switch',nameJp:'ポケモンいれかえ',type:'Treinador',color:'#607D8B',rare:'Comum',price:0,base:true},
+  // ── COLEÇÃO CLÁSSICA 136–165 (numeração própria do tcgdex, igual ao EN/CN) ──
+  {n:"136",dex:25,artist:"Mitsuhiro Arita",name:"Pikachu",nameJp:"ピカチュウ",type:"Eletrico",color:"#FFC107",rare:"Coleção Clássica",price:0,base:false},
+  {n:"137",dex:6,artist:"Mitsuhiro Arita",name:"Charizard",nameJp:"リザードン",type:"Fogo",color:"#F44336",rare:"Coleção Clássica",price:0,base:false},
+  {n:"138",artist:"Ken Sugimori",name:"Misty",nameJp:"カスミ",type:"Treinador",color:"#607D8B",rare:"Coleção Clássica",price:0,base:false},
+  {n:"139",dex:39,artist:"Ken Sugimori",name:"Jigglypuff da Érica",nameEn:"Erika's Jigglypuff",nameJp:"エリカのプリン",type:"Incolor",color:"#9E9E9E",rare:"Coleção Clássica",price:0,base:false},
+  {n:"140",dex:215,artist:"Ken Sugimori",name:"Sneasel",nameJp:"ニューラ",type:"Trevas",color:"#212121",rare:"Coleção Clássica",price:0,base:false},
+  {n:"141",dex:251,artist:"Hironobu Yoshida",name:"Celebi Luminescente",nameEn:"Shining Celebi",nameJp:"ひかるセレビィ",type:"Grama",color:"#4CAF50",rare:"Coleção Clássica",price:0,base:false},
+  {n:"142",dex:249,artist:"Naoyo Kimura",name:"Lugia",nameJp:"ルギア",type:"Incolor",color:"#9E9E9E",rare:"Coleção Clássica",price:0,base:false},
+  {n:"143",dex:301,artist:"Atsuko Nishida",name:"Delcatty",nameJp:"エネコロロ",type:"Incolor",color:"#9E9E9E",rare:"Coleção Clássica",price:0,base:false},
+  {n:"144",dex:248,artist:"Nakaoka",name:"Tyranitar Sombrio",nameEn:"Dark Tyranitar",nameJp:"わるいバンギラス",type:"Trevas",color:"#212121",rare:"Coleção Clássica",price:0,base:false},
+  {n:"145",dex:212,artist:"Mitsuhiro Arita",name:"Scizor ex",nameJp:"ハッサムex",type:"Metal",color:"#607D8B",rare:"Coleção Clássica",price:0,base:false},
+  {n:"146",dex:376,artist:"Masakazu Fukuda",name:"Metagross δ",nameEn:"Metagross",nameJp:"メタグロス",type:"Eletrico",color:"#FFC107",rare:"Coleção Clássica",price:0,base:false},
+  {n:"147",dex:484,artist:"Ryo Ueda",name:"Palkia LV.X",nameJp:"パルキア",type:"Agua",color:"#2196F3",rare:"Coleção Clássica",price:0,base:false},
+  {n:"148",dex:480,artist:"Ken Sugimori",name:"Uxie",nameJp:"ユクシー",type:"Psiquico",color:"#9C27B0",rare:"Coleção Clássica",price:0,base:false},
+  {n:"149",dex:169,artist:"Makoto Imai",name:"Crobat G",nameJp:"クロバットG",type:"Psiquico",color:"#9C27B0",rare:"Coleção Clássica",price:0,base:false},
+  {n:"150",dex:94,artist:"Takashi Yamaguchi",name:"Gengar",nameJp:"ゲンガー",type:"Psiquico",color:"#9C27B0",rare:"Coleção Clássica",price:0,base:false},
+  {n:"151",dex:491,artist:"Shinji Higuchi & Noriko Takaya",name:"Darkrai & Cresselia LEGEND",nameJp:"ダークライ＆クレセリアLEGEND",type:"Trevas",color:"#212121",rare:"Coleção Clássica",price:0,base:false},
+  {n:"152",dex:488,artist:"Shinji Higuchi & Noriko Takaya",name:"Darkrai & Cresselia LEGEND",nameJp:"ダークライ＆クレセリアLEGEND",type:"Trevas",color:"#212121",rare:"Coleção Clássica",price:0,base:false},
+  {n:"153",artist:"Ken Sugimori",name:"N",nameJp:"N",type:"Treinador",color:"#607D8B",rare:"Coleção Clássica",price:0,base:false},
+  {n:"154",dex:384,artist:"Eske Yoshinob",name:"Rayquaza-EX",nameJp:"レックウザEX",type:"Dragao",color:"#673AB7",rare:"Coleção Clássica",price:0,base:false},
+  {n:"155",dex:649,artist:"Eske Yoshinob",name:"Genesect-EX",nameJp:"ゲノセクトEX",type:"Grama",color:"#4CAF50",rare:"Coleção Clássica",price:0,base:false},
+  {n:"156",dex:282,artist:"5ban Graphics",name:"M Gardevoir-EX",nameJp:"サーナイトEX",type:"Psiquico",color:"#9C27B0",rare:"Coleção Clássica",price:0,base:false},
+  {n:"157",dex:658,artist:"5ban Graphics",name:"Greninja BREAK",nameJp:"ゲッコウガBREAK",type:"Agua",color:"#2196F3",rare:"Coleção Clássica",price:0,base:false},
+  {n:"158",dex:791,artist:"PLANETA",name:"Solgaleo-GX",nameJp:"ソルガレオGX",type:"Metal",color:"#607D8B",rare:"Coleção Clássica",price:0,base:false},
+  {n:"159",dex:794,artist:"5ban Graphics",name:"Buzzwole-GX",nameJp:"マッシブーンGX",type:"Luta",color:"#FF6B35",rare:"Coleção Clássica",price:0,base:false},
+  {n:"160",dex:25,artist:"Mitsuhiro Arita",name:"Pikachu e Zekrom-GX",nameEn:"Pikachu & Zekrom-GX",nameJp:"ピカチュウ&ゼクロムGX",type:"Eletrico",color:"#FFC107",rare:"Coleção Clássica",price:0,base:false},
+  {n:"161",dex:888,artist:"5ban Graphics",name:"Zacian-V",nameEn:"Zacian V",nameJp:"ザシアンV",type:"Metal",color:"#607D8B",rare:"Coleção Clássica",price:0,base:false},
+  {n:"162",dex:243,artist:"Hideki Ishikawa",name:"Raikou",nameJp:"ライコウ",type:"Eletrico",color:"#FFC107",rare:"Coleção Clássica",price:0,base:false},
+  {n:"163",dex:151,artist:"5ban Graphics",name:"Mew-VMAX",nameEn:"Mew VMAX",nameJp:"ミュウVMAX",type:"Psiquico",color:"#9C27B0",rare:"Coleção Clássica",price:0,base:false},
+  {n:"164",dex:493,artist:"5ban Graphics",name:"Arceus VSTAR",nameJp:"アルセウスVSTAR",type:"Incolor",color:"#9E9E9E",rare:"Coleção Clássica",price:0,base:false},
+  {n:"165",dex:129,artist:"Shinji Kanda",name:"Magikarp",nameJp:"コイキング",type:"Agua",color:"#2196F3",rare:"Coleção Clássica",price:0,base:false},
   // ── ENERGIAS BÁSICAS (8 cartas bonus, letras G/R/W/L/P/F/D/M) ──
   {n:'G',artist:'YOSHIROTTEN',name:'Energia de Planta Básica',nameEn:'Basic Grass Energy',nameJp:'基本草エネルギー',type:'Energia',color:'#4CAF50',rare:'Comum',price:0,base:false},
   {n:'R',artist:'YOSHIROTTEN',name:'Energia de Fogo Básica',nameEn:'Basic Fire Energy',nameJp:'基本炎エネルギー',type:'Energia',color:'#F44336',rare:'Comum',price:0,base:false},
