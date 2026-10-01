@@ -10,11 +10,19 @@
 // set EN/PT de 199 cartas — é um produto menor e diferente: 103 cartas base
 // (mesmíssima seleção de espécies do M6a japonês) + secretas + a MESMA
 // Coleção Clássica de 30 cartas do set EN (mesma ordem/conteúdo, conferido).
-// GAPS CONHECIDOS: o site fonte tem paginação/lazy-load que não carregou as
-// 8 Energias Básicas (existem no produto real, numeradas ~166-173, mas não
-// foram capturadas) nem 1 carta secreta entre Gholdengo e Meowth (o total
-// oficial do set é 169; aqui entram 161 cartas confirmadas). Não foram
-// inventadas/adivinhadas entradas pra fechar esses números.
+// GAPS CONHECIDOS: o site fonte (pokipair) tem paginação/lazy-load que não
+// carregou 1 carta secreta entre Gholdengo e Meowth (o total oficial do set
+// é 169; aqui entram 161 cartas confirmadas por essa fonte + 8 energias por
+// outra fonte, ver abaixo). Não foram inventadas/adivinhadas entradas pra
+// fechar esse número.
+// ENERGIAS BÁSICAS (01/10/2026): as 8 não estavam no pokipair (gap
+// documentado antes) — achadas no dataset oficial duanxr/PTCG-CHS-Datasets
+// (github.com/duanxr/PTCG-CHS-Datasets, coleção id 515, 176 cartas — mais
+// completo que o pokipair). Essas 8 têm ilustrador confirmado direto no
+// JSON oficial (YOSHIROTTEN), não cruzado por espécie como o resto do
+// arquivo. Dado o tamanho da diferença (176 vs 161 cartas), pode valer a
+// pena reconstruir o arquivo inteiro com essa fonte — não fiz isso agora
+// pra não misturar com o pedido original (só a arte das energias).
 // PREÇO: sem fonte de mercado chinês confirmada — price:0 em todas.
 // IMAGEM: hotlink direto nas miniaturas (218×300) do pokipair.com — é uma
 // loja pequena, não um CDN de banco de dados público como o limitlesstcg;
@@ -184,4 +192,20 @@ const CARDS_CEL30CN = [
   {n:'CC28',dex:151,name:'Mew-VMAX',nameEn:'Mew VMAX',type:'Psiquico',color:'#9C27B0',rare:'Coleção Clássica',price:0,base:false,img:'https://media.pokipair.com/2026/09/11174054/30th-Celebration-30THC-Simplified-Chinese-Pokemon-TCG-PokiPair-Store-Ireland-159-218x300.png'},
   {n:'CC29',dex:493,name:'Arceus VSTAR',type:'Incolor',color:'#9E9E9E',rare:'Coleção Clássica',price:0,base:false,img:'https://media.pokipair.com/2026/09/11174058/30th-Celebration-30THC-Simplified-Chinese-Pokemon-TCG-PokiPair-Store-Ireland-160-218x300.png'},
   {n:'CC30',dex:129,name:'Magikarp',type:'Agua',color:'#2196F3',rare:'Coleção Clássica',price:0,base:false,img:'https://media.pokipair.com/2026/09/11174104/30th-Celebration-30THC-Simplified-Chinese-Pokemon-TCG-PokiPair-Store-Ireland-161-218x300.png'},
+  // ── ENERGIAS BÁSICAS (01/10/2026 — pedido do Eduardo: "procure as artes
+  // das energias"). Fonte diferente das 161 cartas acima: achado o dataset
+  // oficial duanxr/PTCG-CHS-Datasets (github.com/duanxr/PTCG-CHS-Datasets,
+  // coleção id 515 "补充包 30周年庆典" — 176 cartas no total, bem mais completo
+  // que o pokipair.com usado pro resto do arquivo). Ilustrador (YOSHIROTTEN)
+  // e nome confirmados direto no JSON oficial do dataset, não cruzado por
+  // espécie. `n` usa o código de 3 letras do próprio dataset (GRA/FIR/etc,
+  // não numérico — igual o padrão de letras do cel30jp).
+  {n:'GRA',artist:'YOSHIROTTEN',name:'Energia de Planta Básica',nameEn:'Basic Grass Energy',type:'Energia',color:'#4CAF50',rare:'Comum',price:0,base:false,img:'https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/170.png'},
+  {n:'FIR',artist:'YOSHIROTTEN',name:'Energia de Fogo Básica',nameEn:'Basic Fire Energy',type:'Energia',color:'#F44336',rare:'Comum',price:0,base:false,img:'https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/168.png'},
+  {n:'WAT',artist:'YOSHIROTTEN',name:'Energia de Água Básica',nameEn:'Basic Water Energy',type:'Energia',color:'#2196F3',rare:'Comum',price:0,base:false,img:'https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/175.png'},
+  {n:'LIG',artist:'YOSHIROTTEN',name:'Energia de Raio Básica',nameEn:'Basic Lightning Energy',type:'Energia',color:'#FFC107',rare:'Comum',price:0,base:false,img:'https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/171.png'},
+  {n:'PSY',artist:'YOSHIROTTEN',name:'Energia Psíquica Básica',nameEn:'Basic Psychic Energy',type:'Energia',color:'#9C27B0',rare:'Comum',price:0,base:false,img:'https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/173.png'},
+  {n:'FIG',artist:'YOSHIROTTEN',name:'Energia de Luta Básica',nameEn:'Basic Fighting Energy',type:'Energia',color:'#FF6B35',rare:'Comum',price:0,base:false,img:'https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/167.png'},
+  {n:'DAR',artist:'YOSHIROTTEN',name:'Energia de Escuridão Básica',nameEn:'Basic Darkness Energy',type:'Energia',color:'#212121',rare:'Comum',price:0,base:false,img:'https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/166.png'},
+  {n:'MET',artist:'YOSHIROTTEN',name:'Energia de Metal Básica',nameEn:'Basic Metal Energy',type:'Energia',color:'#607D8B',rare:'Comum',price:0,base:false,img:'https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/172.png'},
 ];
