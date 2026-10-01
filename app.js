@@ -312,9 +312,18 @@ function imgMe03(n){return`https://images.scrydex.com/pokemon/me3-${parseInt(n)}
 function imgMe02(n){return`https://images.scrydex.com/pokemon/me2-${parseInt(n)}/large`;}
 function imgMe05(n){return`https://images.scrydex.com/pokemon/me5-${parseInt(n)}/large`;}
 function imgMe06(n){return`https://images.scrydex.com/pokemon/me6-${parseInt(n)}/large`;}
-// me2pt5: slug confirmado direto na resposta da api.pokemontcg.io (campo images.large
-// de cada carta), diferente do padrão "me5-N" dos outros ME — aqui é "me2pt5-N" mesmo.
-function imgMe2pt5(n){return`https://images.scrydex.com/pokemon/me2pt5-${parseInt(n)}/large`;}
+// me2pt5: CORRIGIDO 01/10/2026 (pedido do Eduardo: "fichário em português
+// mostrando foto em inglês") — trocado de scrydex (sem idioma, só arte EN)
+// pra tcgdex, que cataloga este set ("me02.5") com arte própria por idioma.
+// `lang` segue o mesmo padrão de imgCel30: 'en' pega a arte americana,
+// qualquer outra coisa (undefined incluso) cai em português — não precisa
+// de capitalização nem fallback especial porque tcgdex já usa esses 2
+// códigos exatamente (pt/en), confirmado card a card nesta sessão.
+function imgMe2pt5(n,lang){
+  const l=lang==='en'?'en':'pt';
+  const id=String(parseInt(n,10)).padStart(3,'0');
+  return`https://assets.tcgdex.net/${l}/me/me02.5/${id}/high.png`;
+}
 // cel30: sem entrada no scrydex (set novo) — hotlink direto no CDN do
 // limitlesstcg.com/cards/30C (conferido 30/09/2026: padrao
 // 30C_<codigo>_R_EN_LG.png). Cartas normais/secretas usam o numero com 3
@@ -482,8 +491,8 @@ function getCardImg(card){
 function imgAltUrl(setId,n){
   const num=parseInt(n,10);const safe=isNaN(num)?n:num;
   const map={
-    // não confirmado se tcgdex já cataloga este set sob este slug — best-effort
-    me2pt5:`https://assets.tcgdex.net/en/me/me2pt5/${safe}/high.png`,
+    // slug confirmado 01/10/2026: "me02.5" (não "me2pt5") — ver imgMe2pt5()
+    me2pt5:`https://assets.tcgdex.net/en/me/me02.5/${safe}/high.png`,
     me05:`https://assets.tcgdex.net/en/me/me05/${safe}/high.png`,
     me06:`https://assets.tcgdex.net/en/me/me06/${safe}/high.png`,
     me04:`https://assets.tcgdex.net/en/me/me04/${safe}/high.png`,
@@ -541,7 +550,7 @@ function getBinderImg(c,setId,lang){
   if(setId==='cel30jp') return imgCel30Jp(c.n);
   if(setId==='cel30cn') return c.img||'';
   const n=parseInt(c.n);
-  if(setId==='me2pt5') return imgMe2pt5(n);
+  if(setId==='me2pt5') return imgMe2pt5(n,lang);
   if(setId==='me06') return imgMe06(n);
   if(setId==='me05') return imgMe05(n);
   if(setId==='me03') return imgMe03(n);
@@ -594,7 +603,7 @@ setInterval(()=>{ if(document.visibilityState==='visible') fetchCambio(); }, 30*
 
 // ── PREÇOS AO VIVO (TCGDex — CardMarket EUR + TCGPlayer USD) ─────
 const TCGDX={
-  me04:'me04',me03:'me03',me02:'me02',meg:'me01',mep:'mep',
+  me2pt5:'me02.5',me04:'me04',me03:'me03',me02:'me02',meg:'me01',mep:'mep',
   sv1:'sv1',sv2:'sv2',sv3:'sv3',sv3pt5:'sv3pt5',sv4:'sv4',sv4pt5:'sv4pt5',
   sv5:'sv5',sv6:'sv6',sv6pt5:'sv6pt5',sv7:'sv7',sv8:'sv8',sv8pt5:'sv8pt5',
   sv9:'sv9',sv10:'sv10',
@@ -664,12 +673,26 @@ let purchases=[],pulledCards=[],collected=new Set(),collectedQty=new Map(),value
 // CORRIGIDO 18/08/2026: N era #c8cfe8, quase igual a var(--border) — ver
 // mesma correção em VERSIONS (fichario_patch.js).
 const VER_COLOR={N:'#7c5cff',F:'#118ab2',RH:'#06d6a0',SP:'#ff6b35'};
-const VER_LABEL={N:'Normal',F:'Foil',RH:'Reverse Holo',SP:'Especial'};
-const VER_SHORT={N:'N',F:'F',RH:'RH',SP:'★'};
+const VER_LABEL={N:'Normal',F:'Foil',RH:'Reverse Holo',RH2:'Reverse Holo (Bola)',SP:'Especial'};
+const VER_SHORT={N:'N',F:'F',RH:'RH',RH2:'RH2',SP:'★'};
 
 function getSlots(c,setId){
   const r=c.rare||'';
   if(!c.base) return [{ver:'SP',price:c.price}];
+  // ME2.5(ASC) — Heróis Excelsos (01/10/2026, confirmado via tcgdex
+  // variants_detailed + cruzado contra ninthpocket.com/sets/ascended-heroes
+  // e binderforge.com, que batem no mesmo número: 140 cartas): diferente de
+  // QUALQUER outro set ME/SV já catalogado aqui, toda carta Pokémon
+  // Comum/Incomum/Rara nasce com DOIS reverse holo distintos (Energia +
+  // um padrão de bola/Equipe Rocket), não um só — por isso o 3º slot 'RH2'
+  // aqui, exclusivo deste set. Treinador/Energia (38 cartas, mesma faixa de
+  // raridade) continuam com só 1 reverse — tratamento genérico mais abaixo,
+  // sem mudança. Rara Dupla (ex) e secretas (218+) não entram aqui (já
+  // retornam antes: base:false acima, 'Dupla' logo abaixo).
+  if(setId==='me2pt5'&&c.category!=='Treinador'&&c.category!=='Energia'&&(r==='Comum'||r==='Incomum'||r==='Rara')){
+    if(r==='Rara') return [{ver:'F',price:c.price},{ver:'RH',price:c.priceRH||null},{ver:'RH2',price:null}];
+    return [{ver:'N',price:c.price},{ver:'RH',price:c.priceRH||null},{ver:'RH2',price:null}];
+  }
   // CORRIGIDO 01/10/2026 (pedido do Eduardo, confirmado contra
   // tcgplayer.com/content/article/Collector-s-Guide-to-Pokémon-TCG-30th-Celebration):
   // o set 30th Celebration (cel30/cel30jp/cel30cn) é "all-foil" — TODA carta

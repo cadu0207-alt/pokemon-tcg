@@ -31,6 +31,11 @@ const VERSIONS = [
   { code: 'F',  label: 'Foil/Holo',   color: '#118ab2', bg: 'rgba(17,138,178,.15)'  },
   { code: 'RH', label: 'Reverse Holo', color: '#06d6a0', bg: 'rgba(6,214,160,.15)'   },
   { code: 'SP', label: 'Especial',     color: '#ff6b35', bg: 'rgba(255,107,53,.15)'  },
+  // 01/10/2026 — exclusivo da ME2.5(ASC): 2ª variante de reverse holo
+  // (padrão Poké Bola/Love Ball/etc ou carimbo Equipe Rocket, varia por
+  // carta — ver getSlots() em app.js). slotBadge() caía no fallback
+  // genérico (VERSIONS[3], laranja de "Especial") sem este registro.
+  { code: 'RH2', label: 'Reverse Holo (2ª variante)', color: '#ef476f', bg: 'rgba(239,71,111,.15)' },
 ];
 
 /* ─────────────────────────────────────────────
