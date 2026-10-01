@@ -1404,9 +1404,16 @@ const SET_CARDS_MAP={
 
 // ── CATÁLOGO DE COLEÇÕES ─────────────────────────────────────────
 const SET_CATALOG=[
+  // CORRIGIDO 01/10/2026 (pedido do Eduardo): cel30jp/cel30cn SAÍRAM daqui —
+  // antes apareciam como 2 entradas soltas no seletor "Meus Fichários",
+  // junto de cel30. Agora só existe UMA entrada (cel30) e JP/CN viram
+  // opções dentro do seletor de idioma do próprio fichário (PT/EN/JP/CN —
+  // ver setFicLang() em fichario_patch.js), que troca o array de cartas de
+  // verdade por baixo. Continuam existindo em SET_CARDS_MAP/getSetData()
+  // normalmente — só não têm mais entrada própria no catálogo visível.
+  // Padrão pensado pra repetir em futuras coleções multi-região, sem inchar
+  // a lista principal com 1 entrada a mais por idioma a cada lançamento.
   {id:'cel30',label:'CEL30 — Celebração de 30 Anos',emoji:'🎉',cards:typeof CARDS_CEL30!=='undefined'?CARDS_CEL30.length:199,color:'#FFD700',series:'ME'},
-  {id:'cel30jp',label:'CEL30(JP) — 30th Celebration',emoji:'🎌',cards:typeof CARDS_CEL30JP!=='undefined'?CARDS_CEL30JP.length:111,color:'#FFD700',series:'ME'},
-  {id:'cel30cn',label:'CEL30(CN) — 30周年庆典',emoji:'🏮',cards:typeof CARDS_CEL30CN!=='undefined'?CARDS_CEL30CN.length:161,color:'#FFD700',series:'ME'},
   {id:'me06',label:'ME06 — Esmeralda Tempestuosa',emoji:'💎',cards:0,  color:'#00c853',series:'ME',upcoming:true},
   {id:'me2pt5',label:'ME2.5(ASC) — Heróis Excelsos', emoji:'🦸',cards:typeof CARDS_ME2PT5!=='undefined'?CARDS_ME2PT5.length:295,color:'#5C6BC0',series:'ME'},
   {id:'me05',label:'ME05(PBL) — Escuridão Absoluta', emoji:'🌑',cards:typeof CARDS_ME05!=='undefined'?CARDS_ME05.length:120,color:'#757575',series:'ME'},

@@ -357,29 +357,65 @@ function setBinderSize(n, onRefresh, ids) {
   if (typeof onRefresh === 'function') onRefresh(); else renderBinder();
 }
 
+// Sets da "família" cel30 — a única com seletor de idioma por enquanto.
+// PT/EN são troca de DISPLAY dentro do MESMO array (cel30 — mesma carta,
+// mesma numeração). JP/CN são checklists DIFERENTES (cards_cel30_jp.js/
+// cards_cel30_cn.js — numeração, contagem e até seleção de Pokémon
+// própria), então "escolher idioma" ali precisa trocar o currentSet de
+// verdade (via switchSet), não só re-renderizar com outro campo.
+// 01/10/2026 (pedido do Eduardo): JP/CN deixaram de ser coleções soltas no
+// catálogo (cel30jp/cel30cn removidos de SET_CATALOG em app.js) — agora só
+// aparecem aqui, dentro do seletor de idioma da coleção "Celebração de 30
+// Anos", pra não inchar a lista principal a cada idioma de cada coleção
+// futura parecida.
+const FIC_LANG_REGION_SET = { jp: 'cel30jp', cn: 'cel30cn' };
+const FIC_LANG_FAMILY = ['cel30', 'cel30jp', 'cel30cn'];
+
 function setFicLang(lang, onRefresh, ids) {
+  const regionSet = FIC_LANG_REGION_SET[lang];
+  if (regionSet) {
+    // JP/CN não têm conceito de EN separado — PT é sempre o texto exibido
+    // (os arquivos já trazem name em português; nameEn é só metadado).
+    ficLang = 'pt';
+    try { localStorage.setItem('ficLang', 'pt'); } catch (e) {}
+    if (typeof switchSet === 'function') switchSet(regionSet);
+    syncFicLangButtons(ids);
+    return;
+  }
+  // pt/en: precisa estar no array compartilhado (cel30) — se o usuário
+  // estava em cel30jp/cel30cn, troca de volta antes de só mudar o display.
+  if ((currentSet === 'cel30jp' || currentSet === 'cel30cn') && typeof switchSet === 'function') {
+    switchSet('cel30');
+  }
   ficLang = lang;
   try { localStorage.setItem('ficLang', lang); } catch (e) {}
-  const ptId = (ids && ids.pt) || 'fic-lang-pt';
-  const enId = (ids && ids.en) || 'fic-lang-en';
-  [[ptId, 'pt'], [enId, 'en']].forEach(([id, l]) => {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    btn.classList.toggle('active', l === lang);
-  });
+  syncFicLangButtons(ids);
   if (typeof onRefresh === 'function') onRefresh(); else renderBinder();
 }
 
-// Mostra/esconde o seletor de idioma — só aparece em sets com dados
-// traduzidos (qualquer card com nameEn ou priceUsd). Chamado por switchSet()
+function syncFicLangButtons(ids) {
+  const idOf = {
+    pt: (ids && ids.pt) || 'fic-lang-pt',
+    en: (ids && ids.en) || 'fic-lang-en',
+    jp: (ids && ids.jp) || 'fic-lang-jp',
+    cn: (ids && ids.cn) || 'fic-lang-cn',
+  };
+  const active = currentSet === 'cel30jp' ? 'jp' : currentSet === 'cel30cn' ? 'cn' : ficLang;
+  Object.entries(idOf).forEach(([key, id]) => {
+    const btn = document.getElementById(id);
+    if (btn) btn.classList.toggle('active', key === active);
+  });
+}
+
+// Mostra/esconde o seletor de idioma — só aparece na família cel30 (por
+// enquanto a única com versões PT/EN/JP/CN). Chamado por switchSet()
 // (app.js) toda vez que troca de coleção.
 function updateFicLangVisibility() {
   const ctrl = document.getElementById('fic-lang-controls');
   if (!ctrl) return;
-  const cards = getSetCards();
-  const hasI18n = Array.isArray(cards) && cards.some(c => c.nameEn || c.priceUsd != null);
-  ctrl.style.display = hasI18n ? 'flex' : 'none';
-  if (!hasI18n && ficLang !== 'pt') setFicLang('pt', () => {}); // volta pro padrão sem forçar redraw duplo
+  const inFamily = FIC_LANG_FAMILY.includes(currentSet);
+  ctrl.style.display = inFamily ? 'flex' : 'none';
+  if (inFamily) syncFicLangButtons();
 }
 
 // Nome/preço exibidos de acordo com ficLang — cai no PT/BRL padrão quando a

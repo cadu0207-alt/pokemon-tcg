@@ -725,10 +725,17 @@
              — só aparece quando o set atual tem dados traduzidos
              (nameEn/priceUsd em algum card). Troca nome/preço/arte exibidos
              sem mudar a coleção rastreada (mesmo card_n, mesma coleção). -->
+        <!-- 01/10/2026 (pedido do Eduardo): JP/CN entraram aqui em vez de
+             serem coleções separadas no catálogo — cada clique troca o
+             array de cartas de verdade por baixo (ver setFicLang() em
+             fichario_patch.js), mas pro usuário é só "mudar o idioma" de
+             UMA coleção (Celebração de 30 Anos). -->
         <div id="fic-lang-controls" style="display:none;gap:4px;align-items:center">
           <span class="fic-toolbar-lbl">IDIOMA:</span>
           <button id="fic-lang-pt" class="fic-btn active" onclick="setFicLang('pt')">🇧🇷 PT</button>
           <button id="fic-lang-en" class="fic-btn" onclick="setFicLang('en')">🇺🇸 EN</button>
+          <button id="fic-lang-jp" class="fic-btn" onclick="setFicLang('jp')">🇯🇵 JP</button>
+          <button id="fic-lang-cn" class="fic-btn" onclick="setFicLang('cn')">🇨🇳 CN</button>
         </div>
 
         <span style="margin-left:auto"></span>
