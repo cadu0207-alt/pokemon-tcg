@@ -345,6 +345,15 @@ function imgCel30(n,lang){
   const l=(lang||'en').toUpperCase();
   return`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/30C/30C_${code}_R_${l}_LG.png`;
 }
+// cel30jp: set japones M6a (checklist DIFERENTE do cel30, nao e so tradução
+// — ver cards_cel30_jp.js). CDN confirmado 30/09/2026: mesmo provedor do
+// EN, mas pasta "tpc" (nao "tpci") e set "M6a" — numeros 001-103 e as 8
+// letras de energia G/R/W/L/P/F/D/M usam o proprio `n` sem padding (o CDN já
+// aceita "1" solto, sem zero à esquerda, testado).
+function imgCel30Jp(n){
+  const code=/^\d+$/.test(n)?parseInt(n,10):n;
+  return`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpc/M6a/M6a_${code}_R_JP_LG.png`;
+}
 function imgMeg(n) {return`https://images.scrydex.com/pokemon/me1-${parseInt(n)}/large`;}
 // LOGO DA COLEÇÃO (12/08/2026) — pedido do Eduardo: mostrar a arte oficial de
 // cada set em vez do código (ME06/SV10/etc). Confirmado na doc pública da
@@ -515,6 +524,13 @@ function getBinderImg(c,setId,lang){
   // de idioma do Fichário) só é usado aqui — os outros sets nem têm arte
   // multi-idioma ainda.
   if(setId==='cel30') return imgCel30(c.n,lang);
+  // cel30jp/cel30cn: checklists PRÓPRIOS (não são o cel30 traduzido — ver
+  // cards_cel30_jp.js/cards_cel30_cn.js). cel30cn já guarda a URL da arte
+  // em c.img (hotlink direto no pokipair.com, único checklist chinês achado
+  // — limitlesstcg não cataloga simplificado); cel30jp usa o CDN do
+  // limitlesstcg como o EN, só que na pasta/set M6a.
+  if(setId==='cel30jp') return imgCel30Jp(c.n);
+  if(setId==='cel30cn') return c.img||'';
   const n=parseInt(c.n);
   if(setId==='me2pt5') return imgMe2pt5(n);
   if(setId==='me06') return imgMe06(n);
@@ -1362,6 +1378,8 @@ const SET_CARDS_MAP={
   rsv10pt5:()=>typeof CARDS_RSV10PT5!=='undefined'?CARDS_RSV10PT5:[],
   svp:()=>typeof CARDS_SVP!=='undefined'?CARDS_SVP:[],
   pgo:()=>typeof CARDS_PGO!=='undefined'?CARDS_PGO:[],
+  cel30jp:()=>typeof CARDS_CEL30JP!=='undefined'?CARDS_CEL30JP:[],
+  cel30cn:()=>typeof CARDS_CEL30CN!=='undefined'?CARDS_CEL30CN:[],
 };
 // sets legados entram no mapa dinamicamente
 (window.LEGACY_SETS||[]).forEach(ls=>{if(!SET_CARDS_MAP[ls.id])SET_CARDS_MAP[ls.id]=()=>ls.data;});
@@ -1369,6 +1387,8 @@ const SET_CARDS_MAP={
 // ── CATÁLOGO DE COLEÇÕES ─────────────────────────────────────────
 const SET_CATALOG=[
   {id:'cel30',label:'CEL30 — Celebração de 30 Anos',emoji:'🎉',cards:typeof CARDS_CEL30!=='undefined'?CARDS_CEL30.length:199,color:'#FFD700',series:'ME'},
+  {id:'cel30jp',label:'CEL30(JP) — 30th Celebration',emoji:'🎌',cards:typeof CARDS_CEL30JP!=='undefined'?CARDS_CEL30JP.length:111,color:'#FFD700',series:'ME'},
+  {id:'cel30cn',label:'CEL30(CN) — 30周年庆典',emoji:'🏮',cards:typeof CARDS_CEL30CN!=='undefined'?CARDS_CEL30CN.length:161,color:'#FFD700',series:'ME'},
   {id:'me06',label:'ME06 — Esmeralda Tempestuosa',emoji:'💎',cards:0,  color:'#00c853',series:'ME',upcoming:true},
   {id:'me2pt5',label:'ME2.5(ASC) — Heróis Excelsos', emoji:'🦸',cards:typeof CARDS_ME2PT5!=='undefined'?CARDS_ME2PT5.length:295,color:'#5C6BC0',series:'ME'},
   {id:'me05',label:'ME05(PBL) — Escuridão Absoluta', emoji:'🌑',cards:typeof CARDS_ME05!=='undefined'?CARDS_ME05.length:120,color:'#757575',series:'ME'},
@@ -2609,6 +2629,10 @@ function getSetData(){
   const map={
     cel30:{cards:typeof CARDS_CEL30!=='undefined'?CARDS_CEL30:[],imgFn:imgCel30,label:'CEL30 — Celebração de 30 Anos',
       sections:[{lbl:'📄 Base — 001 a 128',filter:c=>c.base},{lbl:'✨ Secretas, RGB, Clássica e Energias',filter:c=>!c.base}]},
+    cel30jp:{cards:typeof CARDS_CEL30JP!=='undefined'?CARDS_CEL30JP:[],imgFn:imgCel30Jp,label:'CEL30(JP) — 30th Celebration',
+      sections:[{lbl:'📄 Base — 001 a 103',filter:c=>c.base},{lbl:'✨ Energias Básicas',filter:c=>!c.base}]},
+    cel30cn:{cards:typeof CARDS_CEL30CN!=='undefined'?CARDS_CEL30CN:[],label:'CEL30(CN) — 30周年庆典',
+      sections:[{lbl:'📄 Base — 001 a 103',filter:c=>c.base},{lbl:'✨ Secretas e Coleção Clássica',filter:c=>!c.base}]},
     me06:{cards:me06c,imgFn:imgMe06,label:'ME06 — Esmeralda Tempestuosa',upcoming:true,
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Secretas',filter:c=>!c.base}]},
     me2pt5:{cards:me2pt5c,imgFn:imgMe2pt5,label:'ME2.5(ASC) — Heróis Excelsos', // lançou 30/jan/2026
