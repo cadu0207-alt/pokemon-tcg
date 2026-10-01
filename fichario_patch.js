@@ -278,15 +278,23 @@ function getSetLabel() {
   }[currentSet] || currentSet.toUpperCase();
 }
 
-function imgUrl(n, setId) {
+function imgUrl(n, setId, card) {
   // CORRIGIDO 29/07/2026: aceita setId opcional (2º parâmetro) — necessário pra
   // fichário personalizado/fixado, que mistura cartas de vários sets ao mesmo
   // tempo e não pode depender só do `currentSet` global. Sem o 2º argumento,
   // comportamento 100% igual a antes (usa currentSet).
   const sid = setId || currentSet;
-  // Delega para getBinderImg do app.js quando disponível (cobre todos os sets)
+  // CORRIGIDO 01/10/2026: bug real por trás do "chinês com imagem preta" que
+  // sobreviveu ao fix de referrerpolicy — este helper só repassava {n} (sem
+  // o resto da carta) pro getBinderImg(). Isso é inofensivo pros sets que
+  // calculam a URL só a partir do número (imgCel30Jp, scrydex, etc.), mas
+  // cel30cn GUARDA a URL pronta no próprio campo `img` da carta (não dá pra
+  // calcular só com `n`) — então c.img vinha sempre undefined e a imagem
+  // nunca nem tentava carregar (não é hotlink, era um <img src=""> vazio).
+  // Agora os 4 chamadores passam a carta inteira (3º parâmetro opcional);
+  // sets que só precisam do número continuam funcionando igual (fallback {n}).
   if (typeof getBinderImg === 'function') {
-    return getBinderImg({ n }, sid, ficLang);
+    return getBinderImg(card || { n }, sid, ficLang);
   }
   // Fallback inline (caso app.js ainda não tenha carregado)
   const num = parseInt(n, 10);
@@ -626,7 +634,7 @@ function ficCardHtml(c, setId) {
        onmouseout="this.style.transform=''">
     <div style="width:var(--cw,90px);height:var(--ch,126px);border-radius:7px;border:${border};
          box-shadow:${glow};position:relative;overflow:hidden;background:#0a0b10">
-      <img src="${(typeof imgThumb==='function')?imgThumb(imgUrl(c.n, setId)):imgUrl(c.n, setId)}" alt="${lc.name}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+      <img src="${(typeof imgThumb==='function')?imgThumb(imgUrl(c.n, setId, c)):imgUrl(c.n, setId, c)}" alt="${lc.name}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
            style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:${imgFilter}"
            onerror="handleCardImgError(this,'${setId}','${c.n}')">
       <div style="display:none;flex-direction:column;align-items:center;justify-content:center;
@@ -755,7 +763,7 @@ function renderBinderView(cards, setIdOf) {
          onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform=''">
       <div style="width:${cellSize}px;height:${Math.round(cellSize*1.4)}px;border-radius:6px;
            border:2px solid ${borderColor};box-shadow:${glow};background:#0a0b10;overflow:hidden;position:relative">
-        <img src="${(typeof imgThumb==='function')?imgThumb(imgUrl(c.n, setId)):imgUrl(c.n, setId)}" alt="${lc.name}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+        <img src="${(typeof imgThumb==='function')?imgThumb(imgUrl(c.n, setId, c)):imgUrl(c.n, setId, c)}" alt="${lc.name}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
              style="width:100%;height:100%;object-fit:cover;filter:${imgFilter}"
              onerror="handleCardImgError(this,'${setId}','${c.n}')">
         <div style="display:none;flex-direction:column;align-items:center;justify-content:center;
@@ -896,7 +904,7 @@ async function openSlotModal(cardN, defaultVer, setIdOverride, cardOverride, onS
     <button onclick="closeSlotModal()" style="position:absolute;top:12px;right:12px;background:none;
       border:none;color:var(--muted);font-size:18px;cursor:pointer;z-index:2">✕</button>
     <div class="slot-modal-head">
-      <img class="slot-modal-img" src="${imgUrl(cardN, setId)}" alt="${_lcCard.name}" referrerpolicy="no-referrer"
+      <img class="slot-modal-img" src="${imgUrl(cardN, setId, card)}" alt="${_lcCard.name}" referrerpolicy="no-referrer"
            onerror="handleCardImgError(this,'${setId}','${cardN}')">
       <div class="slot-modal-info">
         <div class="slot-modal-title">${_lcCard.name}</div>
@@ -1133,7 +1141,7 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
       popup.document.write(`
       <div class="slot">
         <div class="imgwrap">
-          <img src="${(typeof imgMedium === 'function') ? imgMedium(imgUrl(c.n, setId)) : imgUrl(c.n, setId)}" alt="${c.name}" style="${grayFilter}" referrerpolicy="no-referrer"
+          <img src="${(typeof imgMedium === 'function') ? imgMedium(imgUrl(c.n, setId, c)) : imgUrl(c.n, setId, c)}" alt="${c.name}" style="${grayFilter}" referrerpolicy="no-referrer"
                onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=empty>${c.n}<br>${c.name}</div>')">
         </div>
         <div class="label">
