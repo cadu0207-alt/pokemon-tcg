@@ -637,18 +637,34 @@ function ficCardHtml(c, setId) {
 }
 
 function renderGridView(cards, setIdOf) {
-  const base = cards.filter(c => c.base !== false);
-  const sec  = cards.filter(c => c.base === false);
   // setIdOf é opcional — sem ele, comportamento idêntico a antes (currentSet
   // pra toda carta). Fichário personalizado passa uma função que lê o set de
   // origem de cada carta (c._setId), já que mistura cartas de vários sets.
   const sIdOf = setIdOf || (() => currentSet);
   const cardHtml = c => ficCardHtml(c, sIdOf(c));
 
+  // CORRIGIDO 01/10/2026 (pedido do Eduardo, cel30): antes só existia o split
+  // fixo Base/Secretas. Agora usa o array `sections` de getSetData() (app.js)
+  // quando o set define um — permite qualquer número de grupos com label e
+  // filtro próprios (ex: cel30 separa Base/Pikachu Especial/Secretas/Especial
+  // RGB/Coleção Clássica/Energias). Sem `sections` (todo o resto do catálogo,
+  // fichário personalizado, etc.) cai no mesmo Base/Secretas de sempre —
+  // nenhum outro set muda de comportamento.
+  const customSections = (!setIdOf && typeof getSetData === 'function') ? getSetData()?.sections : null;
+  const sections = (customSections && customSections.length)
+    ? customSections
+    : [{ lbl: '📄 Cartas Base', filter: c => c.base !== false },
+       { lbl: '✨ Cartas Secretas', filter: c => c.base === false }];
+
   let html = '';
-  if (base.length) html += `<div class="bsec-lbl">📄 Cartas Base</div><div class="bgrid">${base.map(cardHtml).join('')}</div>`;
-  if (sec.length)  html += `<div class="bsec-lbl">✨ Cartas Secretas</div><div class="bgrid">${sec.map(cardHtml).join('')}</div>`;
-  if (!base.length && !sec.length) html = `<div style="color:var(--muted);font-size:13px;padding:40px;text-align:center">Nenhuma carta encontrada com esses filtros.</div>`;
+  let any = false;
+  sections.forEach(sec => {
+    const group = cards.filter(sec.filter);
+    if (!group.length) return;
+    any = true;
+    html += `<div class="bsec-lbl">${sec.lbl}</div><div class="bgrid">${group.map(cardHtml).join('')}</div>`;
+  });
+  if (!any) html = `<div style="color:var(--muted);font-size:13px;padding:40px;text-align:center">Nenhuma carta encontrada com esses filtros.</div>`;
   return html;
 }
 

@@ -661,6 +661,15 @@ const VER_SHORT={N:'N',F:'F',RH:'RH',SP:'★'};
 function getSlots(c,setId){
   const r=c.rare||'';
   if(!c.base) return [{ver:'SP',price:c.price}];
+  // CORRIGIDO 01/10/2026 (pedido do Eduardo, confirmado contra
+  // tcgplayer.com/content/article/Collector-s-Guide-to-Pokémon-TCG-30th-Celebration):
+  // o set 30th Celebration (cel30/cel30jp/cel30cn) é "all-foil" — TODA carta
+  // da base, até as Comuns, nasce só em foil, sem reverse holo nem versão
+  // normal. Sem este caso especial, Comum/Rara/Rara Ilustrada desse set
+  // caíam nos ramos genéricos mais abaixo (N+RH ou F+RH), pedindo uma 2ª
+  // versão que não existe fisicamente. JP/CN assumidos iguais (mesmo
+  // gimmick do produto, não confirmado 1:1 fora do set em inglês).
+  if(setId==='cel30'||setId==='cel30jp'||setId==='cel30cn') return [{ver:'F',price:c.price}];
   if(r.includes('Dupla')||r.includes('RR')) return [{ver:'F',price:c.price}];
   // Raridade "Rara" nos sets modernos (ME/SV): a impressão padrão já nasce holo,
   // mas mantemos o slot "N" mesmo assim — remover ele em 09/07/2026 órfãou os
@@ -2628,7 +2637,18 @@ function getSetData(){
   const me2pt5c=typeof CARDS_ME2PT5!=='undefined'?CARDS_ME2PT5:[];
   const map={
     cel30:{cards:typeof CARDS_CEL30!=='undefined'?CARDS_CEL30:[],imgFn:imgCel30,label:'CEL30 — Celebração de 30 Anos',
-      sections:[{lbl:'📄 Base — 001 a 128',filter:c=>c.base},{lbl:'✨ Secretas, RGB, Clássica e Energias',filter:c=>!c.base}]},
+      // REORGANIZADO 01/10/2026 (pedido do Eduardo): antes era só Base/Resto —
+      // agora separa os 6 grupos reais do set. Pikachu Especial (30 cartas
+      // ilustradas, base:true mas rare='Rara Ilustrada') precisa vir ANTES do
+      // filtro de "Base" genérico pra não cair lá também (mutuamente exclusivos).
+      sections:[
+        {lbl:'📄 Base',                 filter:c=>c.base&&c.rare!=='Rara Ilustrada'},
+        {lbl:'⚡ Pikachu Especial',      filter:c=>c.base&&c.rare==='Rara Ilustrada'},
+        {lbl:'✨ Secretas — 129 a 158',  filter:c=>!c.base&&/^\d+$/.test(c.n)},
+        {lbl:'💎 Especial RGB (Mew)',    filter:c=>c.n==='R/RGB'||c.n==='G/RGB'||c.n==='B/RGB'},
+        {lbl:'🕰️ Coleção Clássica',      filter:c=>c.rare==='Coleção Clássica'},
+        {lbl:'🔋 Energias Básicas',      filter:c=>c.n.startsWith('MEE')},
+      ]},
     cel30jp:{cards:typeof CARDS_CEL30JP!=='undefined'?CARDS_CEL30JP:[],imgFn:imgCel30Jp,label:'CEL30(JP) — 30th Celebration',
       sections:[{lbl:'📄 Base — 001 a 103',filter:c=>c.base},{lbl:'✨ Energias Básicas',filter:c=>!c.base}]},
     cel30cn:{cards:typeof CARDS_CEL30CN!=='undefined'?CARDS_CEL30CN:[],label:'CEL30(CN) — 30周年庆典',
