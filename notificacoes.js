@@ -85,6 +85,7 @@ function notifOnSession(user){
   if(!id||!sbClient)return;
   notifLoad();
   notifSubscribe(id);
+  notifPushSync();
 }
 
 // Mesmo padrão do hookLeilaoTabVisibility (leilao.js): _updateUserChip roda a
@@ -182,7 +183,8 @@ function notifRenderPanel(){
       <span>Notificações</span>
       <button type="button" class="notif-markall" onclick="notifMarkAllRead()"${notifUnread?'':' disabled'}>Marcar todas como lidas</button>
     </div>
-    <div class="notif-list">${items}</div>`;
+    <div class="notif-list">${items}</div>
+    ${notifPushRowHtml()}`;
 }
 
 // ── PAINEL (abrir/fechar/posicionar) ───────────────────────────────
@@ -216,6 +218,7 @@ function notifOpenPanel(){
   if(panel.parentElement!==document.body)document.body.appendChild(panel);
   notifPanelOpen=true;
   notifRenderPanel();
+  notifPushRefreshState(); // a permissão pode ter mudado nas configurações do navegador
   panel.style.display='flex';
   notifPositionPanel();
   const bell=document.getElementById('notif-bell');
@@ -234,7 +237,13 @@ document.addEventListener('click',e=>{
   if(!notifPanelOpen)return;
   const wrap=document.getElementById('notif-wrap');
   const panel=document.getElementById('notif-panel');
-  if((wrap&&wrap.contains(e.target))||(panel&&panel.contains(e.target)))return;
+  // composedPath() é gravado no INÍCIO do disparo: clicar num botão do painel
+  // re-desenha o painel (innerHTML) antes do evento chegar aqui, e aí
+  // panel.contains(e.target) daria false (alvo já fora da árvore) e o painel
+  // fecharia sozinho a cada clique em "Ativar"/"Marcar todas como lidas".
+  const path=typeof e.composedPath==='function'?e.composedPath():[];
+  const inside=(el)=>!!el&&(path.includes(el)||el.contains(e.target));
+  if(inside(wrap)||inside(panel))return;
   notifClosePanel();
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&notifPanelOpen)notifClosePanel();});
@@ -262,4 +271,214 @@ function notifShowToast(n){
     el.classList.remove('show');
     setTimeout(()=>el.remove(),350);
   },9000);
+}
+
+// ================================================================
+// PUSH (etapa 2, 02/10/2026) — aviso no celular/PC com o app FECHADO.
+// Cada aparelho/navegador tem a própria inscrição, guardada no servidor
+// por RPC (o client nunca lê as chaves de volta). Quem envia é a Edge
+// Function notify-dispatch, disparada pelo banco a cada nova notificação.
+// ================================================================
+let notifPushState='unknown'; // 'unsupported'|'ios-install'|'blocked'|'off'|'on'|'busy'|'unknown'
+let notifVapidKey=null;
+
+function notifIsIOS(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+}
+function notifIsStandalone(){
+  return (window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+}
+function notifPushSupported(){
+  return 'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+}
+function notifB64ToBytes(b64){
+  const raw=atob((b64+'='.repeat((4-b64.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/'));
+  return Uint8Array.from(raw,c=>c.charCodeAt(0));
+}
+function notifBytesToB64(buf){
+  return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+// navigator.serviceWorker.ready nunca resolve se não há SW registrado — não
+// deixa o painel nem o logout ficarem pendurados esperando.
+function notifSwReady(ms){
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('service worker indisponível')),ms||4000)),
+  ]);
+}
+
+// "Ativei push NESTE aparelho com ESTA conta" — por usuário, só no navegador.
+// Sem isso, a conta B que entrasse num computador onde a A já liberou as
+// notificações passaria a receber os avisos de B sem nunca ter pedido.
+function notifPushOptInKey(){return notifUserId?'notifPushOptIn:'+notifUserId:null;}
+function notifPushOptIn(){
+  try{const k=notifPushOptInKey();return !!k&&localStorage.getItem(k)==='1';}catch(e){return false;}
+}
+function notifPushSetOptIn(on){
+  try{const k=notifPushOptInKey();if(!k)return;on?localStorage.setItem(k,'1'):localStorage.removeItem(k);}catch(e){}
+}
+
+async function notifPushRefreshState(){
+  if(notifPushState==='busy')return;
+  let next;
+  if(!notifPushSupported()){
+    next=(notifIsIOS()&&!notifIsStandalone())?'ios-install':'unsupported';
+  }else if(Notification.permission==='denied'){
+    next='blocked';
+  }else{
+    try{
+      const reg=await notifSwReady();
+      const sub=await reg.pushManager.getSubscription();
+      next=(sub&&Notification.permission==='granted'&&notifPushOptIn())?'on':'off';
+    }catch(e){next='off';}
+  }
+  if(next!==notifPushState){notifPushState=next;if(notifPanelOpen)notifRenderPanel();}
+}
+
+function notifPushRowHtml(){
+  const s=notifPushState;
+  if(s==='unknown'||s==='unsupported')return'';
+  let txt,btn='';
+  if(s==='ios-install'){
+    txt='📲 No iPhone, adicione o MyDeck à Tela de Início (Compartilhar → Adicionar à Tela de Início) e abra por lá pra receber avisos com o app fechado.';
+  }else if(s==='blocked'){
+    txt='🔕 Avisos bloqueados neste navegador. Libere nas configurações do site pra receber com o app fechado.';
+  }else if(s==='on'){
+    txt='📲 Avisos neste aparelho: <strong>ativados</strong>';
+    btn='<button type="button" class="notif-push-btn ghost" onclick="notifPushDisable()">Desativar</button>';
+  }else if(s==='busy'){
+    txt='📲 Aguarde…';
+  }else{
+    txt='📲 Receba os avisos mesmo com o app fechado';
+    btn='<button type="button" class="notif-push-btn" onclick="notifPushEnable()">Ativar neste aparelho</button>';
+  }
+  return `<div class="notif-push-row"><span>${txt}</span>${btn}</div>`;
+}
+
+async function notifFetchVapidKey(){
+  if(notifVapidKey)return notifVapidKey;
+  const{data,error}=await sbClient.from('app_public_config').select('value').eq('key','vapid_public_key').maybeSingle();
+  if(error){console.error('[notif] chave VAPID',error);return null;}
+  notifVapidKey=(data&&data.value)||null;
+  return notifVapidKey;
+}
+
+async function notifPushRegister(sub){
+  const p256dh=sub.getKey('p256dh'),auth=sub.getKey('auth');
+  if(!p256dh||!auth)throw new Error('inscrição sem chaves');
+  const{error}=await sbClient.rpc('register_push_subscription',{
+    p_endpoint:sub.endpoint,
+    p_p256dh_key:notifBytesToB64(p256dh),
+    p_auth_key:notifBytesToB64(auth),
+    p_user_agent:navigator.userAgent,
+  });
+  if(error)throw error;
+}
+
+async function notifPushEnable(){
+  if(notifPushState==='busy'||!notifPushSupported())return;
+  notifPushState='busy';notifRenderPanel();
+  try{
+    // requestPermission precisa sair DIRETO do clique (nenhum await antes)
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted'){
+      if(perm==='denied')toast('Notificações bloqueadas neste navegador. Libere nas configurações do site.','error');
+      return;
+    }
+    const key=await notifFetchVapidKey();
+    if(!key)throw new Error('chave VAPID indisponível');
+    const reg=await notifSwReady();
+    let sub=await reg.pushManager.getSubscription();
+    // inscrição feita com outra chave VAPID (se algum dia as chaves mudarem)
+    if(sub&&sub.options&&sub.options.applicationServerKey&&notifBytesToB64(sub.options.applicationServerKey)!==key){
+      await sub.unsubscribe();sub=null;
+    }
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:notifB64ToBytes(key)});
+    await notifPushRegister(sub);
+    notifPushSetOptIn(true);
+    toast('Avisos ativados neste aparelho 🔔');
+  }catch(e){
+    console.error('[notif] push enable',e);
+    toast('Não consegui ativar os avisos agora. Tente de novo em instantes.','error');
+  }finally{
+    notifPushState='unknown';
+    await notifPushRefreshState();
+  }
+}
+
+async function notifPushDisable(){
+  if(notifPushState==='busy')return;
+  notifPushState='busy';notifRenderPanel();
+  try{
+    notifPushSetOptIn(false);
+    const reg=await notifSwReady();
+    const sub=await reg.pushManager.getSubscription();
+    if(sub){
+      try{await sbClient.rpc('unregister_push_subscription',{p_endpoint:sub.endpoint});}catch(e){}
+      await sub.unsubscribe();
+    }
+    toast('Avisos desativados neste aparelho');
+  }catch(e){
+    console.error('[notif] push disable',e);
+    toast('Não consegui desativar agora. Tente de novo.','error');
+  }finally{
+    notifPushState='unknown';
+    await notifPushRefreshState();
+  }
+}
+
+// Ao entrar: se ESTA conta já ativou push neste aparelho, reafirma a
+// inscrição no servidor (idempotente — reaponta o aparelho pra conta certa
+// e renova se o navegador trocou o endpoint).
+async function notifPushSync(){
+  try{
+    if(notifPushSupported()&&Notification.permission==='granted'&&notifPushOptIn()){
+      const reg=await notifSwReady();
+      const sub=await reg.pushManager.getSubscription();
+      if(sub)await notifPushRegister(sub);
+    }
+  }catch(e){console.warn('[notif] push sync',e);}
+  notifPushRefreshState();
+}
+
+// Ao sair: tira o aparelho desta conta no servidor ANTES do logout (depois
+// não há mais sessão pra autorizar a chamada) — senão o próximo a usar o
+// aparelho receberia os avisos de quem saiu. A inscrição do navegador fica;
+// o opt-in guardado reativa tudo no próximo login desta conta.
+async function notifPushUnbind(){
+  if(!sbClient||!notifPushSupported()||Notification.permission!=='granted')return;
+  const reg=await notifSwReady(1500);
+  const sub=await reg.pushManager.getSubscription();
+  if(sub)await sbClient.rpc('unregister_push_subscription',{p_endpoint:sub.endpoint});
+}
+(function hookSignOutPush(){
+  function tryHook(){
+    if(typeof window.signOut!=='function'){setTimeout(tryHook,50);return;}
+    const original=window.signOut;
+    window.signOut=async function(){
+      try{await notifPushUnbind();}catch(e){console.warn('[notif] push unbind',e);}
+      return original.apply(this,arguments);
+    };
+  }
+  tryHook();
+})();
+
+// Clique numa notificação do sistema com o app JÁ aberto: o sw.js traz a
+// janela pra frente e manda esta mensagem (sem recarregar a página).
+async function notifMarkReadById(id){
+  if(notifItems.some(n=>n.id===id)){notifMarkRead([id]);return;}
+  if(!sbClient)return;
+  await sbClient.from('notifications').update({read_at:new Date().toISOString()}).eq('id',id);
+  notifLoad();
+}
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('message',e=>{
+    const d=e.data;
+    if(!d||d.type!=='notif-click')return;
+    if(d.notificationId)notifMarkReadById(d.notificationId);
+    if(d.auctionId){
+      if(typeof aucPendingOpenId!=='undefined')aucPendingOpenId=d.auctionId;
+      if(typeof goToTab==='function')goToTab('leilao');
+    }
+  });
 }

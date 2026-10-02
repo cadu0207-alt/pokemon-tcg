@@ -60,3 +60,54 @@ self.addEventListener('fetch', e => {
     );
   }
 });
+
+// ── PUSH (02/10/2026) — avisos do leilao com o app fechado ─────────────
+// Sem bump de CACHE de proposito: o navegador troca o SW sozinho quando os
+// bytes deste arquivo mudam (install -> skipWaiting -> claim), e bump faria o
+// activate acima apagar o cache de imagens de carta de todo mundo sem
+// necessidade. Payload vem da Edge Function notify-dispatch:
+// {id, title, body, url, auctionId, tag}.
+self.addEventListener('push', e => {
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; }
+  catch (_) { data = { body: e.data ? e.data.text() : '' }; }
+
+  e.waitUntil((async () => {
+    // App aberto e em foco: o aviso ao vivo do proprio app (notificacoes.js)
+    // ja cobre — mostrar tambem na bandeja do sistema seria duplicado. O
+    // Chrome aceita nao mostrar quando ha uma janela visivel e focada.
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    if (wins.some(w => w.visibilityState === 'visible' && w.focused)) return;
+
+    await self.registration.showNotification(data.title || 'MyDeck', {
+      body: data.body || '',
+      icon: 'icon-192.png',
+      badge: 'icon-192.png',
+      // mesmo tag por leilao: "coberto" e depois "encerrado" substituem o
+      // aviso anterior na bandeja em vez de empilhar; renotify avisa de novo
+      tag: data.tag || undefined,
+      renotify: !!data.tag,
+      data: { url: data.url || '/', notificationId: data.id || null, auctionId: data.auctionId || null },
+    });
+  })());
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const d = e.notification.data || {};
+  const target = new URL(d.url || '/', self.location.origin).href;
+
+  e.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const open = wins.find(w => new URL(w.url).origin === self.location.origin);
+    if (open) {
+      // App ja aberto (aba em segundo plano): traz pra frente e pede pra
+      // abrir o leilao sem recarregar (notificacoes.js escuta a mensagem).
+      await open.focus();
+      open.postMessage({ type: 'notif-click', auctionId: d.auctionId, notificationId: d.notificationId, url: target });
+      return;
+    }
+    // App fechado: o link ?leilao=<id> ja e tratado na abertura (leilao.js)
+    await self.clients.openWindow(target);
+  })());
+});
