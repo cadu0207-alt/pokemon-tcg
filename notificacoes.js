@@ -327,8 +327,12 @@ function notifPushSetOptIn(on){
 async function notifPushRefreshState(){
   if(notifPushState==='busy')return;
   let next;
-  if(!notifPushSupported()){
-    next=(notifIsIOS()&&!notifIsStandalone())?'ios-install':'unsupported';
+  // iPhone no Safari comum (fora da Tela de Início): o iOS expõe PushManager mas
+  // reporta permission='denied' — não é bloqueio do usuário, é falta de instalar.
+  if(notifIsIOS()&&!notifIsStandalone()){
+    next='ios-install';
+  }else if(!notifPushSupported()){
+    next='unsupported';
   }else if(Notification.permission==='denied'){
     next='blocked';
   }else{
