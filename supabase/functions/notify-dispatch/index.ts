@@ -65,6 +65,47 @@ const deps: Deps = {
     const { error } = await sb.from('push_subscriptions').delete().in('id', ids);
     if (error) console.error('[notify-dispatch] limpando inscrições mortas:', error.message);
   },
+
+  // ── e-mail ──
+  async getEmailPrefs(userIds) {
+    const { data, error } = await sb.from('notification_prefs')
+      .select('user_id,email_enabled').in('user_id', userIds);
+    if (error) throw new Error('notification_prefs: ' + error.message);
+    return new Map((data ?? []).map((r: { user_id: string; email_enabled: boolean }) => [r.user_id, r.email_enabled]));
+  },
+
+  async getUserEmail(userId) {
+    const { data, error } = await sb.auth.admin.getUserById(userId);
+    if (error || !data?.user) return null;
+    // só e-mail confirmado: evita mandar aviso pra endereço digitado errado
+    return data.user.email && data.user.email_confirmed_at ? data.user.email : null;
+  },
+
+  async claimEmails(rows) {
+    // ON CONFLICT DO NOTHING + RETURNING devolve só o que foi inserido AGORA:
+    // uma chamada repetida (retry do pg_net) não reserva de novo => não reenvia
+    const { data, error } = await sb.from('notification_emails')
+      .upsert(rows, { onConflict: 'notification_id', ignoreDuplicates: true })
+      .select('notification_id');
+    if (error) throw new Error('notification_emails(claim): ' + error.message);
+    return new Set<number>((data ?? []).map((r: { notification_id: number }) => r.notification_id));
+  },
+
+  async countRecentEmails(userId, auctionId, type, sinceIso, excludeId) {
+    const { count, error } = await sb.from('notification_emails')
+      .select('notification_id', { count: 'exact', head: true })
+      .eq('user_id', userId).eq('auction_id', auctionId).eq('type', type)
+      .neq('notification_id', excludeId).gte('created_at', sinceIso)
+      .in('status', ['sent', 'pending']);
+    if (error) throw new Error('notification_emails(count): ' + error.message);
+    return count ?? 0;
+  },
+
+  async finishEmail(notificationId, status, detail) {
+    const { error } = await sb.from('notification_emails')
+      .update({ status, detail: detail ?? null }).eq('notification_id', notificationId);
+    if (error) console.error('[notify-dispatch] registrando e-mail:', error.message);
+  },
 };
 
 Deno.serve(async (req) => {

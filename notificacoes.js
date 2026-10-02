@@ -15,6 +15,8 @@ let notifUserId=null;     // dono da assinatura atual
 let notifChannel=null;
 let notifPanelOpen=false;
 let notifSubscribedOnce=false;
+let notifEmailEnabled=null; // null = ainda carregando; sem linha em notification_prefs = ligado
+let notifEmailBusy=false;
 
 const NOTIF_LIMIT=30;
 const NOTIF_ICON={auction_outbid:'🔔',auction_closed:'🏁'};
@@ -71,6 +73,7 @@ function notifTeardown(){
   notifSubscribedOnce=false;
   notifItems=[];
   notifUnread=0;
+  notifEmailEnabled=null;
   notifClosePanel();
   notifRender();
 }
@@ -86,6 +89,8 @@ function notifOnSession(user){
   notifLoad();
   notifSubscribe(id);
   notifPushSync();
+  notifEmailLoad();
+  notifHandlePrefsLink();
 }
 
 // Mesmo padrão do hookLeilaoTabVisibility (leilao.js): _updateUserChip roda a
@@ -184,6 +189,7 @@ function notifRenderPanel(){
       <button type="button" class="notif-markall" onclick="notifMarkAllRead()"${notifUnread?'':' disabled'}>Marcar todas como lidas</button>
     </div>
     <div class="notif-list">${items}</div>
+    ${notifEmailRowHtml()}
     ${notifPushRowHtml()}`;
 }
 
@@ -481,4 +487,61 @@ if('serviceWorker' in navigator){
       if(typeof goToTab==='function')goToTab('leilao');
     }
   });
+}
+
+// ================================================================
+// E-MAIL (etapa 3, 02/10/2026) — o envio é feito pela Edge Function
+// notify-dispatch (Resend); aqui fica só a preferência do usuário. Sem
+// linha em notification_prefs = ligado. O link "desativar avisos por
+// e-mail" dos e-mails abre /?notif=prefs, que abre este painel.
+// ================================================================
+async function notifEmailLoad(){
+  if(!sbClient||!notifUserId)return;
+  const uidAtStart=notifUserId;
+  const{data,error}=await sbClient.from('notification_prefs').select('email_enabled').maybeSingle();
+  if(uidAtStart!==notifUserId)return;
+  if(error){console.warn('[notif] preferência de e-mail',error);return;} // fica sem a linha em vez de mostrar estado falso
+  notifEmailEnabled=data?data.email_enabled!==false:true;
+  if(notifPanelOpen)notifRenderPanel();
+}
+
+function notifEmailRowHtml(){
+  if(notifEmailEnabled===null)return'';
+  const mail=(typeof currentUser!=='undefined'&&currentUser&&currentUser.email)?currentUser.email:'';
+  const who=mail?` (${esc(mail)})`:'';
+  return notifEmailEnabled
+    ?`<div class="notif-push-row"><span>✉️ Avisos por e-mail${who}: <strong>ativados</strong></span><button type="button" class="notif-push-btn ghost" onclick="notifEmailSet(false)">Desativar</button></div>`
+    :`<div class="notif-push-row"><span>✉️ Avisos por e-mail${who}: desativados</span><button type="button" class="notif-push-btn" onclick="notifEmailSet(true)">Ativar</button></div>`;
+}
+
+async function notifEmailSet(on){
+  if(notifEmailBusy||!sbClient||!notifUserId)return;
+  notifEmailBusy=true;
+  const prev=notifEmailEnabled;
+  notifEmailEnabled=on;               // otimista; volta se o banco recusar
+  if(notifPanelOpen)notifRenderPanel();
+  const{error}=await sbClient.from('notification_prefs')
+    .upsert({user_id:notifUserId,email_enabled:on,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+  notifEmailBusy=false;
+  if(error){
+    console.error('[notif] salvar preferência de e-mail',error);
+    notifEmailEnabled=prev;
+    toast('Não consegui salvar agora. Tente de novo.','error');
+  }else{
+    toast(on?'Avisos por e-mail ativados':'Avisos por e-mail desativados');
+  }
+  if(notifPanelOpen)notifRenderPanel();
+}
+
+// /?notif=prefs (link do rodapé dos e-mails): abre o painel e limpa o
+// parâmetro da URL pra não reabrir a cada recarregamento.
+function notifHandlePrefsLink(){
+  try{
+    const p=new URLSearchParams(window.location.search);
+    if(p.get('notif')!=='prefs')return;
+    p.delete('notif');
+    const q=p.toString();
+    history.replaceState(null,'',window.location.pathname+(q?'?'+q:'')+window.location.hash);
+    setTimeout(()=>{if(notifUserId&&!notifPanelOpen)notifOpenPanel();},700);
+  }catch(e){}
 }

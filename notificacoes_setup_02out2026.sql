@@ -33,7 +33,7 @@ create table if not exists notifications (
   auction_id  bigint references auctions(id) on delete cascade,
   title       text not null,
   body        text,
-  data        jsonb not null default '{}'::jsonb,   -- {auction_id, current_bid, min_next_bid, end_at, url}
+  data        jsonb not null default '{}'::jsonb,   -- {auction_id, card_name, current_bid, min_next_bid, end_at, url}
   read_at     timestamptz,
   created_at  timestamptz not null default now()
 );
@@ -111,6 +111,7 @@ begin
     ),
     jsonb_build_object(
       'auction_id',   new.id,
+      'card_name',    new.card_name,
       'current_bid',  new.current_bid,
       'min_next_bid', v_min_next,
       'end_at',       new.end_at,
@@ -148,7 +149,7 @@ begin
     new.id,
     'Leilão encerrado',
     format('O leilão de %s encerrou e o seu lance não foi o vencedor.', new.card_name),
-    jsonb_build_object('auction_id', new.id, 'url', '/?leilao=' || new.id)
+    jsonb_build_object('auction_id', new.id, 'card_name', new.card_name, 'url', '/?leilao=' || new.id)
   from auction_bids b
   where b.auction_id = new.id
     and b.bidder_id is distinct from new.winner_id;
