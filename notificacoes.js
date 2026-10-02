@@ -17,9 +17,11 @@ let notifPanelOpen=false;
 let notifSubscribedOnce=false;
 let notifEmailEnabled=null; // null = ainda carregando; sem linha em notification_prefs = ligado
 let notifEmailBusy=false;
+let notifNewsEnabled=null;  // novidades/notícias no sino e push (notification_prefs.news_enabled); null = carregando
+let notifNewsBusy=false;
 
 const NOTIF_LIMIT=30;
-const NOTIF_ICON={auction_outbid:'🔔',auction_closed:'🏁'};
+const NOTIF_ICON={auction_outbid:'🔔',auction_closed:'🏁',site_update:'🆕',news:'🗞️'};
 
 // ── CARGA ──────────────────────────────────────────────────────────
 async function notifLoad(){
@@ -74,6 +76,7 @@ function notifTeardown(){
   notifItems=[];
   notifUnread=0;
   notifEmailEnabled=null;
+  notifNewsEnabled=null;
   notifClosePanel();
   notifRender();
 }
@@ -139,11 +142,29 @@ function notifOpen(id){
   if(!n)return;
   notifClosePanel();
   notifMarkRead([id]);
-  const aid=n.auction_id||(n.data&&n.data.auction_id);
-  if(!aid)return;
-  // leilao.js abre a carta em renderLeilaoTab() → scrollToSharedAuction()
-  if(typeof aucPendingOpenId!=='undefined')aucPendingOpenId=aid;
-  if(typeof goToTab==='function')goToTab('leilao');
+  notifRoute(n);
+}
+
+// Pra onde cada tipo de notificação leva. Leilão abre a carta; notícia abre
+// a matéria; novidade do site leva pro Início (onde fica o mural).
+function notifRoute(n){
+  const d=n.data||{};
+  const aid=n.auction_id||d.auction_id;
+  if(aid){
+    // leilao.js abre a carta em renderLeilaoTab() → scrollToSharedAuction()
+    if(typeof aucPendingOpenId!=='undefined')aucPendingOpenId=aid;
+    if(typeof goToTab==='function')goToTab('leilao');
+    return;
+  }
+  if(d.news_id){
+    if(typeof goToTab==='function')goToTab('inicio');
+    if(typeof openInicioArticle==='function')setTimeout(()=>openInicioArticle(d.news_id),250);
+    return;
+  }
+  if(n.type==='site_update'){
+    if(typeof goToTab==='function')goToTab('inicio');
+    setTimeout(()=>{const w=document.getElementById('inicio-updates-wrap');if(w)w.scrollIntoView({behavior:'smooth',block:'center'});},300);
+  }
 }
 
 // ── RENDER ─────────────────────────────────────────────────────────
@@ -182,7 +203,7 @@ function notifRenderPanel(){
         </span>
         <span class="notif-item-time">${notifTimeAgo(n.created_at)}</span>
       </button>`).join('')
-    :`<div class="notif-empty">Nenhuma notificação ainda.<br>Você será avisado aqui quando um lance seu for coberto ou um leilão em que participou encerrar.</div>`;
+    :`<div class="notif-empty">Nenhuma notificação ainda.<br>Você será avisado aqui quando um lance seu for coberto, um leilão em que participou encerrar ou o MyDeck tiver novidades.</div>`;
   panel.innerHTML=`
     <div class="notif-panel-head">
       <span>Notificações</span>
@@ -190,6 +211,7 @@ function notifRenderPanel(){
     </div>
     <div class="notif-list">${items}</div>
     ${notifEmailRowHtml()}
+    ${notifNewsRowHtml()}
     ${notifPushRowHtml()}`;
 }
 
@@ -486,6 +508,8 @@ if('serviceWorker' in navigator){
     const d=e.data;
     if(!d||d.type!=='notif-click')return;
     if(d.notificationId)notifMarkReadById(d.notificationId);
+    const clicked=d.notificationId?notifItems.find(x=>x.id===d.notificationId):null;
+    if(clicked&&!d.auctionId){notifRoute(clicked);return;}
     if(d.auctionId){
       if(typeof aucPendingOpenId!=='undefined')aucPendingOpenId=d.auctionId;
       if(typeof goToTab==='function')goToTab('leilao');
@@ -502,10 +526,17 @@ if('serviceWorker' in navigator){
 async function notifEmailLoad(){
   if(!sbClient||!notifUserId)return;
   const uidAtStart=notifUserId;
-  const{data,error}=await sbClient.from('notification_prefs').select('email_enabled').maybeSingle();
+  let{data,error}=await sbClient.from('notification_prefs').select('email_enabled,news_enabled').maybeSingle();
+  if(error){ // coluna news_enabled ainda não existe no banco: pelo menos o e-mail
+    const r=await sbClient.from('notification_prefs').select('email_enabled').maybeSingle();
+    data=r.data;error=r.error;
+    if(!error)notifNewsEnabled=null;
+  }
   if(uidAtStart!==notifUserId)return;
   if(error){console.warn('[notif] preferência de e-mail',error);return;} // fica sem a linha em vez de mostrar estado falso
   notifEmailEnabled=data?data.email_enabled!==false:true;
+  if(!error&&data&&'news_enabled' in data)notifNewsEnabled=data.news_enabled!==false;
+  else if(!error&&!data)notifNewsEnabled=true;
   if(notifPanelOpen)notifRenderPanel();
 }
 
@@ -533,6 +564,33 @@ async function notifEmailSet(on){
     toast('Não consegui salvar agora. Tente de novo.','error');
   }else{
     toast(on?'Avisos por e-mail ativados':'Avisos por e-mail desativados');
+  }
+  if(notifPanelOpen)notifRenderPanel();
+}
+
+// Novidades e notícias (etapa 4): liga/desliga sino + push desse tipo.
+function notifNewsRowHtml(){
+  if(notifNewsEnabled===null)return'';
+  return notifNewsEnabled
+    ?`<div class="notif-push-row"><span>🆕 Novidades e notícias do MyDeck: <strong>ativadas</strong></span><button type="button" class="notif-push-btn ghost" onclick="notifNewsSet(false)">Desativar</button></div>`
+    :`<div class="notif-push-row"><span>🆕 Novidades e notícias do MyDeck: desativadas</span><button type="button" class="notif-push-btn" onclick="notifNewsSet(true)">Ativar</button></div>`;
+}
+
+async function notifNewsSet(on){
+  if(notifNewsBusy||!sbClient||!notifUserId)return;
+  notifNewsBusy=true;
+  const prev=notifNewsEnabled;
+  notifNewsEnabled=on;
+  if(notifPanelOpen)notifRenderPanel();
+  const{error}=await sbClient.from('notification_prefs')
+    .upsert({user_id:notifUserId,news_enabled:on,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+  notifNewsBusy=false;
+  if(error){
+    console.error('[notif] salvar preferência de novidades',error);
+    notifNewsEnabled=prev;
+    toast('Não consegui salvar agora. Tente de novo.','error');
+  }else{
+    toast(on?'Novidades e notícias ativadas':'Novidades e notícias desativadas');
   }
   if(notifPanelOpen)notifRenderPanel();
 }

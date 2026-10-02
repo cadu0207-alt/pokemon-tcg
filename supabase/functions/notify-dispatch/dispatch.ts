@@ -70,6 +70,10 @@ const TTL_SECONDS = 3600;
 // continuam avisando cada vez).
 const OUTBID_EMAIL_WINDOW_MS = 10 * 60 * 1000;
 const DEFAULT_FROM = 'MyDeck Leilão <leilao@mydecktcg.com.br>';
+// Só estes tipos viram e-mail. Novidades/notícias (envio em massa pra todos os
+// usuários) ficam só no sino + push — e-mail em massa estouraria a cota da
+// Resend e arriscaria spam. Tipo novo nasce SEM e-mail até entrar aqui.
+const EMAIL_TYPES = new Set(['auction_outbid', 'auction_closed']);
 // plano gratuito da Resend: 2 requisições/segundo
 const EMAIL_SPACING_MS = 600;
 
@@ -180,10 +184,12 @@ async function dispatchEmail(notifs: Notif[], deps: Deps, sendEmail: EmailSender
   const from = (await deps.getPrivate('email_from')) || DEFAULT_FROM;
   const replyTo = (await deps.getPrivate('email_reply_to')) || undefined;
 
-  const claimed = await deps.claimEmails(notifs.map((n) => ({
+  const eligible = notifs.filter((n) => EMAIL_TYPES.has(n.type));
+  if (!eligible.length) return summary;
+  const claimed = await deps.claimEmails(eligible.map((n) => ({
     notification_id: n.id, user_id: n.user_id, auction_id: n.auction_id, type: n.type,
   })));
-  const todo = notifs.filter((n) => claimed.has(n.id));
+  const todo = eligible.filter((n) => claimed.has(n.id));
   if (!todo.length) return summary;
 
   const prefs = await deps.getEmailPrefs([...new Set(todo.map((n) => n.user_id))]);
