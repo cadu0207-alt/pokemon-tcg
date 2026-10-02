@@ -820,6 +820,7 @@
       <button type="button" class="btn-add leilao-subtab-btn" data-sub="loja" onclick="switchLeilaoSubtab('loja')">🏪 Loja do Leiloeiro</button>
       <button type="button" id="leilao-tab-cadastro" class="btn-add leilao-subtab-btn" data-sub="cadastro" onclick="switchLeilaoSubtab('cadastro')" style="display:none">➕ Cadastro</button>
       <button type="button" id="leilao-tab-pedidos" class="btn-add leilao-subtab-btn" data-sub="pedidos" onclick="switchLeilaoSubtab('pedidos')" style="display:none">📬 Pedidos &amp; Envios</button>
+      <button type="button" id="leilao-tab-participantes" class="btn-add leilao-subtab-btn" data-sub="participantes" onclick="switchLeilaoSubtab('participantes')" style="display:none">🚫 Participantes</button>
       <button type="button" id="leilao-tab-estoque" class="btn-add leilao-subtab-btn" data-sub="estoque" onclick="switchLeilaoSubtab('estoque')" style="display:none">📦 Estoque da Loja</button>
       <button type="button" id="leilao-tab-analises" class="btn-add leilao-subtab-btn" data-sub="analises" onclick="switchLeilaoSubtab('analises')" style="display:none">📊 Análises</button>
       <button type="button" id="leilao-tab-arquivo" class="btn-add leilao-subtab-btn" data-sub="arquivo" onclick="switchLeilaoSubtab('arquivo')" style="display:none">🗄️ Arquivo</button>
@@ -941,6 +942,20 @@
       <div class="sec-title" style="margin-top:0">📬 Pedidos / Carrinhos do Leilão</div>
       <div style="font-size:10.5px;color:var(--muted);margin-bottom:14px">Resumo de cada rodada arrematada, endereço de entrega, simulação de frete e o botão pra chamar o comprador no WhatsApp e combinar pagamento/envio.</div>
       <div id="leilao-admin-orders"></div>
+    </div>
+
+    <!-- 02/10/2026 — Participantes & Bloqueios (leilao_participantes.js): quem está
+         bloqueado e quem não, com botões de bloquear/liberar. Só leiloeiro. -->
+    <div id="leilao-sub-participantes" style="display:none">
+      <div class="sec-title" style="margin-top:0">🚫 Participantes &amp; Bloqueios</div>
+      <div class="mkt-note">
+        Todo mundo que já deu lance (ou tem pedido) no Leilão. <b>Bloqueado</b> = não consegue dar lance até você liberar.
+        O sistema bloqueia sozinho quem deixa o pagamento vencer; aqui você também pode bloquear ou liberar manualmente.
+        Pedidos vencidos contam só os seus (o admin principal vê todos).
+      </div>
+      <div class="kpi-grid" id="leilao-part-kpis" style="margin-top:12px"></div>
+      <div id="leilao-part-filters"></div>
+      <div id="leilao-part-list"></div>
     </div>
 
     <div id="leilao-sub-analises" style="display:none">
@@ -2123,6 +2138,8 @@
      Precisa carregar ANTES do leilao.js. -->
 <script defer src="frete.js"></script>
 <script defer src="leilao.js"></script>
+<!-- 02/10/2026: aba Participantes & Bloqueios do Leilão -->
+<script defer src="leilao_participantes.js"></script>
 <!-- notificacoes.js (02/10/2026): sino + aviso ao vivo; usa aucPendingOpenId
      do leilao.js, por isso carrega DEPOIS dele. -->
 <script defer src="notificacoes.js"></script>

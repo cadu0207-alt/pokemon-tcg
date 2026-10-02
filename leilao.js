@@ -165,7 +165,7 @@ async function renderLeilaoTab(){
   // "Meus Arremates" e, desde 19/08/2026, "Loja do Leiloeiro"); só os botões de
   // gestão (Cadastro/Estoque/Análises/Arquivo/Financeiro) continuam escondidos
   // de quem não é leiloeiro.
-  ['leilao-tab-cadastro','leilao-tab-pedidos','leilao-tab-estoque','leilao-tab-analises','leilao-tab-arquivo','leilao-tab-financeiro'].forEach(id=>{
+  ['leilao-tab-cadastro','leilao-tab-pedidos','leilao-tab-participantes','leilao-tab-estoque','leilao-tab-analises','leilao-tab-arquivo','leilao-tab-financeiro'].forEach(id=>{
     const btn=document.getElementById(id);
     if(btn)btn.style.display=aucIsLeilaoAdmin?'':'none';
   });
@@ -175,7 +175,7 @@ async function renderLeilaoTab(){
   // outras sub-abas nem aparecem no menu pra ele); leiloeiro mantém a última
   // sub-aba escolhida.
   const allowed=aucIsLeilaoAdmin
-    ?['leiloes','meus-arremates','loja','cadastro','pedidos','estoque','analises','arquivo','financeiro']
+    ?['leiloes','meus-arremates','loja','cadastro','pedidos','participantes','estoque','analises','arquivo','financeiro']
     :['leiloes','meus-arremates','loja'];
   switchLeilaoSubtab(allowed.includes(aucActiveSubtab)?aucActiveSubtab:'leiloes');
 
@@ -254,7 +254,7 @@ async function renderLeilaoTab(){
 let aucActiveSubtab='leiloes';
 function switchLeilaoSubtab(name){
   aucActiveSubtab=name;
-  ['leiloes','meus-arremates','loja','cadastro','pedidos','estoque','analises','arquivo','financeiro'].forEach(n=>{
+  ['leiloes','meus-arremates','loja','cadastro','pedidos','participantes','estoque','analises','arquivo','financeiro'].forEach(n=>{
     const pane=document.getElementById('leilao-sub-'+n);
     if(pane)pane.style.display=(n===name)?'':'none';
     const btn=document.querySelector(`.leilao-subtab-btn[data-sub="${n}"]`);
@@ -267,6 +267,8 @@ function switchLeilaoSubtab(name){
   // — mostra o popup na hora, mesmo antes de ele tentar salvar algo
   // (além da trava dentro de createAuctionRound/publishAuction).
   if(name==='cadastro'&&aucIsLeilaoAdmin&&aucSellerAccepted===false)openLeiloeiroOnboardingModal();
+  // 02/10/2026 — aba Participantes & Bloqueios (leilao_participantes.js): recarrega ao abrir
+  if(name==='participantes'&&aucIsLeilaoAdmin&&typeof aucPartOpen==='function')aucPartOpen();
 }
 
 // Atalho do aviso "cadastre seu endereço" (mostrado quando falta
