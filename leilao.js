@@ -1717,7 +1717,18 @@ async function shareAuctionPdf(auctionId){
 // já ampliada (zoom) assim que a lista carregar — só uma vez por sessão de
 // página, senão reabriria toda vez que renderLeilaoTab() rodar de novo.
 let aucSharedZoomOpened=false;
+// 02/10/2026: clique numa notificação (notificacoes.js) pede pra abrir um
+// leilão específico — goToTab('leilao') dispara renderLeilaoTab(), que termina
+// aqui. Diferente do link compartilhado acima, vale a CADA clique (não só a
+// primeira vez da sessão) e é consumido na hora, sem ficar pendente pra um
+// próximo render abrir sozinho um leilão que a pessoa nem pediu.
+let aucPendingOpenId=null;
 function scrollToSharedAuction(){
+  if(aucPendingOpenId){
+    const pid=aucPendingOpenId;
+    aucPendingOpenId=null;
+    if(aucAuctions.some(x=>x.id===pid)){openAuctionZoom(pid);return;}
+  }
   if(aucSharedZoomOpened)return;
   const id=parseInt(new URLSearchParams(window.location.search).get('leilao'));
   if(!id)return;
