@@ -26,6 +26,15 @@ const sb = createClient(
   { auth: { persistSession: false } },
 );
 
+// .in() vai na URL do PostgREST: lista grande (aviso em massa pra milhares de
+// usuários) estoura o tamanho da URL — consulta em lotes.
+const CHUNK = 150;
+function chunks<T>(arr: T[], n = CHUNK): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+  return out;
+}
+
 const deps: Deps = {
   async getPrivate(key) {
     const { data, error } = await sb.from('app_private_config').select('value').eq('key', key).maybeSingle();
@@ -48,17 +57,25 @@ const deps: Deps = {
   },
 
   async getNotifications(ids) {
-    const { data, error } = await sb.from('notifications')
-      .select('id,user_id,type,auction_id,title,body,data').in('id', ids);
-    if (error) throw new Error('notifications: ' + error.message);
-    return data ?? [];
+    const out = [];
+    for (const part of chunks(ids)) {
+      const { data, error } = await sb.from('notifications')
+        .select('id,user_id,type,auction_id,title,body,data').in('id', part);
+      if (error) throw new Error('notifications: ' + error.message);
+      out.push(...(data ?? []));
+    }
+    return out;
   },
 
   async getSubscriptions(userIds) {
-    const { data, error } = await sb.from('push_subscriptions')
-      .select('id,user_id,endpoint,p256dh_key,auth_key').in('user_id', userIds);
-    if (error) throw new Error('push_subscriptions: ' + error.message);
-    return data ?? [];
+    const out = [];
+    for (const part of chunks(userIds)) {
+      const { data, error } = await sb.from('push_subscriptions')
+        .select('id,user_id,endpoint,p256dh_key,auth_key').in('user_id', part);
+      if (error) throw new Error('push_subscriptions: ' + error.message);
+      out.push(...(data ?? []));
+    }
+    return out;
   },
 
   async deleteSubscriptions(ids) {
@@ -68,10 +85,14 @@ const deps: Deps = {
 
   // ── e-mail ──
   async getEmailPrefs(userIds) {
-    const { data, error } = await sb.from('notification_prefs')
-      .select('user_id,email_enabled').in('user_id', userIds);
-    if (error) throw new Error('notification_prefs: ' + error.message);
-    return new Map((data ?? []).map((r: { user_id: string; email_enabled: boolean }) => [r.user_id, r.email_enabled]));
+    const m = new Map<string, boolean>();
+    for (const part of chunks(userIds)) {
+      const { data, error } = await sb.from('notification_prefs')
+        .select('user_id,email_enabled').in('user_id', part);
+      if (error) throw new Error('notification_prefs: ' + error.message);
+      for (const r of (data ?? []) as { user_id: string; email_enabled: boolean }[]) m.set(r.user_id, r.email_enabled);
+    }
+    return m;
   },
 
   async getUserEmail(userId) {

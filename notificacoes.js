@@ -19,9 +19,11 @@ let notifEmailEnabled=null; // null = ainda carregando; sem linha em notificatio
 let notifEmailBusy=false;
 let notifNewsEnabled=null;  // novidades/notícias no sino e push (notification_prefs.news_enabled); null = carregando
 let notifNewsBusy=false;
+let notifDropsEnabled=null; // novos leilões e rifas (notification_prefs.drops_enabled); null = carregando
+let notifDropsBusy=false;
 
 const NOTIF_LIMIT=30;
-const NOTIF_ICON={auction_outbid:'🔔',auction_closed:'🏁',site_update:'🆕',news:'🗞️'};
+const NOTIF_ICON={auction_outbid:'🔔',auction_closed:'🏁',site_update:'🆕',news:'🗞️',new_auction:'🔨',new_raffle:'🎟️'};
 
 // ── CARGA ──────────────────────────────────────────────────────────
 async function notifLoad(){
@@ -77,6 +79,7 @@ function notifTeardown(){
   notifUnread=0;
   notifEmailEnabled=null;
   notifNewsEnabled=null;
+  notifDropsEnabled=null;
   notifClosePanel();
   notifRender();
 }
@@ -156,6 +159,10 @@ function notifRoute(n){
     if(typeof goToTab==='function')goToTab('leilao');
     return;
   }
+  if(d.raffle_id){
+    if(typeof goToTab==='function')goToTab('rifas');
+    return;
+  }
   if(d.news_id){
     if(typeof goToTab==='function')goToTab('inicio');
     if(typeof openInicioArticle==='function')setTimeout(()=>openInicioArticle(d.news_id),250);
@@ -203,7 +210,7 @@ function notifRenderPanel(){
         </span>
         <span class="notif-item-time">${notifTimeAgo(n.created_at)}</span>
       </button>`).join('')
-    :`<div class="notif-empty">Nenhuma notificação ainda.<br>Você será avisado aqui quando um lance seu for coberto, um leilão em que participou encerrar ou o MyDeck tiver novidades.</div>`;
+    :`<div class="notif-empty">Nenhuma notificação ainda.<br>Você será avisado aqui quando um lance seu for coberto, um leilão em que participou encerrar o MyDeck tiver novidades ou sair um novo leilão ou rifa.</div>`;
   panel.innerHTML=`
     <div class="notif-panel-head">
       <span>Notificações</span>
@@ -212,6 +219,7 @@ function notifRenderPanel(){
     <div class="notif-list">${items}</div>
     ${notifEmailRowHtml()}
     ${notifNewsRowHtml()}
+    ${notifDropsRowHtml()}
     ${notifPushRowHtml()}`;
 }
 
@@ -526,17 +534,18 @@ if('serviceWorker' in navigator){
 async function notifEmailLoad(){
   if(!sbClient||!notifUserId)return;
   const uidAtStart=notifUserId;
-  let{data,error}=await sbClient.from('notification_prefs').select('email_enabled,news_enabled').maybeSingle();
-  if(error){ // coluna news_enabled ainda não existe no banco: pelo menos o e-mail
-    const r=await sbClient.from('notification_prefs').select('email_enabled').maybeSingle();
+  // tenta com todas as colunas; se o banco ainda não tem alguma (migração pendente), cai pro conjunto menor
+  let data=null,error=null;
+  for(const cols of['email_enabled,news_enabled,drops_enabled','email_enabled,news_enabled','email_enabled']){
+    const r=await sbClient.from('notification_prefs').select(cols).maybeSingle();
     data=r.data;error=r.error;
-    if(!error)notifNewsEnabled=null;
+    if(!error)break;
   }
   if(uidAtStart!==notifUserId)return;
   if(error){console.warn('[notif] preferência de e-mail',error);return;} // fica sem a linha em vez de mostrar estado falso
   notifEmailEnabled=data?data.email_enabled!==false:true;
-  if(!error&&data&&'news_enabled' in data)notifNewsEnabled=data.news_enabled!==false;
-  else if(!error&&!data)notifNewsEnabled=true;
+  notifNewsEnabled=data?('news_enabled' in data?data.news_enabled!==false:null):true;
+  notifDropsEnabled=data?('drops_enabled' in data?data.drops_enabled!==false:null):true;
   if(notifPanelOpen)notifRenderPanel();
 }
 
@@ -591,6 +600,33 @@ async function notifNewsSet(on){
     toast('Não consegui salvar agora. Tente de novo.','error');
   }else{
     toast(on?'Novidades e notícias ativadas':'Novidades e notícias desativadas');
+  }
+  if(notifPanelOpen)notifRenderPanel();
+}
+
+// Novos leilões e rifas (etapa 5): liga/desliga sino + push desse tipo.
+function notifDropsRowHtml(){
+  if(notifDropsEnabled===null)return'';
+  return notifDropsEnabled
+    ?`<div class="notif-push-row"><span>🔨 Novos leilões e rifas: <strong>ativados</strong></span><button type="button" class="notif-push-btn ghost" onclick="notifDropsSet(false)">Desativar</button></div>`
+    :`<div class="notif-push-row"><span>🔨 Novos leilões e rifas: desativados</span><button type="button" class="notif-push-btn" onclick="notifDropsSet(true)">Ativar</button></div>`;
+}
+
+async function notifDropsSet(on){
+  if(notifDropsBusy||!sbClient||!notifUserId)return;
+  notifDropsBusy=true;
+  const prev=notifDropsEnabled;
+  notifDropsEnabled=on;
+  if(notifPanelOpen)notifRenderPanel();
+  const{error}=await sbClient.from('notification_prefs')
+    .upsert({user_id:notifUserId,drops_enabled:on,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+  notifDropsBusy=false;
+  if(error){
+    console.error('[notif] salvar preferência de leilões e rifas',error);
+    notifDropsEnabled=prev;
+    toast('Não consegui salvar agora. Tente de novo.','error');
+  }else{
+    toast(on?'Avisos de novos leilões e rifas ativados':'Avisos de novos leilões e rifas desativados');
   }
   if(notifPanelOpen)notifRenderPanel();
 }
