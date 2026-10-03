@@ -1,4 +1,15 @@
-__pycache__/
+﻿__pycache__/
 .idea/
 .env
 .env.*
+
+# Nao publicar (o GitHub Pages serve tudo que esta rastreado na raiz):
+debug_screenshots/
+_claude_tmp/
+_to_delete/
+*.log
+.set9_array.json.deleted
+scripts/test_trunc.txt
+# Analises/relatorios internos (ficam so no disco e no historico do git)
+ANALISE_*.md
+LOG_ATUALIZACOES_*.md
