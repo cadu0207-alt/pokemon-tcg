@@ -25,7 +25,7 @@ let notifLotsEnabled=null;  // e-mails de novos leilões (notification_prefs.lot
 let notifLotsBusy=false;
 
 const NOTIF_LIMIT=30;
-const NOTIF_ICON={auction_outbid:'🔔',auction_closed:'🏁',site_update:'🆕',news:'🗞️',new_auction:'🔨',new_raffle:'🎟️'};
+const NOTIF_ICON={auction_outbid:'🔔',auction_closed:'🏁',auction_won:'🏆',auction_ending:'⏰',site_update:'🆕',news:'🗞️',new_auction:'🔨',new_raffle:'🎟️'};
 
 // ── CARGA ──────────────────────────────────────────────────────────
 async function notifLoad(){

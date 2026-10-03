@@ -46,7 +46,9 @@ export function buildEmail(n: EmailSource): { subject: string; html: string; tex
   const link = SITE_URL + path;
   const prefsLink = SITE_URL + '/?notif=prefs';
   const subject = card ? `${n.title} — ${card}` : n.title;
-  const cta = n.type === 'auction_outbid' ? 'Dar um novo lance' : 'Ver o leilão';
+  const cta = n.type === 'auction_outbid' ? 'Dar um novo lance'
+    : n.type === 'auction_won' ? 'Ver meu pedido e pagar'
+    : 'Ver o leilão';
   const body = n.body ?? '';
 
   const html = `<!doctype html>

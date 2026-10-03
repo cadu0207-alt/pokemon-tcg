@@ -91,7 +91,9 @@ const DEFAULT_FROM = 'MyDeck Leilão <leilao@mydecktcg.com.br>';
 // Só estes tipos viram e-mail. Novidades/notícias (envio em massa pra todos os
 // usuários) ficam só no sino + push — e-mail em massa estouraria a cota da
 // Resend e arriscaria spam. Tipo novo nasce SEM e-mail até entrar aqui.
-const EMAIL_TYPES = new Set(['auction_outbid', 'auction_closed']);
+// auction_won = "você ganhou" (quem precisa pagar); auction_ending ("encerra em
+// breve") fica de fora de propósito: só sino + push.
+const EMAIL_TYPES = new Set(['auction_outbid', 'auction_closed', 'auction_won']);
 // plano gratuito da Resend: 2 requisições/segundo
 const EMAIL_SPACING_MS = 600;
 
