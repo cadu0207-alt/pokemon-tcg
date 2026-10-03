@@ -1985,28 +1985,25 @@
 <!-- Auth mosaic generator -->
 <script>
 (function(){
-  const sets=[
-    ['me4',100,122],['me3',100,120],['me2',100,130]
-  ];
-  const cards=[];
-  sets.forEach(([s,a,b])=>{for(let n=a;n<=b;n++) cards.push(`${s}-${n}`);});
+  // PERFORMANCE 03/10/2026: antes eram 40 <img> do scrydex (~51 KB cada, ≈2 MB) que baixavam toda vez que o
+  // fundo da tela de login aparecia. Agora recortam o MESMO sprite do mosaico do app (mosaic-sprite.webp, já
+  // baixado): 12 colunas x 6 linhas de tiles; background-size em % acompanha a célula fluida da grade.
+  const SPR_COLS=12, SPR_ROWS=6, SPR_TILES=SPR_COLS*SPR_ROWS;
+  const tiles=[];
+  for(let i=0;i<SPR_TILES;i++) tiles.push(i);
   // shuffle
-  for(let i=cards.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cards[i],cards[j]]=[cards[j],cards[i]];}
+  for(let i=tiles.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[tiles[i],tiles[j]]=[tiles[j],tiles[i]];}
   const mosaic=document.getElementById('auth-mosaic');
   if(!mosaic) return;
   const N=40;
   for(let i=0;i<N;i++){
-    const card=cards[i%cards.length];
+    const t=tiles[i%tiles.length];
+    const px=((t%SPR_COLS)/(SPR_COLS-1)*100).toFixed(3);
+    const py=(Math.floor(t/SPR_COLS)/(SPR_ROWS-1)*100).toFixed(3);
     const delay=(Math.random()*10).toFixed(2);
     const dur=(5+Math.random()*7).toFixed(2);
     const div=document.createElement('div');
-    div.style.cssText=`border-radius:10px;overflow:hidden;aspect-ratio:2.5/3.5;animation:cardFloat ${dur}s ease-in-out ${delay}s infinite alternate;`;
-    const img=document.createElement('img');
-    img.src=`https://images.scrydex.com/pokemon/${card}/small`;
-    img.loading='lazy';
-    img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;';
-    img.onerror=function(){this.parentElement.style.background='#0d0f1a';this.remove();};
-    div.appendChild(img);
+    div.style.cssText=`border-radius:10px;overflow:hidden;aspect-ratio:2.5/3.5;background:#0d0f1a url(mosaic-sprite.webp) ${px}% ${py}%/${SPR_COLS*100}% ${SPR_ROWS*100}% no-repeat;animation:cardFloat ${dur}s ease-in-out ${delay}s infinite alternate;`;
     mosaic.appendChild(div);
   }
 })();
