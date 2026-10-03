@@ -147,7 +147,7 @@ function todayBRT() {
 }
 
 const date = todayBRT();
-const rows = [];
+let rows = [];
 let totalCardsLoaded = 0;
 
 for (const setId of Object.keys(SET_CARDS_MAP)) {
@@ -171,6 +171,15 @@ for (const setId of Object.keys(SET_CARDS_MAP)) {
     });
   });
 }
+
+// DEDUP (03/10/2026): sets com número de carta repetido (ex.: cel25c tem a carta 15 mais de uma vez) geram
+// a mesma slot_key duas vezes no MESMO lote, e o Postgres recusa o lote inteiro ("ON CONFLICT DO UPDATE
+// command cannot affect row a second time", HTTP 500). Como o script abortava no 1º erro, só os 10 primeiros
+// lotes (10.000 de ~33.400 linhas) eram gravados — todo dia, desde 20/08 — e ~70% dos sets ficavam sem
+// histórico de preço. Mantém a última ocorrência de cada slot_key.
+const rowsBruto = rows.length;
+rows = Array.from(new Map(rows.map(function (r) { return [r.slot_key, r]; })).values());
+if (rows.length !== rowsBruto) console.log('Atenção: ' + (rowsBruto - rows.length) + ' linha(s) com slot_key repetida descartada(s) (numeração duplicada no catálogo).');
 
 console.log(totalCardsLoaded + ' cartas carregadas em ' + Object.keys(SET_CARDS_MAP).length + ' colecoes -- ' + rows.length + ' slots com preco a gravar (data BRT: ' + date + ')' + (DRY_RUN ? ' (DRY-RUN)' : ''));
 
@@ -206,17 +215,28 @@ async function main() {
   }
   const BATCH = 1000;
   let written = 0;
+  let failedBatches = 0;
   for (let i = 0; i < rows.length; i += BATCH) {
     const batch = rows.slice(i, i + BATCH);
-    await sbFetch('card_price_history', {
-      method: 'POST',
-      headers: { Prefer: 'resolution=merge-duplicates' },
-      body: JSON.stringify(batch),
-    });
-    written += batch.length;
-    console.log('  gravado lote ' + written + '/' + rows.length);
+    // Um lote ruim NÃO pode derrubar os seguintes (antes abortava e o resto do catálogo ficava sem preço do dia).
+    try {
+      await sbFetch('card_price_history', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates' },
+        body: JSON.stringify(batch),
+      });
+      written += batch.length;
+      console.log('  gravado lote ' + (i / BATCH + 1) + ' (' + written + '/' + rows.length + ')');
+    } catch (err) {
+      failedBatches++;
+      console.error('  FALHOU lote ' + (i / BATCH + 1) + ' (linhas ' + i + '-' + (i + batch.length - 1) + '): ' + err.message);
+    }
   }
   console.log(written + ' snapshots de preco gravados em card_price_history para ' + date + '.');
+  if (failedBatches) {
+    console.error(failedBatches + ' lote(s) falharam — ' + (rows.length - written) + ' slots ficaram sem preco hoje.');
+    process.exit(1);
+  }
 }
 
 main().catch(function (err) {
