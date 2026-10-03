@@ -58,7 +58,12 @@ self.addEventListener('fetch', e => {
       // servidor (ETag -> 304, sem corpo) a cada carga: continua sempre fresco (nunca serve versão
       // velha, o bug que o no-store resolveu) e só rebaixa o que mudou.
       fetch(e.request, { cache: 'no-cache' }).then(r => {
-        if (r.ok) { const cl = r.clone(); caches.open(CACHE).then(c => c.put(e.request, cl)); }
+        // 03/10/2026: só o HTML (navegação) vai pro Cache Storage, como fallback offline. Antes TODO
+        // arquivo same-origin era gravado ali (53 scripts + CSS a cada visita): medido em produção, a
+        // carga com o SW no controle terminava escalonada (~58 ms por arquivo, DCL ≈ 3,6 s) enquanto
+        // sem o SW, com o cache HTTP morno, o DCL era ≈ 0,16 s. JS/CSS seguem revalidados (no-cache)
+        // e o cache HTTP do navegador guarda o corpo (304 = sem rebaixar).
+        if (r.ok && e.request.mode === 'navigate') { const cl = r.clone(); caches.open(CACHE).then(c => c.put(e.request, cl)); }
         return r;
       }).catch(() => caches.match(e.request))
     );
