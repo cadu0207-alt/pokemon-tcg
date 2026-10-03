@@ -127,6 +127,24 @@ const deps: Deps = {
       .update({ status, detail: detail ?? null }).eq('notification_id', notificationId);
     if (error) console.error('[notify-dispatch] registrando e-mail:', error.message);
   },
+
+  // ── e-mail de novo lote (a lógica de orçamento/limites mora no SQL) ──
+  async claimLotEmails() {
+    const { data, error } = await sb.rpc('claim_lot_emails');
+    if (error) throw new Error('claim_lot_emails: ' + error.message);
+    return data ?? [];
+  },
+
+  async getLotRound(roundId) {
+    const { data, error } = await sb.rpc('lot_email_round', { p_round_id: roundId });
+    if (error) throw new Error('lot_email_round: ' + error.message);
+    return data ?? null;
+  },
+
+  async finishLotEmails(ids, status, detail) {
+    const { error } = await sb.rpc('finish_lot_emails', { p_ids: ids, p_status: status, p_detail: detail ?? null });
+    if (error) console.error('[notify-dispatch] registrando e-mail de lote:', error.message);
+  },
 };
 
 Deno.serve(async (req) => {

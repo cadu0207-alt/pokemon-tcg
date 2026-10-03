@@ -21,6 +21,8 @@ let notifNewsEnabled=null;  // novidades/notícias no sino e push (notification_
 let notifNewsBusy=false;
 let notifDropsEnabled=null; // novos leilões e rifas (notification_prefs.drops_enabled); null = carregando
 let notifDropsBusy=false;
+let notifLotsEnabled=null;  // e-mails de novos leilões (notification_prefs.lots_email_enabled); null = carregando
+let notifLotsBusy=false;
 
 const NOTIF_LIMIT=30;
 const NOTIF_ICON={auction_outbid:'🔔',auction_closed:'🏁',site_update:'🆕',news:'🗞️',new_auction:'🔨',new_raffle:'🎟️'};
@@ -80,6 +82,7 @@ function notifTeardown(){
   notifEmailEnabled=null;
   notifNewsEnabled=null;
   notifDropsEnabled=null;
+  notifLotsEnabled=null;
   notifClosePanel();
   notifRender();
 }
@@ -218,6 +221,7 @@ function notifRenderPanel(){
     </div>
     <div class="notif-list">${items}</div>
     ${notifEmailRowHtml()}
+    ${notifLotsRowHtml()}
     ${notifNewsRowHtml()}
     ${notifDropsRowHtml()}
     ${notifPushRowHtml()}`;
@@ -536,7 +540,7 @@ async function notifEmailLoad(){
   const uidAtStart=notifUserId;
   // tenta com todas as colunas; se o banco ainda não tem alguma (migração pendente), cai pro conjunto menor
   let data=null,error=null;
-  for(const cols of['email_enabled,news_enabled,drops_enabled','email_enabled,news_enabled','email_enabled']){
+  for(const cols of['email_enabled,news_enabled,drops_enabled,lots_email_enabled','email_enabled,news_enabled,drops_enabled','email_enabled,news_enabled','email_enabled']){
     const r=await sbClient.from('notification_prefs').select(cols).maybeSingle();
     data=r.data;error=r.error;
     if(!error)break;
@@ -546,6 +550,7 @@ async function notifEmailLoad(){
   notifEmailEnabled=data?data.email_enabled!==false:true;
   notifNewsEnabled=data?('news_enabled' in data?data.news_enabled!==false:null):true;
   notifDropsEnabled=data?('drops_enabled' in data?data.drops_enabled!==false:null):true;
+  notifLotsEnabled=data?('lots_email_enabled' in data?data.lots_email_enabled!==false:null):true;
   if(notifPanelOpen)notifRenderPanel();
 }
 
@@ -604,6 +609,34 @@ async function notifNewsSet(on){
   if(notifPanelOpen)notifRenderPanel();
 }
 
+// E-mails de novos leilões (1 por rodada): liga/desliga só esse e-mail. O "desativar
+// todos os e-mails" é a linha de cima (email_enabled).
+function notifLotsRowHtml(){
+  if(notifLotsEnabled===null||notifEmailEnabled===false)return'';
+  return notifLotsEnabled
+    ?`<div class="notif-push-row"><span>✉️ E-mails de novos leilões: <strong>ativados</strong></span><button type="button" class="notif-push-btn ghost" onclick="notifLotsSet(false)">Desativar</button></div>`
+    :`<div class="notif-push-row"><span>✉️ E-mails de novos leilões: desativados</span><button type="button" class="notif-push-btn" onclick="notifLotsSet(true)">Ativar</button></div>`;
+}
+
+async function notifLotsSet(on){
+  if(notifLotsBusy||!sbClient||!notifUserId)return;
+  notifLotsBusy=true;
+  const prev=notifLotsEnabled;
+  notifLotsEnabled=on;
+  if(notifPanelOpen)notifRenderPanel();
+  const{error}=await sbClient.from('notification_prefs')
+    .upsert({user_id:notifUserId,lots_email_enabled:on,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+  notifLotsBusy=false;
+  if(error){
+    console.error('[notif] salvar preferência de e-mails de novos leilões',error);
+    notifLotsEnabled=prev;
+    toast('Não consegui salvar agora. Tente de novo.','error');
+  }else{
+    toast(on?'E-mails de novos leilões ativados':'E-mails de novos leilões desativados');
+  }
+  if(notifPanelOpen)notifRenderPanel();
+}
+
 // Novos leilões e rifas (etapa 5): liga/desliga sino + push desse tipo.
 function notifDropsRowHtml(){
   if(notifDropsEnabled===null)return'';
@@ -643,3 +676,96 @@ function notifHandlePrefsLink(){
     setTimeout(()=>{if(notifUserId&&!notifPanelOpen)notifOpenPanel();},700);
   }catch(e){}
 }
+
+// ================================================================
+// DESCADASTRO DE E-MAIL POR LINK (?emails=sair&t=<token>) — 03/10/2026
+// Todo e-mail de "novo leilão" leva um link pessoal pra cá. Funciona SEM login:
+// o token identifica a conta no banco (email_unsub_info / email_unsub_apply).
+// ================================================================
+const EMSAIR_UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+let emsairToken=null;
+let emsairBusy=false;
+
+function emsairShell(inner){
+  let ov=document.getElementById('emsair-ov');
+  if(!ov){
+    ov=document.createElement('div');
+    ov.id='emsair-ov';
+    ov.className='emsair-ov';
+    ov.addEventListener('click',e=>{if(e.target===ov)emsairClose();});
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML=`<div class="emsair-card" role="dialog" aria-modal="true" aria-label="E-mails do MyDeck">${inner}</div>`;
+}
+function emsairClose(){const ov=document.getElementById('emsair-ov');if(ov)ov.remove();}
+
+function emsairInvalid(){
+  emsairShell(`<div class="emsair-title">🔗 Link inválido ou expirado</div>
+    <div class="emsair-text">Não consegui identificar a sua conta por esse link. Entre no MyDeck e ajuste os avisos pelo sino 🔔 (no fim do painel).</div>
+    <div class="emsair-actions"><button type="button" class="emsair-btn primary" onclick="emsairClose()">Ir para o MyDeck</button></div>`);
+}
+
+function emsairView(info,flash){
+  const allOff=info.email_enabled===false;
+  const lotsOff=info.lots_email_enabled===false;
+  const status=allOff?'Você <strong>não recebe nenhum e-mail</strong> do MyDeck.'
+    :lotsOff?'Você <strong>não recebe e-mails de novos leilões</strong>.'
+    :'Você recebe e-mails quando sai um novo leilão.';
+  const buttons=allOff
+    ?'<button type="button" class="emsair-btn primary" onclick="emsairApply(\'undo\')">Voltar a receber e-mails</button>'
+    :lotsOff
+      ?'<button type="button" class="emsair-btn" onclick="emsairApply(\'all\')">Parar TODOS os e-mails do MyDeck</button><button type="button" class="emsair-btn primary" onclick="emsairApply(\'undo\')">Voltar a receber</button>'
+      :'<button type="button" class="emsair-btn primary" onclick="emsairApply(\'lots\')">Parar e-mails de novos leilões</button><button type="button" class="emsair-btn" onclick="emsairApply(\'all\')">Parar TODOS os e-mails do MyDeck</button>';
+  emsairShell(`<div class="emsair-title">📭 Seus e-mails do MyDeck</div>
+    <div class="emsair-text">Conta: <strong>${esc(info.email||'')}</strong></div>
+    ${flash?`<div class="emsair-flash">${flash}</div>`:''}
+    <div class="emsair-text">${status}</div>
+    <div class="emsair-actions">${buttons}</div>
+    <div class="emsair-foot"><button type="button" class="emsair-link" onclick="emsairClose()">Ir para o MyDeck</button></div>`);
+}
+
+async function emsairWaitClient(){
+  for(let i=0;i<50;i++){
+    if(typeof sbClient!=='undefined'&&sbClient)return true;
+    await new Promise(r=>setTimeout(r,100));
+  }
+  return false;
+}
+
+async function emsairOpen(token){
+  emsairShell('<div class="emsair-text">Carregando…</div>');
+  if(!EMSAIR_UUID.test(token)||!(await emsairWaitClient())){emsairInvalid();return;}
+  emsairToken=token;
+  const{data,error}=await sbClient.rpc('email_unsub_info',{p_token:token});
+  if(error||!data||!data.ok){if(error)console.warn('[emails] info',error);emsairInvalid();return;}
+  emsairView(data,'');
+}
+
+async function emsairApply(scope){
+  if(emsairBusy||!emsairToken)return;
+  emsairBusy=true;
+  const{data,error}=await sbClient.rpc('email_unsub_apply',{p_token:emsairToken,p_scope:scope});
+  emsairBusy=false;
+  if(error||!data||!data.ok){
+    console.warn('[emails] apply',error);
+    toast('Não consegui salvar agora. Tente de novo.','error');
+    return;
+  }
+  const msg=scope==='lots'?'✔ Pronto! Você não receberá mais e-mails de novos leilões.'
+    :scope==='all'?'✔ Pronto! Você não receberá mais nenhum e-mail do MyDeck.'
+    :'✔ Tudo certo, os e-mails voltaram.';
+  emsairView(data,msg);
+}
+
+function emsairBoot(){
+  try{
+    const p=new URLSearchParams(window.location.search);
+    if(p.get('emails')!=='sair')return;
+    const t=p.get('t')||'';
+    p.delete('emails');p.delete('t');
+    const q=p.toString();
+    history.replaceState(null,'',window.location.pathname+(q?'?'+q:'')+window.location.hash);
+    emsairOpen(t);
+  }catch(e){}
+}
+emsairBoot();

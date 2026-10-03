@@ -10,7 +10,9 @@
 // ================================================================
 
 import webpush from 'npm:web-push@3.6.7';
-import { buildEmail, type EmailSender, resendSend } from './email.ts';
+import {
+  type BatchSender, buildEmail, buildLotEmail, type EmailMsg, type EmailSender, type LotRound, resendSend, resendSendBatch,
+} from './email.ts';
 
 export interface Notif {
   id: number;
@@ -37,6 +39,17 @@ export interface EmailClaim {
   type: string;
 }
 
+// e-mail de "novo lote" (em massa): 1 linha por destinatário, já reservada no banco
+export interface LotJob {
+  id: number;
+  batch: string;
+  round_id: number;
+  user_id: string;
+  email: string;
+  token: string;
+  attempts?: number;
+}
+
 export interface Deps {
   getPrivate(key: string): Promise<string | null>;
   // grava o par VAPID: privada em app_private_config, pública também em
@@ -56,6 +69,11 @@ export interface Deps {
   claimEmails(rows: EmailClaim[]): Promise<Set<number>>;
   countRecentEmails(userId: string, auctionId: number, type: string, sinceIso: string, excludeId: number): Promise<number>;
   finishEmail(notificationId: number, status: 'sent' | 'skipped' | 'failed', detail?: string): Promise<void>;
+
+  // ── e-mail de novo lote (opcionais: ambientes de teste antigos não precisam) ──
+  claimLotEmails?(): Promise<LotJob[]>;
+  getLotRound?(roundId: number): Promise<LotRound | null>;
+  finishLotEmails?(ids: number[], status: 'sent' | 'retry' | 'failed' | 'skipped', detail?: string): Promise<void>;
 }
 
 // https:// ou mailto: — o push service usa só como contato, nunca é e-mail pessoal
@@ -236,11 +254,94 @@ async function dispatchEmail(notifs: Notif[], deps: Deps, sendEmail: EmailSender
   return summary;
 }
 
+interface LotSummary { claimed: number; sent: number; retry: number; failed: number; skipped: number; reason?: string }
+
+// Envia o e-mail de novo lote pra quem o banco liberou agora (orçamento diário,
+// limite por pessoa e trava email_live já foram aplicados em claim_lot_emails()).
+// Lotes de até 100 por chamada (Resend /emails/batch). Falha de validação num
+// endereço cai pro envio individual pra isolar o ruim; falha transitória (429,
+// 5xx, rede) devolve pra fila sem gastar orçamento.
+async function sendLotEmails(deps: Deps, sendBatch: BatchSender, sendEmail: EmailSender): Promise<LotSummary> {
+  const summary: LotSummary = { claimed: 0, sent: 0, retry: 0, failed: 0, skipped: 0 };
+  if (!deps.claimLotEmails || !deps.getLotRound || !deps.finishLotEmails) return { ...summary, reason: 'unsupported' };
+
+  const apiKey = await deps.getPrivate('resend_api_key');
+  if (!apiKey) return { ...summary, reason: 'no_key' };
+  if ((await deps.getPrivate('email_live')) !== '1') return { ...summary, reason: 'email_off' };
+
+  const jobs = await deps.claimLotEmails();
+  summary.claimed = jobs.length;
+  if (!jobs.length) return summary;
+
+  const from = (await deps.getPrivate('email_from')) || DEFAULT_FROM;
+  const replyTo = (await deps.getPrivate('email_reply_to')) || undefined;
+
+  const rounds = new Map<number, LotRound | null>();
+  for (const rid of new Set(jobs.map((j) => j.round_id))) {
+    try { rounds.set(rid, await deps.getLotRound(rid)); } catch (_) { rounds.set(rid, null); }
+  }
+
+  const ready: Array<{ job: LotJob; msg: EmailMsg }> = [];
+  const noContent: number[] = [];
+  for (const job of jobs) {
+    const round = rounds.get(job.round_id);
+    if (!round) { noContent.push(job.id); continue; }
+    const e = buildLotEmail(round, job.token);
+    ready.push({
+      job,
+      msg: { from, to: job.email, subject: e.subject, html: e.html, text: e.text, headers: e.headers, ...(replyTo ? { reply_to: replyTo } : {}) },
+    });
+  }
+  if (noContent.length) {
+    await deps.finishLotEmails(noContent, 'skipped', 'sem cartas ativas');
+    summary.skipped += noContent.length;
+  }
+
+  for (let i = 0; i < ready.length; i += 100) {
+    if (i > 0) await sleep(EMAIL_SPACING_MS);
+    const chunk = ready.slice(i, i + 100);
+    const ids = chunk.map((x) => x.job.id);
+    const attempt = Math.max(...chunk.map((x) => x.job.attempts ?? 1));
+    const idem = `lot-${ids[0]}-${ids[ids.length - 1]}-${ids.length}-a${attempt}`;
+    try {
+      let res = await sendBatch(chunk.map((x) => x.msg), apiKey, idem);
+      if (!res.ok && res.status === 429) {
+        await sleep(Math.min(res.retryAfterMs ?? 1200, 5000));
+        res = await sendBatch(chunk.map((x) => x.msg), apiKey, idem);
+      }
+      if (res.ok) {
+        await deps.finishLotEmails(ids, 'sent');
+        summary.sent += ids.length;
+      } else if (res.status === 400 || res.status === 422) {
+        // um endereço inválido derruba o lote todo: reenvia um a um e isola
+        for (const x of chunk) {
+          await sleep(EMAIL_SPACING_MS);
+          const r1 = await sendEmail(x.msg, apiKey, `lot-${x.job.id}-a${x.job.attempts ?? 1}`);
+          if (r1.ok) { await deps.finishLotEmails([x.job.id], 'sent'); summary.sent++; }
+          else if (r1.status === 400 || r1.status === 422) {
+            await deps.finishLotEmails([x.job.id], 'failed', `${r1.status} ${r1.detail ?? ''}`.trim()); summary.failed++;
+          } else { await deps.finishLotEmails([x.job.id], 'retry', `${r1.status} ${r1.detail ?? ''}`.trim()); summary.retry++; }
+        }
+      } else {
+        console.error('[notify-dispatch] lote de e-mail falhou', res.status, res.detail ?? '');
+        await deps.finishLotEmails(ids, 'retry', `${res.status} ${res.detail ?? ''}`.trim());
+        summary.retry += ids.length;
+      }
+    } catch (err) {
+      console.error('[notify-dispatch] lote de e-mail erro', (err as Error).message);
+      try { await deps.finishLotEmails(ids, 'retry', String((err as Error).message).slice(0, 200)); } catch (_) { /* segue */ }
+      summary.retry += ids.length;
+    }
+  }
+  return summary;
+}
+
 export async function handle(
   req: Request,
   deps: Deps,
   send: SendFn = webpush.sendNotification.bind(webpush),
   sendEmail: EmailSender = resendSend,
+  sendBatch: BatchSender = resendSendBatch,
 ): Promise<Response> {
   if (req.method !== 'POST') return jsonResponse({ error: 'method not allowed' }, 405);
 
@@ -281,6 +382,44 @@ export async function handle(
       apiKey, `test-${crypto.randomUUID()}`,
     );
     return jsonResponse({ ok: res.ok, status: res.status, detail: res.detail ?? null, from }, res.ok ? 200 : 502);
+  }
+
+  // E-mail em massa de novo lote (chamado pelo cron via kick_lot_emails)
+  if (body.action === 'send_lot_emails') {
+    return jsonResponse({ ok: true, ...(await sendLotEmails(deps, sendBatch, sendEmail)) });
+  }
+
+  // E-mail de TESTE do layout de novo lote, pra um endereço escolhido. Usa dados de
+  // exemplo (ou o token real do destinatário, pra o link de descadastro funcionar).
+  if (body.action === 'test_lot_email') {
+    const tb = body as { to?: unknown; token?: unknown };
+    const to = typeof tb.to === 'string' ? tb.to.trim() : '';
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return jsonResponse({ error: 'invalid "to"' }, 400);
+    const apiKey = await deps.getPrivate('resend_api_key');
+    if (!apiKey) return jsonResponse({ error: 'resend_api_key ausente' }, 400);
+    const from = (await deps.getPrivate('email_from')) || DEFAULT_FROM;
+    const replyTo = (await deps.getPrivate('email_reply_to')) || undefined;
+    const img = (n: number) => `https://images.pokemontcg.io/sv3pt5/${n}.png`;
+    const sample: LotRound = {
+      title: 'EVENTO DE EXEMPLO — EDIÇÃO 151',
+      end_at: new Date(Date.now() + 3 * 86400e3).toISOString(),
+      total: 14,
+      first_auction_id: 1,
+      first_start_at: new Date(Date.now() + 2 * 3600e3).toISOString(),
+      cards: [
+        { id: 1, name: 'Charizard ex', price: 120, buy_now: 260, version: 'Ultra Rara', condition: 'NM', image: img(6) },
+        { id: 2, name: 'Mew ex', price: 85, buy_now: null, version: 'Ultra Rara', condition: 'NM', image: img(151) },
+        { id: 3, name: 'Alakazam ex', price: 64.9, buy_now: null, version: 'Ultra Rara', condition: 'NM', image: img(65) },
+        { id: 4, name: 'Pikachu', price: 38.5, buy_now: 80, version: 'Reverse Holo', condition: 'NM', image: img(25) },
+        { id: 5, name: 'Psyduck', price: 22, buy_now: null, version: null, condition: 'NM', image: img(54) },
+      ],
+    };
+    const e = buildLotEmail(sample, typeof tb.token === 'string' ? tb.token : '');
+    const res = await sendEmail(
+      { from, to, subject: `[TESTE] ${e.subject}`, html: e.html, text: e.text, headers: e.headers, ...(replyTo ? { reply_to: replyTo } : {}) },
+      apiKey, `testlot-${crypto.randomUUID()}`,
+    );
+    return jsonResponse({ ok: res.ok, status: res.status, detail: res.detail ?? null, unsubscribe: e.unsubscribeUrl }, res.ok ? 200 : 502);
   }
 
   const ids = Array.isArray(body.ids) ? body.ids.filter((x) => Number.isInteger(x)) as number[] : [];

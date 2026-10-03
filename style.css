@@ -3778,3 +3778,29 @@ body.inicio-modal-open { overflow: hidden; }
 }
 .notif-push-btn.ghost { background: none; border: 1px solid var(--border2); color: var(--muted); font-weight: 600; }
 .notif-push-btn:hover { filter: brightness(1.08); }
+
+/* Descadastro de e-mail por link (?emails=sair&t=…) — notificacoes.js, 03/10/2026 */
+.emsair-ov {
+  position: fixed; inset: 0; z-index: 10050; background: rgba(10, 12, 24, .72);
+  display: flex; align-items: center; justify-content: center; padding: 18px;
+}
+.emsair-card {
+  background: var(--surface); color: var(--text); border: 1px solid var(--border2);
+  border-radius: 16px; max-width: 430px; width: 100%; padding: 24px 22px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.45); font-family: 'DM Sans', sans-serif;
+}
+.emsair-title { font-size: 19px; font-weight: 700; margin-bottom: 12px; }
+.emsair-text { font-size: 13.5px; line-height: 1.55; color: var(--text); margin-bottom: 10px; word-break: break-word; }
+.emsair-flash {
+  font-size: 13px; font-weight: 600; color: var(--teal); margin: 4px 0 12px;
+  padding: 9px 12px; border-radius: 10px; background: color-mix(in srgb, var(--teal) 12%, var(--surface));
+}
+.emsair-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.emsair-btn {
+  cursor: pointer; font-family: inherit; font-size: 13.5px; font-weight: 700; padding: 11px 14px;
+  border-radius: 10px; border: 1px solid var(--border2); background: none; color: var(--text);
+}
+.emsair-btn.primary { background: var(--teal); border-color: var(--teal); color: #fff; }
+.emsair-btn:hover { filter: brightness(1.06); }
+.emsair-foot { text-align: center; margin-top: 14px; }
+.emsair-link { background: none; border: none; cursor: pointer; font-family: inherit; font-size: 12.5px; color: var(--muted); text-decoration: underline; }
