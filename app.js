@@ -310,7 +310,20 @@ if(sbClient){
 function imgMe04(n){return`https://images.scrydex.com/pokemon/me4-${parseInt(n)}/large`;}
 function imgMe03(n){return`https://images.scrydex.com/pokemon/me3-${parseInt(n)}/large`;}
 function imgMe02(n){return`https://images.scrydex.com/pokemon/me2-${parseInt(n)}/large`;}
-function imgMe05(n){return`https://images.scrydex.com/pokemon/me5-${parseInt(n)}/large`;}
+// me05: 03/10/2026 — mesma estrutura do me2pt5 (arte por idioma, tcgdex slug "me05"):
+// pt = arte em português da Copag, en = arte americana, jp = URL pronta no campo `img`
+// da carta (limitlesstcg, set JP M5; 3 cartas vêm do set MP — ver cards_me05.js).
+// Aceita `n` OU a carta inteira (chamadores genéricos só têm o número). Sem `lang`
+// cai no scrydex EN de antes, que é o que os chamadores sem idioma já usavam.
+function imgMe05(nOrCard,lang){
+  const isCard=nOrCard&&typeof nOrCard==='object';
+  const n=isCard?nOrCard.n:nOrCard;
+  if(lang==='jp')return(isCard&&nOrCard.img)||'';
+  if(lang==='pt'||lang==='en'){
+    return`https://assets.tcgdex.net/${lang}/me/me05/${String(parseInt(n,10)).padStart(3,'0')}/high.png`;
+  }
+  return`https://images.scrydex.com/pokemon/me5-${parseInt(n)}/large`;
+}
 function imgMe06(n){return`https://images.scrydex.com/pokemon/me6-${parseInt(n)}/large`;}
 // me2pt5: CORRIGIDO 01/10/2026 (pedido do Eduardo: "fichário em português
 // mostrando foto em inglês") — trocado de scrydex (sem idioma, só arte EN)
@@ -565,7 +578,7 @@ function getBinderImg(c,setId,lang){
   const n=parseInt(c.n);
   if(setId==='me2pt5') return imgMe2pt5(c,lang);
   if(setId==='me06') return imgMe06(n);
-  if(setId==='me05') return imgMe05(n);
+  if(setId==='me05') return imgMe05(c,lang);
   if(setId==='me03') return imgMe03(n);
   if(setId==='me02') return imgMe02(n);
   if(setId==='meg')  return imgMeg(n);
@@ -1397,7 +1410,7 @@ const SET_META={
   cel30:{label:'🎉 CEL30 — Celebração de 30 Anos',color:'#FFD700',chase:'Mew ex Ultra Rare — R$568,40',heroCard:'158',imgFn:imgCel30,releaseDate:'16/set/2026'},
   me06:{label:'💎 ME06 — Esmeralda Tempestuosa',color:'#00c853',chase:'Mega Rayquaza ex Gold — R$1.500 (est.)',heroCard:1,imgFn:imgMe06,upcoming:true,releaseDate:'out/2026'},
   me2pt5:{label:'🦸 ME2.5(ASC) — Heróis Excelsos',color:'#5C6BC0',chase:'Mega Charizard Y ex Hiper Rara Mega — preço a confirmar',heroCard:294,imgFn:imgMe2pt5,releaseDate:'30/jan/2026'},
-  me05:{label:'🌑 ME05(PBL) — Escuridão Absoluta',color:'#424242',chase:'Gladion\'s Showdown SAR — US$1.090',heroCard:118,imgFn:imgMe05,releaseDate:'17/jul/2026'},
+  me05:{label:'🌑 ME05(PBL) — Escuridão Absoluta',color:'#424242',chase:'Batalha Decisiva do Gladio SAR — US$1.090',heroCard:118,imgFn:imgMe05,releaseDate:'17/jul/2026'},
   me04:{label:'🔥 ME04(CRI) — Caos Ascendente',color:'var(--accent)',chase:'Mega Greninja ex Gold — R$1.482',heroCard:22,imgFn:imgMe04},
   me03:{label:'🔵 ME03(POR) — Equilíbrio Perfeito',color:'#1565C0',chase:'Meowth ex SAR — R$870 · Mega Zygarde ex Gold — R$775',heroCard:62,imgFn:imgMe03},
   me02:{label:'👻 ME02(PFL) — Fogo Fantasmagórico',color:'#9C27B0',chase:'Mega Charizard X ex SAR — R$1.809',heroCard:13,imgFn:imgMe02},
