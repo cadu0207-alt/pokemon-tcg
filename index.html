@@ -84,6 +84,11 @@
   ]
 }
 </script>
+<!-- PERFORMANCE 03/10/2026: abre as conexões das origens externas em paralelo, sem esperar o CSS/JS pedir -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://images.scrydex.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,900&family=IBM+Plex+Mono:wght@400;600;700&family=DM+Sans:wght@300;500;700&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script>
@@ -141,14 +146,20 @@
   flex-shrink: 0;
   will-change: transform;
 }
-.amrow img {
+/* PERFORMANCE 03/10/2026: as cartinhas deixaram de ser 184 <img> (≈9,2 MB de PNG do scrydex, escondidas
+   atrás do overlay 90% opaco) e viraram recortes de UM sprite WebP de baixa qualidade (~46 KB,
+   mosaic-sprite.webp, gerado por scripts/build_mosaic_sprite.js). Sprite = 12 colunas x 6 linhas
+   de tiles; exibido a 32x44 px por tile (background-size 384x264). */
+.amcard {
+  width: 32px;
   height: 44px;
-  width: auto;
   border-radius: 4px;
   flex-shrink: 0;
+  background-color: #e8eaf2;
+  background-image: url(mosaic-sprite.webp);
+  background-size: 384px 264px;
   opacity: 0.55;
   filter: saturate(0.8);
-  transition: opacity .3s;
 }
 .amrow.paused { animation-play-state: paused !important; }
 #pg-app .pane {
@@ -232,8 +243,10 @@
     <div class="hdr-logo-block">
       <button class="back-btn" onclick="goToTab('inicio')" title="Início">⌂</button>
       <a href="#" class="hdr-logo-link" title="Início" onclick="goToTab('inicio');return false;">
-        <img class="hdr-logo-img home-logo-light" src="logo-mydeck.webp" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil">
-        <img class="hdr-logo-img home-logo-dark" src="logo-mydeck-dark.webp" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil">
+        <!-- 03/10/2026: logos redimensionadas (1800→600 px, 313→56 KB) e loading=lazy: o <img> com display:none
+             (tema que não está ativo) não é baixado até o tema trocar. -->
+        <img class="hdr-logo-img home-logo-light" src="logo-mydeck.webp" width="600" height="191" loading="lazy" decoding="async" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil">
+        <img class="hdr-logo-img home-logo-dark" src="logo-mydeck-dark.webp" width="600" height="191" loading="lazy" decoding="async" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil">
       </a>
     </div>
     <div class="hstatus">
@@ -2005,11 +2018,9 @@
   const container=document.getElementById('app-mosaic');
   if(!container) return;
 
-  const SETS=[
-    ['me4',100,122],['me3',100,120],['me2',100,130],
-    ['me4',1,50],   ['me3',1,50],   ['me2',1,50],
-    ['me4',51,99],  ['me3',51,99],
-  ];
+  // Sprite (mosaic-sprite.webp): SPRITE_COLS x (SPRITE_TILES/SPRITE_COLS) tiles — mesmas
+  // constantes de scripts/build_mosaic_sprite.js. Cada linha embaralha os 72 tiles.
+  const SPRITE_COLS=12, SPRITE_TILES=72, TILE_W=32, TILE_H=44;
   // MELHORIA 20/08/2026: linhas cobrindo a tela inteira (antes eram 8 fixas,
   // que só preenchiam uma faixa no topo). Calculado a partir da altura real
   // da viewport — reaproveita os mesmos pools de cartas via SETS[si%SETS.length],
@@ -2020,9 +2031,8 @@
   const PAUSE_DISTANCE=120; // px — distância do mouse para pausar
 
   function makePool(si){
-    const[s,a,b]=SETS[si%SETS.length];
     const pool=[];
-    for(let n=a;n<=b;n++) pool.push(`${s}-${n}`);
+    for(let n=0;n<SPRITE_TILES;n++) pool.push(n);
     // shuffle
     for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
     return pool;
@@ -2038,14 +2048,13 @@
     // Para scrollRight começa em -50%→0, também sem offset extra (o keyframe cuida)
 
     // Imagens: triplicar para loop suave em telas largas
-    const pool=makePool(i).slice(0,24); // pool enxuto: menos requests
-    const imgs=[...pool,...pool];
-    imgs.forEach(card=>{
-      const img=document.createElement('img');
-      img.src=`https://images.scrydex.com/pokemon/${card}/small`;
-      img.loading='lazy';
-      img.onerror=function(){this.remove();};
-      row.appendChild(img);
+    const pool=makePool(i).slice(0,24);
+    const tiles=[...pool,...pool]; // duplica pro loop suave em telas largas
+    tiles.forEach(t=>{
+      const c=document.createElement('div');
+      c.className='amcard';
+      c.style.backgroundPosition=`-${(t%SPRITE_COLS)*TILE_W}px -${Math.floor(t/SPRITE_COLS)*TILE_H}px`;
+      row.appendChild(c);
     });
     container.appendChild(row);
   }
@@ -2070,9 +2079,24 @@
 <!-- Supabase JS v2 — deve vir ANTES de app.js -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- QRCode.js — usado no botão Compartilhar do Fichário -->
-<script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
 <!-- jsPDF (12/08/2026): usado só pelo botão "PDF" de compartilhar leilão (leilao.js) — monta um PDF com a foto da carta + o texto padrão do leilão. -->
-<script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script>
+// PERFORMANCE 03/10/2026: o jsPDF (356 KB) só serve pro botão "PDF" do leilão — carrega só quando alguém clica.
+window.loadJsPdf=function(){
+  if(window.jspdf)return Promise.resolve();
+  if(!window._jspdfP){
+    window._jspdfP=new Promise(function(res,rej){
+      var s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+      s.onload=function(){res();};
+      s.onerror=function(){window._jspdfP=null;rej(new Error('jspdf'));};
+      document.head.appendChild(s);
+    });
+  }
+  return window._jspdfP;
+};
+</script>
 <script defer src="cards_cel30.js"></script>
 <script defer src="cards_cel30_jp.js"></script>
 <script defer src="cards_cel30_cn.js"></script>

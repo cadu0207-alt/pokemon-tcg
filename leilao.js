@@ -1652,8 +1652,10 @@ async function shareAuctionPdf(auctionId){
   const a=aucAuctions.find(x=>x.id===auctionId);
   if(!a)return;
   if(typeof window.jspdf==='undefined'){
-    setStatus('Gerador de PDF ainda carregando, tenta de novo em 1 segundo','err');
-    return;
+    // jsPDF não vem mais no carregamento da página (356 KB) — baixa agora, na 1ª vez
+    setStatus('Preparando o gerador de PDF...','ok');
+    try{await (window.loadJsPdf?window.loadJsPdf():Promise.reject(new Error('sem loader')));}
+    catch(e){setStatus('Não consegui carregar o gerador de PDF. Verifique a conexão e tente de novo.','err');return;}
   }
   setStatus('Gerando PDF...','ok');
   const msg=aucShareMessage(a);

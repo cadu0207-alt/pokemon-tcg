@@ -53,7 +53,11 @@ self.addEventListener('fetch', e => {
 
   if (url.origin === location.origin) {
     e.respondWith(
-      fetch(e.request, { cache: 'no-store' }).then(r => {
+      // 03/10/2026: 'no-store' -> 'no-cache'. no-store ignorava o cache do navegador de vez: toda visita
+      // rebaixava ~550 KB (53 scripts + CSS + HTML) mesmo sem nada ter mudado. no-cache REVALIDA com o
+      // servidor (ETag -> 304, sem corpo) a cada carga: continua sempre fresco (nunca serve versão
+      // velha, o bug que o no-store resolveu) e só rebaixa o que mudou.
+      fetch(e.request, { cache: 'no-cache' }).then(r => {
         if (r.ok) { const cl = r.clone(); caches.open(CACHE).then(c => c.put(e.request, cl)); }
         return r;
       }).catch(() => caches.match(e.request))
