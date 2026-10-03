@@ -54,14 +54,44 @@ let _phSeq=0;
 window._phBlocks=window._phBlocks||{};
 
 // ── BUSCA DE DADOS ──────────────────────────────────────────────
+// HISTÓRICO COMPACTO (03/10/2026): card_price_history guarda só o 1º preço de cada slot e as MUDANÇAS
+// (o plano gratuito do Supabase tem 500 MB; gravar todo dia o mesmo preço de 33 mil slots estourava em
+// ~43 dias — ver card_price_history_compacto_03out2026.sql). Dia sem linha = mesmo preço da linha
+// anterior. Aqui o gráfico (que espaça os pontos por posição, não por data) recebe a série DIÁRIA já
+// preenchida: busca a janela de 90 dias + o último ponto ANTES dela e repete o preço vigente dia a dia
+// até hoje. Linhas diárias antigas (formato denso) dão o mesmo resultado.
+function phTodayBRT(){return new Date(Date.now()-3*3600*1000).toISOString().slice(0,10);}
+function phDayMs(d){return Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10));}
+function phExpandDaily(rows,since,today){
+  if(!rows||!rows.length)return[];
+  const end=today||phTodayBRT();
+  const start=rows[0].date<since?since:rows[0].date;   // rows já vem em ordem crescente de data
+  const byDate={};
+  rows.forEach(r=>{byDate[r.date]=r.price;});
+  let cur=null;                                         // preço vigente no início da janela
+  for(const r of rows){if(r.date<=start)cur=r.price;else break;}
+  const out=[];
+  for(let t=phDayMs(start),t1=phDayMs(end);t<=t1;t+=86400000){
+    const d=new Date(t).toISOString().slice(0,10);
+    if(byDate[d]!==undefined)cur=byDate[d];
+    if(cur!==null)out.push({date:d,price:cur});
+  }
+  return out.length?out:rows;
+}
 async function phFetchHistory(slotKeyStr){
   if(!sbClient)return[];
   const since=new Date(Date.now()-90*86400000).toISOString().slice(0,10);
-  const{data,error}=await sbClient.from('card_price_history')
-    .select('date,price').eq('slot_key',slotKeyStr).gte('date',since)
-    .order('date',{ascending:true});
-  if(error){console.error('[card_price_history select]',error);return[];}
-  return data||[];
+  const[win,prior]=await Promise.all([
+    sbClient.from('card_price_history')
+      .select('date,price').eq('slot_key',slotKeyStr).gte('date',since)
+      .order('date',{ascending:true}),
+    sbClient.from('card_price_history')
+      .select('date,price').eq('slot_key',slotKeyStr).lt('date',since)
+      .order('date',{ascending:false}).limit(1),
+  ]);
+  if(win.error){console.error('[card_price_history select]',win.error);return[];}
+  const rows=(prior.data||[]).concat(win.data||[]);
+  return phExpandDaily(rows,since);
 }
 
 async function phFetchBook(setId,n){

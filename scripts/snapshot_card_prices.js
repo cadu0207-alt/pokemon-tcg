@@ -15,6 +15,12 @@
  *     SUPABASE_SERVICE_ROLE_KEY=xxx node scripts/snapshot_card_prices.js
  *     SUPABASE_SERVICE_ROLE_KEY=xxx node scripts/snapshot_card_prices.js --dry-run
  *
+ * MODO COMPACTO (03/10/2026): grava só o PRIMEIRO preço de cada slot e as MUDANÇAS em relação ao último
+ * preço já gravado (função card_price_latest). 86% dos slots não mudam em semanas, e gravar todos
+ * os ~33 mil slots todo dia (~6 MB/dia) estourava o limite de 500 MB do plano gratuito do Supabase em
+ * ~43 dias. O gráfico (price_history.js) preenche os dias sem linha. Dia sem nenhuma mudança = 0
+ * linhas gravadas (normal). --full força gravar tudo. Ver card_price_history_compacto_03out2026.sql.
+ *
  * Reaproveita a mesma técnica de snapshot_value.js: carrega os arquivos
  * de cartas num sandbox de VM (são JS de verdade, não regex) e espelha
  * SET_CARDS_MAP + getSlots() de app.js. Se um set novo for adicionado em
@@ -29,6 +35,7 @@ const REPO_ROOT = path.dirname(__dirname);
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://dvkiodmhtzlkvmyyzelx.supabase.co';
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DRY_RUN = process.argv.includes('--dry-run');
+const FULL = process.argv.includes('--full'); // grava TODOS os slots (ignora o "só mudanças") — uso excepcional
 
 if (!SERVICE_KEY) {
   console.error('Faltou a env SUPABASE_SERVICE_ROLE_KEY (Settings -> API -> service_role no painel do Supabase).');
@@ -208,10 +215,52 @@ async function sbFetch(pathAndQuery, opts) {
   return r;
 }
 
+// Último preço gravado de cada slot (paginado por slot_key). Se a função não existir/falhar, devolve null
+// e o script cai pro modo completo (grava tudo) — nunca perde dado por causa disso.
+async function fetchLatestPrices() {
+  const map = new Map();
+  let after = '';
+  for (;;) {
+    const r = await sbFetch('rpc/card_price_latest', {
+      method: 'POST',
+      body: JSON.stringify({ p_after: after, p_limit: 1000 }),
+    });
+    const page = await r.json();
+    page.forEach(function (x) { map.set(x.slot_key, Number(x.price)); });
+    if (page.length < 1000) break;
+    after = page[page.length - 1].slot_key;
+  }
+  return map;
+}
+const cents = function (n) { return Math.round(Number(n) * 100); };
+
 async function main() {
   if (!rows.length) {
     console.log('Nenhum slot com preco valido -- nada a gravar.');
     return;
+  }
+  if (!FULL) {
+    let latest = null;
+    try {
+      latest = await fetchLatestPrices();
+    } catch (err) {
+      console.error('Aviso: nao consegui ler os ultimos precos (' + err.message + ') — gravando TODOS os slots (modo completo).');
+    }
+    if (latest) {
+      const total = rows.length;
+      let novos = 0, mudou = 0;
+      rows = rows.filter(function (r) {
+        if (!latest.has(r.slot_key)) { novos++; return true; }
+        if (cents(latest.get(r.slot_key)) !== cents(r.price)) { mudou++; return true; }
+        return false;
+      });
+      console.log('Modo compacto: ' + latest.size + ' slots ja tinham historico; ' + total + ' slots hoje -> ' +
+        novos + ' novos + ' + mudou + ' com preco diferente = ' + rows.length + ' linha(s) a gravar (' + (total - rows.length) + ' sem mudanca, nao gravados).');
+      if (!rows.length) {
+        console.log('Nenhuma mudanca de preco hoje -- nada a gravar.');
+        return;
+      }
+    }
   }
   const BATCH = 1000;
   let written = 0;
