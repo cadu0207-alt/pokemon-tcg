@@ -307,7 +307,18 @@ if(sbClient){
 }
 
 // ── IMAGENS ──────────────────────────────────────────────────────
-function imgMe04(n){return`https://images.scrydex.com/pokemon/me4-${parseInt(n)}/large`;}
+// me04: 04/10/2026 — mesmo padrão do me05/me2pt5 (arte por idioma, tcgdex slug "me04"; jp = `img` da carta,
+// set JP M4 "Ninja Spinner", 3 cartas vêm do MP — ver cards_me04.js). Aceita `n` OU a carta inteira; sem
+// `lang` cai no scrydex EN de antes (chamadores genéricos, hero card, etc.).
+function imgMe04(nOrCard,lang){
+  const isCard=nOrCard&&typeof nOrCard==='object';
+  const n=isCard?nOrCard.n:nOrCard;
+  if(lang==='jp')return(isCard&&nOrCard.img)||'';
+  if(lang==='pt'||lang==='en'){
+    return`https://assets.tcgdex.net/${lang}/me/me04/${String(parseInt(n,10)).padStart(3,'0')}/high.png`;
+  }
+  return`https://images.scrydex.com/pokemon/me4-${parseInt(n)}/large`;
+}
 function imgMe03(n){return`https://images.scrydex.com/pokemon/me3-${parseInt(n)}/large`;}
 function imgMe02(n){return`https://images.scrydex.com/pokemon/me2-${parseInt(n)}/large`;}
 // me05: 03/10/2026 — mesma estrutura do me2pt5 (arte por idioma, tcgdex slug "me05"):
@@ -584,7 +595,7 @@ function getBinderImg(c,setId,lang){
   if(setId==='meg')  return imgMeg(n);
   if(setId==='mep')  return imgMep(n);
   // svp usa o fallback genérico sv* logo abaixo (pokemontcg.io CDN)
-  if(setId==='me04') return imgMe04(n);
+  if(setId==='me04') return imgMe04(c,lang);
   // Raio Preto (Black Bolt) e Fogo Branco (White Flare) — EV10.5, jul/2025.
   // Adicionados 19/08/2026 (indicação de usuário). IDs oficiais pokemontcg.io
   // (zsv10pt5/rsv10pt5) não começam com "sv" — não caem no fallback genérico

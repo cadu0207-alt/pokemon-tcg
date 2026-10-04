@@ -398,6 +398,8 @@ const FIC_LANG_SETS = {
   // ME05(PBL): JP resolvido carta a carta (limitlesstcg, ver header de cards_me05.js); sem chinês
   // (a série Megaevolução chinesa ainda não tem set principal).
   me05: ['pt', 'en', 'jp'],
+  // ME04(CRI): idem (JP via limitlesstcg, ver header de cards_me04.js); sem chinês
+  me04: ['pt', 'en', 'jp'],
 };
 
 function setFicLang(lang, onRefresh, ids) {
