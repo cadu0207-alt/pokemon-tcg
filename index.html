@@ -84,6 +84,11 @@
   ]
 }
 </script>
+<!-- PERFORMANCE 03/10/2026: abre as conexões das origens externas em paralelo, sem esperar o CSS/JS pedir -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://images.scrydex.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,900&family=IBM+Plex+Mono:wght@400;600;700&family=DM+Sans:wght@300;500;700&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script>
@@ -141,14 +146,20 @@
   flex-shrink: 0;
   will-change: transform;
 }
-.amrow img {
+/* PERFORMANCE 03/10/2026: as cartinhas deixaram de ser 184 <img> (≈9,2 MB de PNG do scrydex, escondidas
+   atrás do overlay 90% opaco) e viraram recortes de UM sprite WebP de baixa qualidade (~46 KB,
+   mosaic-sprite.webp, gerado por scripts/build_mosaic_sprite.js). Sprite = 12 colunas x 6 linhas
+   de tiles; exibido a 32x44 px por tile (background-size 384x264). */
+.amcard {
+  width: 32px;
   height: 44px;
-  width: auto;
   border-radius: 4px;
   flex-shrink: 0;
+  background-color: #e8eaf2;
+  background-image: url(mosaic-sprite.webp);
+  background-size: 384px 264px;
   opacity: 0.55;
   filter: saturate(0.8);
-  transition: opacity .3s;
 }
 .amrow.paused { animation-play-state: paused !important; }
 #pg-app .pane {
@@ -232,15 +243,23 @@
     <div class="hdr-logo-block">
       <button class="back-btn" onclick="goToTab('inicio')" title="Início">⌂</button>
       <a href="#" class="hdr-logo-link" title="Início" onclick="goToTab('inicio');return false;">
-        <img class="hdr-logo-img home-logo-light" src="logo-mydeck.webp" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil">
-        <img class="hdr-logo-img home-logo-dark" src="logo-mydeck-dark.webp" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil">
+        <!-- 03/10/2026: logos redimensionadas (1800→600 px, 313→56 KB) e loading=lazy: o <img> com display:none
+             (tema que não está ativo) não é baixado até o tema trocar. -->
+        <img class="hdr-logo-img home-logo-light" src="logo-mydeck.webp" width="600" height="191" loading="lazy" decoding="async" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil">
+        <img class="hdr-logo-img home-logo-dark" src="logo-mydeck-dark.webp" width="600" height="191" loading="lazy" decoding="async" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil">
       </a>
     </div>
     <div class="hstatus">
       <span id="status-dot" class="dot dot-warning"></span>
       <span id="status-txt">Conectando...</span>
       <span id="usd-brl" style="margin-left:14px;opacity:.6"></span>
-      <div id="user-chip" style="display:none;align-items:center;gap:8px;margin-left:12px;padding:4px 10px 4px 4px;background:var(--surface2);border:1px solid var(--border);border-radius:30px">
+      <!-- 02/10/2026: sino de notificações (notificacoes.js) — só aparece
+           logado; o painel é position:fixed, posicionado por JS. -->
+      <div id="notif-wrap" style="display:none;margin-left:12px">
+        <button type="button" id="notif-bell" class="notif-bell" onclick="notifTogglePanel(event)" aria-label="Notificações" aria-haspopup="true" aria-expanded="false" title="Notificações">🔔<span id="notif-badge" class="notif-badge" style="display:none">0</span></button>
+        <div id="notif-panel" class="notif-panel" role="dialog" aria-label="Notificações" style="display:none"></div>
+      </div>
+      <div id="user-chip"style="display:none;align-items:center;gap:8px;margin-left:12px;padding:4px 10px 4px 4px;background:var(--surface2);border:1px solid var(--border);border-radius:30px">
         <img id="user-avatar" style="width:26px;height:26px;border-radius:50%;object-fit:cover;background:var(--border)" src="" onerror="this.style.display='none'">
         <span id="user-display-name" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
         <button onclick="signOut()" title="Sair" style="background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0;line-height:1" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">⏻</button>
@@ -421,6 +440,8 @@
        Links/Revista são conteúdo novo, publicado só pela aba Admin
        (hasPerm('inicio'), home_content_admin.js). -->
   <div id="inicio" class="pane active">
+    <!-- 03/10/2026: h1 da página (SEO/leitores de tela). A logo é imagem e não conta como título; .sr-only deixa visível só pra quem lê a página, sem mexer no layout. -->
+    <h1 class="sr-only">MyDeck — tracker de coleção Pokémon TCG Brasil: master set, fichário, gastos, preço justo, leilões e rifas</h1>
     <!-- IDENTIDADE VISUAL + ATALHOS 31/08/2026 (pedido do Eduardo): logo e os
          2 botões viviam empilhados e centralizados, ocupando bastante altura
          antes das Novidades. Viraram uma faixa só: logo à esquerda (menor,
@@ -721,6 +742,24 @@
           <button id="fic-binder-4" class="fic-btn" onclick="setBinderSize(4)">4×4</button>
         </div>
 
+        <!-- Seletor de idioma (30/09/2026, piloto no cel30, pedido do Eduardo)
+             — só aparece quando o set atual tem dados traduzidos
+             (nameEn/priceUsd em algum card). Troca nome/preço/arte exibidos
+             sem mudar a coleção rastreada (mesmo card_n, mesma coleção). -->
+        <!-- 01/10/2026 (pedido do Eduardo): seletor de idioma genérico —
+             cada coleção cadastrada em FIC_LANG_SETS (fichario_patch.js)
+             decide quais dos 4 botões aparecem. Na família cel30, jp/cn
+             trocam o array de cartas por baixo (checklists próprios,
+             diferentes do PT/EN); em coleções normais (ex: ME2.5) é só
+             troca de nome/arte exibidos na MESMA carta — ver setFicLang(). -->
+        <div id="fic-lang-controls" style="display:none;gap:4px;align-items:center">
+          <span class="fic-toolbar-lbl">IDIOMA:</span>
+          <button id="fic-lang-pt" class="fic-btn active" onclick="setFicLang('pt')">🇧🇷 PT</button>
+          <button id="fic-lang-en" class="fic-btn" onclick="setFicLang('en')">🇺🇸 EN</button>
+          <button id="fic-lang-jp" class="fic-btn" onclick="setFicLang('jp')">🇯🇵 JP</button>
+          <button id="fic-lang-cn" class="fic-btn" onclick="setFicLang('cn')">🇨🇳 CN</button>
+        </div>
+
         <span style="margin-left:auto"></span>
 
         <!-- Menu 'Mais ações' — agrupa copiar lista / imprimir / compartilhar,
@@ -796,6 +835,7 @@
       <button type="button" class="btn-add leilao-subtab-btn" data-sub="loja" onclick="switchLeilaoSubtab('loja')">🏪 Loja do Leiloeiro</button>
       <button type="button" id="leilao-tab-cadastro" class="btn-add leilao-subtab-btn" data-sub="cadastro" onclick="switchLeilaoSubtab('cadastro')" style="display:none">➕ Cadastro</button>
       <button type="button" id="leilao-tab-pedidos" class="btn-add leilao-subtab-btn" data-sub="pedidos" onclick="switchLeilaoSubtab('pedidos')" style="display:none">📬 Pedidos &amp; Envios</button>
+      <button type="button" id="leilao-tab-participantes" class="btn-add leilao-subtab-btn" data-sub="participantes" onclick="switchLeilaoSubtab('participantes')" style="display:none">🚫 Participantes</button>
       <button type="button" id="leilao-tab-estoque" class="btn-add leilao-subtab-btn" data-sub="estoque" onclick="switchLeilaoSubtab('estoque')" style="display:none">📦 Estoque da Loja</button>
       <button type="button" id="leilao-tab-analises" class="btn-add leilao-subtab-btn" data-sub="analises" onclick="switchLeilaoSubtab('analises')" style="display:none">📊 Análises</button>
       <button type="button" id="leilao-tab-arquivo" class="btn-add leilao-subtab-btn" data-sub="arquivo" onclick="switchLeilaoSubtab('arquivo')" style="display:none">🗄️ Arquivo</button>
@@ -917,6 +957,20 @@
       <div class="sec-title" style="margin-top:0">📬 Pedidos / Carrinhos do Leilão</div>
       <div style="font-size:10.5px;color:var(--muted);margin-bottom:14px">Resumo de cada rodada arrematada, endereço de entrega, simulação de frete e o botão pra chamar o comprador no WhatsApp e combinar pagamento/envio.</div>
       <div id="leilao-admin-orders"></div>
+    </div>
+
+    <!-- 02/10/2026 — Participantes & Bloqueios (leilao_participantes.js): quem está
+         bloqueado e quem não, com botões de bloquear/liberar. Só leiloeiro. -->
+    <div id="leilao-sub-participantes" style="display:none">
+      <div class="sec-title" style="margin-top:0">🚫 Participantes &amp; Bloqueios</div>
+      <div class="mkt-note">
+        Todo mundo que já deu lance (ou tem pedido) no Leilão. <b>Bloqueado</b> = não consegue dar lance até você liberar.
+        O sistema bloqueia sozinho quem deixa o pagamento vencer; aqui você também pode bloquear ou liberar manualmente.
+        Pedidos vencidos contam só os seus (o admin principal vê todos).
+      </div>
+      <div class="kpi-grid" id="leilao-part-kpis" style="margin-top:12px"></div>
+      <div id="leilao-part-filters"></div>
+      <div id="leilao-part-list"></div>
     </div>
 
     <div id="leilao-sub-analises" style="display:none">
@@ -1933,28 +1987,25 @@
 <!-- Auth mosaic generator -->
 <script>
 (function(){
-  const sets=[
-    ['me4',100,122],['me3',100,120],['me2',100,130]
-  ];
-  const cards=[];
-  sets.forEach(([s,a,b])=>{for(let n=a;n<=b;n++) cards.push(`${s}-${n}`);});
+  // PERFORMANCE 03/10/2026: antes eram 40 <img> do scrydex (~51 KB cada, ≈2 MB) que baixavam toda vez que o
+  // fundo da tela de login aparecia. Agora recortam o MESMO sprite do mosaico do app (mosaic-sprite.webp, já
+  // baixado): 12 colunas x 6 linhas de tiles; background-size em % acompanha a célula fluida da grade.
+  const SPR_COLS=12, SPR_ROWS=6, SPR_TILES=SPR_COLS*SPR_ROWS;
+  const tiles=[];
+  for(let i=0;i<SPR_TILES;i++) tiles.push(i);
   // shuffle
-  for(let i=cards.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cards[i],cards[j]]=[cards[j],cards[i]];}
+  for(let i=tiles.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[tiles[i],tiles[j]]=[tiles[j],tiles[i]];}
   const mosaic=document.getElementById('auth-mosaic');
   if(!mosaic) return;
   const N=40;
   for(let i=0;i<N;i++){
-    const card=cards[i%cards.length];
+    const t=tiles[i%tiles.length];
+    const px=((t%SPR_COLS)/(SPR_COLS-1)*100).toFixed(3);
+    const py=(Math.floor(t/SPR_COLS)/(SPR_ROWS-1)*100).toFixed(3);
     const delay=(Math.random()*10).toFixed(2);
     const dur=(5+Math.random()*7).toFixed(2);
     const div=document.createElement('div');
-    div.style.cssText=`border-radius:10px;overflow:hidden;aspect-ratio:2.5/3.5;animation:cardFloat ${dur}s ease-in-out ${delay}s infinite alternate;`;
-    const img=document.createElement('img');
-    img.src=`https://images.scrydex.com/pokemon/${card}/small`;
-    img.loading='lazy';
-    img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;';
-    img.onerror=function(){this.parentElement.style.background='#0d0f1a';this.remove();};
-    div.appendChild(img);
+    div.style.cssText=`border-radius:10px;overflow:hidden;aspect-ratio:2.5/3.5;background:#0d0f1a url(mosaic-sprite.webp) ${px}% ${py}%/${SPR_COLS*100}% ${SPR_ROWS*100}% no-repeat;animation:cardFloat ${dur}s ease-in-out ${delay}s infinite alternate;`;
     mosaic.appendChild(div);
   }
 })();
@@ -1966,11 +2017,9 @@
   const container=document.getElementById('app-mosaic');
   if(!container) return;
 
-  const SETS=[
-    ['me4',100,122],['me3',100,120],['me2',100,130],
-    ['me4',1,50],   ['me3',1,50],   ['me2',1,50],
-    ['me4',51,99],  ['me3',51,99],
-  ];
+  // Sprite (mosaic-sprite.webp): SPRITE_COLS x (SPRITE_TILES/SPRITE_COLS) tiles — mesmas
+  // constantes de scripts/build_mosaic_sprite.js. Cada linha embaralha os 72 tiles.
+  const SPRITE_COLS=12, SPRITE_TILES=72, TILE_W=32, TILE_H=44;
   // MELHORIA 20/08/2026: linhas cobrindo a tela inteira (antes eram 8 fixas,
   // que só preenchiam uma faixa no topo). Calculado a partir da altura real
   // da viewport — reaproveita os mesmos pools de cartas via SETS[si%SETS.length],
@@ -1981,9 +2030,8 @@
   const PAUSE_DISTANCE=120; // px — distância do mouse para pausar
 
   function makePool(si){
-    const[s,a,b]=SETS[si%SETS.length];
     const pool=[];
-    for(let n=a;n<=b;n++) pool.push(`${s}-${n}`);
+    for(let n=0;n<SPRITE_TILES;n++) pool.push(n);
     // shuffle
     for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
     return pool;
@@ -1999,14 +2047,13 @@
     // Para scrollRight começa em -50%→0, também sem offset extra (o keyframe cuida)
 
     // Imagens: triplicar para loop suave em telas largas
-    const pool=makePool(i).slice(0,24); // pool enxuto: menos requests
-    const imgs=[...pool,...pool];
-    imgs.forEach(card=>{
-      const img=document.createElement('img');
-      img.src=`https://images.scrydex.com/pokemon/${card}/small`;
-      img.loading='lazy';
-      img.onerror=function(){this.remove();};
-      row.appendChild(img);
+    const pool=makePool(i).slice(0,24);
+    const tiles=[...pool,...pool]; // duplica pro loop suave em telas largas
+    tiles.forEach(t=>{
+      const c=document.createElement('div');
+      c.className='amcard';
+      c.style.backgroundPosition=`-${(t%SPRITE_COLS)*TILE_W}px -${Math.floor(t/SPRITE_COLS)*TILE_H}px`;
+      row.appendChild(c);
     });
     container.appendChild(row);
   }
@@ -2031,9 +2078,27 @@
 <!-- Supabase JS v2 — deve vir ANTES de app.js -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- QRCode.js — usado no botão Compartilhar do Fichário -->
-<script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
 <!-- jsPDF (12/08/2026): usado só pelo botão "PDF" de compartilhar leilão (leilao.js) — monta um PDF com a foto da carta + o texto padrão do leilão. -->
-<script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script>
+// PERFORMANCE 03/10/2026: o jsPDF (356 KB) só serve pro botão "PDF" do leilão — carrega só quando alguém clica.
+window.loadJsPdf=function(){
+  if(window.jspdf)return Promise.resolve();
+  if(!window._jspdfP){
+    window._jspdfP=new Promise(function(res,rej){
+      var s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+      s.onload=function(){res();};
+      s.onerror=function(){window._jspdfP=null;rej(new Error('jspdf'));};
+      document.head.appendChild(s);
+    });
+  }
+  return window._jspdfP;
+};
+</script>
+<script defer src="cards_cel30.js"></script>
+<script defer src="cards_cel30_jp.js"></script>
+<script defer src="cards_cel30_cn.js"></script>
 <script defer src="cards_me06.js"></script>
 <script defer src="cards_me2pt5.js"></script>
 <script defer src="cards_me05.js"></script>
@@ -2096,6 +2161,11 @@
      Precisa carregar ANTES do leilao.js. -->
 <script defer src="frete.js"></script>
 <script defer src="leilao.js"></script>
+<!-- 02/10/2026: aba Participantes & Bloqueios do Leilão -->
+<script defer src="leilao_participantes.js"></script>
+<!-- notificacoes.js (02/10/2026): sino + aviso ao vivo; usa aucPendingOpenId
+     do leilao.js, por isso carrega DEPOIS dele. -->
+<script defer src="notificacoes.js"></script>
 <!-- rifa.js (24/08/2026): aba de Rifas, reaproveita estado/funções globais do
      leilao.js (aucIsLeilaoAdmin, compressAuctionPhoto, uploadAuctionPhotos,
      etc.) — por isso precisa carregar DEPOIS dele. -->

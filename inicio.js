@@ -387,9 +387,14 @@ function inicioRenderFeedPage() {
 
     // Registra visualização (1x por usuário) só das notícias que acabaram de
     // entrar na tela — silencioso, admin lê a soma via fn_news_view_counts.
-    slice.filter(function (it) { return it.kind === 'news'; }).forEach(function (it) {
-      sbClient.rpc('fn_register_news_view', { p_news_id: it.row.id }).then(function () {}, function () {});
-    });
+    // 03/10/2026: só logado. A função já ignorava visitante (auth.uid() nulo => return), então cada
+    // notícia na tela gerava 1 requisição inútil por visita anônima — e agora visitante nem tem
+    // permissão de executar essa RPC (revisão das funções abertas do banco).
+    if (typeof uid === 'function' && uid()) {
+      slice.filter(function (it) { return it.kind === 'news'; }).forEach(function (it) {
+        sbClient.rpc('fn_register_news_view', { p_news_id: it.row.id }).then(function () {}, function () {});
+      });
+    }
 
     INICIO_FEED_RENDERED += slice.length;
     const sentinel = document.getElementById('inicio-feed-sentinel');

@@ -307,14 +307,108 @@ if(sbClient){
 }
 
 // ── IMAGENS ──────────────────────────────────────────────────────
-function imgMe04(n){return`https://images.scrydex.com/pokemon/me4-${parseInt(n)}/large`;}
+// me04: 04/10/2026 — mesmo padrão do me05/me2pt5 (arte por idioma, tcgdex slug "me04"; jp = `img` da carta,
+// set JP M4 "Ninja Spinner", 3 cartas vêm do MP — ver cards_me04.js). Aceita `n` OU a carta inteira; sem
+// `lang` cai no scrydex EN de antes (chamadores genéricos, hero card, etc.).
+function imgMe04(nOrCard,lang){
+  const isCard=nOrCard&&typeof nOrCard==='object';
+  const n=isCard?nOrCard.n:nOrCard;
+  if(lang==='jp')return(isCard&&nOrCard.img)||'';
+  if(lang==='pt'||lang==='en'){
+    return`https://assets.tcgdex.net/${lang}/me/me04/${String(parseInt(n,10)).padStart(3,'0')}/high.png`;
+  }
+  return`https://images.scrydex.com/pokemon/me4-${parseInt(n)}/large`;
+}
 function imgMe03(n){return`https://images.scrydex.com/pokemon/me3-${parseInt(n)}/large`;}
 function imgMe02(n){return`https://images.scrydex.com/pokemon/me2-${parseInt(n)}/large`;}
-function imgMe05(n){return`https://images.scrydex.com/pokemon/me5-${parseInt(n)}/large`;}
+// me05: 03/10/2026 — mesma estrutura do me2pt5 (arte por idioma, tcgdex slug "me05"):
+// pt = arte em português da Copag, en = arte americana, jp = URL pronta no campo `img`
+// da carta (limitlesstcg, set JP M5; 3 cartas vêm do set MP — ver cards_me05.js).
+// Aceita `n` OU a carta inteira (chamadores genéricos só têm o número). Sem `lang`
+// cai no scrydex EN de antes, que é o que os chamadores sem idioma já usavam.
+function imgMe05(nOrCard,lang){
+  const isCard=nOrCard&&typeof nOrCard==='object';
+  const n=isCard?nOrCard.n:nOrCard;
+  if(lang==='jp')return(isCard&&nOrCard.img)||'';
+  if(lang==='pt'||lang==='en'){
+    return`https://assets.tcgdex.net/${lang}/me/me05/${String(parseInt(n,10)).padStart(3,'0')}/high.png`;
+  }
+  return`https://images.scrydex.com/pokemon/me5-${parseInt(n)}/large`;
+}
 function imgMe06(n){return`https://images.scrydex.com/pokemon/me6-${parseInt(n)}/large`;}
-// me2pt5: slug confirmado direto na resposta da api.pokemontcg.io (campo images.large
-// de cada carta), diferente do padrão "me5-N" dos outros ME — aqui é "me2pt5-N" mesmo.
-function imgMe2pt5(n){return`https://images.scrydex.com/pokemon/me2pt5-${parseInt(n)}/large`;}
+// me2pt5: CORRIGIDO 01/10/2026 (pedido do Eduardo: "fichário em português
+// mostrando foto em inglês") — trocado de scrydex (sem idioma, só arte EN)
+// pra tcgdex, que cataloga este set ("me02.5") com arte própria por idioma.
+// `lang` segue o mesmo padrão de imgCel30: 'en' pega a arte americana,
+// qualquer outra coisa (undefined incluso) cai em português — não precisa
+// de capitalização nem fallback especial porque tcgdex já usa esses 2
+// códigos exatamente (pt/en), confirmado card a card nesta sessão.
+// JAPONÊS (01/10/2026): Ascended Heroes NÃO tem set japonês próprio — é uma
+// compilação de 27 (!) lançamentos JP diferentes (confirmado carta a carta
+// via limitlesstcg.com/cards/ASC, campo "JP. Prints"), cada carta com seu
+// próprio set/número de origem. Por isso, ao contrário de pt/en (onde a URL
+// é sempre calculável só com `n`), jp precisa da carta inteira — guarda a
+// URL pronta no campo `img` (hotlink direto no CDN do limitlesstcg, mesmo
+// provedor do cel30jp). Aceita `n` OU a carta completa no 1º parâmetro
+// pra não quebrar os 2 chamadores genéricos que só têm o número
+// (hero card e fallback de imgFn — nenhum dos dois pede jp).
+function imgMe2pt5(nOrCard,lang){
+  if(lang==='jp'){
+    return(nOrCard&&typeof nOrCard==='object'&&nOrCard.img)||'';
+  }
+  const l=lang==='en'?'en':'pt';
+  const n=(nOrCard&&typeof nOrCard==='object')?nOrCard.n:nOrCard;
+  const id=String(parseInt(n,10)).padStart(3,'0');
+  return`https://assets.tcgdex.net/${l}/me/me02.5/${id}/high.png`;
+}
+// cel30: sem entrada no scrydex (set novo) — hotlink direto no CDN do
+// limitlesstcg.com/cards/30C (conferido 30/09/2026: padrao
+// 30C_<codigo>_R_EN_LG.png). Cartas normais/secretas usam o numero com 3
+// digitos (001, 023, 158); RGB usa a letra sozinha (G/R/B); a Coleção
+// Clássica guarda no `n` o codigo ORIGINAL do set de origem (ex "4/102"),
+// que não é o que o limitlesstcg usa na URL — por isso o mapa CEL30_CC_IMG
+// (mesmo mapeamento nome<->CC-index conferido na correção de 30/09/2026).
+const CEL30_CC_IMG={
+  '4/102':'CC2','5/109':'CC8','11/113':'CC11','11/101':'CC20','18/132':'CC3',
+  '19/109':'CC9','25/111':'CC5','33/181':'CC25','41/122':'CC22','43/146':'CC13',
+  '47/127':'CC14','050/185':'CC27','57/111':'CC24','58/102':'CC1','69/132':'CC4',
+  '85/124':'CC19','89/149':'CC23','94/102':'CC15','99/102':'CC16','100/102':'CC17',
+  '101/101':'CC18','106/106':'CC12','106/160':'CC21','106/105':'CC6','108/115':'CC10',
+  '114/264':'CC28','123/172':'CC29','138/202':'CC26','149/147':'CC7','203/193':'CC30',
+};
+// lang (30/09/2026, seletor de idioma do Fichário): 'pt'|'en'|'de'|'fr'|'es'|'it'
+// — os 6 confirmados no mesmo CDN pra este set (30C_<codigo>_R_<LANG>_LG.png,
+// todos retornam 200). Japonês/Chinês NÃO seguem este padrão — são sets com
+// numeração própria (M6a/30thC), ainda não integrados.
+function imgCel30(n,lang){
+  const l=(lang||'en').toUpperCase();
+  // CORRIGIDO 01/10/2026 (pedido do Eduardo: "procure as artes das
+  // energias") — as 8 Energias Básicas (MEE 009-016) NÃO pertencem ao set
+  // "30C" no limitlesstcg, têm catálogo próprio "MEE" (Mega Evolution
+  // Energy — set perene reaproveitado em vários produtos, #9-16 são a
+  // versão ilustrada por YOSHIROTTEN usada no 30th Celebration). Mesmo CDN,
+  // pasta/set diferente, número com 3 dígitos (ex "MEE 009" -> "009").
+  if(/^MEE/.test(n)){
+    const num=n.replace(/\D/g,'').padStart(3,'0');
+    return`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEE/MEE_${num}_R_${l}_LG.png`;
+  }
+  let code;
+  if(CEL30_CC_IMG[n]) code=CEL30_CC_IMG[n];
+  else if(n==='R/RGB') code='R';
+  else if(n==='G/RGB') code='G';
+  else if(n==='B/RGB') code='B';
+  else code=String(parseInt(n)).padStart(3,'0');
+  return`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/30C/30C_${code}_R_${l}_LG.png`;
+}
+// cel30jp: set japones M6a (checklist DIFERENTE do cel30, nao e so tradução
+// — ver cards_cel30_jp.js). CDN confirmado 30/09/2026: mesmo provedor do
+// EN, mas pasta "tpc" (nao "tpci") e set "M6a" — numeros 001-103 e as 8
+// letras de energia G/R/W/L/P/F/D/M usam o proprio `n` sem padding (o CDN já
+// aceita "1" solto, sem zero à esquerda, testado).
+function imgCel30Jp(n){
+  const code=/^\d+$/.test(n)?parseInt(n,10):n;
+  return`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpc/M6a/M6a_${code}_R_JP_LG.png`;
+}
 function imgMeg(n) {return`https://images.scrydex.com/pokemon/me1-${parseInt(n)}/large`;}
 // LOGO DA COLEÇÃO (12/08/2026) — pedido do Eduardo: mostrar a arte oficial de
 // cada set em vez do código (ME06/SV10/etc). Confirmado na doc pública da
@@ -434,8 +528,8 @@ function getCardImg(card){
 function imgAltUrl(setId,n){
   const num=parseInt(n,10);const safe=isNaN(num)?n:num;
   const map={
-    // não confirmado se tcgdex já cataloga este set sob este slug — best-effort
-    me2pt5:`https://assets.tcgdex.net/en/me/me2pt5/${safe}/high.png`,
+    // slug confirmado 01/10/2026: "me02.5" (não "me2pt5") — ver imgMe2pt5()
+    me2pt5:`https://assets.tcgdex.net/en/me/me02.5/${safe}/high.png`,
     me05:`https://assets.tcgdex.net/en/me/me05/${safe}/high.png`,
     me06:`https://assets.tcgdex.net/en/me/me06/${safe}/high.png`,
     me04:`https://assets.tcgdex.net/en/me/me04/${safe}/high.png`,
@@ -473,17 +567,35 @@ function handleCardImgError(img,setId,n){
   img.style.display='none';
   if(img.nextElementSibling)img.nextElementSibling.style.display='flex';
 }
-function getBinderImg(c,setId){
+function getBinderImg(c,setId,lang){
+  // CORRIGIDO 30/09/2026: cel30 não estava nesta lista — como o `n` das
+  // cartas dele não é numérico puro (RGB, "4/102" da Coleção Clássica, "MEE
+  // 009" das energias), a função caía direto no fallback genérico do fim
+  // (imgMe04, Caos Ascendente) pra TODAS as cartas do set, sem nem tentar o
+  // parseInt(c.n) reportado pelo Eduardo ("fotos buscando de caos
+  // ascendente em vez da coleção de 30 anos"). imgCel30() já faz seu
+  // próprio parsing (número com 3 dígitos / índice CC / letra RGB), então
+  // entra antes do parseInt(c.n) genérico abaixo. `lang` (piloto do seletor
+  // de idioma do Fichário) só é usado aqui — os outros sets nem têm arte
+  // multi-idioma ainda.
+  if(setId==='cel30') return imgCel30(c.n,lang);
+  // cel30jp/cel30cn: checklists PRÓPRIOS (não são o cel30 traduzido — ver
+  // cards_cel30_jp.js/cards_cel30_cn.js). cel30cn já guarda a URL da arte
+  // em c.img (hotlink direto no pokipair.com, único checklist chinês achado
+  // — limitlesstcg não cataloga simplificado); cel30jp usa o CDN do
+  // limitlesstcg como o EN, só que na pasta/set M6a.
+  if(setId==='cel30jp') return imgCel30Jp(c.n);
+  if(setId==='cel30cn') return c.img||'';
   const n=parseInt(c.n);
-  if(setId==='me2pt5') return imgMe2pt5(n);
+  if(setId==='me2pt5') return imgMe2pt5(c,lang);
   if(setId==='me06') return imgMe06(n);
-  if(setId==='me05') return imgMe05(n);
+  if(setId==='me05') return imgMe05(c,lang);
   if(setId==='me03') return imgMe03(n);
   if(setId==='me02') return imgMe02(n);
   if(setId==='meg')  return imgMeg(n);
   if(setId==='mep')  return imgMep(n);
   // svp usa o fallback genérico sv* logo abaixo (pokemontcg.io CDN)
-  if(setId==='me04') return imgMe04(n);
+  if(setId==='me04') return imgMe04(c,lang);
   // Raio Preto (Black Bolt) e Fogo Branco (White Flare) — EV10.5, jul/2025.
   // Adicionados 19/08/2026 (indicação de usuário). IDs oficiais pokemontcg.io
   // (zsv10pt5/rsv10pt5) não começam com "sv" — não caem no fallback genérico
@@ -528,7 +640,7 @@ setInterval(()=>{ if(document.visibilityState==='visible') fetchCambio(); }, 30*
 
 // ── PREÇOS AO VIVO (TCGDex — CardMarket EUR + TCGPlayer USD) ─────
 const TCGDX={
-  me04:'me04',me03:'me03',me02:'me02',meg:'me01',mep:'mep',
+  me2pt5:'me02.5',me04:'me04',me03:'me03',me02:'me02',meg:'me01',mep:'mep',
   sv1:'sv1',sv2:'sv2',sv3:'sv3',sv3pt5:'sv3pt5',sv4:'sv4',sv4pt5:'sv4pt5',
   sv5:'sv5',sv6:'sv6',sv6pt5:'sv6pt5',sv7:'sv7',sv8:'sv8',sv8pt5:'sv8pt5',
   sv9:'sv9',sv10:'sv10',
@@ -598,12 +710,35 @@ let purchases=[],pulledCards=[],collected=new Set(),collectedQty=new Map(),value
 // CORRIGIDO 18/08/2026: N era #c8cfe8, quase igual a var(--border) — ver
 // mesma correção em VERSIONS (fichario_patch.js).
 const VER_COLOR={N:'#7c5cff',F:'#118ab2',RH:'#06d6a0',SP:'#ff6b35'};
-const VER_LABEL={N:'Normal',F:'Foil',RH:'Reverse Holo',SP:'Especial'};
-const VER_SHORT={N:'N',F:'F',RH:'RH',SP:'★'};
+const VER_LABEL={N:'Normal',F:'Foil',RH:'Reverse Holo',RH2:'Reverse Holo (Bola)',SP:'Especial'};
+const VER_SHORT={N:'N',F:'F',RH:'RH',RH2:'RH2',SP:'★'};
 
 function getSlots(c,setId){
   const r=c.rare||'';
   if(!c.base) return [{ver:'SP',price:c.price}];
+  // ME2.5(ASC) — Heróis Excelsos (01/10/2026, confirmado via tcgdex
+  // variants_detailed + cruzado contra ninthpocket.com/sets/ascended-heroes
+  // e binderforge.com, que batem no mesmo número: 140 cartas): diferente de
+  // QUALQUER outro set ME/SV já catalogado aqui, toda carta Pokémon
+  // Comum/Incomum/Rara nasce com DOIS reverse holo distintos (Energia +
+  // um padrão de bola/Equipe Rocket), não um só — por isso o 3º slot 'RH2'
+  // aqui, exclusivo deste set. Treinador/Energia (38 cartas, mesma faixa de
+  // raridade) continuam com só 1 reverse — tratamento genérico mais abaixo,
+  // sem mudança. Rara Dupla (ex) e secretas (218+) não entram aqui (já
+  // retornam antes: base:false acima, 'Dupla' logo abaixo).
+  if(setId==='me2pt5'&&c.category!=='Treinador'&&c.category!=='Energia'&&(r==='Comum'||r==='Incomum'||r==='Rara')){
+    if(r==='Rara') return [{ver:'F',price:c.price},{ver:'RH',price:c.priceRH||null},{ver:'RH2',price:null}];
+    return [{ver:'N',price:c.price},{ver:'RH',price:c.priceRH||null},{ver:'RH2',price:null}];
+  }
+  // CORRIGIDO 01/10/2026 (pedido do Eduardo, confirmado contra
+  // tcgplayer.com/content/article/Collector-s-Guide-to-Pokémon-TCG-30th-Celebration):
+  // o set 30th Celebration (cel30/cel30jp/cel30cn) é "all-foil" — TODA carta
+  // da base, até as Comuns, nasce só em foil, sem reverse holo nem versão
+  // normal. Sem este caso especial, Comum/Rara/Rara Ilustrada desse set
+  // caíam nos ramos genéricos mais abaixo (N+RH ou F+RH), pedindo uma 2ª
+  // versão que não existe fisicamente. JP/CN assumidos iguais (mesmo
+  // gimmick do produto, não confirmado 1:1 fora do set em inglês).
+  if(setId==='cel30'||setId==='cel30jp'||setId==='cel30cn') return [{ver:'F',price:c.price}];
   if(r.includes('Dupla')||r.includes('RR')) return [{ver:'F',price:c.price}];
   // Raridade "Rara" nos sets modernos (ME/SV): a impressão padrão já nasce holo,
   // mas mantemos o slot "N" mesmo assim — remover ele em 09/07/2026 órfãou os
@@ -1283,9 +1418,10 @@ const GEN1=[
 
 // ── PROGRESS ────────────────────────────────────────────────────
 const SET_META={
+  cel30:{label:'🎉 CEL30 — Celebração de 30 Anos',color:'#FFD700',chase:'Mew ex Ultra Rare — R$568,40',heroCard:'158',imgFn:imgCel30,releaseDate:'16/set/2026'},
   me06:{label:'💎 ME06 — Esmeralda Tempestuosa',color:'#00c853',chase:'Mega Rayquaza ex Gold — R$1.500 (est.)',heroCard:1,imgFn:imgMe06,upcoming:true,releaseDate:'out/2026'},
   me2pt5:{label:'🦸 ME2.5(ASC) — Heróis Excelsos',color:'#5C6BC0',chase:'Mega Charizard Y ex Hiper Rara Mega — preço a confirmar',heroCard:294,imgFn:imgMe2pt5,releaseDate:'30/jan/2026'},
-  me05:{label:'🌑 ME05(PBL) — Escuridão Absoluta',color:'#424242',chase:'Gladion\'s Showdown SAR — US$1.090',heroCard:118,imgFn:imgMe05,releaseDate:'17/jul/2026'},
+  me05:{label:'🌑 ME05(PBL) — Escuridão Absoluta',color:'#424242',chase:'Batalha Decisiva do Gladio SAR — US$1.090',heroCard:118,imgFn:imgMe05,releaseDate:'17/jul/2026'},
   me04:{label:'🔥 ME04(CRI) — Caos Ascendente',color:'var(--accent)',chase:'Mega Greninja ex Gold — R$1.482',heroCard:22,imgFn:imgMe04},
   me03:{label:'🔵 ME03(POR) — Equilíbrio Perfeito',color:'#1565C0',chase:'Meowth ex SAR — R$870 · Mega Zygarde ex Gold — R$775',heroCard:62,imgFn:imgMe03},
   me02:{label:'👻 ME02(PFL) — Fogo Fantasmagórico',color:'#9C27B0',chase:'Mega Charizard X ex SAR — R$1.809',heroCard:13,imgFn:imgMe02},
@@ -1293,6 +1429,7 @@ const SET_META={
   mep: {label:'⭐ MEP(MEP) — Parceiros Iniciais',color:'#ffd166',chase:'Charmander MEP038 — R$36',heroCard:38,imgFn:imgMep},
 };
 const SET_CARDS_MAP={
+  cel30:()=>typeof CARDS_CEL30!=='undefined'?CARDS_CEL30:[],
   me06:()=>typeof CARDS_ME06!=='undefined'?CARDS_ME06:[],
   me2pt5:()=>typeof CARDS_ME2PT5!=='undefined'?CARDS_ME2PT5:[],
   me05:()=>typeof CARDS_ME05!=='undefined'?CARDS_ME05:[],
@@ -1319,12 +1456,24 @@ const SET_CARDS_MAP={
   rsv10pt5:()=>typeof CARDS_RSV10PT5!=='undefined'?CARDS_RSV10PT5:[],
   svp:()=>typeof CARDS_SVP!=='undefined'?CARDS_SVP:[],
   pgo:()=>typeof CARDS_PGO!=='undefined'?CARDS_PGO:[],
+  cel30jp:()=>typeof CARDS_CEL30JP!=='undefined'?CARDS_CEL30JP:[],
+  cel30cn:()=>typeof CARDS_CEL30CN!=='undefined'?CARDS_CEL30CN:[],
 };
 // sets legados entram no mapa dinamicamente
 (window.LEGACY_SETS||[]).forEach(ls=>{if(!SET_CARDS_MAP[ls.id])SET_CARDS_MAP[ls.id]=()=>ls.data;});
 
 // ── CATÁLOGO DE COLEÇÕES ─────────────────────────────────────────
 const SET_CATALOG=[
+  // CORRIGIDO 01/10/2026 (pedido do Eduardo): cel30jp/cel30cn SAÍRAM daqui —
+  // antes apareciam como 2 entradas soltas no seletor "Meus Fichários",
+  // junto de cel30. Agora só existe UMA entrada (cel30) e JP/CN viram
+  // opções dentro do seletor de idioma do próprio fichário (PT/EN/JP/CN —
+  // ver setFicLang() em fichario_patch.js), que troca o array de cartas de
+  // verdade por baixo. Continuam existindo em SET_CARDS_MAP/getSetData()
+  // normalmente — só não têm mais entrada própria no catálogo visível.
+  // Padrão pensado pra repetir em futuras coleções multi-região, sem inchar
+  // a lista principal com 1 entrada a mais por idioma a cada lançamento.
+  {id:'cel30',label:'CEL30 — Celebração de 30 Anos',emoji:'🎉',cards:typeof CARDS_CEL30!=='undefined'?CARDS_CEL30.length:199,color:'#FFD700',series:'ME'},
   {id:'me06',label:'ME06 — Esmeralda Tempestuosa',emoji:'💎',cards:0,  color:'#00c853',series:'ME',upcoming:true},
   {id:'me2pt5',label:'ME2.5(ASC) — Heróis Excelsos', emoji:'🦸',cards:typeof CARDS_ME2PT5!=='undefined'?CARDS_ME2PT5.length:295,color:'#5C6BC0',series:'ME'},
   {id:'me05',label:'ME05(PBL) — Escuridão Absoluta', emoji:'🌑',cards:typeof CARDS_ME05!=='undefined'?CARDS_ME05.length:120,color:'#757575',series:'ME'},
@@ -1416,8 +1565,8 @@ function searchCardsByCode(raw, limit){
 
 function _loadMyCollections(){
   try{const v=JSON.parse(localStorage.getItem('myCollections'));
-    return Array.isArray(v)&&v.length?v:['me06','me2pt5','me05','me04','me03','me02','meg','mep'];}
-  catch(e){return['me06','me2pt5','me05','me04','me03','me02','meg','mep'];}
+    return Array.isArray(v)&&v.length?v:['cel30','me06','me2pt5','me05','me04','me03','me02','meg','mep'];}
+  catch(e){return['cel30','me06','me2pt5','me05','me04','me03','me02','meg','mep'];}
 }
 let myCollections=_loadMyCollections();
 function saveMyCollections(){try{localStorage.setItem('myCollections',JSON.stringify(myCollections));}catch(e){}}
@@ -1526,7 +1675,7 @@ function updateDashProgress(){
       return`<div class="panel panel-link" style="border-color:${color}44;overflow:hidden;position:relative;${meta.upcoming?'opacity:.8':''}" onclick="goToTab('fichario');switchSet('${id}',null)">
         ${upBadge}
         <div style="position:absolute;right:-8px;top:-8px;width:70px;height:100px;opacity:.1;pointer-events:none">
-          <img loading="lazy" decoding="async" alt="" src="${imgThumb(meta.imgFn(meta.heroCard))}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
+          <img loading="lazy" decoding="async" alt="" src="${imgThumb(meta.imgFn(meta.heroCard))}" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
           <div style="flex:1"><div style="font-weight:700;font-size:13px">${meta.label}</div>
@@ -2552,6 +2701,7 @@ function switchSet(id,el){
   if(binderCtrl)binderCtrl.style.display='';
   if(setInfo)setInfo.style.display='';
   if(bstats)bstats.style.display='';
+  if(typeof updateFicLangVisibility==='function')updateFicLangVisibility();
   renderBinder();
   const{cards:_sc}=getSetData();
   fetchLivePrices(id,_sc);
@@ -2562,6 +2712,23 @@ function getSetData(){
   const me06c=typeof CARDS_ME06!=='undefined'?CARDS_ME06:[];
   const me2pt5c=typeof CARDS_ME2PT5!=='undefined'?CARDS_ME2PT5:[];
   const map={
+    cel30:{cards:typeof CARDS_CEL30!=='undefined'?CARDS_CEL30:[],imgFn:imgCel30,label:'CEL30 — Celebração de 30 Anos',
+      // REORGANIZADO 01/10/2026 (pedido do Eduardo): antes era só Base/Resto —
+      // agora separa os 6 grupos reais do set. Pikachu Especial (30 cartas
+      // ilustradas, base:true mas rare='Rara Ilustrada') precisa vir ANTES do
+      // filtro de "Base" genérico pra não cair lá também (mutuamente exclusivos).
+      sections:[
+        {lbl:'📄 Base',                 filter:c=>c.base&&c.rare!=='Rara Ilustrada'},
+        {lbl:'⚡ Pikachu Especial',      filter:c=>c.base&&c.rare==='Rara Ilustrada'},
+        {lbl:'✨ Secretas — 129 a 158',  filter:c=>!c.base&&/^\d+$/.test(c.n)},
+        {lbl:'💎 Especial RGB (Mew)',    filter:c=>c.n==='R/RGB'||c.n==='G/RGB'||c.n==='B/RGB'},
+        {lbl:'🕰️ Coleção Clássica',      filter:c=>c.rare==='Coleção Clássica'},
+        {lbl:'🔋 Energias Básicas',      filter:c=>c.n.startsWith('MEE')},
+      ]},
+    cel30jp:{cards:typeof CARDS_CEL30JP!=='undefined'?CARDS_CEL30JP:[],imgFn:imgCel30Jp,label:'CEL30(JP) — 30th Celebration',
+      sections:[{lbl:'📄 Base — 001 a 103',filter:c=>c.base},{lbl:'✨ Coleção Clássica e Energias',filter:c=>!c.base}]},
+    cel30cn:{cards:typeof CARDS_CEL30CN!=='undefined'?CARDS_CEL30CN:[],label:'CEL30(CN) — 30周年庆典',
+      sections:[{lbl:'📄 Base — 001 a 103',filter:c=>c.base},{lbl:'✨ Secretas e Coleção Clássica',filter:c=>!c.base}]},
     me06:{cards:me06c,imgFn:imgMe06,label:'ME06 — Esmeralda Tempestuosa',upcoming:true,
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Secretas',filter:c=>!c.base}]},
     me2pt5:{cards:me2pt5c,imgFn:imgMe2pt5,label:'ME2.5(ASC) — Heróis Excelsos', // lançou 30/jan/2026
@@ -3257,7 +3424,7 @@ const BINDER_PRESETS=[
   {key:'tipo_metal',      name:'Aço Inabalável',      emoji:'🤖',desc:'Cartas de tipo Metal',               filter:c=>c.type==='Metal',                          color:'#8d96b5'},
 ];
 
-const IMG_FNS={me04:imgMe04,me03:imgMe03,me02:imgMe02,meg:imgMeg,mep:imgMep,me05:imgMe05,me06:imgMe06,me2pt5:imgMe2pt5};
+const IMG_FNS={me04:imgMe04,me03:imgMe03,me02:imgMe02,meg:imgMeg,mep:imgMep,me05:imgMe05,me06:imgMe06,me2pt5:imgMe2pt5,cel30:imgCel30};
 const CB_SET_LABELS={
   me04:'🔥 ME04(CRI) — Caos Ascendente',
   me03:'🔵 ME03(POR) — Equilíbrio Perfeito',
@@ -4405,7 +4572,7 @@ function renderSharedCustomBinder(cardIds, binderName){
   const bstats=document.getElementById('binder-stats');
   if(bstats){
     bstats.style.display='flex';
-    bstats.innerHTML=`<div><div class="bsv" style="color:var(--purple)">${binderName}</div><div class="bsl">Fichário compartilhado</div></div>
+    bstats.innerHTML=`<div><div class="bsv" style="color:var(--purple)">${esc(binderName)}</div><div class="bsl">Fichário compartilhado</div></div>
       <div><div class="bsv">${pct}%</div><div class="bsl">Coletado</div></div>
       <div><div class="bsv">${got}/${total}</div><div class="bsl">Slots</div></div>`;
   }

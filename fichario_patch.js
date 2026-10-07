@@ -31,6 +31,11 @@ const VERSIONS = [
   { code: 'F',  label: 'Foil/Holo',   color: '#118ab2', bg: 'rgba(17,138,178,.15)'  },
   { code: 'RH', label: 'Reverse Holo', color: '#06d6a0', bg: 'rgba(6,214,160,.15)'   },
   { code: 'SP', label: 'Especial',     color: '#ff6b35', bg: 'rgba(255,107,53,.15)'  },
+  // 01/10/2026 — exclusivo da ME2.5(ASC): 2ª variante de reverse holo
+  // (padrão Poké Bola/Love Ball/etc ou carimbo Equipe Rocket, varia por
+  // carta — ver getSlots() em app.js). slotBadge() caía no fallback
+  // genérico (VERSIONS[3], laranja de "Especial") sem este registro.
+  { code: 'RH2', label: 'Reverse Holo (2ª variante)', color: '#ef476f', bg: 'rgba(239,71,111,.15)' },
 ];
 
 /* ─────────────────────────────────────────────
@@ -142,6 +147,10 @@ function _badgeInk(hex) {
 ───────────────────────────────────────────── */
 let ficViewMode   = 'grid'; // 'grid' | 'binder'
 let ficBinderSize = 3;      // 2, 3 ou 4
+// Idioma de exibição (30/09/2026, piloto cel30) — troca nome/arte/preço
+// exibidos por carta; NÃO afeta a coleção rastreada nem os totais em R$
+// (dashboard/gastos continuam em cima de c.price, igual sempre foi).
+let ficLang = localStorage.getItem('ficLang') || 'pt';
 
 // Camada de enriquecimento: qty > 1 e origens (localStorage only)
 // A fonte de verdade de "tem/não tem" é o `collected` Set do app.js
@@ -274,15 +283,23 @@ function getSetLabel() {
   }[currentSet] || currentSet.toUpperCase();
 }
 
-function imgUrl(n, setId) {
+function imgUrl(n, setId, card) {
   // CORRIGIDO 29/07/2026: aceita setId opcional (2º parâmetro) — necessário pra
   // fichário personalizado/fixado, que mistura cartas de vários sets ao mesmo
   // tempo e não pode depender só do `currentSet` global. Sem o 2º argumento,
   // comportamento 100% igual a antes (usa currentSet).
   const sid = setId || currentSet;
-  // Delega para getBinderImg do app.js quando disponível (cobre todos os sets)
+  // CORRIGIDO 01/10/2026: bug real por trás do "chinês com imagem preta" que
+  // sobreviveu ao fix de referrerpolicy — este helper só repassava {n} (sem
+  // o resto da carta) pro getBinderImg(). Isso é inofensivo pros sets que
+  // calculam a URL só a partir do número (imgCel30Jp, scrydex, etc.), mas
+  // cel30cn GUARDA a URL pronta no próprio campo `img` da carta (não dá pra
+  // calcular só com `n`) — então c.img vinha sempre undefined e a imagem
+  // nunca nem tentava carregar (não é hotlink, era um <img src=""> vazio).
+  // Agora os 4 chamadores passam a carta inteira (3º parâmetro opcional);
+  // sets que só precisam do número continuam funcionando igual (fallback {n}).
   if (typeof getBinderImg === 'function') {
-    return getBinderImg({ n }, sid);
+    return getBinderImg(card || { n }, sid, ficLang);
   }
   // Fallback inline (caso app.js ainda não tenha carregado)
   const num = parseInt(n, 10);
@@ -351,6 +368,110 @@ function setBinderSize(n, onRefresh, ids) {
     btn.style.fontWeight  = s === n ? '700' : '400';
   });
   if (typeof onRefresh === 'function') onRefresh(); else renderBinder();
+}
+
+// Sets da "família" cel30 — a única com seletor de idioma por enquanto.
+// PT/EN são troca de DISPLAY dentro do MESMO array (cel30 — mesma carta,
+// mesma numeração). JP/CN são checklists DIFERENTES (cards_cel30_jp.js/
+// cards_cel30_cn.js — numeração, contagem e até seleção de Pokémon
+// própria), então "escolher idioma" ali precisa trocar o currentSet de
+// verdade (via switchSet), não só re-renderizar com outro campo.
+// 01/10/2026 (pedido do Eduardo): JP/CN deixaram de ser coleções soltas no
+// catálogo (cel30jp/cel30cn removidos de SET_CATALOG em app.js) — agora só
+// aparecem aqui, dentro do seletor de idioma da coleção "Celebração de 30
+// Anos", pra não inchar a lista principal a cada idioma de cada coleção
+// futura parecida.
+const FIC_LANG_REGION_SET = { jp: 'cel30jp', cn: 'cel30cn' };
+// SWITCH_FAMILY: só o cel30 precisa trocar de `setId` pra mostrar jp/cn,
+// porque lá são checklists DIFERENTES (cel30jp/cel30cn têm suas próprias
+// cards_*.js, numeração e contagem). Sets novos (01/10/2026, começando pela
+// ME2.5) guardam nameJp/img direto na MESMA carta — não precisam trocar de
+// set, só o idioma exibido (ver LANG_SETS logo abaixo).
+const FIC_LANG_SWITCH_FAMILY = ['cel30', 'cel30jp', 'cel30cn'];
+// Quais idiomas cada set mostra no seletor, e em que ordem os botões ficam
+// visíveis. Sets fora deste mapa não mostram o controle (comportamento
+// anterior, zero mudança pro resto do catálogo).
+const FIC_LANG_SETS = {
+  cel30: ['pt', 'en', 'jp', 'cn'], cel30jp: ['pt', 'en', 'jp', 'cn'], cel30cn: ['pt', 'en', 'jp', 'cn'],
+  // ME2.5(ASC): sem chinês confirmado ainda (ver header de cards_me2pt5.js)
+  me2pt5: ['pt', 'en', 'jp'],
+  // ME05(PBL): JP resolvido carta a carta (limitlesstcg, ver header de cards_me05.js); sem chinês
+  // (a série Megaevolução chinesa ainda não tem set principal).
+  me05: ['pt', 'en', 'jp'],
+  // ME04(CRI): idem (JP via limitlesstcg, ver header de cards_me04.js); sem chinês
+  me04: ['pt', 'en', 'jp'],
+};
+
+function setFicLang(lang, onRefresh, ids) {
+  const regionSet = FIC_LANG_SWITCH_FAMILY.includes(currentSet) ? FIC_LANG_REGION_SET[lang] : null;
+  if (regionSet) {
+    // JP/CN não têm conceito de EN separado — PT é sempre o texto exibido
+    // (os arquivos já trazem name em português; nameEn é só metadado).
+    ficLang = 'pt';
+    try { localStorage.setItem('ficLang', 'pt'); } catch (e) {}
+    if (typeof switchSet === 'function') switchSet(regionSet);
+    syncFicLangButtons(ids);
+    return;
+  }
+  // pt/en: precisa estar no array compartilhado (cel30) — se o usuário
+  // estava em cel30jp/cel30cn, troca de volta antes de só mudar o display.
+  if ((currentSet === 'cel30jp' || currentSet === 'cel30cn') && typeof switchSet === 'function') {
+    switchSet('cel30');
+  }
+  ficLang = lang;
+  try { localStorage.setItem('ficLang', lang); } catch (e) {}
+  syncFicLangButtons(ids);
+  if (typeof onRefresh === 'function') onRefresh(); else renderBinder();
+}
+
+function syncFicLangButtons(ids) {
+  const idOf = {
+    pt: (ids && ids.pt) || 'fic-lang-pt',
+    en: (ids && ids.en) || 'fic-lang-en',
+    jp: (ids && ids.jp) || 'fic-lang-jp',
+    cn: (ids && ids.cn) || 'fic-lang-cn',
+  };
+  const active = currentSet === 'cel30jp' ? 'jp' : currentSet === 'cel30cn' ? 'cn' : ficLang;
+  const supported = FIC_LANG_SETS[currentSet] || ['pt', 'en', 'jp', 'cn'];
+  Object.entries(idOf).forEach(([key, id]) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.classList.toggle('active', key === active);
+    // esconde botão de idioma que este set não tem ainda (ex: CN na
+    // ME2.5) — evita mostrar um idioma que só cai no fallback PT silencioso
+    btn.style.display = supported.includes(key) ? '' : 'none';
+  });
+}
+
+// Mostra/esconde o seletor de idioma — só aparece pros sets cadastrados em
+// FIC_LANG_SETS (cada um com seus próprios idiomas suportados). Chamado por
+// switchSet() (app.js) toda vez que troca de coleção.
+function updateFicLangVisibility() {
+  const ctrl = document.getElementById('fic-lang-controls');
+  if (!ctrl) return;
+  const supported = FIC_LANG_SETS[currentSet];
+  ctrl.style.display = supported ? 'flex' : 'none';
+  if (supported) syncFicLangButtons();
+}
+
+// Nome/preço exibidos de acordo com ficLang — cai no PT/BRL padrão quando a
+// carta não tem tradução (todo o resto do catálogo, por enquanto).
+function cardI18n(c, lang) {
+  const l = lang || ficLang;
+  if (l === 'en') {
+    return {
+      name: c.nameEn || c.name,
+      price: c.priceUsd != null ? c.priceUsd : c.price,
+      symbol: c.priceUsd != null ? '$' : 'R$',
+    };
+  }
+  // 01/10/2026 — jp/cn genéricos (fora da família cel30, que já guarda o
+  // nome certo direto em `name`): troca só o nome exibido, preço continua
+  // em R$ igual ao PT (nenhuma das duas tem fonte de mercado própria ainda
+  // pros sets que não são o cel30).
+  if (l === 'jp') return { name: c.nameJp || c.nameEn || c.name, price: c.price, symbol: 'R$' };
+  if (l === 'cn') return { name: c.nameCn || c.name, price: c.price, symbol: 'R$' };
+  return { name: c.name, price: c.price, symbol: 'R$' };
 }
 
 /* ─────────────────────────────────────────────
@@ -502,6 +623,7 @@ function renderFicDashboard(cards) {
 // abaixo (fichário oficial) e por openCustomBinderView em app.js (fichário
 // personalizado/fixado) — os dois produzem exatamente o mesmo HTML/CSS agora.
 function ficCardHtml(c, setId) {
+  const lc = cardI18n(c, ficLang);
   const slots  = getSlots(c, setId);
   const vers   = slots.map(s => s.ver);
   const allCol = vers.every(v => collected.has(`${setId}:${c.n}:${v}`));
@@ -546,13 +668,13 @@ function ficCardHtml(c, setId) {
        onmouseout="this.style.transform=''">
     <div style="width:var(--cw,90px);height:var(--ch,126px);border-radius:7px;border:${border};
          box-shadow:${glow};position:relative;overflow:hidden;background:#0a0b10">
-      <img src="${(typeof imgThumb==='function')?imgThumb(imgUrl(c.n, setId)):imgUrl(c.n, setId)}" alt="${c.name}" loading="lazy" decoding="async"
+      <img src="${(typeof imgThumb==='function')?imgThumb(imgUrl(c.n, setId, c)):imgUrl(c.n, setId, c)}" alt="${lc.name}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
            style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:${imgFilter}"
            onerror="handleCardImgError(this,'${setId}','${c.n}')">
       <div style="display:none;flex-direction:column;align-items:center;justify-content:center;
            gap:3px;position:absolute;inset:0;padding:5px;text-align:center">
         <div style="font-family:'Space Mono',monospace;font-size:7px;color:var(--muted)">${c.n}</div>
-        <div style="font-size:7px;font-weight:700;color:var(--text);line-height:1.2">${c.name}</div>
+        <div style="font-size:7px;font-weight:700;color:var(--text);line-height:1.2">${lc.name}</div>
         <div style="font-size:6px;color:var(--muted)">${c.type||''}</div>
         <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:${c.color||'#666'}"></div>
       </div>
@@ -574,10 +696,10 @@ function ficCardHtml(c, setId) {
          background:rgba(8,9,13,.96);border:1px solid var(--border);border-radius:6px;padding:8px 11px;
          font-size:11px;white-space:nowrap;opacity:0;pointer-events:none;z-index:100;min-width:140px;
          transition:opacity .15s">
-      <div style="font-weight:700;color:var(--text)">${c.name}</div>
+      <div style="font-weight:700;color:var(--text)">${lc.name}</div>
       <div style="color:var(--muted);font-family:'Space Mono',monospace;font-size:9px">#${c.n} · ${c.type||''}</div>
       <div style="color:var(--accent2);font-size:9px;margin-top:2px">${c.rare||''}</div>
-      ${c.price?`<div style="color:var(--teal);font-size:10px;font-weight:700;margin-top:3px">R$${fmtR(c.price)}</div>`:''}
+      ${lc.price?`<div style="color:var(--teal);font-size:10px;font-weight:700;margin-top:3px">${lc.symbol}${fmtR(lc.price)}</div>`:''}
       <div style="margin-top:4px;display:flex;gap:4px">
         ${vers.map(v => {
           const key = `${setId}:${c.n}:${v}`;
@@ -593,18 +715,34 @@ function ficCardHtml(c, setId) {
 }
 
 function renderGridView(cards, setIdOf) {
-  const base = cards.filter(c => c.base !== false);
-  const sec  = cards.filter(c => c.base === false);
   // setIdOf é opcional — sem ele, comportamento idêntico a antes (currentSet
   // pra toda carta). Fichário personalizado passa uma função que lê o set de
   // origem de cada carta (c._setId), já que mistura cartas de vários sets.
   const sIdOf = setIdOf || (() => currentSet);
   const cardHtml = c => ficCardHtml(c, sIdOf(c));
 
+  // CORRIGIDO 01/10/2026 (pedido do Eduardo, cel30): antes só existia o split
+  // fixo Base/Secretas. Agora usa o array `sections` de getSetData() (app.js)
+  // quando o set define um — permite qualquer número de grupos com label e
+  // filtro próprios (ex: cel30 separa Base/Pikachu Especial/Secretas/Especial
+  // RGB/Coleção Clássica/Energias). Sem `sections` (todo o resto do catálogo,
+  // fichário personalizado, etc.) cai no mesmo Base/Secretas de sempre —
+  // nenhum outro set muda de comportamento.
+  const customSections = (!setIdOf && typeof getSetData === 'function') ? getSetData()?.sections : null;
+  const sections = (customSections && customSections.length)
+    ? customSections
+    : [{ lbl: '📄 Cartas Base', filter: c => c.base !== false },
+       { lbl: '✨ Cartas Secretas', filter: c => c.base === false }];
+
   let html = '';
-  if (base.length) html += `<div class="bsec-lbl">📄 Cartas Base</div><div class="bgrid">${base.map(cardHtml).join('')}</div>`;
-  if (sec.length)  html += `<div class="bsec-lbl">✨ Cartas Secretas</div><div class="bgrid">${sec.map(cardHtml).join('')}</div>`;
-  if (!base.length && !sec.length) html = `<div style="color:var(--muted);font-size:13px;padding:40px;text-align:center">Nenhuma carta encontrada com esses filtros.</div>`;
+  let any = false;
+  sections.forEach(sec => {
+    const group = cards.filter(sec.filter);
+    if (!group.length) return;
+    any = true;
+    html += `<div class="bsec-lbl">${sec.lbl}</div><div class="bgrid">${group.map(cardHtml).join('')}</div>`;
+  });
+  if (!any) html = `<div style="color:var(--muted);font-size:13px;padding:40px;text-align:center">Nenhuma carta encontrada com esses filtros.</div>`;
   return html;
 }
 
@@ -638,6 +776,7 @@ function renderBinderView(cards, setIdOf) {
     if (!slot) return `<div style="width:${cellSize}px;height:${Math.round(cellSize*1.4)}px;
       border:2px dashed var(--border);border-radius:6px;opacity:.3"></div>`;
     const { card: c, ver: v, setId } = slot;
+    const lc = cardI18n(c, ficLang);
     const key = `${setId}:${c.n}:${v}`;
     const isCollected = collected.has(key);
     const qty = ficCollection[key]?.qty || (isCollected ? 1 : 0);
@@ -658,13 +797,13 @@ function renderBinderView(cards, setIdOf) {
          onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform=''">
       <div style="width:${cellSize}px;height:${Math.round(cellSize*1.4)}px;border-radius:6px;
            border:2px solid ${borderColor};box-shadow:${glow};background:#0a0b10;overflow:hidden;position:relative">
-        <img src="${(typeof imgThumb==='function')?imgThumb(imgUrl(c.n, setId)):imgUrl(c.n, setId)}" alt="${c.name}" loading="lazy" decoding="async"
+        <img src="${(typeof imgThumb==='function')?imgThumb(imgUrl(c.n, setId, c)):imgUrl(c.n, setId, c)}" alt="${lc.name}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
              style="width:100%;height:100%;object-fit:cover;filter:${imgFilter}"
              onerror="handleCardImgError(this,'${setId}','${c.n}')">
         <div style="display:none;flex-direction:column;align-items:center;justify-content:center;
              gap:2px;position:absolute;inset:0;padding:4px;text-align:center">
           <div style="font-size:${cellSize>90?7:6}px;color:var(--muted);font-family:'Space Mono',monospace">${c.n}</div>
-          <div style="font-size:${cellSize>90?7:5}px;font-weight:700;color:var(--text);line-height:1.1">${c.name}</div>
+          <div style="font-size:${cellSize>90?7:5}px;font-weight:700;color:var(--text);line-height:1.1">${lc.name}</div>
           <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:${c.color||'#666'}"></div>
         </div>
         ${qty>1?`<div style="position:absolute;top:2px;right:2px;font-size:8px;font-weight:900;
@@ -730,6 +869,7 @@ async function openSlotModal(cardN, defaultVer, setIdOverride, cardOverride, onS
   const setId = setIdOverride || currentSet;
   const card  = cardOverride || getSetCards().find(c => c.n === cardN);
   if (!card) return;
+  const _lcCard = cardI18n(card, ficLang);
   _ficModalSetId   = setId;
   _ficModalCardObj = card;
   _ficModalOnSaved = onSaved || null;
@@ -798,13 +938,13 @@ async function openSlotModal(cardN, defaultVer, setIdOverride, cardOverride, onS
     <button onclick="closeSlotModal()" style="position:absolute;top:12px;right:12px;background:none;
       border:none;color:var(--muted);font-size:18px;cursor:pointer;z-index:2">✕</button>
     <div class="slot-modal-head">
-      <img class="slot-modal-img" src="${imgUrl(cardN, setId)}" alt="${card.name}"
+      <img class="slot-modal-img" src="${imgUrl(cardN, setId, card)}" alt="${_lcCard.name}" referrerpolicy="no-referrer"
            onerror="handleCardImgError(this,'${setId}','${cardN}')">
       <div class="slot-modal-info">
-        <div class="slot-modal-title">${card.name}</div>
+        <div class="slot-modal-title">${_lcCard.name}</div>
         <div class="slot-modal-sub">#${card.n} · ${card.type||''}</div>
         <div class="slot-modal-rare">${card.rare||''}</div>
-        ${card.price?`<div class="slot-modal-price">R$${fmtR(card.price)}</div>`:''}
+        ${_lcCard.price?`<div class="slot-modal-price">${_lcCard.symbol}${fmtR(_lcCard.price)}</div>`:''}
         ${card.important?'<div style="color:var(--gold);font-size:12px;margin-top:4px">★ Carta importante</div>':''}
       </div>
     </div>
@@ -1035,7 +1175,7 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
       popup.document.write(`
       <div class="slot">
         <div class="imgwrap">
-          <img src="${(typeof imgMedium === 'function') ? imgMedium(imgUrl(c.n, setId)) : imgUrl(c.n, setId)}" alt="${c.name}" style="${grayFilter}"
+          <img src="${(typeof imgMedium === 'function') ? imgMedium(imgUrl(c.n, setId, c)) : imgUrl(c.n, setId, c)}" alt="${c.name}" style="${grayFilter}" referrerpolicy="no-referrer"
                onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=empty>${c.n}<br>${c.name}</div>')">
         </div>
         <div class="label">

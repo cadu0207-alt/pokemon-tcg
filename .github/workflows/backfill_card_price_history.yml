@@ -1,0 +1,39 @@
+name: Backfill do Historico de Preco (uso unico)
+
+# Reconstroi pelo git o historico de preco dos dias 20/08-02/10/2026 que o snapshot diario nao gravou
+# (bug do cel25c:15, corrigido). Grava so PONTOS DE MUDANCA, sem sobrescrever nada do que ja existe.
+# Rode primeiro SEM marcar "gravar" (simulacao: mostra no log quantas linhas inseriria) e depois marcando.
+on:
+  workflow_dispatch:
+    inputs:
+      gravar:
+        description: 'Gravar de verdade no banco? (desmarcado = so simulacao)'
+        type: boolean
+        default: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout com historico completo (branch Rotower)
+        uses: actions/checkout@v4
+        with:
+          ref: Rotower
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Backfill do historico de preco
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GRAVAR: ${{ inputs.gravar }}
+        run: |
+          if [ "$GRAVAR" = "true" ]; then
+            node scripts/backfill_card_price_history.js --write
+          else
+            node scripts/backfill_card_price_history.js
+          fi

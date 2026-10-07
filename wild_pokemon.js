@@ -39,8 +39,10 @@
 //   window.wpGrantBall('greatball', 1, 'teste manual')
 //
 // ── Botões no badge (canto inferior esquerdo) ──────────────────
-//   🎮/🚫  liga/desliga o minigame inteiro (para de aparecer e de
-//          dar bola; some qualquer Pokémon na tela na hora)
+//   🎮     MINIMIZA o minigame inteiro: para de aparecer e de dar bola,
+//          some qualquer Pokémon na tela e esconde o badge E o botão de
+//          Batalhar. Sobra só uma abinha na borda esquerda da tela
+//          (clicar nela traz tudo de volta). Estado salvo no aparelho.
 //   🔊/🔇  liga/desliga o som
 //
 // ── Debug no console ─────────────────────────────────────────
@@ -314,6 +316,7 @@
 
   // ── Bônus de primeiro acesso do dia: 1 Great Ball ───────────────
   function wpCheckDailyLoginBonus() {
+    if (!wpEnabled) return; // minigame minimizado — não mostra aviso nem dá bola
     const today = wpTodayStr();
     if (wpLoadJSON(WP_STORAGE_DAILY_BONUS, null) === today) return; // já deu hoje (neste aparelho, ou já sincronizado da conta)
     wpSaveJSON(WP_STORAGE_DAILY_BONUS, today);
@@ -782,12 +785,24 @@
     .wp-badge:hover { border-color: #ffd166aa; }
     .wp-badge .wp-sound-btn, .wp-badge .wp-power-btn { cursor: pointer; opacity: .7; }
     .wp-badge .wp-sound-btn:hover, .wp-badge .wp-power-btn:hover { opacity: 1; }
-    .wp-badge.wp-badge-off { opacity: .55; }
-    .wp-badge.wp-badge-off .wp-power-btn { opacity: 1; }
+    /* Minimizado (02/10/2026, pedido do Eduardo): badge e botão de Batalhar
+       somem; sobra só a abinha .wp-edge-tab colada na borda esquerda, pra
+       não ficar na frente de nada. */
+    .wp-min { display: none !important; }
+    .wp-edge-tab {
+      position: fixed; left: 0; bottom: 14px; z-index: 9997;
+      width: 22px; height: 34px; border-radius: 0 10px 10px 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #111422; border: 1px solid #52597a55; border-left: none;
+      font-size: 13px; line-height: 1; cursor: pointer; opacity: .55;
+      box-shadow: 2px 2px 8px rgba(0,0,0,.3); transition: opacity .15s, width .15s;
+    }
+    .wp-edge-tab:hover { opacity: 1; width: 28px; }
     /* 29/08/2026: sobe acima da .mnav (barra inferior fixa do menu mobile
        novo) — senão a bolinha ficava atrás/colada nela no celular. */
     @media (max-width: 900px) {
       .wp-badge { bottom: calc(66px + env(safe-area-inset-bottom, 0px)); }
+      .wp-edge-tab { bottom: calc(66px + env(safe-area-inset-bottom, 0px)); }
     }
     .wp-modal-backdrop {
       position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 10001;
@@ -1252,7 +1267,7 @@
     if (!wpBadgeEl) return;
     const totalCaught = Object.keys(wpCatches).length;
     const totalBalls = WP_BALL_ORDER.reduce((s, t) => s + (wpBalls[t] || 0), 0);
-    wpBadgeEl.classList.toggle('wp-badge-off', !wpEnabled);
+    wpApplyMinimized();
     const bagPart = wpBackpackLoaded ? ` · 🎒 ${wpBackpack.length}/${wpBackpackCap}` : '';
     // Não existe emoji de pokébola de verdade no Unicode — reaproveita o
     // mesmo ícone (imagem) já usado no seletor de bola/inventário, só que
@@ -1261,14 +1276,24 @@
       ? `${wpBallIconHtml('pokeball', 13)} ${totalBalls} · 🐾 ${totalCaught}/${WP_KANTO151.length}${bagPart}`
       : `Minigame desligado`;
     const powerBtn = wpBadgeEl.querySelector('.wp-power-btn');
-    if (powerBtn) { powerBtn.textContent = wpEnabled ? '🎮' : '🚫'; powerBtn.title = wpEnabled ? 'Desligar minigame' : 'Ligar minigame'; }
+    if (powerBtn) { powerBtn.textContent = '🎮'; powerBtn.title = 'Minimizar minigame e batalha'; }
+  }
+
+  // Minimizado = minigame desligado: esconde badge + botão de Batalhar e
+  // mostra só a abinha da esquerda (wpEdgeTabEl).
+  let wpEdgeTabEl = null;
+  function wpApplyMinimized() {
+    const min = !wpEnabled;
+    if (wpBadgeEl) wpBadgeEl.classList.toggle('wp-min', min);
+    if (wpArenaEl) wpArenaEl.classList.toggle('wp-min', min);
+    if (wpEdgeTabEl) wpEdgeTabEl.classList.toggle('wp-min', !min);
   }
 
   function wpBuildBadge() {
     if (wpBadgeEl) return;
     wpBadgeEl = document.createElement('div');
     wpBadgeEl.className = 'wp-badge';
-    wpBadgeEl.innerHTML = `<span class="wp-badge-text"></span><span class="wp-sound-btn" title="Som">${wpSoundOn ? '🔊' : '🔇'}</span><span class="wp-power-btn" title="Desligar minigame">${wpEnabled ? '🎮' : '🚫'}</span>`;
+    wpBadgeEl.innerHTML = `<span class="wp-badge-text"></span><span class="wp-sound-btn" title="Som">${wpSoundOn ? '🔊' : '🔇'}</span><span class="wp-power-btn" title="Minimizar minigame e batalha">🎮</span>`;
     wpBadgeEl.querySelector('.wp-badge-text').addEventListener('click', wpOpenDex);
     wpBadgeEl.querySelector('.wp-sound-btn').addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1282,6 +1307,12 @@
       wpSetEnabled(!wpEnabled);
     });
     document.body.appendChild(wpBadgeEl);
+    wpEdgeTabEl = document.createElement('div');
+    wpEdgeTabEl.className = 'wp-edge-tab wp-min';
+    wpEdgeTabEl.title = 'Mostrar minigame e batalha';
+    wpEdgeTabEl.textContent = '🎮';
+    wpEdgeTabEl.addEventListener('click', () => wpSetEnabled(true));
+    document.body.appendChild(wpEdgeTabEl);
     wpUpdateBadge();
   }
 
@@ -1374,7 +1405,7 @@
         ${entry.exceptional ? '<span class="wp-bp-exceptional-tag">💠</span>' : ''}
         ${tags ? `<span class="wp-bp-cell-tags">${tags}</span>` : ''}
         <img src="${wpSpriteUrl(entry.dex)}" alt="">
-        <div class="wp-bp-nick">${wpBackpackDisplayName(entry)}</div>
+        <div class="wp-bp-nick">${esc(wpBackpackDisplayName(entry))}</div>
         <div class="wp-r" style="color:${meta.color}">${meta.label}</div>
       </div>`;
     }).join('')}</div>`;
@@ -1404,7 +1435,7 @@
       <div class="wp-bp-detail-head">
         <img src="${wpSpriteUrl(entry.dex)}" alt="">
         <div style="flex:1">
-          <input class="wp-bp-nick-input" maxlength="24" value="${wpBackpackDisplayName(entry)}" placeholder="Apelido">
+          <input class="wp-bp-nick-input" maxlength="24" value="${esc(wpBackpackDisplayName(entry))}" placeholder="Apelido">
           <div class="wp-sub" style="margin:4px 0 0"><span style="color:${meta.color}">${meta.label}</span> · capturado em ${caughtDate}</div>
         </div>
       </div>
@@ -1453,7 +1484,7 @@
       releaseBtn.textContent = 'Liberando…';
       wpReleaseBackpack(entry.id).then((ok) => {
         if (ok) {
-          wpToastRaw('🎒', `${wpBackpackDisplayName(entry)} voltou pra natureza.`, true);
+          wpToastRaw('🎒', `${esc(wpBackpackDisplayName(entry))} voltou pra natureza.`, true);
           wpRenderMochilaGrid(container);
         } else {
           wpToastRaw('⚠️', 'Não deu pra liberar agora, tenta de novo.', false);
@@ -1473,6 +1504,7 @@
     wpArenaEl.addEventListener('click', wpStartBattle);
     document.body.appendChild(wpArenaEl);
     wpUpdateArenaButton();
+    wpApplyMinimized();
   }
 
   function wpUpdateArenaButton() {

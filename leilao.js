@@ -165,7 +165,7 @@ async function renderLeilaoTab(){
   // "Meus Arremates" e, desde 19/08/2026, "Loja do Leiloeiro"); só os botões de
   // gestão (Cadastro/Estoque/Análises/Arquivo/Financeiro) continuam escondidos
   // de quem não é leiloeiro.
-  ['leilao-tab-cadastro','leilao-tab-pedidos','leilao-tab-estoque','leilao-tab-analises','leilao-tab-arquivo','leilao-tab-financeiro'].forEach(id=>{
+  ['leilao-tab-cadastro','leilao-tab-pedidos','leilao-tab-participantes','leilao-tab-estoque','leilao-tab-analises','leilao-tab-arquivo','leilao-tab-financeiro'].forEach(id=>{
     const btn=document.getElementById(id);
     if(btn)btn.style.display=aucIsLeilaoAdmin?'':'none';
   });
@@ -175,7 +175,7 @@ async function renderLeilaoTab(){
   // outras sub-abas nem aparecem no menu pra ele); leiloeiro mantém a última
   // sub-aba escolhida.
   const allowed=aucIsLeilaoAdmin
-    ?['leiloes','meus-arremates','loja','cadastro','pedidos','estoque','analises','arquivo','financeiro']
+    ?['leiloes','meus-arremates','loja','cadastro','pedidos','participantes','estoque','analises','arquivo','financeiro']
     :['leiloes','meus-arremates','loja'];
   switchLeilaoSubtab(allowed.includes(aucActiveSubtab)?aucActiveSubtab:'leiloes');
 
@@ -254,7 +254,7 @@ async function renderLeilaoTab(){
 let aucActiveSubtab='leiloes';
 function switchLeilaoSubtab(name){
   aucActiveSubtab=name;
-  ['leiloes','meus-arremates','loja','cadastro','pedidos','estoque','analises','arquivo','financeiro'].forEach(n=>{
+  ['leiloes','meus-arremates','loja','cadastro','pedidos','participantes','estoque','analises','arquivo','financeiro'].forEach(n=>{
     const pane=document.getElementById('leilao-sub-'+n);
     if(pane)pane.style.display=(n===name)?'':'none';
     const btn=document.querySelector(`.leilao-subtab-btn[data-sub="${n}"]`);
@@ -267,6 +267,8 @@ function switchLeilaoSubtab(name){
   // — mostra o popup na hora, mesmo antes de ele tentar salvar algo
   // (além da trava dentro de createAuctionRound/publishAuction).
   if(name==='cadastro'&&aucIsLeilaoAdmin&&aucSellerAccepted===false)openLeiloeiroOnboardingModal();
+  // 02/10/2026 — aba Participantes & Bloqueios (leilao_participantes.js): recarrega ao abrir
+  if(name==='participantes'&&aucIsLeilaoAdmin&&typeof aucPartOpen==='function')aucPartOpen();
 }
 
 // Atalho do aviso "cadastre seu endereço" (mostrado quando falta
@@ -1650,8 +1652,10 @@ async function shareAuctionPdf(auctionId){
   const a=aucAuctions.find(x=>x.id===auctionId);
   if(!a)return;
   if(typeof window.jspdf==='undefined'){
-    setStatus('Gerador de PDF ainda carregando, tenta de novo em 1 segundo','err');
-    return;
+    // jsPDF não vem mais no carregamento da página (356 KB) — baixa agora, na 1ª vez
+    setStatus('Preparando o gerador de PDF...','ok');
+    try{await (window.loadJsPdf?window.loadJsPdf():Promise.reject(new Error('sem loader')));}
+    catch(e){setStatus('Não consegui carregar o gerador de PDF. Verifique a conexão e tente de novo.','err');return;}
   }
   setStatus('Gerando PDF...','ok');
   const msg=aucShareMessage(a);
@@ -1717,7 +1721,18 @@ async function shareAuctionPdf(auctionId){
 // já ampliada (zoom) assim que a lista carregar — só uma vez por sessão de
 // página, senão reabriria toda vez que renderLeilaoTab() rodar de novo.
 let aucSharedZoomOpened=false;
+// 02/10/2026: clique numa notificação (notificacoes.js) pede pra abrir um
+// leilão específico — goToTab('leilao') dispara renderLeilaoTab(), que termina
+// aqui. Diferente do link compartilhado acima, vale a CADA clique (não só a
+// primeira vez da sessão) e é consumido na hora, sem ficar pendente pra um
+// próximo render abrir sozinho um leilão que a pessoa nem pediu.
+let aucPendingOpenId=null;
 function scrollToSharedAuction(){
+  if(aucPendingOpenId){
+    const pid=aucPendingOpenId;
+    aucPendingOpenId=null;
+    if(aucAuctions.some(x=>x.id===pid)){openAuctionZoom(pid);return;}
+  }
   if(aucSharedZoomOpened)return;
   const id=parseInt(new URLSearchParams(window.location.search).get('leilao'));
   if(!id)return;

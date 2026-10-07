@@ -3696,3 +3696,111 @@ body.inicio-modal-open { overflow: hidden; }
   .inicio-modal { padding: 0; }
   .inicio-modal-card { max-width: none; min-height: 100%; border-radius: 0; }
 }
+
+/* ── NOTIFICAÇÕES (02/10/2026) — sino no cabeçalho + painel + aviso ao vivo
+   (notificacoes.js). O painel é position:fixed e posicionado por JS
+   (notifPositionPanel), pra não depender de onde o sino cai no header —
+   no mobile o .hstatus ocupa a própria linha e o sino pode ficar bem na
+   borda esquerda. */
+.notif-bell {
+  position: relative; background: none; border: none; cursor: pointer;
+  font-size: 16px; line-height: 1; padding: 3px 4px; border-radius: 8px;
+  color: var(--text); transition: background .15s;
+}
+.notif-bell:hover { background: var(--surface2); }
+.notif-badge {
+  position: absolute; top: -5px; right: -6px; min-width: 11px; height: 14px;
+  padding: 0 3px; border-radius: 9px; box-sizing: content-box;
+  background: var(--accent); color: #fff; font-size: 9.5px; font-weight: 700;
+  font-family: 'IBM Plex Mono', monospace; line-height: 14px; text-align: center;
+  border: 2px solid var(--surface);
+}
+.notif-panel {
+  position: fixed; z-index: 9000; max-height: min(70vh, 520px);
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border2); border-radius: var(--radius-md);
+  box-shadow: 0 12px 40px rgba(0,0,0,.35);
+  font-family: 'DM Sans', sans-serif;
+}
+.notif-panel-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 11px 14px; border-bottom: 1px solid var(--border);
+  font-size: 13px; font-weight: 700;
+}
+.notif-markall {
+  background: none; border: none; cursor: pointer; padding: 2px 0;
+  font-family: inherit; font-size: 11.5px; font-weight: 600; color: var(--teal);
+}
+.notif-markall:disabled { color: var(--muted); cursor: default; opacity: .6; }
+.notif-list { overflow-y: auto; overscroll-behavior: contain; }
+.notif-item {
+  display: flex; align-items: flex-start; gap: 10px; width: 100%;
+  padding: 11px 14px; text-align: left; cursor: pointer;
+  background: none; border: none; border-bottom: 1px solid var(--border);
+  font-family: inherit; color: var(--text);
+}
+.notif-item:last-child { border-bottom: none; }
+.notif-item:hover { background: var(--surface2); }
+.notif-item.unread { background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.notif-item.unread:hover { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.notif-item-ic { font-size: 16px; line-height: 1.2; flex-shrink: 0; }
+.notif-item-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.notif-item-title { font-size: 13px; font-weight: 700; }
+.notif-item.unread .notif-item-title::after {
+  content: ''; display: inline-block; width: 7px; height: 7px; margin-left: 6px;
+  border-radius: 50%; background: var(--accent); vertical-align: middle;
+}
+.notif-item-body { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.notif-item-time {
+  font-size: 10.5px; color: var(--muted); flex-shrink: 0;
+  font-family: 'IBM Plex Mono', monospace; padding-top: 2px;
+}
+.notif-empty { padding: 26px 18px; text-align: center; font-size: 12.5px; color: var(--muted); line-height: 1.55; }
+/* aviso ao vivo: #md-toast-wrap tem pointer-events:none, este precisa de clique */
+.notif-toast {
+  display: flex; flex-direction: column; gap: 3px; cursor: pointer;
+  pointer-events: auto; font-weight: 500;
+}
+.notif-toast strong { font-weight: 700; }
+.notif-toast span { font-size: 12px; color: var(--muted); }
+
+/* Linha de push no rodapé do painel de notificações (etapa 2) */
+.notif-push-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 14px; border-top: 1px solid var(--border);
+  background: var(--surface2); font-size: 11.5px; color: var(--muted); line-height: 1.4;
+}
+.notif-push-row strong { color: var(--text); }
+.notif-push-btn {
+  flex-shrink: 0; cursor: pointer; font-family: inherit; font-size: 11.5px; font-weight: 700;
+  padding: 6px 11px; border-radius: 8px; border: none; background: var(--teal); color: #fff;
+}
+.notif-push-btn.ghost { background: none; border: 1px solid var(--border2); color: var(--muted); font-weight: 600; }
+.notif-push-btn:hover { filter: brightness(1.08); }
+
+/* Descadastro de e-mail por link (?emails=sair&t=…) — notificacoes.js, 03/10/2026 */
+.emsair-ov {
+  position: fixed; inset: 0; z-index: 10050; background: rgba(10, 12, 24, .72);
+  display: flex; align-items: center; justify-content: center; padding: 18px;
+}
+.emsair-card {
+  background: var(--surface); color: var(--text); border: 1px solid var(--border2);
+  border-radius: 16px; max-width: 430px; width: 100%; padding: 24px 22px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.45); font-family: 'DM Sans', sans-serif;
+}
+.emsair-title { font-size: 19px; font-weight: 700; margin-bottom: 12px; }
+.emsair-text { font-size: 13.5px; line-height: 1.55; color: var(--text); margin-bottom: 10px; word-break: break-word; }
+.emsair-flash {
+  font-size: 13px; font-weight: 600; color: var(--teal); margin: 4px 0 12px;
+  padding: 9px 12px; border-radius: 10px; background: color-mix(in srgb, var(--teal) 12%, var(--surface));
+}
+.emsair-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.emsair-btn {
+  cursor: pointer; font-family: inherit; font-size: 13.5px; font-weight: 700; padding: 11px 14px;
+  border-radius: 10px; border: 1px solid var(--border2); background: none; color: var(--text);
+}
+.emsair-btn.primary { background: var(--teal); border-color: var(--teal); color: #fff; }
+.emsair-btn:hover { filter: brightness(1.06); }
+.emsair-foot { text-align: center; margin-top: 14px; }
+.emsair-link { background: none; border: none; cursor: pointer; font-family: inherit; font-size: 12.5px; color: var(--muted); text-decoration: underline; }

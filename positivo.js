@@ -104,11 +104,18 @@ function pcNormalizeLink(v, kind) {
   return 'https://' + v;
 }
 
+// CORRIGIDO 04/09/2026 (auditoria de segurança): url vem de campo livre
+// cadastrado por qualquer usuário (Instagram/TikTok/Site do "Cadastro
+// Positivo") e ia direto pro href sem escapar nem checar protocolo —
+// dava pra quebrar o atributo (aspas) ou injetar um link javascript:.
+// Mesmo padrão de inicioSafeUrl() (inicio.js): só aceita http(s), senão
+// vira '#'; esc() cuida de aspas/tags no que sobra.
 function pcLinkPill(url, label) {
   if (!url) return '';
-  return `<a href="${url}" target="_blank" rel="noopener"
+  const safe = /^https?:\/\//i.test(String(url).trim()) ? String(url).trim() : '#';
+  return `<a href="${esc(safe)}" target="_blank" rel="noopener"
     style="font-size:10px;font-family:'Space Mono',monospace;padding:4px 10px;border-radius:20px;
-    border:1px solid var(--teal);color:var(--teal);text-decoration:none;white-space:nowrap">${label}</a>`;
+    border:1px solid var(--teal);color:var(--teal);text-decoration:none;white-space:nowrap">${esc(label)}</a>`;
 }
 
 function pcStars(avg) {
@@ -202,7 +209,7 @@ function pcToggleReviewsList(id) {
       <div style="padding:8px 0;border-top:1px solid var(--border);font-size:10.5px;font-family:'Space Mono',monospace">
         <div>${pcStars(r.nota)} <span style="color:${r.tipo === 'elogio' ? 'var(--teal)' : 'var(--accent)'}">${r.tipo === 'elogio' ? '👍 Elogio' : '👎 Reclamação'}</span>
           ${r.preco_sugerido != null ? ` · <span style="color:var(--gold)">💰 ${pcFmtBRL(r.preco_sugerido)}</span>` : ''}</div>
-        ${r.comentario ? `<div style="color:var(--muted);margin-top:4px">${r.comentario}</div>` : ''}
+        ${r.comentario ? `<div style="color:var(--muted);margin-top:4px">${esc(r.comentario)}</div>` : ''}
       </div>
     `).join('') || '<div class="cv-item-empty" style="padding:12px">Nenhum comentário ainda.</div>';
     el.style.display = 'block';
@@ -244,12 +251,12 @@ function positiveCompanyCard(c, { pending } = {}) {
   ].filter(Boolean).join(' ');
   return `<div class="mkt-store-card">
     <div class="mkt-store-top">
-      <div class="mkt-store-name">${c.nome}</div>
-      <span class="mkt-store-badge mkt-badge-${c.status}">${c.status}</span>
+      <div class="mkt-store-name">${esc(c.nome)}</div>
+      <span class="mkt-store-badge mkt-badge-${esc(c.status)}">${esc(c.status)}</span>
     </div>
-    ${(c.cidade || c.uf) ? `<div class="mkt-store-meta">${[c.cidade, c.uf].filter(Boolean).join(' — ')}</div>` : ''}
-    ${c.observacoes ? `<div class="mkt-store-meta">${c.observacoes}</div>` : ''}
-    ${pending && c.contato_dono ? `<div class="mkt-store-meta">Contato do dono: ${c.contato_dono}</div>` : ''}
+    ${(c.cidade || c.uf) ? `<div class="mkt-store-meta">${esc([c.cidade, c.uf].filter(Boolean).join(' — '))}</div>` : ''}
+    ${c.observacoes ? `<div class="mkt-store-meta">${esc(c.observacoes)}</div>` : ''}
+    ${pending && c.contato_dono ? `<div class="mkt-store-meta">Contato do dono: ${esc(c.contato_dono)}</div>` : ''}
     ${links ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${links}</div>` : ''}
     ${!pending ? pcReviewsBlock(c) : ''}
     ${pending && typeof hasPerm === 'function' && hasPerm('positivo') ? `<div style="display:flex;gap:8px;margin-top:10px">
