@@ -684,6 +684,16 @@
     .wp-spawn.wp-bl { left: -78px; bottom: 18px; }
     .wp-spawn.wp-br { right: -78px; bottom: 18px; }
     .wp-spawn.wp-tl { left: -78px; top: 90px; }
+    /* 07/10/2026: mesmo problema que já tinha sido corrigido na .wp-badge e
+       na .wp-arena-btn (29/08) — o Pokémon nascia atrás/colado na .mnav
+       (barra inferior fixa do menu mobile, ~54px + safe-area) e ficava
+       praticamente impossível de ver/clicar no celular. Essa correção nunca
+       tinha chegado nos cantos de spawn (ver feedback_coding/report de
+       "pokémon não aparece"). Mesmo delta (+52px) aplicado ao badge.
+       wp-tl fica no topo, não precisa de ajuste. */
+    @media (max-width: 900px) {
+      .wp-spawn.wp-bl, .wp-spawn.wp-br { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+    }
     .wp-spawn.wp-in.wp-bl { transform: translateX(86px); }
     .wp-spawn.wp-in.wp-br { transform: translateX(-86px); }
     .wp-spawn.wp-in.wp-tl { transform: translateX(86px); }
