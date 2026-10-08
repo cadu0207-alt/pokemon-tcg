@@ -400,6 +400,8 @@ const FIC_LANG_SETS = {
   me05: ['pt', 'en', 'jp'],
   // ME04(CRI): idem (JP via limitlesstcg, ver header de cards_me04.js); sem chinês
   me04: ['pt', 'en', 'jp'],
+  // ME03(POR): idem (JP via limitlesstcg, ver header de cards_me03.js); sem chinês
+  me03: ['pt', 'en', 'jp'],
 };
 
 function setFicLang(lang, onRefresh, ids) {

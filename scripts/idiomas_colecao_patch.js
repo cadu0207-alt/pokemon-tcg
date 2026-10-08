@@ -1,4 +1,5 @@
 // FERRAMENTA (04/10/2026): aplica o data.json do idiomas_colecao_fetch.js num cards_*.js (nameEn/nameJp/img/artist). Preserva CRLF/LF.
+// Aceita linhas com dex repetido e colunas alinhadas (ME03). Flags: --rename=82,83 --keep-name=122 --type=83:Item:#5C6BC0
 // Aplica os dados coletados (mset_fetch.js) num cards_*.js: nameEn / nameJp / img, nomes PT errados e artist.
 // Uso: node mset_patch.js <arquivo cards_*.js> <data.json> [--rename=082,083,...] [--keep-name=122,113,115] [--type=083:Item:#5C6BC0]
 const fs = require('fs');
@@ -14,7 +15,7 @@ const q = (s) => JSON.stringify(s);
 const SUF = /( \((?:IR|UR|SAR|F)\))$/;
 const stats = { rows: 0, nameEn: 0, renamed: [], artistFix: 0, artistAdd: 0, artistDel: [], typeFix: [] };
 const out = raw.split(crlf ? '\r\n' : '\n').map((ln) => {
-  const m = ln.match(/^(\s*\{n:'(\d{3})',)(dex:\d+,)?(artist:(?:'[^']*'|"[^"]*"),)?name:('([^']*)'|"([^"]*)")(,.*)$/);
+  const m = ln.match(/^(\s*\{n:'(\d{3})',)((?:dex:\d+,)+)?(artist:(?:'[^']*'|"[^"]*"),)?name:('([^']*)'|"([^"]*)")(,.*)$/);
   if (!m) return ln;
   const n = +m[2]; const r = d[n];
   if (!r || !r.nameJp || !r.img) throw new Error('sem dado JP para ' + n);
@@ -31,11 +32,12 @@ const out = raw.split(crlf ? '\r\n' : '\n').map((ln) => {
   if (had !== next) { art = next ? 'artist:' + q(next) + ',' : ''; if (!next) stats.artistDel.push(m[2]); else if (had) stats.artistFix++; else stats.artistAdd++; }
   let rest = m[8];
   if (typeFix[n]) {
-    rest = rest.replace(/,type:'[^']*',color:'#[0-9A-Fa-f]{6}'/, `,type:'${typeFix[n].t}',color:'${typeFix[n].c}'`);
+    rest = rest.replace(/,(\s*)type:'[^']*',(\s*)color:'#[0-9A-Fa-f]{6}'/, `,$1type:'${typeFix[n].t}',$2color:'${typeFix[n].c}'`);
     stats.typeFix.push(m[2] + ' -> ' + typeFix[n].t);
   }
   stats.rows++;
-  return m[1] + (m[3] || '') + art + 'name:' + q(name) + nameEn + ',nameJp:' + q(r.nameJp) + ',img:' + q(r.img) + rest;
+  // dex repetido (ex.: "dex:167,dex:167,") vira um só
+  return m[1] + (m[3] ? m[3].match(/dex:\d+,/)[0] : '') + art + 'name:' + q(name) + nameEn + ',nameJp:' + q(r.nameJp) + ',img:' + q(r.img) + rest;
 });
 fs.writeFileSync(FILE, out.join(crlf ? '\r\n' : '\n'));
 console.log(JSON.stringify(stats, null, 1));

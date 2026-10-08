@@ -319,7 +319,17 @@ function imgMe04(nOrCard,lang){
   }
   return`https://images.scrydex.com/pokemon/me4-${parseInt(n)}/large`;
 }
-function imgMe03(n){return`https://images.scrydex.com/pokemon/me3-${parseInt(n)}/large`;}
+// me03: 04/10/2026 — mesmo padrão do me04/me05 (tcgdex slug "me03"; jp = `img` da carta, set JP M3
+// "Nihil Zero" + reimpressões de outros sets — ver cards_me03.js). Sem `lang` = scrydex EN de antes.
+function imgMe03(nOrCard,lang){
+  const isCard=nOrCard&&typeof nOrCard==='object';
+  const n=isCard?nOrCard.n:nOrCard;
+  if(lang==='jp')return(isCard&&nOrCard.img)||'';
+  if(lang==='pt'||lang==='en'){
+    return`https://assets.tcgdex.net/${lang}/me/me03/${String(parseInt(n,10)).padStart(3,'0')}/high.png`;
+  }
+  return`https://images.scrydex.com/pokemon/me3-${parseInt(n)}/large`;
+}
 function imgMe02(n){return`https://images.scrydex.com/pokemon/me2-${parseInt(n)}/large`;}
 // me05: 03/10/2026 — mesma estrutura do me2pt5 (arte por idioma, tcgdex slug "me05"):
 // pt = arte em português da Copag, en = arte americana, jp = URL pronta no campo `img`
@@ -590,7 +600,7 @@ function getBinderImg(c,setId,lang){
   if(setId==='me2pt5') return imgMe2pt5(c,lang);
   if(setId==='me06') return imgMe06(n);
   if(setId==='me05') return imgMe05(c,lang);
-  if(setId==='me03') return imgMe03(n);
+  if(setId==='me03') return imgMe03(c,lang);
   if(setId==='me02') return imgMe02(n);
   if(setId==='meg')  return imgMeg(n);
   if(setId==='mep')  return imgMep(n);
