@@ -239,10 +239,30 @@ function _updateUserChip(user){
   if(nm) nm.textContent=(m.full_name||m.name||m.username||user.email||'').split(' ')[0];
 }
 
+// Estado da última carga de dados do usuário logado (loadAll): null = nunca rodou / saiu da conta,
+// 'loading' = em andamento, 'ok' = tudo carregado, 'partial'/'fail' = deu problema (tenta de novo no próximo evento).
+let _authLoadState=null;
+
 // Escuta mudanças de sessão (login/logout/refresh)
 if(sbClient){
   sbClient.auth.onAuthStateChange((_event,session)=>{
     if(shareMode) return; // visitante de link compartilhado: não mexe na tela de login
+    // 04/10/2026 — "a página dá refresh quando volto pra aba": toda vez que a aba volta a ficar visível o
+    // supabase-js (v2) dispara SIGNED_IN de novo com a MESMA sessão (e INITIAL_SESSION junto, ao abrir a página).
+    // Até aqui isso refazia a tela inteira: loadAll() (6 consultas + coleção inteira), renderAll(), initFichario(),
+    // routeFromHash() e todos os ganchos de _updateUserChip. Medido: cada volta = ~31 requisições e a tela
+    // redesenhada. Agora, mesmo usuário + dados já carregados (ou carregando) => só atualiza o objeto da sessão.
+    // Não pula: SIGNED_OUT, troca de usuário nem carga que falhou ('partial'/'fail' => o evento da volta serve
+    // de nova tentativa, como antes). USER_UPDATED (nome/avatar mudou) só atualiza o chip do topo.
+    const _nextUser=session?.user??null;
+    if(_nextUser&&currentUser&&_nextUser.id===currentUser.id
+       &&_event!=='SIGNED_OUT'
+       &&(_authLoadState==='ok'||_authLoadState==='loading')){
+      currentUser=_nextUser;
+      if(_event==='USER_UPDATED') _updateUserChip(currentUser);
+      return;
+    }
+    if(!_nextUser) _authLoadState=null; // saiu da conta: o próximo login carrega do zero
     currentUser=session?.user??null;
     _updateUserChip(currentUser);
     if(currentUser){
@@ -936,11 +956,13 @@ async function fetchAllRows(queryFactory){
 let _loadAllPromise = null;
 async function loadAll(){
   if(_loadAllPromise) return _loadAllPromise;
+  _authLoadState='loading'; // ver o handler de onAuthStateChange: evita refazer tudo a cada volta à aba
   _loadAllPromise = _loadAllImpl();
   try{
     return await _loadAllPromise;
   } finally {
     _loadAllPromise = null;
+    if(_authLoadState==='loading') _authLoadState='fail'; // saiu sem concluir (sem login, erro, exceção)
   }
 }
 async function _loadAllImpl(){
@@ -1011,8 +1033,10 @@ async function _loadAllImpl(){
   if(failedCount>0){
     setStatus('Conexão instável','warning');
     console.warn('loadAll: '+failedCount+' de '+results.length+' queries falharam — mostrando dados parciais',results);
+    _authLoadState='partial';
   }else{
     setStatus('Online ✓','ok');
+    _authLoadState='ok';
   }
   fetchCambio();  // atualiza USD_BRL e EUR_BRL para conversão de preços
   renderAll();
