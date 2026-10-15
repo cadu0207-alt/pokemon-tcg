@@ -1137,7 +1137,7 @@ function goPage(id){
 // Abas que qualquer visitante pode ver sem login — hoje só a Início
 // (conteúdo público: novidades/notícias/vídeos/links/revista + atalhos).
 // Todo o resto exige conta (Opção 1 — ver conversa de 29/08/2026).
-const PUBLIC_TABS = new Set(['inicio']);
+const PUBLIC_TABS = new Set(['inicio','mk']); // mk = vitrine da Loja Toybox (leitura pública)
 function tabRequiresAuth(id){ return !PUBLIC_TABS.has(id); }
 function go(id,el){
   // GATE 29/08/2026 (Opção 1): abas pessoais exigem login — sem sair da
@@ -1170,6 +1170,7 @@ function go(id,el){
   if(id==='cartas'){renderCartas();}
   if(id==='gastos'){renderGastos();}
   if(id==='lojas'){if(typeof renderLojas==='function')renderLojas();}
+  if(id==='mk'){if(typeof renderMk==='function')renderMk();}
   if(id==='mercado'){if(typeof renderMercado==='function')renderMercado();}
   if(id==='leilao'){if(typeof renderLeilaoTab==='function')renderLeilaoTab();}
   if(id==='rifas'){if(typeof renderRifasTab==='function')renderRifasTab();}

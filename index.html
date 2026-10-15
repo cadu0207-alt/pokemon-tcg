@@ -91,6 +91,7 @@
 <link rel="preconnect" href="https://images.scrydex.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,900&family=IBM+Plex+Mono:wght@400;600;700&family=DM+Sans:wght@300;500;700&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="mk.css">
 <script>
 (function(){
   var t = localStorage.getItem('mydeck-theme') || 'light';
@@ -183,14 +184,13 @@
 @media (max-width: 900px) {
   #pg-app .pane { background-image: none; }
 }
-/* CORRIGIDO 18/08/2026: .stripe, #feedback-bar-wrap e #global-ctcg-banner-wrap
+/* CORRIGIDO 18/08/2026: .stripe e #feedback-bar-wrap
    ficam FORA de .pane no DOM, então (sem position própria) eram pintados
    ANTES do #app-mosaic na stacking order — o overlay quase-opaco do mosaico
    (::after) cobria tudo, deixando a barra de feedback ("site em construção")
    e o input de mensagem praticamente invisíveis. Mesmo tratamento de .pane. */
 #pg-app > .stripe,
-#pg-app > #feedback-bar-wrap,
-#pg-app > #global-ctcg-banner-wrap { position: relative; z-index: 1; }
+#pg-app > #feedback-bar-wrap { position: relative; z-index: 1; }
 </style>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -268,7 +268,6 @@
   </header>
   <div class="stripe"></div>
   <div id="feedback-bar-wrap"></div>
-  <div id="global-ctcg-banner-wrap"></div>
 
   <!-- MENU DESKTOP 12/08/2026: agrupa as abas em 3 menus hover (MYDECK,
        COMPRA E VENDA E LEILÃO, INICIANTES) pra telas largas — a barra .tabs
@@ -299,7 +298,8 @@
 
     <div class="tdesk-label">Compra &amp; Venda</div>
     <button type="button" class="tdesk-link" data-tab="cartas" onclick="goToTab('cartas')"><span class="tdesk-icon">📈</span>Venda de Produtos</button>
-    <button type="button" class="tdesk-link" data-tab="lojas" onclick="goToTab('lojas')"><span class="tdesk-icon">🛍️</span>Lojas & Ofertas</button>
+    <button type="button" class="tdesk-link" data-tab="mk" onclick="goToTab('mk')"><span class="tdesk-icon">🧸</span>Loja Toybox</button>
+    <button type="button" class="tdesk-link" data-tab="lojas" onclick="goToTab('lojas')"><span class="tdesk-icon">🔎</span>Busca de Promoções ML</button>
     <button type="button" class="tdesk-link" data-tab="mercado" onclick="goToTab('mercado')"><span class="tdesk-icon">🏪</span>Lojas Confiáveis</button>
     <button type="button" class="tdesk-link" data-tab="positivo" onclick="goToTab('positivo')"><span class="tdesk-icon">✅</span>Cadastro Positivo</button>
     <!-- espelha nav-tab-leilao: só admin vê (updateLeilaoTabVisibility em leilao.js) -->
@@ -335,7 +335,8 @@
     <button type="button" class="tab" id="nav-tab-gastos" onclick="go('gastos',this)">💸 Gastos</button>
     <button type="button" class="tab" id="nav-tab-cartas" onclick="go('cartas',this)">📈 Compra/Venda</button>
     <button type="button" class="tab" id="nav-tab-preco" onclick="go('preco',this)">💰 Preço Justo</button>
-    <button type="button" class="tab" id="nav-tab-lojas" onclick="go('lojas',this)">🛍️ Lojas & Ofertas</button>
+    <button type="button" class="tab" id="nav-tab-mk" onclick="go('mk',this)">🧸 Loja Toybox</button>
+    <button type="button" class="tab" id="nav-tab-lojas" onclick="go('lojas',this)">🔎 Busca de Promoções ML</button>
     <button type="button" class="tab" id="nav-tab-mercado" onclick="go('mercado',this)">🏪 Lojas Confiáveis</button>
     <button type="button" class="tab" id="nav-tab-positivo" onclick="go('positivo',this)">✅ Cadastro Positivo</button>
     <button type="button" class="tab" id="nav-tab-iniciantes" onclick="go('iniciantes',this)">🔰 Iniciantes</button>
@@ -394,7 +395,8 @@
       <div class="msheet-label">Compra &amp; Venda</div>
       <div class="msheet-grid">
         <button type="button" class="msheet-item" data-tab="cartas" onclick="mNav('cartas')"><span class="msheet-ic">📈</span><span class="msheet-lb">Venda de Produtos</span></button>
-        <button type="button" class="msheet-item" data-tab="lojas" onclick="mNav('lojas')"><span class="msheet-ic">🛍️</span><span class="msheet-lb">Lojas &amp; Ofertas</span></button>
+        <button type="button" class="msheet-item" data-tab="mk" onclick="mNav('mk')"><span class="msheet-ic">🧸</span><span class="msheet-lb">Loja Toybox</span></button>
+        <button type="button" class="msheet-item" data-tab="lojas" onclick="mNav('lojas')"><span class="msheet-ic">🔎</span><span class="msheet-lb">Busca de Promoções ML</span></button>
         <button type="button" class="msheet-item" data-tab="mercado" onclick="mNav('mercado')"><span class="msheet-ic">🏪</span><span class="msheet-lb">Lojas Confiáveis</span></button>
         <button type="button" class="msheet-item" data-tab="positivo" onclick="mNav('positivo')"><span class="msheet-ic">✅</span><span class="msheet-lb">Cadastro Positivo</span></button>
       </div>
@@ -797,6 +799,11 @@
 
   <div id="lojas" class="pane">
     <div id="lojas-wrap"></div>
+  </div>
+
+  <!-- LOJA TOYBOX (15/10/2026): vitrine + painel do lojista (mk_core.js / mk_store.js / mk_panel.js) -->
+  <div id="mk" class="pane">
+    <div id="mk-wrap"></div>
   </div>
 
   <div id="iniciantes" class="pane">
@@ -2172,9 +2179,6 @@ window.loadJsPdf=function(){
 <script defer src="rifa.js"></script>
 <script defer src="loja.js"></script>
 <script defer src="positivo.js"></script>
-<script defer src="lojas_store_vespa.js"></script>
-<script defer src="lojas_store_coffeecat_fix.js"></script>
-<script defer src="lojas_banner_centraltcg.js"></script>
 <script defer src="lojas_destaques.js"></script>
 <script defer src="lojas_whatsapp.js"></script>
 <!-- lojas_msrp.js (15/10/2026): preço sugerido do fabricante (coluna msrp) — destaque
@@ -2182,6 +2186,10 @@ window.loadJsPdf=function(){
      lojas_destaques.js e lojas_whatsapp.js (encadeia por cima dos dois). -->
 <script defer src="lojas_msrp.js"></script>
 <script defer src="lojas_admin_collapse.js"></script>
+<!-- Loja Toybox (15/10/2026): base do marketplace. Depende de app.js (sbClient, uid, hasPerm via staff_access.js). Ordem: core, vitrine, painel. -->
+<script defer src="mk_core.js"></script>
+<script defer src="mk_store.js"></script>
+<script defer src="mk_panel.js"></script>
 <script defer src="iniciantes.js"></script>
 <script defer src="centralizacao.js"></script>
 <script defer src="admin_stats.js"></script>

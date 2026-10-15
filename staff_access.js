@@ -23,7 +23,7 @@ window.__staffPerms = [];
 window.__isStaffMember = false;
 
 const STAFF_AREAS = [
-  { key: 'lojas', label: '🛒 Lojas & Ofertas', hint: 'cadastrar/editar produtos rastreados, cupons, coleção, destaque, atualizar preços (não mexe no link de afiliado)' },
+  { key: 'lojas', label: '🔎 Busca de Promoções ML', hint: 'cadastrar/editar produtos rastreados, cupons, coleção, destaque, atualizar preços (não mexe no link de afiliado)' },
   { key: 'feedback', label: '💬 Feedback', hint: 'responder mensagens de usuários' },
   { key: 'marketplace', label: '🏪 Lojas Confiáveis', hint: 'aprovar/rejeitar cadastro de lojas (não edita CNPJ/comissão)' },
   { key: 'positivo', label: '✅ Cadastro Positivo', hint: 'aprovar/rejeitar indicações de lojas' },

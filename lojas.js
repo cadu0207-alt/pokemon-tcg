@@ -80,26 +80,8 @@ async function fetchCatalogPreview(catalogIdOrLink) {
 
 // ── CONFIG: lojas parceiras ─────────────────────────────────────
 const STORES = [
-  {
-    name: 'iWorld TCG',
-    city: 'Pereira Barreto · SP',
-    logo: 'https://ugc.production.linktr.ee/929ba8e6-3ff8-4f67-8973-e6f071b900cf_8567fd8ded86adcb458e6ac291267689-tplv-tiktokx-cropcenter-1080-1080.jpeg',
-    tiktok: 'https://www.tiktok.com/@iworldtcg',
-    instagram: '',
-    whatsapp: '',
-    color: '#22c55e',
-    tag: '🤝 Parceria oficial'
-  },
-  {
-    name: 'CoffeeCat - Pokémon TCG',
-    city: '',
-    logo: '',
-    tiktok: '',
-    instagram: '',
-    whatsapp: '',
-    color: '#c8960a',
-    tag: '⭐ Loja recomendada'
-  },
+  // 15/10/2026: só a TOYBOX fica na lista (as demais lojas indicadas foram retiradas a pedido do Eduardo).
+  // shop:true = a loja tem vitrine própria dentro do MyDeck (aba "Loja Toybox", mk_store.js).
   {
     name: 'TOYBOX Artes 3D',
     city: 'José Bonifácio · SP',
@@ -108,7 +90,8 @@ const STORES = [
     instagram: 'https://www.instagram.com/toybox_colecionaveis/',
     whatsapp: 'https://wa.me/5517991620996',
     color: '#0e7898',
-    tag: '⭐ Loja recomendada'
+    tag: '⭐ Loja parceira',
+    shop: true
   }
 ];
 
@@ -511,6 +494,7 @@ function renderStoreCard(s) {
   if (s.tiktok) links.push('<a href="' + s.tiktok + '" target="_blank" rel="noopener">🎵 TikTok</a>');
   if (s.instagram) links.push('<a href="' + s.instagram + '" target="_blank" rel="noopener">📸 Instagram</a>');
   if (s.whatsapp) links.push('<a href="' + s.whatsapp + '" target="_blank" rel="noopener">💬 WhatsApp</a>');
+  if (s.shop) links.unshift('<a href="#" onclick="goToTab(\'mk\');return false;"><b>🛒 Ver a loja no MyDeck</b></a>');
   const linksHtml = links.length ? links.join(' &nbsp;·&nbsp; ') : '<span style="opacity:.5">links em breve</span>';
   return (
     '<div class="store-card" style="--store-color:' + s.color + '">' +
