@@ -157,10 +157,16 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS });
 
   try {
-    const { data: terms, error } = await sbAdmin
+    // ?collection=Nome — atualiza só os produtos daquela coleção. Usado
+    // pelo cron extra de 5 em 5 min da "Celebração 30 Anos"
+    // (lojas_ml_update15.sql); o cron geral de 15 min chama sem filtro.
+    const collection = new URL(req.url).searchParams.get('collection');
+    let query = sbAdmin
       .from('ml_search_terms')
       .select('id, term, label, catalog_product_id, image_url')
       .eq('active', true);
+    if (collection) query = query.eq('collection', collection);
+    const { data: terms, error } = await query;
 
     if (error) throw new Error('Erro lendo ml_search_terms: ' + error.message);
     if (!terms || !terms.length) return json({ ok: true, refreshed: 0, results: [] });

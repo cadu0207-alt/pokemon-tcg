@@ -133,3 +133,24 @@ if (typeof window.renderProductCard === 'function') {
   style.textContent = css;
   document.head.appendChild(style);
 })();
+
+// ── 4. Aviso de promoção no celular (type 'deal_alert') ────────────
+// Os avisos são criados no banco por ml_check_deals() (lojas_ml_update15.sql)
+// e o push sai pelo notify-dispatch de sempre. Aqui só: ícone no sino e,
+// ao tocar no aviso com o site aberto, abrir o link da oferta (com o app
+// fechado, o service worker já abre data.url direto).
+(function setupDealAlertNotifications() {
+  try { if (typeof NOTIF_ICON !== 'undefined') NOTIF_ICON.deal_alert = '💰'; } catch (e) { /* sino não carregado */ }
+  if (typeof window.notifRoute === 'function') {
+    const _origNotifRoute = window.notifRoute;
+    window.notifRoute = function (n) {
+      if (n && n.type === 'deal_alert') {
+        const url = n.data && typeof n.data.url === 'string' ? n.data.url : null;
+        if (url && /^https:\/\//.test(url)) window.open(url, '_blank', 'noopener');
+        else if (typeof goToTab === 'function') goToTab('lojas');
+        return;
+      }
+      return _origNotifRoute.apply(this, arguments);
+    };
+  }
+})();
