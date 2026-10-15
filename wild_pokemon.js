@@ -281,6 +281,27 @@
     return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${dex}.png`;
   }
 
+  // 15/10/2026: raw.githubusercontent.com é bloqueado em alguns provedores/
+  // antivírus/DNS — o Pokémon "aparecia" invisível (só a div, sem imagem) e o
+  // jogador nunca via nada (report do Alex). Toda <img> do PokeAPI que falhar
+  // (Pokémon, pokébolas, mochila, batalha) é recarregada pelo espelho
+  // jsDelivr do MESMO repositório; se também falhar, o artwork do Pokémon
+  // vem do CDN da PokeAPI em outro formato. Listener único em captura —
+  // cobre imagens criadas depois sem mexer em cada innerHTML.
+  const WP_RAW_PREFIX = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/';
+  const WP_JSD_PREFIX = 'https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/';
+  document.addEventListener('error', function (ev) {
+    const img = ev.target;
+    if (!img || img.tagName !== 'IMG') return;
+    const src = img.currentSrc || img.src || '';
+    if (src.startsWith(WP_RAW_PREFIX)) {
+      img.src = WP_JSD_PREFIX + src.slice(WP_RAW_PREFIX.length);
+    } else if (src.startsWith(WP_JSD_PREFIX) && !img.dataset.wpFb2) {
+      const m = src.match(/official-artwork\/(\d+)\.png$/);
+      if (m) { img.dataset.wpFb2 = '1'; img.src = `https://img.pokemondb.net/sprites/home/normal/${(WP_KANTO151.find(x => x.d === +m[1]) || {}).s || m[1]}.png`; }
+    }
+  }, true);
+
   // ── Persistência local (teste — sem Supabase ainda) ────────────
   function wpLoadJSON(key, fallback) {
     try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
@@ -682,7 +703,11 @@
       50%      { opacity: 1; transform: scale(1); }
     }
     .wp-spawn.wp-bl { left: -78px; bottom: 18px; }
-    .wp-spawn.wp-br { right: -78px; bottom: 18px; }
+    /* 15/10/2026: --wpx por canto. As animações peek/shy/fled usam
+       translateX(var(--wpx,86px)) e sobrescrevem o transform do .wp-in — sem
+       isso, o canto direito andava +86px PARA FORA da tela e o Pokémon
+       nunca aparecia (1 em cada 3 spawns invisível pra todo mundo). */
+    .wp-spawn.wp-br { right: -78px; bottom: 18px; --wpx: -86px; }
     .wp-spawn.wp-tl { left: -78px; top: 90px; }
     /* 07/10/2026: mesmo problema que já tinha sido corrigido na .wp-badge e
        na .wp-arena-btn (29/08) — o Pokémon nascia atrás/colado na .mnav
@@ -963,6 +988,10 @@
   function wpSpawn(chance) {
     if (!wpEnabled) return; // minigame desligado pelo usuário
     if (wpActiveEl) return; // só 1 por vez na tela
+    // 15/10/2026: aba em segundo plano (PC com o site aberto em outra aba)
+    // — antes o Pokémon nascia e sumia em 8s sem ninguém ver. Guarda o
+    // spawn pra quando a pessoa voltar pra aba.
+    if (document.hidden) { wpPendingSpawn = true; return; }
     if (Math.random() > chance) return;
 
     const mon = wpPickMon();
@@ -1674,6 +1703,14 @@
   // muda. chance=1 porque a raridade sorteada já embute a probabilidade;
   // o intervalo entre tentativas é que faz a cadência de verdade.
   const WP_AVG_INTERVAL_MS = (WP_TEST_MODE ? WP_TEST_DAY_COMPRESS_MS : WP_DAY_MS) / WP_DAILY_TOTAL;
+
+  let wpPendingSpawn = false;
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && wpPendingSpawn) {
+      wpPendingSpawn = false;
+      setTimeout(() => wpSpawn(1), 1500);
+    }
+  });
 
   function wpScheduleBase() {
     const jitter = 0.5 + Math.random(); // 0.5x–1.5x pra não ficar num ritmo mecânico
