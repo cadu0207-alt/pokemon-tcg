@@ -23,7 +23,8 @@
 .mk-hero-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .mk-hero-links a { color: #fff; font-size: 12.5px; font-weight: 600; text-decoration: none; padding: 5px 10px; border-radius: 99px; background: rgba(255,255,255,.18); }
 .mk-hero-links a:hover { background: rgba(255,255,255,.3); }
-.mk-manage-btn { position: absolute; top: 10px; right: 10px; border: 0; cursor: pointer; font: 700 12px inherit; padding: 6px 11px; border-radius: 99px; background: #fff; color: #14516a; }
+.mk-hero-btns { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.mk-manage-btn { position: static; border: 0; cursor: pointer; font: 700 12px inherit; padding: 6px 11px; border-radius: 99px; background: #fff; color: #14516a; }
 .mk-info { margin: 12px 0 4px; font-size: 13px; color: var(--text2); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; }
 .mk-info summary { cursor: pointer; font-weight: 600; }
 .mk-info ul { margin: 8px 0 2px; padding-left: 18px; line-height: 1.7; }
@@ -235,3 +236,36 @@ body.mk-modal-open { overflow: hidden; }
 .mkb-card-tx b { font-size: 14px; }
 .mkb-card-tx span { font-size: 12.5px; color: #b6a6d4; }
 @media (max-width: 480px) { .mkb-card { grid-template-columns: auto 1fr; } .mkb-card .mkb-btn { grid-column: 1 / -1; text-align: center; } }
+
+/* ── frete, compra e pedidos (mk_orders.js) ── */
+.mk-ship { margin: 14px 0 4px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 10px; }
+.mk-ship-t { font-weight: 800; font-size: 13.5px; margin-bottom: 6px; }
+.mk-ship-row { display: flex; gap: 8px; }
+.mk-ship-row input { flex: 1; min-width: 0; }
+.mk-ship-out { margin-top: 8px; font-size: 13px; }
+.mk-ship-list { margin: 0; padding-left: 18px; line-height: 1.7; }
+.mk-ship-err { color: var(--accent); }
+.mk-buy-site { margin-top: 12px; background: #ffc21e; color: #120a1e; width: 100%; border: 0; cursor: pointer; }
+.mk-buy-site:hover { background: #ffd24d; }
+.mk-buy-alt { margin-top: 8px; background: transparent; color: #16a34a; border: 1px solid #16a34a; }
+.mk-buy-alt:hover { background: rgba(22,163,74,.1); }
+.mk-ck-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mk-seg { display: flex; gap: 6px; flex-wrap: wrap; }
+.mk-opts { display: flex; flex-direction: column; gap: 6px; }
+.mk-opt { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13.5px; cursor: pointer; }
+.mk-opt small { flex-basis: 100%; color: var(--muted); font-size: 11.5px; padding-left: 24px; }
+.mk-ck-total { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; font-size: 13.5px; }
+.mk-ck-sum { font-size: 16px; }
+.mk-ck-sum b { color: var(--accent); }
+.mk-qr { display: block; margin: 10px auto; width: 210px; max-width: 70%; background: #fff; padding: 8px; border-radius: 8px; }
+.mk-ord { border: 1px solid var(--border); background: var(--surface); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; font-size: 13px; }
+.mk-ord-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.mk-ord-when { margin-left: auto; color: var(--muted); font-size: 11.5px; }
+.mk-ord-st { font-size: 11.5px; font-weight: 800; padding: 2px 8px; border-radius: 99px; background: var(--surface2); }
+.mk-ord-aguardando_pagamento { background: rgba(255,194,30,.2); }
+.mk-ord-pago, .mk-ord-em_separacao, .mk-ord-enviado, .mk-ord-entregue { background: rgba(22,163,74,.18); }
+.mk-ord-cancelado, .mk-ord-expirado { background: rgba(220,38,38,.15); }
+.mk-ord-items { margin: 6px 0; }
+.mk-ord-line { color: var(--text2); margin: 2px 0; }
+.mk-ord-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.mk-row-actions-inline { display: flex; gap: 6px; flex-wrap: wrap; }

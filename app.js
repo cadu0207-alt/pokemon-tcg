@@ -1194,7 +1194,11 @@ function go(id,el){
 // Dashboard não levava a lugar nenhum visualmente. Qualquer onclick que
 // combine switchSet(...) com uma coleção/fichário agora chama goToTab
 // primeiro.
+// 17/10/2026: Lojas Confiáveis e Cadastro Positivo saíram do menu (decisão do Eduardo, foco na Loja Toybox);
+// links antigos caem na Loja Toybox. Painéis, código e dados continuam no repo/banco, só sem entrada.
+const RETIRED_TABS={mercado:'mk',positivo:'mk'};
 function goToTab(id){
+  if(RETIRED_TABS[id])id=RETIRED_TABS[id];
   const el=document.getElementById('nav-tab-'+id);
   if(el)go(id,el);
 }

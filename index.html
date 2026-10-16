@@ -300,8 +300,6 @@
     <button type="button" class="tdesk-link" data-tab="mk" onclick="goToTab('mk')"><span class="tdesk-icon">🧸</span>Loja Toybox <i class="mk-nav-badge" hidden>NOVO</i></button>
     <button type="button" class="tdesk-link" data-tab="cartas" onclick="goToTab('cartas')"><span class="tdesk-icon">📈</span>Venda de Produtos</button>
     <button type="button" class="tdesk-link" data-tab="lojas" onclick="goToTab('lojas')"><span class="tdesk-icon">🔎</span>Busca de Promoções ML</button>
-    <button type="button" class="tdesk-link" data-tab="mercado" onclick="goToTab('mercado')"><span class="tdesk-icon">🏪</span>Lojas Confiáveis</button>
-    <button type="button" class="tdesk-link" data-tab="positivo" onclick="goToTab('positivo')"><span class="tdesk-icon">✅</span>Cadastro Positivo</button>
     <!-- espelha nav-tab-leilao: só admin vê (updateLeilaoTabVisibility em leilao.js) -->
     <button type="button" class="tdesk-link" id="desk-tab-leilao" style="display:none" data-tab="leilao" onclick="goToTab('leilao')"><span class="tdesk-icon">🔨</span>Leilão</button>
     <!-- RIFAS (24/08/2026): mesma visibilidade do leilão — qualquer usuário
@@ -337,8 +335,6 @@
     <button type="button" class="tab" id="nav-tab-preco" onclick="go('preco',this)">💰 Preço Justo</button>
     <button type="button" class="tab" id="nav-tab-mk" onclick="go('mk',this)">🧸 Loja Toybox <i class="mk-nav-badge" hidden>NOVO</i></button>
     <button type="button" class="tab" id="nav-tab-lojas" onclick="go('lojas',this)">🔎 Busca de Promoções ML</button>
-    <button type="button" class="tab" id="nav-tab-mercado" onclick="go('mercado',this)">🏪 Lojas Confiáveis</button>
-    <button type="button" class="tab" id="nav-tab-positivo" onclick="go('positivo',this)">✅ Cadastro Positivo</button>
     <button type="button" class="tab" id="nav-tab-iniciantes" onclick="go('iniciantes',this)">🔰 Iniciantes</button>
     <button type="button" class="tab" id="nav-tab-centralizacao" onclick="go('centralizacao',this)">🎯 Avaliação de Centralização</button>
     <!-- LEILÃO 12/08/2026: fase de testes — só visível pro Eduardo (isAdmin(),
@@ -398,8 +394,6 @@
         <button type="button" class="msheet-item" data-tab="mk" onclick="mNav('mk')"><span class="msheet-ic">🧸</span><span class="msheet-lb">Loja Toybox <i class="mk-nav-badge" hidden>NOVO</i></span></button>
         <button type="button" class="msheet-item" data-tab="cartas" onclick="mNav('cartas')"><span class="msheet-ic">📈</span><span class="msheet-lb">Venda de Produtos</span></button>
         <button type="button" class="msheet-item" data-tab="lojas" onclick="mNav('lojas')"><span class="msheet-ic">🔎</span><span class="msheet-lb">Busca de Promoções ML</span></button>
-        <button type="button" class="msheet-item" data-tab="mercado" onclick="mNav('mercado')"><span class="msheet-ic">🏪</span><span class="msheet-lb">Lojas Confiáveis</span></button>
-        <button type="button" class="msheet-item" data-tab="positivo" onclick="mNav('positivo')"><span class="msheet-ic">✅</span><span class="msheet-lb">Cadastro Positivo</span></button>
       </div>
       <div class="msheet-label">&nbsp;</div>
       <div class="msheet-grid">
@@ -2193,6 +2187,7 @@ window.loadJsPdf=function(){
 <script defer src="mk_core.js"></script>
 <script defer src="mk_store.js"></script>
 <script defer src="mk_panel.js"></script>
+<script defer src="mk_orders.js"></script>
 <script defer src="mk_banners.js"></script>
 <script defer src="iniciantes.js"></script>
 <script defer src="centralizacao.js"></script>

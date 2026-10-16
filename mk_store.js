@@ -72,7 +72,10 @@ function mkStoreHeaderHtml() {
       (s.description ? '<p class="mk-hero-desc">' + mkEsc(s.description) + '</p>' : '') +
       (links.length ? '<div class="mk-hero-links">' + links.join('') + '</div>' : '') +
     '</div>' +
-    (mk.isMember ? '<button type="button" class="mk-manage-btn" onclick="mkGoPanel()">⚙️ Gerenciar loja</button>' : '') +
+    '<div class="mk-hero-btns">' +
+      (mk.isMember ? '<button type="button" class="mk-manage-btn" onclick="mkGoPanel()">⚙️ Gerenciar loja</button>' : '') +
+      (s.checkout_enabled && !mk.isMember && typeof mkOpenMyOrders === 'function' ? '<button type="button" class="mk-manage-btn" onclick="mkOpenMyOrders()">📦 Meus pedidos</button>' : '') +
+    '</div>' +
   '</div>' +
   (s.status !== 'ativa' ? '<div class="mk-note mk-note-warn">Esta loja está <b>' + mkEsc(s.status) + '</b>: só quem é da equipe consegue vê-la.</div>' : '') +
   '<details class="mk-info"><summary>ℹ️ Entrega, frete e trocas</summary><ul>' + info.join('') + '</ul></details>';
@@ -191,8 +194,10 @@ function mkOpenProduct(id) {
         '<div class="mk-prod-stock ' + (qty <= 0 ? 'out' : 'ok') + '">' + (qty <= 0 ? 'Esgotado' : qty + ' em estoque') + '</div>' +
         (p.description ? '<p class="mk-prod-desc">' + mkEsc(p.description).replace(/\n/g, '<br>') + '</p>' : '') +
         '<table class="mk-prod-table">' + rows.map(function (r) { return '<tr><th>' + mkEsc(r[0]) + '</th><td>' + mkEsc(r[1]) + '</td></tr>'; }).join('') + '</table>' +
-        (wa && qty > 0 ? '<a class="mk-buy-btn" target="_blank" rel="noopener" href="https://wa.me/' + wa + '?text=' + encodeURIComponent(msg) + '">💬 Chamar a loja no WhatsApp</a>' +
-          '<div class="mk-prod-hint">A compra direto pelo site chega em breve. Por enquanto a loja combina pagamento e envio pelo WhatsApp.</div>' : '') +
+        (typeof mkShipBoxHtml === 'function' ? mkShipBoxHtml(p) : '') +
+        (typeof mkBuyBtnHtml === 'function' ? mkBuyBtnHtml(p) : '') +
+        (wa && qty > 0 ? '<a class="mk-buy-btn' + (mk.seller.checkout_enabled ? ' mk-buy-alt' : '') + '" target="_blank" rel="noopener" href="https://wa.me/' + wa + '?text=' + encodeURIComponent(msg) + '">💬 Chamar a loja no WhatsApp</a>' +
+          (mk.seller.checkout_enabled ? '' : '<div class="mk-prod-hint">A compra direto pelo site chega em breve. Por enquanto a loja combina pagamento e envio pelo WhatsApp.</div>') : '') +
         (qty <= 0 ? '<div class="mk-prod-hint">Produto esgotado no momento. Pergunte à loja se vai repor.</div>' : '') +
         (mk.isMember ? '<button type="button" class="btn-mini" style="margin-top:12px" onclick="mkCloseModal();mkGoPanel(\'produtos\');setTimeout(function(){mkOpenProductForm(' + p.id + ')},60)">✏️ Editar este produto</button>' : '') +
       '</div>' +

@@ -11,8 +11,8 @@ let mkCatCache = null;      // catálogo de cartas (carregado 1x, só pra vincul
 function mkRenderPanel() {
   const wrap = document.getElementById('mk-wrap');
   if (!wrap || !mk.seller) return;
-  const tabs = [['produtos', '📦 Produtos'], ['estoque', '🔢 Estoque'], ['config', '⚙️ Dados da loja']];
-  if (mk.isOwner) tabs.push(['equipe', '👥 Equipe']);
+  const tabs = [['produtos', '📦 Produtos'], ['estoque', '🔢 Estoque'], ['pedidos', '🛒 Pedidos'], ['config', '⚙️ Dados da loja']];
+  if (mk.isOwner) { tabs.push(['pagamentos', '💳 Pagamentos']); tabs.push(['equipe', '👥 Equipe']); }
   if (!tabs.some(function (t) { return t[0] === mk.panelTab; })) mk.panelTab = 'produtos';
   wrap.innerHTML = '<div class="mk-page">' +
     '<div class="mk-panel-head"><div><div class="mk-panel-kicker">Painel do lojista</div><h2 class="mk-panel-title">' + mkEsc(mk.seller.name) + '</h2></div>' +
@@ -32,6 +32,11 @@ function mkRenderPanelBody() {
   if (mk.panelTab === 'produtos') body.innerHTML = mkProductsTabHtml();
   else if (mk.panelTab === 'estoque') body.innerHTML = mkStockTabHtml();
   else if (mk.panelTab === 'config') { body.innerHTML = mkConfigTabHtml(); }
+  else if (mk.panelTab === 'pedidos') { body.innerHTML = '<div class="mk-empty">Carregando pedidos…</div>'; mkLoadSellerOrders(); }
+  else if (mk.panelTab === 'pagamentos') {
+    body.innerHTML = '<div class="mk-empty">Carregando…</div>';
+    mkPaymentsTabHtml().then(function (h) { if (mk.panelTab === 'pagamentos') { const b = document.getElementById('mk-panel-body'); if (b) b.innerHTML = h; } });
+  }
   else if (mk.panelTab === 'equipe') { body.innerHTML = '<div class="mk-empty">Carregando equipe…</div>'; mkLoadTeam(); }
 }
 

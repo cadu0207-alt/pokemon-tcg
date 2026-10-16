@@ -25,7 +25,7 @@ let notifLotsEnabled=null;  // e-mails de novos leilões (notification_prefs.lot
 let notifLotsBusy=false;
 
 const NOTIF_LIMIT=30;
-const NOTIF_ICON={auction_outbid:'🔔',auction_closed:'🏁',auction_won:'🏆',auction_ending:'⏰',site_update:'🆕',news:'🗞️',new_auction:'🔨',new_raffle:'🎟️'};
+const NOTIF_ICON={auction_outbid:'🔔',auction_closed:'🏁',auction_won:'🏆',auction_ending:'⏰',site_update:'🆕',news:'🗞️',new_auction:'🔨',new_raffle:'🎟️',mk_order_new:'🛒',mk_order_update:'📦'};
 
 // ── CARGA ──────────────────────────────────────────────────────────
 async function notifLoad(){
@@ -164,6 +164,17 @@ function notifRoute(n){
   }
   if(d.raffle_id){
     if(typeof goToTab==='function')goToTab('rifas');
+    return;
+  }
+  if(d.mk_order_id){   // pedidos da Loja Toybox: lojista cai na aba Pedidos, comprador em "Meus pedidos"
+    if(typeof goToTab==='function')goToTab('mk');
+    setTimeout(async()=>{
+      try{
+        if(typeof mkLoadAll==='function')await mkLoadAll(false);
+        if(n.type==='mk_order_new'&&typeof mkGoPanel==='function'&&mk.isMember)mkGoPanel('pedidos');
+        else if(typeof mkOpenMyOrders==='function')mkOpenMyOrders();
+      }catch(e){}
+    },300);
     return;
   }
   if(d.news_id){
