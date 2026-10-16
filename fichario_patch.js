@@ -1248,3 +1248,52 @@ document.addEventListener('keydown', function (e) {
   e.preventDefault();
   el.click();
 });
+
+/* ─────────────────────────────────────────────
+   17/10/2026 — Fichário no celular: toolbar recolhível + aba ativa visível
+   • "⚙ Filtros" (#fic-filters-toggle, só ≤900px) abre/fecha checkboxes, raridade, artista, "Ordenar por Dex" e
+     tamanho; o selo mostra quantos filtros estão ligados ("Filtros (2)"). Busca, modo e "Mais ações" ficam sempre.
+   • A aba do set aberto passa a ficar centralizada na barra horizontal (antes o set ativo podia estar fora da tela).
+   Desktop não muda: o botão fica oculto e nada é recolhido (ver style.css, bloco "Fichário no celular").
+───────────────────────────────────────────── */
+function ficUpdateFilterBadge() {
+  const t = document.getElementById('fic-filters-toggle');
+  if (!t) return;
+  let n = 0;
+  ['fc', 'fm', 'fi2'].forEach(function (id) { if (document.getElementById(id)?.checked) n++; });
+  const art = document.getElementById('fm-artist-select');
+  if (art && art.value) n++;
+  t.textContent = '⚙ Filtros' + (n ? ' (' + n + ')' : '');
+  t.classList.toggle('active', n > 0);
+}
+function ficToggleOpts(force) {
+  const b = document.querySelector('.bctl');
+  if (!b) return;
+  const open = force !== undefined ? !!force : !b.classList.contains('fic-opts-open');
+  b.classList.toggle('fic-opts-open', open);
+  const t = document.getElementById('fic-filters-toggle');
+  if (t) t.setAttribute('aria-expanded', open ? 'true' : 'false');
+  ficUpdateFilterBadge();
+}
+window.ficToggleOpts = ficToggleOpts;
+document.addEventListener('change', function (e) {
+  if (e.target && e.target.closest && e.target.closest('.fic-toolbar-row1')) ficUpdateFilterBadge();
+});
+(function () {
+  const rb = window.renderBinder;
+  if (typeof rb === 'function') {
+    window.renderBinder = function () { const r = rb.apply(this, arguments); try { ficUpdateFilterBadge(); } catch (e) { /* ok */ } return r; };
+  }
+  const rt = window.renderTabs;
+  if (typeof rt === 'function') {
+    window.renderTabs = function () {
+      const r = rt.apply(this, arguments);
+      try {
+        const c = document.getElementById('binder-tabs');
+        const a = c && c.querySelector('.ctab.active');
+        if (c && a && c.clientWidth && c.scrollWidth > c.clientWidth) c.scrollLeft = Math.max(0, a.offsetLeft - (c.clientWidth - a.offsetWidth) / 2);
+      } catch (e) { /* ok */ }
+      return r;
+    };
+  }
+})();

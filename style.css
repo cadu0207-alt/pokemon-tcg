@@ -3865,3 +3865,44 @@ body.inicio-modal-open { overflow: hidden; }
 .fav-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .fav-badge { position: absolute; top: 3px; left: 4px; font-size: 13px; line-height: 1; color: #f5b301; text-shadow: 0 0 3px rgba(0,0,0,.85); pointer-events: none; }
 .fic-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* ── Fichário no celular: toolbar recolhível e cabeçalho do set no topo (17/10/2026) ── */
+#fic-filters-toggle { display: none; }
+.fic-info-toggle { display: none; }
+@media (max-width: 900px) {
+  /* ordem: resumo global, abas, set aberto (nome + %), busca/filtros, cartas — o set aparece ANTES dos controles */
+  #fichario.active { display: flex; flex-direction: column; }
+  #fichario > #binder-stats { order: 1; }
+  #fichario > #fic-tabs-desktop { order: 2; }
+  #fichario > #binder-tabs { order: 3; }
+  #fichario > #fic-set-info { order: 4; }
+  #fichario > .bctl { order: 5; }
+  #fichario > #bwrap { order: 6; }
+  #fichario > * { min-width: 0; }
+
+  #binder-stats { padding: 10px 12px !important; gap: 8px 16px !important; margin-bottom: 8px !important; }
+  #binder-stats .bsv { font-size: 19px; }
+
+  #fic-filters-toggle { display: inline-flex; align-items: center; flex: 0 0 auto; }
+  .fic-toolbar-row1 .bsrch { flex: 1 1 140px; min-width: 0; max-width: none; }
+  /* recolhido: só busca + botão Filtros; aberto: tudo como antes */
+  .bctl:not(.fic-opts-open) .fic-toolbar-row1 > :not(#bsrch):not(#fic-filters-toggle) { display: none !important; }
+  .bctl:not(.fic-opts-open) #fic-binder-controls,
+  .bctl:not(.fic-opts-open) #fm-dexsort-btn { display: none !important; }
+  .fic-toolbar-lbl { display: none; }
+  .fic-toolbar-row2 { gap: 6px !important; }
+
+  /* cabeçalho do set: 2ª linha (Base/Secretas, chase, dica) só ao tocar no ⓘ */
+  .fic-info-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 99px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 13px; cursor: pointer; }
+  #fic-set-info .fic-info-more { display: none !important; }
+  #fic-set-info.open .fic-info-more { display: flex !important; }
+  #fic-set-info { margin-bottom: 10px !important; padding: 9px 12px !important; }
+}
+@media (max-width: 900px) {
+  .fic-toolbar-row1 .bsrch { flex: 1 1 0 !important; width: auto !important; }
+  #fic-set-info:not(.open) #fm-ev-bridge { display: none !important; }
+  .fic-toolbar-row2 .fic-btn { padding: 9px 10px !important; }
+  #fic-more-btn .fic-more-txt { display: none; }
+  #fic-more-btn { margin-left: auto; }
+}

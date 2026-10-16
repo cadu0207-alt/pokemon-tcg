@@ -94,8 +94,9 @@ function fmRebuildSetInfoHeader(){
         <div style="height:100%;width:${pct}%;background:${pct>=100?'var(--teal)':'var(--gold)'};border-radius:3px;transition:width .4s"></div>
       </div>
       <span style="font-size:10px;color:var(--muted)">${all.c}/${all.t} slots</span>
+      <button type="button" class="fic-info-toggle" aria-label="Mais informações deste set" onclick="document.getElementById('fic-set-info').classList.toggle('open')">ⓘ</button>
     </div>
-    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;width:100%;margin-top:6px;font-size:9px;color:var(--muted-oncard,var(--muted))">
+    <div class="fic-info-more" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;width:100%;margin-top:6px;font-size:9px;color:var(--muted-oncard,var(--muted))">
       ${sectionHtml}
       ${priceUpdated}
       ${chase}

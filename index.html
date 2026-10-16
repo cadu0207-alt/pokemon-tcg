@@ -719,6 +719,9 @@
       <!-- Linha 1 — busca e filtros (sempre visível) -->
       <div class="fic-toolbar-row1" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <input class="bsrch" id="bsrch" placeholder="Buscar carta..." aria-label="Buscar carta neste fichário" oninput="ficSearchDebounced()">
+        <!-- 17/10/2026: só no celular (≤900px) — recolhe checkboxes, raridade, artista, ordem por Dex e tamanho
+             pra primeira tela mostrar as cartas (ver ficToggleOpts em fichario_patch.js) -->
+        <button type="button" id="fic-filters-toggle" class="fic-btn" aria-expanded="false" onclick="ficToggleOpts()">⚙ Filtros</button>
         <label><input type="checkbox" id="fc"  onchange="renderBinder()"> Só coletadas</label>
         <label><input type="checkbox" id="fm"  onchange="renderBinder()"> Só faltantes</label>
         <label><input type="checkbox" id="fi2" onchange="renderBinder()"> Só importantes ★</label>
@@ -766,7 +769,7 @@
         <!-- Menu 'Mais ações' — agrupa copiar lista / imprimir / compartilhar,
              que antes eram 3 botões soltos disputando espaço com o resto -->
         <div style="position:relative">
-          <button id="fic-more-btn" class="fic-btn" onclick="ficToggleMoreMenu(event)">⋯ Mais ações</button>
+          <button id="fic-more-btn" class="fic-btn" aria-label="Mais ações" onclick="ficToggleMoreMenu(event)">⋯<span class="fic-more-txt"> Mais ações</span></button>
           <div id="fic-more-menu" class="fic-more-menu">
             <button class="fic-more-item" onclick="exportBinderText();ficCloseMoreMenu()">📋 Copiar lista (texto)</button>
             <button id="fic-print" class="fic-more-item" onclick="printBinder(null,null,null,typeof _printOnlyState==='function'?_printOnlyState():undefined);ficCloseMoreMenu()">🖨️ Imprimir PDF</button>
