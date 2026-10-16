@@ -154,6 +154,7 @@ function evSelectProduct(id) {
   renderEVControls();
   renderEVResults();
   evApplyRealPrice(id); // busca assincrona — atualiza quando (se) responder
+  if (typeof evRenderRanking === 'function') evRenderRanking(); // só atualiza a linha destacada (preços já em cache)
 }
 
 function evSetPrice(v) {
@@ -215,6 +216,134 @@ function calcEVForProduct(prod) {
            evTotalMin:evBoosterMin*prod.boosters+evExtras,
            evTotalMax:evBoosterMax*prod.boosters+evExtras,
            rarBreakdown:rarBreakdown, noData:false };
+}
+
+// ============================================================
+//  SIMULAÇÃO — chance de recuperar o valor pago (pacote 2, 17/10/2026)
+// ============================================================
+// O EV é uma MÉDIA; quem compra 1 display de 36 boosters quer saber também "qual a chance de eu sair no zero a zero?".
+// Simula 20.000 aberturas do produto com as mesmas taxas (PULL_RATES) e os mesmos preços de carta do EV: cada booster
+// tem 1 slot raro (sorteia a raridade pela taxa e depois uma carta daquela raridade); comuns/incomuns não valem nada
+// (bulk fora do cálculo, igual ao EV). Caixas especiais usam a frequência por raridade do próprio cadastro. O resultado
+// é guardado por produto (a distribuição não depende do preço digitado) e usa semente fixa: os números não "mexem" a
+// cada re-render.
+var EV_SIM_TRIALS = 20000;
+var EV_SELL_FEE = 0.15; // taxa média de venda (ML + frete) — só pra mostrar o retorno "se revender"
+var evSimCache = {};
+
+function evHashStr(str) { var h = 2166136261; for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function evRng(seed) {
+  return function() { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+
+function evSimulate(prod) {
+  if (evSimCache[prod.id]) return evSimCache[prod.id];
+  var rnd = evRng(evHashStr(prod.id));
+  var pools = [], rows = [];
+  if (prod.set) {
+    var groups = {};
+    evGetSetCards(prod.set).forEach(function(c) {
+      if (!c.price || c.price <= 0) return;
+      var r = normalizeRare(c.rare);
+      if (EV_EXCLUDE[r]) return;
+      var pr = PULL_RATES[r];
+      if (!pr || pr.prob === 0) return;
+      if (!groups[r]) groups[r] = { prob: pr.prob, prices: [] };
+      groups[r].prices.push(c.price);
+    });
+    Object.keys(groups).forEach(function(k) { pools.push(groups[k]); });
+    if (!pools.length) return null;
+  } else {
+    rows = (prod.raridades || []).map(function(r) { return { freq: r.freq, valor: r.valor }; });
+    if (!rows.length) return null;
+  }
+  var extras = (prod.extras || []).reduce(function(a, e) { return a + (e.valor || 0); }, 0);
+  var totals = new Float64Array(EV_SIM_TRIALS);
+  for (var t = 0; t < EV_SIM_TRIALS; t++) {
+    var sum = extras;
+    for (var b = 0; b < prod.boosters; b++) {
+      if (pools.length) {
+        var u = rnd(), acc = 0;
+        for (var i = 0; i < pools.length; i++) {
+          acc += pools[i].prob;
+          if (u < acc) { sum += pools[i].prices[Math.floor(rnd() * pools[i].prices.length)]; break; }
+        }
+      } else {
+        for (var j = 0; j < rows.length; j++) {
+          var n = Math.floor(rows[j].freq);
+          if (rnd() < rows[j].freq - n) n++;
+          sum += n * rows[j].valor;
+        }
+      }
+    }
+    totals[t] = sum;
+  }
+  totals.sort();
+  evSimCache[prod.id] = totals;
+  return totals;
+}
+// fração das aberturas simuladas que rendeu pelo menos `price`
+function evSimChance(totals, price) {
+  var lo = 0, hi = totals.length;
+  while (lo < hi) { var mid = (lo + hi) >> 1; if (totals[mid] < price) lo = mid + 1; else hi = mid; }
+  return (totals.length - lo) / totals.length;
+}
+function evSimPct(totals, q) { return totals[Math.min(totals.length - 1, Math.floor(q * totals.length))]; }
+
+// ============================================================
+//  RANKING "ONDE VALE MAIS COMPRAR" (pacote 2)
+// ============================================================
+var evRankCache = null; // { real: {product_key:{price,updatedAt}} }
+function evHasDataFor(p) {
+  if (!p.set) return true;
+  return evGetSetCards(p.set).some(function(c) { return c.price && c.price > 0; });
+}
+async function evRenderRanking() {
+  var box = document.getElementById('ev-rank');
+  if (!box) return;
+  if (!evRankCache) {
+    var real = {};
+    try { if (typeof window.mydeckGetAllRealPrices === 'function') real = await window.mydeckGetAllRealPrices(); } catch (e) { real = {}; }
+    evRankCache = { real: real };
+    box = document.getElementById('ev-rank');
+    if (!box) return;
+  }
+  var rows = [];
+  CATALOG.forEach(function(p) {
+    if (!evHasDataFor(p)) return;
+    var ev = calcEVForProduct(p);
+    if (ev.noData || !(ev.evTotal > 0)) return;
+    var real = evRankCache.real[p.id];
+    var price = real ? real.price : p.varejo;
+    rows.push({ p: p, price: price, isReal: !!real, ret: ev.evTotal / price * 100 });
+  });
+  rows.sort(function(a, b) { return b.ret - a.ret; });
+  var body = rows.map(function(r) {
+    var v = getVerdict(100 / r.ret);
+    var origem = r.isReal ? '<span style="color:#16a34a">ML · 7 dias</span>' : '<span style="color:var(--muted)">' + (r.p.estimado ? '⚠ tabela estimada' : 'preço de tabela') + '</span>';
+    var sel = r.p.id === evState.productId;
+    return '<tr onclick="evPickFromRanking(\'' + r.p.id + '\')" style="cursor:pointer;border-top:1px solid var(--border);' + (sel ? 'background:var(--surface2)' : '') + '">' +
+      '<td style="padding:8px 10px;font-size:12px">' + r.p.nome.replace(/ \[estimado\]/, '') + '<div style="font-size:10px;color:var(--muted)">' + r.p.grupo + '</div></td>' +
+      '<td style="padding:8px 10px;font-size:12px;text-align:right;color:var(--gold);white-space:nowrap">R$' + fmtR(r.price) + '<div style="font-size:9px">' + origem + '</div></td>' +
+      '<td style="padding:8px 10px;font-family:\'Bebas Neue\',sans-serif;font-size:20px;text-align:right;white-space:nowrap">' + Math.round(r.ret) + '%</td>' +
+      '<td style="padding:8px 10px;text-align:center"><span style="font-family:\'Bebas Neue\',sans-serif;font-size:16px">' + v.grade + '</span></td></tr>';
+  }).join('');
+  box.innerHTML =
+    '<div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin:28px 0 6px">🏆 Onde vale mais comprar hoje</div>' +
+    '<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Todos os produtos com preços de carta cadastrados, do maior para o menor retorno esperado. O preço usado é o menor achado no ML nos últimos 7 dias, quando o produto é monitorado; nos demais, o preço de tabela. Toque numa linha pra ver o detalhe.</div>' +
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;max-height:420px;overflow-y:auto">' +
+      '<table style="width:100%;border-collapse:collapse"><thead><tr style="background:var(--surface2)">' +
+        '<th style="padding:8px 10px;font-size:9px;letter-spacing:2px;color:var(--muted);text-align:left;font-weight:400">PRODUTO</th>' +
+        '<th style="padding:8px 10px;font-size:9px;letter-spacing:2px;color:var(--muted);text-align:right;font-weight:400">PREÇO</th>' +
+        '<th style="padding:8px 10px;font-size:9px;letter-spacing:2px;color:var(--muted);text-align:right;font-weight:400">RETORNO</th>' +
+        '<th style="padding:8px 10px;font-size:9px;letter-spacing:2px;color:var(--muted);text-align:center;font-weight:400">NOTA</th>' +
+      '</tr></thead><tbody>' + body + '</tbody></table></div>';
+}
+function evPickFromRanking(id) {
+  evSelectProduct(id);
+  var sel = document.getElementById('ev-product'); if (sel) sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  evRenderRanking();
 }
 
 function kpi(label, value, color) {
@@ -302,6 +431,12 @@ function renderEVResults() {
 
   var mult = ev.evTotal > 0 ? pixPrice / ev.evTotal : 0;
   var lucro = ev.evTotal - pixPrice;
+  var retorno = pixPrice > 0 ? ev.evTotal / pixPrice * 100 : 0;                  // "recupero X% do que pago, em média"
+  var retornoLiq = pixPrice > 0 ? ev.evTotal * (1 - EV_SELL_FEE) / pixPrice * 100 : 0; // se revender as cartas (taxa ~15%)
+  var sim = evSimulate(prod);
+  var chance = sim ? evSimChance(sim, pixPrice) : null;
+  var faixaLo = sim ? evSimPct(sim, 0.10) : null, faixaHi = sim ? evSimPct(sim, 0.90) : null;
+  function fmtPct(f) { return f <= 0 ? '0%' : (f < 0.005 ? '<1%' : (f > 0.995 ? '>99%' : Math.round(f * 100) + '%')); }
   var verdict = getVerdict(mult);
   var precoAlvo = ev.evTotal * 0.85;
   var precoAbaixoTeto = pixPrice <= precoAlvo;
@@ -395,16 +530,21 @@ function renderEVResults() {
         '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px">' + verdict.desc + '</div>' +
       '</div>' +
       '<div style="text-align:right">' +
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:42px;color:#fff;line-height:1">' + mult.toFixed(2) + 'x</div>' +
-        '<div style="font-size:10px;color:rgba(255,255,255,0.7);letter-spacing:2px;text-transform:uppercase">multiplicador</div>' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:42px;color:#fff;line-height:1">' + Math.round(retorno) + '%</div>' +
+        '<div style="font-size:10px;color:rgba(255,255,255,0.7);letter-spacing:2px;text-transform:uppercase">retorno esperado</div>' +
+        '<div style="font-size:10px;color:rgba(255,255,255,0.6);margin-top:2px">você paga ' + mult.toFixed(2) + '× o EV</div>' +
       '</div>' +
     '</div>' +
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px">' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:24px">' +
       kpi('EV / booster', fmtR(ev.evBooster), 'var(--fg)') +
       kpi('EV total (' + prod.boosters + 'x)', fmtR(ev.evTotal), 'var(--fg)') +
       kpi('Você paga', fmtR(pixPrice), 'var(--gold)') +
       kpi('Lucro esperado', (lucro>=0?'+':'') + fmtR(lucro), lucroColor) +
+      (sim ? kpi('Chance de recuperar o valor pago', fmtPct(chance), chance >= 0.5 ? '#43e97b' : (chance >= 0.2 ? 'var(--gold)' : '#e74c3c')) : '') +
+      (sim ? kpi('Faixa provável (80% dos casos)', 'R$' + fmtR(faixaLo) + ' – R$' + fmtR(faixaHi), 'var(--fg)') : '') +
+      kpi('Retorno se revender (taxa ~' + Math.round(EV_SELL_FEE * 100) + '%)', Math.round(retornoLiq) + '%', 'var(--fg)') +
     '</div>' +
+    (sim ? '<div style="font-size:10px;color:var(--muted);margin:-12px 0 24px;line-height:1.6">Chance e faixa vêm de ' + EV_SIM_TRIALS.toLocaleString('pt-BR') + ' aberturas simuladas com as taxas de pull e os preços atuais das cartas (bulk fora, como no EV). O EV é uma média: numa abertura só, o resultado real costuma ficar bem longe dela.</div>' : '') +
     '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;' +
     'padding:14px 18px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">' +
       '<div><div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Teto de compra (EV - 15%)</div>' +
@@ -436,11 +576,12 @@ function renderEV() {
   var wrap = document.getElementById('ev-wrap');
   if (!wrap) return;
   if (!document.getElementById('ev-ctrl')) {
-    wrap.innerHTML = '<div id="ev-ctrl"></div><div id="ev-res"></div>';
+    wrap.innerHTML = '<div id="ev-ctrl"></div><div id="ev-res"></div><div id="ev-rank"></div>';
   }
   renderEVControls();
   renderEVResults();
   evApplyRealPrice(evState.productId);
+  evRenderRanking();
 }
 
 function initEV() { renderEV(); }

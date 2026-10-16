@@ -368,11 +368,34 @@ window.mydeckGetRealPrice = async function(productKey) {
     .order('price', { ascending: true })
     .limit(500);
   if (e2 || !rows || !rows.length) return null;
+  return mydeckPickRealPrice(rows);
+};
+
+// rows ordenadas por preço crescente → o menor preço que não seja outlier (< 50% da mediana)
+function mydeckPickRealPrice(rows) {
+  if (!rows || !rows.length) return null;
   const mid = Math.floor(rows.length / 2);
   const median = rows.length % 2 ? +rows[mid].price : (+rows[mid - 1].price + +rows[mid].price) / 2;
   const best = rows.find(r => +r.price >= median * 0.5);
-  if (!best) return null;
-  return { price: +best.price, updatedAt: best.found_at };
+  return best ? { price: +best.price, updatedAt: best.found_at } : null;
+}
+
+// 17/10/2026 (Preço Justo, ranking): todos os preços reais de uma vez — { product_key: {price, updatedAt} }.
+// Duas consultas no total (em vez de duas por produto).
+window.mydeckGetAllRealPrices = async function() {
+  if (!sbClient) return {};
+  const { data: terms, error } = await sbClient.from('ml_search_terms').select('id, product_key').eq('active', true).not('product_key', 'is', null);
+  if (error || !terms || !terms.length) return {};
+  const since = new Date(Date.now() - 7 * 86400000).toISOString();
+  const { data: rows, error: e2 } = await sbClient.from('ml_price_history').select('term_id, price, found_at')
+    .in('term_id', terms.map(t => t.id)).gte('found_at', since).order('price', { ascending: true }).limit(5000);
+  if (e2 || !rows) return {};
+  const out = {};
+  terms.forEach(t => {
+    const p = mydeckPickRealPrice(rows.filter(r => r.term_id === t.id));
+    if (p) out[t.product_key] = p;
+  });
+  return out;
 };
 
 function applyCouponDiscount(price, coupon) {
