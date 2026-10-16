@@ -25,7 +25,7 @@ const mk = {
   loaded: false,
   loadedFor: null,     // uid com que carregou (recarrega se trocar de conta)
   error: null,
-  filters: { q: '', kind: 'todos', sort: 'recentes', onlyStock: false },
+  filters: { q: '', kind: 'todos', sort: 'recentes', onlyStock: false, setId: null },
   panelFilters: { q: '', status: 'todos' },
 };
 
@@ -74,11 +74,23 @@ function mkCover(p) {
   const imgs = (p.images || []).slice().sort(function (a, b) { return a.position - b.position; });
   return imgs.length ? imgs[0].url : '';
 }
+// "novidade" = publicado há menos de 7 dias (published_at é carimbado pelo banco na 1ª publicação)
+function mkIsNew(p) {
+  const t = Date.parse(p.published_at || '');
+  return Number.isFinite(t) && Date.now() - t < 7 * 86400000;
+}
 function mkQty(p) { return p.stock ? Number(p.stock.qty_available) || 0 : 0; }
 function mkReserved(p) { return p.stock ? Number(p.stock.qty_reserved) || 0 : 0; }
 
 // ── dados ───────────────────────────────────────────────────────────
-async function mkLoadAll(force) {
+// quem chamar enquanto já está carregando espera a MESMA carga (a vitrine e os banners podem pedir juntos)
+let mkLoadPromise = null;
+function mkLoadAll(force) {
+  if (mkLoadPromise) return mkLoadPromise;
+  mkLoadPromise = mkLoadAllImpl(force).finally(function () { mkLoadPromise = null; });
+  return mkLoadPromise;
+}
+async function mkLoadAllImpl(force) {
   if (mk.loading) return;
   const me = (typeof uid === 'function' && uid()) || null;
   if (mk.loaded && !force && mk.loadedFor === me) return;

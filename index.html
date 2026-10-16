@@ -297,8 +297,8 @@
     <button type="button" class="tdesk-link" data-tab="centralizacao" onclick="goToTab('centralizacao')"><span class="tdesk-icon">🎯</span>Centralização</button>
 
     <div class="tdesk-label">Compra &amp; Venda</div>
+    <button type="button" class="tdesk-link" data-tab="mk" onclick="goToTab('mk')"><span class="tdesk-icon">🧸</span>Loja Toybox <i class="mk-nav-badge" hidden>NOVO</i></button>
     <button type="button" class="tdesk-link" data-tab="cartas" onclick="goToTab('cartas')"><span class="tdesk-icon">📈</span>Venda de Produtos</button>
-    <button type="button" class="tdesk-link" data-tab="mk" onclick="goToTab('mk')"><span class="tdesk-icon">🧸</span>Loja Toybox</button>
     <button type="button" class="tdesk-link" data-tab="lojas" onclick="goToTab('lojas')"><span class="tdesk-icon">🔎</span>Busca de Promoções ML</button>
     <button type="button" class="tdesk-link" data-tab="mercado" onclick="goToTab('mercado')"><span class="tdesk-icon">🏪</span>Lojas Confiáveis</button>
     <button type="button" class="tdesk-link" data-tab="positivo" onclick="goToTab('positivo')"><span class="tdesk-icon">✅</span>Cadastro Positivo</button>
@@ -335,7 +335,7 @@
     <button type="button" class="tab" id="nav-tab-gastos" onclick="go('gastos',this)">💸 Gastos</button>
     <button type="button" class="tab" id="nav-tab-cartas" onclick="go('cartas',this)">📈 Compra/Venda</button>
     <button type="button" class="tab" id="nav-tab-preco" onclick="go('preco',this)">💰 Preço Justo</button>
-    <button type="button" class="tab" id="nav-tab-mk" onclick="go('mk',this)">🧸 Loja Toybox</button>
+    <button type="button" class="tab" id="nav-tab-mk" onclick="go('mk',this)">🧸 Loja Toybox <i class="mk-nav-badge" hidden>NOVO</i></button>
     <button type="button" class="tab" id="nav-tab-lojas" onclick="go('lojas',this)">🔎 Busca de Promoções ML</button>
     <button type="button" class="tab" id="nav-tab-mercado" onclick="go('mercado',this)">🏪 Lojas Confiáveis</button>
     <button type="button" class="tab" id="nav-tab-positivo" onclick="go('positivo',this)">✅ Cadastro Positivo</button>
@@ -372,6 +372,7 @@
   <nav class="mnav" aria-label="Navegação mobile" id="mnav">
     <button type="button" class="mnav-btn active" id="mnav-tab-inicio" data-tab="inicio" onclick="mNav('inicio')"><span class="mnav-ic">🏠</span>Início</button>
     <button type="button" class="mnav-btn" id="mnav-tab-fichario" data-tab="fichario" onclick="mNav('fichario')"><span class="mnav-ic">📚</span>Fichário</button>
+    <button type="button" class="mnav-btn" id="mnav-tab-mk" data-tab="mk" onclick="mNav('mk')"><span class="mnav-ic">🧸</span>Toybox<i class="mk-nav-badge mk-nav-dot" hidden></i></button>
     <!-- espelha #nav-tab-leilao: leilao.js mostra pra qualquer usuário
          logado (updateLeilaoTabVisibility, show=!!uid()) — não é só admin,
          só o painel interno do leiloeiro que é restrito. -->
@@ -394,8 +395,8 @@
       </div>
       <div class="msheet-label">Compra &amp; Venda</div>
       <div class="msheet-grid">
+        <button type="button" class="msheet-item" data-tab="mk" onclick="mNav('mk')"><span class="msheet-ic">🧸</span><span class="msheet-lb">Loja Toybox <i class="mk-nav-badge" hidden>NOVO</i></span></button>
         <button type="button" class="msheet-item" data-tab="cartas" onclick="mNav('cartas')"><span class="msheet-ic">📈</span><span class="msheet-lb">Venda de Produtos</span></button>
-        <button type="button" class="msheet-item" data-tab="mk" onclick="mNav('mk')"><span class="msheet-ic">🧸</span><span class="msheet-lb">Loja Toybox</span></button>
         <button type="button" class="msheet-item" data-tab="lojas" onclick="mNav('lojas')"><span class="msheet-ic">🔎</span><span class="msheet-lb">Busca de Promoções ML</span></button>
         <button type="button" class="msheet-item" data-tab="mercado" onclick="mNav('mercado')"><span class="msheet-ic">🏪</span><span class="msheet-lb">Lojas Confiáveis</span></button>
         <button type="button" class="msheet-item" data-tab="positivo" onclick="mNav('positivo')"><span class="msheet-ic">✅</span><span class="msheet-lb">Cadastro Positivo</span></button>
@@ -459,6 +460,8 @@
          No lugar dela entram os feeds de Compra/Venda (ver
          .inicio-market-feed-target / loadInicioMarketFeed() em inicio.js)
          — só aparecem quando houver algum anúncio/ordem pra mostrar. -->
+    <!-- Loja Toybox (16/10/2026): banner + produtos, montados sozinhos por mk_banners.js; vazio enquanto não houver produto ativo com estoque -->
+    <div id="mk-hero-slot"></div>
     <div class="inicio-market-feed-target" id="inicio-market-feed-wrap-top"></div>
 
     <div id="inicio-hero-wrap"></div>
@@ -2190,6 +2193,7 @@ window.loadJsPdf=function(){
 <script defer src="mk_core.js"></script>
 <script defer src="mk_store.js"></script>
 <script defer src="mk_panel.js"></script>
+<script defer src="mk_banners.js"></script>
 <script defer src="iniciantes.js"></script>
 <script defer src="centralizacao.js"></script>
 <script defer src="admin_stats.js"></script>

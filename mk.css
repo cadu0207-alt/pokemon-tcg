@@ -175,3 +175,63 @@ body.mk-modal-open { overflow: hidden; }
   .mk-modal { padding: 0; }
   .mk-modal-box { border-radius: 0; min-height: 100vh; max-width: none; }
 }
+
+/* ================================================================
+   Banners automáticos da Toybox (mk_banners.js) — identidade da marca: roxo escuro, amarelo, ciano
+   ================================================================ */
+.mk-badge-new { background: #7c3aed; }
+.mk-nav-badge { font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: .04em; padding: 1px 6px; border-radius: 99px; background: #ffc21e; color: #1b1100; margin-left: 5px; vertical-align: middle; }
+.mk-nav-badge[hidden] { display: none !important; }
+.mnav-btn { position: relative; }
+.mk-nav-dot { position: absolute; top: 5px; left: calc(50% + 6px); width: 9px; height: 9px; padding: 0; margin: 0; border: 2px solid var(--surface); border-radius: 50%; font-size: 0; }
+
+.mkb-btn { display: inline-block; background: #ffc21e; color: #1b1100 !important; font-weight: 800; font-size: 14px; text-decoration: none; padding: 9px 18px; border-radius: 99px; border: 0; cursor: pointer; white-space: nowrap; }
+.mkb-btn:hover { background: #ffd95c; }
+.mkb-btn-sm { font-size: 13px; padding: 7px 14px; }
+
+/* faixa fina no topo */
+.mkb-strip { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; padding: 7px 38px 7px 14px; position: relative; z-index: 1;
+  background: linear-gradient(90deg, #24114a, #4a1b7a); color: #f5eeff; font-size: 13px; }
+.mkb-strip b { color: #ffc21e; }
+.mkb-strip-ic { width: 20px; height: 20px; border-radius: 6px; background: url(toybox-icon.jpg) center/cover; flex: none; }
+.mkb-strip-tx { min-width: 0; }
+.mkb-strip-go { color: #34d8ff; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.mkb-strip-x { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; color: #f5eeff; opacity: .7; cursor: pointer; font-size: 14px; padding: 6px; }
+.mkb-strip-x:hover { opacity: 1; }
+@media (min-width: 901px) { .mkb-strip { margin-left: var(--tdesk-w, 224px); } }
+
+/* banner grande do Início */
+#mk-hero-slot:empty { display: none; }
+#mk-hero-slot { margin: 0 0 18px; }
+.mkb-hero { position: relative; display: grid; grid-template-columns: 1.15fr 1fr; min-height: 190px; border-radius: 16px; overflow: hidden; background: #120a1e; color: #f5eeff; }
+.mkb-hero-tx { padding: 20px 20px 20px 24px; z-index: 1; display: flex; flex-direction: column; justify-content: center; gap: 7px; }
+.mkb-seal { font-size: 11px; letter-spacing: .13em; font-weight: 800; text-transform: uppercase; color: #34d8ff; }
+.mkb-hero h3 { margin: 0; font-size: clamp(21px, 3.4vw, 29px); line-height: 1.1; font-weight: 800; color: #ffc21e; }
+.mkb-hero p { margin: 0; color: #b6a6d4; font-size: 13.5px; max-width: 44ch; }
+.mkb-hero-cta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.mkb-pill { font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: rgba(255,255,255,.12); }
+.mkb-hero-art { position: relative; background: url(toybox-art.jpg) center/cover; min-height: 150px; }
+.mkb-hero-art::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, #120a1e 0%, rgba(18,10,30,.05) 55%); }
+@media (max-width: 600px) {
+  .mkb-hero { grid-template-columns: 1fr; }
+  .mkb-hero-art { order: -1; min-height: 120px; }
+  .mkb-hero-art::before { background: linear-gradient(0deg, #120a1e 0%, rgba(18,10,30,.05) 70%); }
+}
+.mkb-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+@media (max-width: 600px) { .mkb-row { grid-template-columns: repeat(2, 1fr); } }
+.mkb-mini { display: flex; flex-direction: column; gap: 3px; text-decoration: none; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 8px; transition: transform .12s, box-shadow .12s; }
+.mkb-mini:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,.12); }
+.mkb-mini-img { position: relative; aspect-ratio: 1 / 1; border-radius: 8px; overflow: hidden; background: var(--surface2); display: grid; place-items: center; font-size: 34px; }
+.mkb-mini-img img { width: 100%; height: 100%; object-fit: cover; }
+.mkb-new { position: absolute; top: 6px; left: 6px; font-style: normal; font-size: 9.5px; font-weight: 800; padding: 2px 7px; border-radius: 99px; background: #7c3aed; color: #fff; }
+.mkb-mini-t { font-size: 12.5px; font-weight: 700; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mkb-mini-p { font-size: 14px; font-weight: 800; color: var(--teal); font-variant-numeric: tabular-nums; }
+
+/* cartões (Fichário e Leilão) */
+#mk-fic-slot:empty, #mk-leilao-slot:empty { display: none; }
+.mkb-card { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; margin: 0 0 14px; padding: 12px 14px; border-radius: 12px; background: #1d1232; color: #f5eeff; border: 1px solid rgba(255,255,255,.12); }
+.mkb-card-ic { width: 42px; height: 42px; border-radius: 10px; background: url(toybox-icon.jpg) center/cover; }
+.mkb-card-tx { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mkb-card-tx b { font-size: 14px; }
+.mkb-card-tx span { font-size: 12.5px; color: #b6a6d4; }
+@media (max-width: 480px) { .mkb-card { grid-template-columns: auto 1fr; } .mkb-card .mkb-btn { grid-column: 1 / -1; text-align: center; } }

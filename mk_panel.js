@@ -99,6 +99,7 @@ function mkProductRowsHtml(list) {
       '<div><span class="mk-chip mk-chip-' + p.status + '">' + mkEsc(MK_STATUS_LBL[p.status] || p.status) + '</span></div>' +
       '<div class="mk-row-actions">' +
         '<button type="button" class="btn-mini" onclick="mkOpenProductForm(' + p.id + ')">✏️ Editar</button>' + toggle +
+        '<button type="button" class="btn-mini' + (p.featured ? ' btn-mini-active' : '') + '" title="' + (p.featured ? 'Tirar o destaque' : 'Destacar nos banners') + '" onclick="mkToggleFeatured(' + p.id + ')">' + (p.featured ? '⭐' : '☆') + '</button>' +
         (p.status !== 'arquivado' ? '<button type="button" class="btn-mini btn-mini-danger" title="Arquivar (some da vitrine e da lista)" onclick="mkSetProductStatus(' + p.id + ',\'arquivado\')">🗄️</button>' : '') +
       '</div></div>';
   }).join('') + '</div>';
@@ -115,6 +116,17 @@ function mkPanelSearch(v) {
 }
 function mkPanelStatus(v) { mk.panelFilters.status = v; mkRenderPanelBody(); }
 window.mkPanelSearch = mkPanelSearch; window.mkPanelStatus = mkPanelStatus;
+
+async function mkToggleFeatured(id) {
+  const p = mk.products.find(function (x) { return x.id === id; });
+  if (!p) return;
+  const { error } = await sbClient.from('mk_products').update({ featured: !p.featured }).eq('id', id);
+  if (error) { mkToast('Não consegui mudar o destaque: ' + error.message, true); return; }
+  p.featured = !p.featured;
+  mkToast(p.featured ? 'Em destaque nos banners.' : 'Destaque removido.');
+  mkRenderPanelBody();
+}
+window.mkToggleFeatured = mkToggleFeatured;
 
 async function mkSetProductStatus(id, status) {
   const p = mk.products.find(function (x) { return x.id === id; });
@@ -181,6 +193,7 @@ async function mkOpenProductForm(id) {
         '<label class="mk-f"><span>Avisar quando baixar de</span><input id="mkf-low" type="number" min="0" step="1" value="' + (v.low_stock_alert == null ? 1 : v.low_stock_alert) + '"></label>' +
         '<label class="mk-f"><span>Código (SKU)</span><input id="mkf-sku" maxlength="40" value="' + mkEsc(v.sku || '') + '" placeholder="opcional"></label>' +
       '</div>' +
+      '<label class="mk-check"><input type="checkbox" id="mkf-featured"' + (v.featured ? ' checked' : '') + '> ⭐ Destaque (aparece primeiro nos banners e na vitrine)</label>' +
       '<label class="mk-f"><span>Situação</span><select id="mkf-status">' + mkOpt(
         p ? MK_STATUS_LBL : { rascunho: 'Rascunho (só você vê)', ativo: 'Ativo (aparece na vitrine)', pausado: 'Pausado' }, v.status) + '</select></label>' +
       '<details class="mk-f-more"><summary>Peso e medidas (para o frete, opcional)</summary>' +
@@ -353,6 +366,7 @@ async function mkSaveProduct() {
   const num = function (id) { const t = val(id).replace(',', '.'); if (!t) return null; const n = Number(t); return Number.isFinite(n) && n > 0 ? n : null; };
   const row = {
     kind: kind, title: title, description: val('mkf-desc') || null, sku: val('mkf-sku') || null,
+    featured: !!(document.getElementById('mkf-featured') || {}).checked,
     price: price, compare_at_price: old, low_stock_alert: Number.isFinite(low) && low >= 0 ? low : 1, status: status,
     weight_g: num('mkf-w') ? Math.round(num('mkf-w')) : null, length_cm: num('mkf-l'), width_cm: num('mkf-wd'), height_cm: num('mkf-h'),
     set_id: kind === 'carta' ? mkForm.setId : null, card_n: kind === 'carta' ? mkForm.cardN : null,
@@ -502,6 +516,10 @@ function mkConfigTabHtml() {
     '<div class="mk-f-row">' + f('whatsapp', 'WhatsApp (com DDD)', s.whatsapp, 'inputmode="tel" placeholder="5517999999999"') + f('email', 'E-mail da loja', s.email) + '</div>' +
     '<div class="mk-f-row">' + f('instagram', 'Link do Instagram', s.instagram, 'placeholder="https://…"') + f('tiktok', 'Link do TikTok', s.tiktok, 'placeholder="https://…"') + f('website', 'Site', s.website, 'placeholder="https://…"') + '</div>' +
     '<div class="mk-f-row">' + f('legal_name', 'Razão social (se tiver)', s.legal_name) + f('cnpj', 'CNPJ (se tiver)', s.cnpj, 'inputmode="numeric"') + '</div>' +
+    '<h4 class="mk-sub">Chamada do banner (opcional)</h4>' +
+    '<div class="mk-hint">Os banners do site se montam sozinhos com seus produtos. Se quiser, escreva uma chamada própria para o banner do Início (ex.: “Reinado Delta chega dia 6”). Em branco, usa o texto padrão.</div>' +
+    f('promo_title', 'Título da chamada', s.promo_title, 'maxlength="80" placeholder="ex.: Reinado Delta chegando"') +
+    f('promo_text', 'Texto da chamada', s.promo_text, 'maxlength="200" placeholder="ex.: Reserve o seu pelo WhatsApp"') +
     '<h4 class="mk-sub">Entrega</h4>' +
     '<div class="mk-f-row">' +
       '<label class="mk-f"><span>Posta em até (dias úteis)</span><input id="mkc-handling_days" type="number" min="0" max="60" value="' + (s.handling_days == null ? 3 : s.handling_days) + '"></label>' +
@@ -571,6 +589,7 @@ async function mkSaveConfig() {
     handling_days: days, flat_shipping: flat, free_shipping_over: free,
     pickup_enabled: !!document.getElementById('mkc-pickup_enabled').checked, pickup_note: g('pickup_note') || null,
     return_policy: g('return_policy') || null,
+    promo_title: g('promo_title') || null, promo_text: g('promo_text') || null,
   };
   if (mk.isAdmin) {
     row.status = g('status') || mk.seller.status;

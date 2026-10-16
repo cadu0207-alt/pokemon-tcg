@@ -31,10 +31,14 @@ function mkStoreProducts() {
   const q = f.q.trim().toLowerCase();
   let list = mk.products.filter(function (p) { return p.status === 'ativo'; });
   if (f.kind !== 'todos') list = list.filter(function (p) { return p.kind === f.kind; });
+  if (f.setId) list = list.filter(function (p) { return p.set_id === f.setId; });
   if (q) list = list.filter(function (p) { return (p.title + ' ' + (p.description || '') + ' ' + (p.sku || '')).toLowerCase().indexOf(q) >= 0; });
   if (f.onlyStock) list = list.filter(function (p) { return mkQty(p) > 0; });
   const by = {
-    recentes: function (a, b) { return new Date(b.created_at) - new Date(a.created_at); },
+    // destaques (⭐) primeiro, depois os publicados há menos tempo
+    recentes: function (a, b) {
+      return (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || new Date(b.published_at || b.created_at) - new Date(a.published_at || a.created_at);
+    },
     menor: function (a, b) { return a.price - b.price; },
     maior: function (a, b) { return b.price - a.price; },
     az: function (a, b) { return a.title.localeCompare(b.title, 'pt-BR'); },
@@ -82,10 +86,11 @@ function mkStoreFiltersHtml() {
   return '<div class="mk-filters">' +
     '<input type="search" id="mk-q" class="mk-search" placeholder="Buscar produto…" value="' + mkEsc(f.q) + '" oninput="mkSetFilter(\'q\',this.value)">' +
     '<select class="mk-select" onchange="mkSetFilter(\'sort\',this.value)">' +
-      [['recentes', 'Mais recentes'], ['menor', 'Menor preço'], ['maior', 'Maior preço'], ['az', 'A–Z']].map(function (o) {
+      [['recentes', 'Novidades e destaques'], ['menor', 'Menor preço'], ['maior', 'Maior preço'], ['az', 'A–Z']].map(function (o) {
         return '<option value="' + o[0] + '"' + (f.sort === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
       }).join('') + '</select>' +
     '<label class="mk-check"><input type="checkbox"' + (f.onlyStock ? ' checked' : '') + ' onchange="mkSetFilter(\'onlyStock\',this.checked)"> Só com estoque</label>' +
+    (f.setId ? '<button type="button" class="filter-chip filter-chip-active" title="Tirar o filtro" onclick="mkSetFilter(\'setId\',null)">Coleção ' + mkEsc(String(f.setId).toUpperCase()) + ' ✕</button>' : '') +
     '<div class="mk-chips">' + chips.map(function (k) {
       return '<button type="button" class="filter-chip' + (f.kind === k ? ' filter-chip-active' : '') + '" onclick="mkSetFilter(\'kind\',\'' + k + '\')">' +
         (k === 'todos' ? 'Todos' : (MK_KIND_ICON[k] + ' ' + MK_KIND_LBL[k])) + '</button>';
@@ -112,6 +117,8 @@ function mkCardHtml(p) {
   let badge = '';
   if (qty <= 0) badge = '<span class="mk-badge mk-badge-out">Esgotado</span>';
   else if (qty <= Math.max(2, p.low_stock_alert || 0)) badge = '<span class="mk-badge mk-badge-low">' + (qty === 1 ? 'Última unidade' : 'Últimas ' + qty) + '</span>';
+  else if (mkIsNew(p)) badge = '<span class="mk-badge mk-badge-new">Novo</span>';
+  else if (p.featured) badge = '<span class="mk-badge mk-badge-new">⭐ Destaque</span>';
   const tags = [];
   if (p.kind === 'carta') {
     if (p.condition) tags.push(MK_COND_LBL[p.condition] || p.condition);
