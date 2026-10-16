@@ -228,6 +228,11 @@ function _updateUserChip(user){
   const chip=document.getElementById('user-chip');
   if(!chip) return;
   chip.style.display=user?'flex':'none';
+  // 17/10/2026: o "Conectando..." do HTML só faz sentido pra quem tem conta (loadAll troca o texto). Visitante
+  // sem login ficava lendo "Conectando..." pra sempre — esconde bolinha e texto até haver sessão.
+  const _sd=document.getElementById('status-dot'),_st=document.getElementById('status-txt');
+  if(_sd)_sd.style.display=user?'':'none';
+  if(_st)_st.style.display=user?'':'none';
   if(!user) return;
   const m=user.user_metadata||{};
   const av=document.getElementById('user-avatar');

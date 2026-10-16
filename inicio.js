@@ -116,6 +116,13 @@ function inicioReloadTiktokEmbed() {
   document.body.appendChild(s);
 }
 
+// 17/10/2026 (bug "Início vazia pra visitante"): quem chamava renderInicio() na abertura era só o gancho em
+// _updateUserChip (fim deste arquivo), disparado pelo evento INITIAL_SESSION do Supabase. Sem sessão salva esse
+// evento sai quase na hora — antes deste script instalar o gancho — e a Início ficava só com os títulos. Agora
+// também renderiza no DOMContentLoaded; INICIO_LAST evita refazer tudo quando os dois caminhos disparam juntos
+// (mesmo usuário, menos de 2,5 s). Troca de conta (uid diferente) sempre re-renderiza.
+let INICIO_LAST = { t: 0, uid: undefined };
+
 async function renderInicio() {
   // 29/08/2026 (Opção 1 — Início pública): antes exigia currentUser; agora
   // qualquer visitante (logado ou não) vê o feed. Login só é pedido pra
@@ -123,6 +130,12 @@ async function renderInicio() {
   // go()/app.js e as policies de leitura pública em
   // inicio_publico_setup.sql.
   if (!sbClient) return;
+  const me = (typeof uid === 'function' && uid()) || null;
+  if (Date.now() - INICIO_LAST.t < 2500 && INICIO_LAST.uid === me) return;
+  INICIO_LAST = { t: Date.now(), uid: me };
+  closeInicioArticle();
+  if (inicioFeedObserver) { inicioFeedObserver.disconnect(); inicioFeedObserver = null; }
+  renderInicioWelcome(me);
   renderInicioHero();
   loadInicioUpdates();
   loadInicioFeed();
@@ -133,6 +146,47 @@ async function renderInicio() {
 // chamada antiga (disparada por um _updateUserChip anterior) sobrescreva
 // o resultado de uma chamada mais nova quando o app.js chama renderInicio()
 // mais de uma vez em sequência (ex.: INITIAL_SESSION + SIGNED_IN no login).
+// ── BOAS-VINDAS (17/10/2026) — só pra visitante sem login ───────────
+// Quem chega por link (TikTok, WhatsApp, Toybox) não via o que o MyDeck é. Faixa curta com 3 benefícios reais
+// (abas que existem hoje) e o caminho pra criar conta/entrar; some ao logar e pode ser dispensada por 7 dias.
+const INICIO_WELCOME_KEY = 'mydeck_welcome_dismiss';
+function inicioWelcomeDismissed() {
+  try {
+    const t = parseInt(localStorage.getItem(INICIO_WELCOME_KEY) || '0', 10);
+    return !!t && Date.now() - t < 7 * 86400000;
+  } catch (e) { return false; }
+}
+function renderInicioWelcome(me) {
+  const slot = document.getElementById('inicio-welcome-slot');
+  if (!slot) return;
+  if (me || inicioWelcomeDismissed()) { slot.innerHTML = ''; return; }
+  slot.innerHTML =
+    '<section class="inicio-welcome" aria-label="Boas-vindas ao MyDeck">' +
+      '<button type="button" class="inicio-welcome-x" aria-label="Dispensar" onclick="inicioWelcomeDismiss()">✕</button>' +
+      '<div class="inicio-welcome-eyebrow">Bem-vindo ao MyDeck</div>' +
+      '<h2 class="inicio-welcome-title">Sua coleção de Pokémon TCG organizada, com preço de verdade</h2>' +
+      '<ul class="inicio-welcome-list">' +
+        '<li><span>📚</span><b>Fichário e master set</b> — marque cada carta e veja quanto falta para completar.</li>' +
+        '<li><span>📊</span><b>Dashboard e gastos</b> — quanto vale a coleção e quanto você já investiu.</li>' +
+        '<li><span>💰</span><b>Preço justo</b> — compare o preço de uma carta antes de comprar ou vender.</li>' +
+      '</ul>' +
+      '<div class="inicio-welcome-actions">' +
+        '<button type="button" class="inicio-welcome-cta" onclick="inicioWelcomeAuth(\'signup\')">Criar minha conta</button>' +
+        '<button type="button" class="inicio-welcome-sec" onclick="inicioWelcomeAuth(\'login\')">Já tenho conta</button>' +
+      '</div>' +
+    '</section>';
+}
+function inicioWelcomeAuth(tab) {
+  if (typeof _showAuth === 'function') _showAuth(true);
+  if (typeof authSwitchTab === 'function') authSwitchTab(tab);
+}
+function inicioWelcomeDismiss() {
+  try { localStorage.setItem(INICIO_WELCOME_KEY, String(Date.now())); } catch (e) { /* ok */ }
+  const slot = document.getElementById('inicio-welcome-slot');
+  if (slot) slot.innerHTML = '';
+}
+window.inicioWelcomeAuth = inicioWelcomeAuth; window.inicioWelcomeDismiss = inicioWelcomeDismiss;
+
 let INICIO_HERO_REQ = 0;
 
 // ── HERO — puxa o artigo em destaque da Revista ────────────────────
@@ -687,10 +741,15 @@ window.deleteInicioComment = deleteInicioComment;
       // limpava tudo no logout). Fecha modal/observer de uma sessão
       // anterior antes de recarregar, pra não vazar estado (ex.: botão
       // de apagar em comentário que não é mais "meu").
-      closeInicioArticle();
-      if (inicioFeedObserver) { inicioFeedObserver.disconnect(); inicioFeedObserver = null; }
+      // (17/10/2026: o fechamento do modal/observer foi pra dentro de renderInicio, depois da checagem
+      // INICIO_LAST — senão uma chamada descartada deixava o scroll infinito sem observer.)
       renderInicio();
     };
   }
   tryHook();
+  // 17/10/2026: garante a primeira renderização mesmo se o evento de sessão já passou (ver INICIO_LAST).
+  document.addEventListener('DOMContentLoaded', function () {
+    const pane = document.getElementById('inicio');
+    if (pane && pane.classList.contains('active')) renderInicio();
+  });
 })();

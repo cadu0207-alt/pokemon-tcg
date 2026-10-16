@@ -3813,3 +3813,22 @@ body.inicio-modal-open { overflow: hidden; }
 .emsair-btn:hover { filter: brightness(1.06); }
 .emsair-foot { text-align: center; margin-top: 14px; }
 .emsair-link { background: none; border: none; cursor: pointer; font-family: inherit; font-size: 12.5px; color: var(--muted); text-decoration: underline; }
+
+/* ── Boas-vindas ao visitante (17/10/2026, inicio.js → renderInicioWelcome) ── */
+.inicio-welcome { position: relative; border-radius: 16px; padding: 22px 24px; margin-bottom: 22px;
+  background: linear-gradient(150deg, var(--surface2, var(--surface)) 0%, var(--surface) 70%); border: 1px solid var(--border); }
+.inicio-welcome-x { position: absolute; top: 8px; right: 8px; width: 36px; height: 36px; border: 0; border-radius: 99px;
+  background: transparent; color: var(--muted); font-size: 15px; cursor: pointer; }
+.inicio-welcome-x:hover { background: var(--surface2, rgba(0,0,0,.06)); color: var(--text); }
+.inicio-welcome-eyebrow { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+.inicio-welcome-title { font-size: 22px; line-height: 1.2; margin: 0 36px 12px 0; color: var(--text); }
+.inicio-welcome-list { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 8px; font-size: 13.5px; color: var(--text2, var(--text)); line-height: 1.45; }
+.inicio-welcome-list li { display: flex; gap: 10px; align-items: baseline; }
+.inicio-welcome-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.inicio-welcome-cta, .inicio-welcome-sec { min-height: 44px; padding: 0 18px; border-radius: 10px; font-weight: 700; font-size: 14px; font-family: inherit; cursor: pointer; }
+.inicio-welcome-cta { border: 0; background: var(--accent); color: #fff; }
+.inicio-welcome-cta:hover { filter: brightness(1.08); }
+.inicio-welcome-sec { border: 1px solid var(--border); background: transparent; color: var(--text); }
+.inicio-welcome-sec:hover { background: var(--surface2, rgba(0,0,0,.05)); }
+@media (min-width: 720px) { .inicio-welcome-list { grid-template-columns: repeat(3, 1fr); } .inicio-welcome-list li { flex-direction: column; gap: 2px; } }
+@media (max-width: 719px) { .inicio-welcome { padding: 18px 16px; } .inicio-welcome-title { font-size: 19px; } .inicio-welcome-actions > button { flex: 1 1 100%; } }
