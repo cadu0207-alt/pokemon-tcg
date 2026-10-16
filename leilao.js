@@ -1150,6 +1150,59 @@ function aucComputeCheapCards(allCards,n){
     .slice(0,n||10);
 }
 
+// 17/10/2026: com 0 leilões ativos a página mostrava só o resumo da última rodada encerrada — sem dizer quando vem o
+// próximo nem oferecer aviso (e é o que a maioria das visitas vê). Este bloco aparece no topo SÓ quando não há leilão
+// aberto: próximo leilão marcado (se houver), resultado da última rodada e os botões de aviso (sino + push).
+function aucNoActiveHtml(visibleRounds,allCards){
+  const now=new Date();
+  if((allCards||[]).some(a=>a.status==='ativo'&&new Date(a.end_at)>now))return'';
+
+  // próxima rodada marcada (ainda não começou)
+  const upcoming=aucRounds.filter(r=>r.status!=='cancelado'&&!r.archived&&r.start_at&&new Date(r.start_at)>now)
+    .sort((x,y)=>new Date(x.start_at)-new Date(y.start_at))[0];
+  const nextHtml=upcoming
+    ?`<div style="font-size:13px;margin-bottom:4px">⏳ Próximo: <b>${esc(upcoming.title)}</b> — começa em <b>${new Date(upcoming.start_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</b>, lances até ${new Date(upcoming.end_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}.</div>`
+    :`<div style="font-size:13px;margin-bottom:4px">O próximo leilão ainda não foi marcado — ative o aviso abaixo e você fica sabendo assim que abrir.</div>`;
+
+  // resultado da última rodada encerrada
+  let lastHtml='';
+  const last=(visibleRounds||[]).slice().sort((x,y)=>new Date(y.end_at)-new Date(x.end_at))[0];
+  if(last){
+    const cards=aucAuctions.filter(a=>a.round_id===last.id&&a.status!=='cancelado');
+    const sold=cards.filter(a=>a.winner_id&&+a.winning_bid>0);
+    const total=sold.reduce((t,a)=>t+(+a.winning_bid||0),0);
+    const lances=cards.reduce((t,a)=>t+(a.bid_count||0),0);
+    const semLance=cards.filter(a=>!(a.bid_count>0)).length;
+    const top=sold.slice().sort((x,y)=>(+y.winning_bid)-(+x.winning_bid))[0];
+    if(cards.length){
+      lastHtml=`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.7">
+        🏁 <b style="color:var(--text)">${esc(last.title)}</b> (encerrada): ${cards.length} lote${cards.length===1?'':'s'}, ${sold.length} arrematado${sold.length===1?'':'s'}${semLance?`, ${semLance} sem lance`:''} · ${lances} lances · R$ ${fmtR(total)} em arremates${top?` · maior arremate: ${esc(top.card_name)} (R$ ${fmtR(top.winning_bid)})`:''}
+      </div>`;
+    }
+  }
+
+  // avisos: sino (novos leilões e rifas) + push neste aparelho
+  let avisoHtml='';
+  if(typeof notifDropsEnabled!=='undefined'&&notifDropsEnabled!==null){
+    avisoHtml+=notifDropsEnabled
+      ?`<span style="font-size:12px;color:var(--teal)">✓ Você será avisado no sino quando abrir um novo leilão</span>`
+      :`<button type="button" class="btn-add" onclick="aucNotifDrops(true)">🔔 Avisar quando abrir um novo leilão</button>`;
+  }
+  const ps=typeof notifPushState!=='undefined'?notifPushState:'unknown';
+  if(ps==='off')avisoHtml+=`<button type="button" class="cv-item-remove" style="color:var(--teal);border-color:var(--teal)" onclick="aucNotifPush()">📲 Receber também no celular/PC, com o app fechado</button>`;
+  else if(ps==='on')avisoHtml+=`<span style="font-size:11px;color:var(--muted)">📲 Avisos com o app fechado: ligados neste aparelho</span>`;
+  else if(ps==='ios-install')avisoHtml+=`<span style="font-size:11px;color:var(--muted)">📲 No iPhone: adicione o MyDeck à Tela de Início pra receber avisos com o app fechado.</span>`;
+
+  return`<div class="panel" style="margin-bottom:18px;border:1px dashed var(--border)">
+    <div style="font-size:15px;font-weight:700;margin-bottom:8px">🔨 Nenhum leilão aberto agora</div>
+    ${nextHtml}
+    ${avisoHtml?`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px">${avisoHtml}</div>`:''}
+    ${lastHtml}
+  </div>`;
+}
+async function aucNotifDrops(on){ if(typeof notifDropsSet==='function')await notifDropsSet(on); renderAuctionsList(); }
+async function aucNotifPush(){ if(typeof notifPushEnable==='function')await notifPushEnable(); renderAuctionsList(); }
+
 function renderAuctionsList(){
   const wrap=document.getElementById('leilao-list');
   const hotWrap=document.getElementById('leilao-hot-list');
@@ -1159,7 +1212,7 @@ function renderAuctionsList(){
     if(hotWrap)hotWrap.innerHTML='';
     const bar=document.getElementById('leilao-filter-bar');
     if(bar)bar.innerHTML='';
-    wrap.innerHTML=`<div class="cv-item-empty">Nenhum leilão no momento.</div>`;
+    wrap.innerHTML=aucNoActiveHtml([],[])+`<div class="cv-item-empty">Nenhum leilão no momento.</div>`;
     return;
   }
 
@@ -1215,7 +1268,7 @@ function renderAuctionsList(){
     mainHtml=resumoHtml+mineHtml+hotHtml+cheapHtml;
   }
 
-  wrap.innerHTML=blockedNote+mainHtml;
+  wrap.innerHTML=blockedNote+(noFiltro?aucNoActiveHtml(visibleRounds,allCards):'')+mainHtml;
   refreshOpenAuctionZoom();
 }
 
