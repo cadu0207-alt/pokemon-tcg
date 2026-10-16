@@ -1342,6 +1342,22 @@ function renderDash(){
   // no R$/Booster logo abaixo).
   const roi=tg>0?(fichVal/tg*100).toFixed(0):0;
   const apb=tb>0?(tg/tb).toFixed(2):'0,00';
+  // 17/10/2026: conta nova (sem cartas, compras nem pulls) — em vez de uma parede de zeros, um passo a passo. Só depois
+  // que a carga dos dados terminou (_authLoadState==='ok'), pra não piscar pra quem já tem coleção enquanto carrega.
+  const _emptyEl=document.getElementById('dash-empty');
+  if(_emptyEl){
+    const _isNew=typeof _authLoadState!=='undefined'&&_authLoadState==='ok'&&collected.size===0&&purchases.length===0&&pulledCards.length===0;
+    _emptyEl.innerHTML=_isNew
+      ?`<section class="dash-empty-card" aria-label="Como começar">
+          <h3 class="dash-empty-title">Seu Dashboard ainda está vazio — comece por aqui</h3>
+          <ol class="dash-empty-steps">
+            <li><span class="dash-empty-n">1</span><div><b>Marque suas cartas</b><small>Abra um fichário e toque nas cartas que você já tem.</small></div><button type="button" class="btn-mini" onclick="goToTab('fichario')">Abrir Fichário</button></li>
+            <li><span class="dash-empty-n">2</span><div><b>Registre o que você gastou</b><small>Boosters, ETBs e acessórios entram no total investido e no R$/booster.</small></div><button type="button" class="btn-mini" onclick="goToTab('gastos')">Registrar compra</button></li>
+            <li><span class="dash-empty-n">3</span><div><b>Confira o preço justo</b><small>Veja quanto vale a pena pagar por um produto antes de comprar.</small></div><button type="button" class="btn-mini" onclick="goToTab('preco')">Calcular</button></li>
+          </ol>
+        </section>`
+      :'';
+  }
   document.getElementById('kpi-dash').innerHTML=
     kpiHTML('red',dico('wallet')+' Total Investido','R$'+fmtR(invested),purchases.length+' compras','gastos')+
     kpiHTML('orange',dico('box')+' Boosters',''+tb,'~'+bst.reduce((a,p)=>a+(Number(p.cards)||0),0)+' cartas','gastos')+
@@ -1688,6 +1704,23 @@ function slotsAndValue(cards,sid){
   });
   return{total,col,have,missing};
 }
+// 17/10/2026: totais por coleção numa passada só — base/especiais (total e coletados) + R$ coletado e faltante.
+// Equivale a countSlotsFor(base) + countSlotsFor(!base) + slotsAndValue(cards,sid) juntos.
+function dashSetStats(cards,sid){
+  const base={total:0,col:0},sec={total:0,col:0};
+  let have=0,missing=0;
+  cards.forEach(c=>{
+    const acc=c.base?base:sec;
+    getSlots(c,sid).forEach(s=>{
+      acc.total++;
+      const key=slotKey(sid+':',c.n,s.ver);
+      const p=s.price||c.price||0;
+      if(collected.has(key)){acc.col++;have+=p*(collectedQty.get(key)?.qty||1);}
+      else missing+=p;
+    });
+  });
+  return{base,sec,have,missing};
+}
 function updateDashProgress(){
   let grand=0,grandC=0;
 
@@ -1706,13 +1739,15 @@ function updateDashProgress(){
     const cat=SET_CATALOG?SET_CATALOG.find(s=>s.id===id):null;
     const cards=SET_CARDS_MAP[id]?.()||[];
     if(!meta&&!cat)return''; // set desconhecido
-    const base=countSlotsFor(cards.filter(c=>c.base),id);
-    const sec=countSlotsFor(cards.filter(c=>!c.base),id);
+    // 17/10/2026: uma passada só (antes: countSlotsFor ×2 + slotsAndValue = 3 passadas de getSlots por carta, a cada
+    // slot salvo). O resultado é idêntico.
+    const _st=dashSetStats(cards,id);
+    const base=_st.base,sec=_st.sec;
     const tot=base.total+sec.total,col=base.col+sec.col;
     grand+=tot;grandC+=col;
     const pct=tot>0?(col/tot*100).toFixed(0):0;
     // NOVO 27/07/2026: valor R$ já coletado e R$ faltante pra completar esta coleção.
-    const{have,missing}=slotsAndValue(cards,id);
+    const{have,missing}=_st;
     const valorRow=tot>0?`<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;font-family:'Space Mono',monospace">
       <span style="color:var(--teal)">R$${fmtR(have)} coletado</span>
       <span style="color:var(--muted)">faltam R$${fmtR(missing)}</span>
