@@ -110,7 +110,12 @@ function inicioVideoEmbedHtml(platform, url, title) {
   if (platform === 'youtube') {
     const yid = inicioYoutubeId(url);
     if (yid) {
-      return '<div class="inicio-video-embed"><iframe src="https://www.youtube-nocookie.com/embed/' + yid + '" title="' + inicioEsc(title || 'Vídeo') + '" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>';
+      // 17/10/2026: o iframe só nasce no clique. Antes cada vídeo do feed carregava o player inteiro do YouTube na
+      // abertura (6 iframes nos 12 primeiros itens); agora é uma miniatura (~20 KB) com botão de play.
+      return '<div class="inicio-video-embed inicio-yt-facade" data-yid="' + yid + '" data-title="' + inicioEsc(title || 'Vídeo') + '" role="button" tabindex="0" ' +
+        'aria-label="Reproduzir vídeo: ' + inicioEsc(title || 'Vídeo') + '" onclick="event.stopPropagation();inicioPlayYoutube(this)" ' +
+        'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();event.stopPropagation();inicioPlayYoutube(this)}">' +
+        '<img src="https://i.ytimg.com/vi/' + yid + '/hqdefault.jpg" alt="" loading="lazy" decoding="async"><span class="inicio-yt-play" aria-hidden="true">▶</span></div>';
     }
   } else if (platform === 'tiktok') {
     const tid = inicioTiktokId(url);
@@ -121,6 +126,17 @@ function inicioVideoEmbedHtml(platform, url, title) {
   const label = platform === 'tiktok' ? 'TikTok' : platform === 'youtube' ? 'YouTube' : 'vídeo';
   return '<a class="inicio-video-fallback" href="' + safeUrl + '" target="_blank" rel="noopener">▶ Assistir no ' + label + '</a>';
 }
+function inicioPlayYoutube(el) {
+  const yid = el.getAttribute('data-yid');
+  if (!yid || !/^[A-Za-z0-9_-]{6,}$/.test(yid)) return;
+  el.classList.remove('inicio-yt-facade');
+  el.removeAttribute('role'); el.removeAttribute('tabindex'); el.removeAttribute('onclick'); el.removeAttribute('onkeydown');
+  el.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + yid + '?autoplay=1" title="' + inicioEsc(el.getAttribute('data-title') || 'Vídeo') +
+    '" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+  const f = el.querySelector('iframe'); if (f) f.focus();
+}
+window.inicioPlayYoutube = inicioPlayYoutube;
+
 // O embed.js do TikTok processa <blockquote class="tiktok-embed"> presentes
 // no DOM no momento em que ele carrega/roda. Como os cards são inseridos
 // via innerHTML depois (SPA), precisa recarregar o script toda vez que
@@ -150,8 +166,13 @@ async function renderInicio() {
   // inicio_publico_setup.sql.
   if (!sbClient) return;
   const me = (typeof uid === 'function' && uid()) || null;
-  if (Date.now() - INICIO_LAST.t < 2500 && INICIO_LAST.uid === me) return;
-  INICIO_LAST = { t: Date.now(), uid: me };
+  // 17/10/2026 (cache): voltar pra Início refazia ~10 consultas e jogava a rolagem pro topo. Mesmo usuário e
+  // feed já carregado com sucesso (ok) => reaproveita a tela por 3 min (20 s pra quem publica conteúdo, pra ver
+  // a própria postagem logo). Dentro de 2,5 s (os dois gatilhos da abertura) pula sempre, carregado ou não.
+  const age = Date.now() - INICIO_LAST.t;
+  const ttl = (typeof hasPerm === 'function' && hasPerm('inicio')) ? 20000 : 180000;
+  if (INICIO_LAST.uid === me && (age < 2500 || (INICIO_LAST.ok && age < ttl))) return;
+  INICIO_LAST = { t: Date.now(), uid: me, ok: false };
   closeInicioArticle();
   if (inicioFeedObserver) { inicioFeedObserver.disconnect(); inicioFeedObserver = null; }
   renderInicioWelcome(me);
@@ -398,14 +419,15 @@ async function loadInicioFeed() {
   const holder = document.getElementById('inicio-feed-wrap');
   if (!holder) return;
   const reqId = ++INICIO_FEED_REQ;
+  inicioPriorityImgUsed = false;
   holder.innerHTML = '<div class="admin-stats-loading">Carregando...</div>';
 
   try {
     const [newsRes, videoRes, linkRes, artRes] = await Promise.all([
-      sbClient.from('pokemon_news').select('id,title,subtitle,body,media_type,media_url,author_uid,published_at').order('published_at', { ascending: false }).limit(40),
-      sbClient.from('community_videos').select('id,platform,video_url,title,handle,created_at').order('created_at', { ascending: false }).limit(40),
-      sbClient.from('community_links').select('id,title,url,category,icon,created_at').order('created_at', { ascending: false }).limit(40),
-      sbClient.from('magazine_articles').select('id,title,subtitle,tag,is_featured,published_at').order('published_at', { ascending: false }).limit(40)
+      sbClient.from('pokemon_news').select('id,title,subtitle,body,media_type,media_url,author_uid,published_at').order('published_at', { ascending: false }).limit(30),
+      sbClient.from('community_videos').select('id,platform,video_url,title,handle,created_at').order('created_at', { ascending: false }).limit(15),
+      sbClient.from('community_links').select('id,title,url,category,icon,created_at').order('created_at', { ascending: false }).limit(15),
+      sbClient.from('magazine_articles').select('id,title,subtitle,tag,is_featured,published_at').order('published_at', { ascending: false }).limit(15)
     ]);
     if (reqId !== INICIO_FEED_REQ) return; // uma chamada mais nova já assumiu
 
@@ -436,6 +458,7 @@ async function loadInicioFeed() {
     holder.innerHTML = '<div class="inicio-feed"></div>';
     inicioRenderFeedPage();
     inicioSetupFeedObserver();
+    INICIO_LAST.ok = true; // feed carregado de verdade: liberado pro cache de renderInicio()
   } catch (e) {
     if (reqId !== INICIO_FEED_REQ) return;
     console.error('[inicio] falha ao carregar o feed:', e);
@@ -514,6 +537,14 @@ function inicioNewsVideoEmbed(url, title) {
   return '';
 }
 
+// 17/10/2026: a 1ª imagem do feed é o maior elemento visível da Início (LCP) — carrega já e com prioridade;
+// as demais continuam preguiçosas.
+let inicioPriorityImgUsed = false;
+function inicioImgLoadAttrs() {
+  if (!inicioPriorityImgUsed && INICIO_FEED_RENDERED === 0) { inicioPriorityImgUsed = true; return 'loading="eager" fetchpriority="high"'; }
+  return 'loading="lazy"';
+}
+
 function inicioFeedNewsCard(n) {
   const dt = inicioDateLabel(n.published_at);
   const videoEmbed = n.media_type === 'video' && n.media_url ? inicioNewsVideoEmbed(n.media_url, n.title) : '';
@@ -521,7 +552,7 @@ function inicioFeedNewsCard(n) {
   // embutir (aí o card não mostra o vídeo e a etiqueta explica o que falta).
   const mediaTag = (n.media_type === 'video' && n.media_url && !videoEmbed) ? (INICIO_MEDIA_LABEL.video || '') : '';
   const thumbBlock = n.media_type === 'image' && n.media_url
-    ? '<img class="inicio-news-media" src="' + inicioSafeUrl(n.media_url) + '" alt="' + inicioEsc(n.title || '') + '" loading="lazy" decoding="async">'
+    ? '<img class="inicio-news-media" src="' + inicioSafeUrl(n.media_url) + '" alt="' + inicioEsc(n.title || '') + '" ' + inicioImgLoadAttrs() + ' decoding="async">'
     : '';
   const commentN = INICIO_FEED_COMMENT_COUNTS[n.id] || 0;
   const title = n.title ? inicioEsc(n.title) : inicioEsc(inicioTruncate(n.body, 70));

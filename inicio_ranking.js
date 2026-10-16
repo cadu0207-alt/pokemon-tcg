@@ -78,8 +78,8 @@
 
     holder.innerHTML = `
       <div class="inicio-ranking-panel">
-        <div class="inicio-ranking-tabs">${IRK_PERIODS.map(p =>
-          `<div class="inicio-ranking-tab ${p.key === irkActivePeriod ? 'inicio-ranking-tab-active' : ''}" data-period="${p.key}">${p.label}</div>`
+        <div class="inicio-ranking-tabs" role="tablist" aria-label="Período do ranking">${IRK_PERIODS.map(p =>
+          `<div class="inicio-ranking-tab ${p.key === irkActivePeriod ? 'inicio-ranking-tab-active' : ''}" data-period="${p.key}" role="tab" tabindex="0" aria-selected="${p.key === irkActivePeriod}">${p.label}</div>`
         ).join('')}</div>
         <div class="inicio-ranking-list"><div class="admin-stats-loading">Carregando...</div></div>
         <div class="inicio-ranking-name-form-wrap"></div>
@@ -87,10 +87,10 @@
     `;
 
     holder.querySelectorAll('.inicio-ranking-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        irkActivePeriod = tab.dataset.period;
-        irkRenderPanel();
-      });
+      const pick = () => { irkActivePeriod = tab.dataset.period; irkRenderPanel(); };
+      tab.addEventListener('click', pick);
+      // 17/10/2026: abas do ranking eram <div> só de mouse — agora Enter/Espaço também trocam o período
+      tab.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
     });
 
     irkLoadList(holder.querySelector('.inicio-ranking-list'));

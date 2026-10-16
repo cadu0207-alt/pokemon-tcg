@@ -462,7 +462,7 @@
 
     <div id="inicio-hero-wrap"></div>
 
-    <div class="sec-title">📢 Novidades do MyDeck</div>
+    <div class="sec-title" role="heading" aria-level="2">📢 Novidades do MyDeck</div>
     <div id="inicio-updates-wrap"></div>
 
     <!-- FEED ÚNICO 24/08/2026 (pedido do Eduardo): Notícias, Vídeos, Links e
@@ -477,7 +477,7 @@
          e o ranking desce pra baixo do feed, empilhado. -->
     <div class="inicio-main-grid">
       <div class="inicio-main-col">
-        <div class="sec-title">📰 Feed do Mundo Pokémon</div>
+        <div class="sec-title" role="heading" aria-level="2">📰 Feed do Mundo Pokémon</div>
         <div id="inicio-feed-wrap"></div>
         <div id="inicio-feed-sentinel" style="display:none"></div>
       </div>
@@ -489,7 +489,7 @@
              .inicio-market-feed-target), só que um dos dois fica
              escondido por CSS conforme a largura (ver style.css). -->
         <div class="inicio-market-feed-target" id="inicio-market-feed-wrap-side"></div>
-        <div class="sec-title" id="inicio-ranking-title">🏆 Ranking de Batalhas</div>
+        <div class="sec-title" role="heading" aria-level="2" id="inicio-ranking-title">🏆 Ranking de Batalhas</div>
         <div id="inicio-ranking-wrap"></div>
       </div>
     </div>
@@ -512,7 +512,7 @@
   <div id="dash" class="pane">
     <div id="updates-log-wrap" class="updates-log-panel"></div>
     <div class="kpi-grid" id="kpi-dash"></div>
-    <div class="sec-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 5a2 2 0 0 1 2-2h11a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2Z"/><path d="M4 5v14a2 2 0 0 0 2 2h11"/></svg> Progresso Master Set</div>
+    <div class="sec-title" role="heading" aria-level="2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 5a2 2 0 0 1 2-2h11a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2Z"/><path d="M4 5v14a2 2 0 0 0 2 2h11"/></svg> Progresso Master Set</div>
     <div id="progress-sets" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:28px"></div>
     <div class="dual">
       <!-- CORRIGIDO 02/08/2026: painéis agora são clicáveis (.panel-link) e levam
@@ -527,24 +527,24 @@
          FICHÁRIO (cartas coletadas, ver renderDash() em app.js — cada card já mostra
          a etiqueta "Fichário"), não do log de "Cartas Tiradas". Renomeado pra bater
          com o dado real, em vez de corrigir o dado pra bater com um título errado. -->
-    <div class="sec-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 2l2.9 6.5L22 9.3l-5 4.9 1.2 7.1L12 17.9l-6.2 3.4L7 14.2 2 9.3l7.1-.8Z"/></svg> Destaques do Fichário</div>
+    <div class="sec-title" role="heading" aria-level="2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 2l2.9 6.5L22 9.3l-5 4.9 1.2 7.1L12 17.9l-6.2 3.4L7 14.2 2 9.3l7.1-.8Z"/></svg> Destaques do Fichário</div>
     <div class="pulled-grid" id="dash-highlights"></div>
   </div>
 
   <div id="gastos" class="pane">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-      <div class="sec-title" style="margin:0">📦 Compras</div>
+      <div class="sec-title" role="heading" aria-level="2" style="margin:0">📦 Compras</div>
       <button class="btn-add" onclick="openModal('mp')">+ NOVA COMPRA</button>
     </div>
     <div id="gastos-resumo"></div>
     <div id="gastos-cards" style="display:flex;flex-direction:column;gap:16px;margin-bottom:32px"></div>
-    <div class="sec-title">📅 Timeline</div>
+    <div class="sec-title" role="heading" aria-level="2">📅 Timeline</div>
     <div class="tl" id="tlwrap"></div>
   </div>
 
   <div id="cartas" class="pane">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:10px">
-      <div class="sec-title" style="margin:0">📈 Sistema de Compra/Venda</div>
+      <div class="sec-title" role="heading" aria-level="2" style="margin:0">📈 Sistema de Compra/Venda</div>
       <button class="btn-add" onclick="openModal('mc')">+ ADICIONAR TIRADA</button>
     </div>
     <div class="mkt-note" style="margin-bottom:18px">
@@ -611,7 +611,7 @@
   </div>
 
   <div id="mercado" class="pane">
-    <div class="sec-title" style="margin-bottom:18px">🏪 Lojas Confiáveis</div>
+    <div class="sec-title" role="heading" aria-level="2" style="margin-bottom:18px">🏪 Lojas Confiáveis</div>
     <div class="mkt-note">
       Sistema de venda com intermediação de loja física: o vendedor envia a carta pra loja mais próxima do comprador,
       a loja confere estado/originalidade, o comprador paga a loja, e a loja repassa o valor (menos comissão) pro vendedor.
@@ -683,7 +683,7 @@
          Admin (mkt-pending-wrap/mkt-pending-list ficam lá agora) — marketplace.js
          continua achando os elementos por id, então nenhuma função mudou. -->
 
-    <div class="sec-title" style="margin-top:24px">✅ Lojas Ativas</div>
+    <div class="sec-title" role="heading" aria-level="2" style="margin-top:24px">✅ Lojas Ativas</div>
     <div id="mkt-active-list" class="mkt-store-list"></div>
   </div>
 
@@ -791,7 +791,7 @@
   <!-- ===== ABA PREÇO JUSTO ===== -->
   <div id="preco" class="pane">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-      <div class="sec-title" style="margin:0">💰 Calculadora de Preço Justo / EV</div>
+      <div class="sec-title" role="heading" aria-level="2" style="margin:0">💰 Calculadora de Preço Justo / EV</div>
     </div>
     <div id="ev-wrap"></div>
   </div>
@@ -828,7 +828,7 @@
        (anti-sniping) — tudo validado no banco (leilao_setup.sql), nunca só
        no client. -->
   <div id="leilao" class="pane">
-    <div class="sec-title" style="margin-top:0">🔨 Leilão</div>
+    <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">🔨 Leilão</div>
 
 
     <!-- SUB-MENU 12/08/2026, reaberto pra todo usuário logado em 13/08/2026:
@@ -937,7 +937,7 @@
       </div>
 
       <div id="leilao-super-admin-wrap" style="display:none">
-        <div class="sec-title">👥 Leiloeiros Autorizados</div>
+        <div class="sec-title" role="heading" aria-level="2">👥 Leiloeiros Autorizados</div>
         <div class="mkt-note">
           Quem estiver aqui ganha os mesmos poderes de leiloeiro (criar rodada, cadastrar carta,
           marcar pagamento) sem virar admin geral do site. A pessoa precisa ter feito login no
@@ -960,7 +960,7 @@
          de frete (frete.js) e o botão de chamar no WhatsApp — antes
          ficava misturado no meio dos gráficos de Análises. -->
     <div id="leilao-sub-pedidos" style="display:none">
-      <div class="sec-title" style="margin-top:0">📬 Pedidos / Carrinhos do Leilão</div>
+      <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">📬 Pedidos / Carrinhos do Leilão</div>
       <div style="font-size:10.5px;color:var(--muted);margin-bottom:14px">Resumo de cada rodada arrematada, endereço de entrega, simulação de frete e o botão pra chamar o comprador no WhatsApp e combinar pagamento/envio.</div>
       <div id="leilao-admin-orders"></div>
     </div>
@@ -968,7 +968,7 @@
     <!-- 02/10/2026 — Participantes & Bloqueios (leilao_participantes.js): quem está
          bloqueado e quem não, com botões de bloquear/liberar. Só leiloeiro. -->
     <div id="leilao-sub-participantes" style="display:none">
-      <div class="sec-title" style="margin-top:0">🚫 Participantes &amp; Bloqueios</div>
+      <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">🚫 Participantes &amp; Bloqueios</div>
       <div class="mkt-note">
         Todo mundo que já deu lance (ou tem pedido) no Leilão. <b>Bloqueado</b> = não consegue dar lance até você liberar.
         O sistema bloqueia sozinho quem deixa o pagamento vencer; aqui você também pode bloquear ou liberar manualmente.
@@ -982,21 +982,21 @@
     <div id="leilao-sub-analises" style="display:none">
       <div class="kpi-grid" id="leilao-analises-kpis" style="margin-bottom:24px"></div>
       <div id="leilao-analises-countdown" style="margin-bottom:24px"></div>
-      <div class="sec-title" style="margin-top:0">📋 Lotes ativos por leiloeiro</div>
+      <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">📋 Lotes ativos por leiloeiro</div>
       <div id="leilao-analises-por-leiloeiro" style="margin-bottom:24px"></div>
-      <div class="sec-title" style="margin-top:0">📈 Valor total do leilão ao longo do tempo (rodada atual)</div>
+      <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">📈 Valor total do leilão ao longo do tempo (rodada atual)</div>
       <div id="leilao-analises-chart" class="panel" style="margin-bottom:24px"></div>
-      <div class="sec-title" style="margin-top:0">🔨 Últimos lances (rodada atual)</div>
+      <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">🔨 Últimos lances (rodada atual)</div>
       <div id="leilao-analises-ultimos-lances" style="margin-bottom:24px"></div>
-      <div class="sec-title" style="margin-top:0">💰 Comissão MyDeck (mês)</div>
+      <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">💰 Comissão MyDeck (mês)</div>
       <div id="leilao-analises-comissao" style="margin-bottom:24px"></div>
 
       <!-- ── LOJA — integrado na mesma aba Análises, 19/08/2026 ────── -->
-      <div class="sec-title">🏪 Loja do Leiloeiro</div>
+      <div class="sec-title" role="heading" aria-level="2">🏪 Loja do Leiloeiro</div>
       <div class="kpi-grid" id="loja-analises-kpis" style="margin-bottom:24px"></div>
-      <div class="sec-title" style="margin-top:0">📦 Itens ativos por leiloeiro (Loja)</div>
+      <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">📦 Itens ativos por leiloeiro (Loja)</div>
       <div id="loja-analises-por-leiloeiro" style="margin-bottom:24px"></div>
-      <div class="sec-title" style="margin-top:0">💰 Comissão MyDeck — Loja (mês, separada do Leilão)</div>
+      <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">💰 Comissão MyDeck — Loja (mês, separada do Leilão)</div>
       <div id="loja-analises-comissao" style="margin-bottom:16px"></div>
       <div id="loja-analises-comissao-total" style="margin-bottom:24px"></div>
     </div>
@@ -1029,11 +1029,11 @@
         </div>
       </div>
 
-      <div class="sec-title">🃏 Cartas arrematadas — custo, venda e margem</div>
+      <div class="sec-title" role="heading" aria-level="2">🃏 Cartas arrematadas — custo, venda e margem</div>
       <div id="leilao-financeiro-list"></div>
 
       <!-- ── LOJA — integrado no mesmo Financeiro, 19/08/2026 ─────── -->
-      <div class="sec-title">🏪 Loja do Leiloeiro</div>
+      <div class="sec-title" role="heading" aria-level="2">🏪 Loja do Leiloeiro</div>
       <div class="kpi-grid" id="loja-financeiro-kpis" style="margin:16px 0 24px"></div>
       <div class="mkt-grid">
         <div class="panel">
@@ -1045,13 +1045,13 @@
           <div id="loja-financeiro-chart-mes"></div>
         </div>
       </div>
-      <div class="sec-title">📦 Vendas da loja — custo, venda e margem</div>
+      <div class="sec-title" role="heading" aria-level="2">📦 Vendas da loja — custo, venda e margem</div>
       <div id="loja-financeiro-list"></div>
     </div>
 
     <!-- ── LEILÕES (todo mundo) ────────────────────────────────────── -->
     <div id="leilao-sub-leiloes">
-      <div class="sec-title" style="margin-top:0">🔥 Leilões Vigentes</div>
+      <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">🔥 Leilões Vigentes</div>
       <div style="margin-bottom:14px">
         <input type="text" id="leilao-search" placeholder="🔍 Buscar por carta, set ou nº..." class="cv-select" style="width:100%;max-width:420px" oninput="aucApplySearchFilter()">
         <div id="leilao-filter-bar" class="collection-filter-bar" style="margin-top:10px"></div>
@@ -1133,7 +1133,7 @@
       </div>
       <div id="loja-grid"></div>
 
-      <div class="sec-title">🧾 Minhas Reservas</div>
+      <div class="sec-title" role="heading" aria-level="2">🧾 Minhas Reservas</div>
       <div id="loja-my-reservations"></div>
     </div>
 
@@ -1191,10 +1191,10 @@
         </div>
       </div>
 
-      <div class="sec-title">📋 Itens Cadastrados</div>
+      <div class="sec-title" role="heading" aria-level="2">📋 Itens Cadastrados</div>
       <div id="loja-admin-items"></div>
 
-      <div class="sec-title">🧾 Reservas / Pedidos da Loja</div>
+      <div class="sec-title" role="heading" aria-level="2">🧾 Reservas / Pedidos da Loja</div>
       <div id="loja-admin-reservations"></div>
     </div>
   </div>
@@ -1391,7 +1391,7 @@
        pra quem pode cadastrar/revisar/sortear — ver rifa.js. Aberta pra
        qualquer usuário logado ver e participar (nav-tab-rifas). -->
   <div id="rifas" class="pane">
-    <div class="sec-title" style="margin-top:0">🎟️ Rifas</div>
+    <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">🎟️ Rifas</div>
 
     <div id="rif-subnav" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
       <button type="button" class="btn-add rif-subtab-btn" data-sub="rifas" onclick="switchRifasSubtab('rifas')">🎟️ Rifas</button>
@@ -1662,7 +1662,7 @@
        no arquivo original (admin_stats.js, feedback.js, updates.js,
        marketplace.js, positivo.js, lojas.js/lojas_admin_collapse.js). -->
   <div id="admin" class="pane">
-    <div class="sec-title" style="margin-top:0">🔐 Painel Admin</div>
+    <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">🔐 Painel Admin</div>
 
     <!-- SEÇÕES COLAPSÁVEIS (23/08/2026) — ver admin_panel.js/toggleAdminSection.
          Cada bloco nasce fechado, exceto os que tiverem pendência (badge > 0);
