@@ -1255,7 +1255,7 @@ const fmtR=v=>(+v||0).toFixed(2).replace('.',',');
 // virar um link clicável pra aba correspondente (goToTab). Chamadas
 // existentes que não passam esse parâmetro continuam idênticas (KPI sem
 // onclick), então não muda nada nas outras telas que reusam kpiHTML().
-const kpiHTML=(cls,lbl,val,sub,nav)=>`<div class="kpi ${cls}"${nav?` onclick="goToTab('${nav}')" style="cursor:pointer" title="Ver na aba correspondente"`:''}><div class="kpi-label">${lbl}</div><div class="kpi-value">${val}</div><div class="kpi-sub">${sub}</div></div>`;
+const kpiHTML=(cls,lbl,val,sub,nav)=>`<div class="kpi ${cls}"${nav?` onclick="goToTab('${nav}')" role="link" tabindex="0" style="cursor:pointer" title="Ver na aba correspondente"`:''}><div class="kpi-label">${lbl}</div><div class="kpi-value">${val}</div><div class="kpi-sub">${sub}</div></div>`;
 
 // ── ÍCONES DO DASHBOARD (27/07/2026) ────────────────────────────
 // CORRIGIDO: KPIs/títulos do Dashboard usavam emoji solto (💰📦💵📊 etc.),
@@ -1396,7 +1396,8 @@ function renderDash(){
   // Gráfico gastos
   const byDate={};purchases.forEach(p=>{byDate[p.date]=(byDate[p.date]||0)+Number(p.price);});
   const dMax=Math.max(...Object.values(byDate),1);
-  document.getElementById('chart-gastos').innerHTML=Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0]))
+  const _cg=document.getElementById('chart-gastos'); // 17/10/2026: painel removido do Dashboard (a Evolução Mensal cobre); mantido só se existir
+  if(_cg)_cg.innerHTML=Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0]))
     .map(([d,v])=>barHTML(d.slice(5),v,dMax,'linear-gradient(90deg,var(--accent),var(--accent2))','R$'+fmtR(v))).join('');
 
   // Destaques do Fichário — as 6 cartas MAIS VALIOSAS que o usuário tem.
@@ -1418,7 +1419,7 @@ function renderDash(){
     // por baixo dos panos mas nunca ativa a pane #fichario — clicar aqui a
     // partir do Dashboard não levava a lugar nenhum visualmente. goToTab
     // primeiro faz a troca de aba de verdade.
-    return`<div class="pc" onclick="goToTab('fichario');switchSet('${sid}',null)">
+    return`<div class="pc" role="link" tabindex="0" onclick="goToTab('fichario');switchSet('${sid}',null)">
       <img class="pc-img" src="${imgSrc}" alt="${c.name}"
         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
       <div class="fb" style="display:none"><div class="fb-n">${c.n}</div><div class="fb-name">${c.name}</div>
@@ -1699,7 +1700,8 @@ function updateDashProgress(){
     ?myCollections
     :SET_CATALOG.map(s=>s.id);
 
-  const html=activeIds.map(id=>{
+  const _info={};
+  const _htmlArr=activeIds.map(id=>{
     const meta=SET_META[id]||null;
     const cat=SET_CATALOG?SET_CATALOG.find(s=>s.id===id):null;
     const cards=SET_CARDS_MAP[id]?.()||[];
@@ -1716,6 +1718,10 @@ function updateDashProgress(){
       <span style="color:var(--muted)">faltam R$${fmtR(missing)}</span>
     </div>`:'';
 
+    // 17/10/2026: metadados pra ordenar/recolher (ver depois do map): coleção "iniciada" = tem ao menos 1 slot e não é "em breve"
+    const _upc=!!((meta&&meta.upcoming)||(cat&&cat.upcoming));
+    _info[id]={id,pct:Number(pct)||0,started:col>0&&!_upc,upcoming:_upc,tot,have,missing,
+      lbl:meta?meta.label:cat.label,color:meta?meta.color:(cat.color||'#666')};
     if(meta){
       // ── Display completo (sets ME com SET_META) ──
       const color=meta.color;
@@ -1726,7 +1732,7 @@ function updateDashProgress(){
       // NOVO 02/08/2026: painel agora navega pro Fichário dessa coleção ao
       // clicar — mesmo padrão de goToTab+switchSet usado nos outros cards
       // do Dashboard que referenciam uma coleção.
-      return`<div class="panel panel-link" style="border-color:${color}44;overflow:hidden;position:relative;${meta.upcoming?'opacity:.8':''}" onclick="goToTab('fichario');switchSet('${id}',null)">
+      return`<div class="panel panel-link" role="link" tabindex="0" style="border-color:${color}44;overflow:hidden;position:relative;${meta.upcoming?'opacity:.8':''}" onclick="goToTab('fichario');switchSet('${id}',null)">
         ${upBadge}
         <div style="position:absolute;right:-8px;top:-8px;width:70px;height:100px;opacity:.1;pointer-events:none">
           <img loading="lazy" decoding="async" alt="" src="${imgThumb(meta.imgFn(meta.heroCard))}" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
@@ -1737,9 +1743,9 @@ function updateDashProgress(){
           <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;color:${color};line-height:1">${meta.upcoming?'?':pct+'%'}</div>
         </div>
         ${!meta.upcoming?`<div class="prog"><div class="prog-lbl"><span>Base</span><span>${base.col}/${base.total}</span></div>
-          <div class="prog-t"><div class="prog-f" style="width:${base.total>0?(base.col/base.total*100).toFixed(1):0}%;background:${color}"></div></div></div>
+          <div class="prog-t" aria-hidden="true"><div class="prog-f" style="width:${base.total>0?(base.col/base.total*100).toFixed(1):0}%;background:${color}"></div></div></div>
         ${sec.total>0?`<div class="prog" style="margin:0"><div class="prog-lbl"><span>Especiais</span><span>${sec.col}/${sec.total}</span></div>
-          <div class="prog-t"><div class="prog-f" style="width:${sec.total>0?(sec.col/sec.total*100).toFixed(1):0}%;background:${color}88"></div></div></div>`:''}
+          <div class="prog-t" aria-hidden="true"><div class="prog-f" style="width:${sec.total>0?(sec.col/sec.total*100).toFixed(1):0}%;background:${color}88"></div></div></div>`:''}
         ${valorRow}`:''}
         <div style="margin-top:10px;font-size:10px;font-family:'Space Mono',monospace;color:var(--muted)">Chase: <span style="color:${color}">${chaseFor(id)||meta.chase}</span></div>
       </div>`;
@@ -1747,7 +1753,7 @@ function updateDashProgress(){
       // ── Display simplificado (sets SV via SET_CATALOG) ──
       const color=cat.color||'#666';
       const upcoming=cat.upcoming||false;
-      return`<div class="panel panel-link" style="border-color:${color}44;overflow:hidden;position:relative;${upcoming?'opacity:.7':''}" onclick="goToTab('fichario');switchSet('${id}',null)">
+      return`<div class="panel panel-link" role="link" tabindex="0" style="border-color:${color}44;overflow:hidden;position:relative;${upcoming?'opacity:.7':''}" onclick="goToTab('fichario');switchSet('${id}',null)">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
           <div style="font-size:28px;line-height:1">${cat.emoji||'📦'}</div>
           <div style="flex:1">
@@ -1759,15 +1765,31 @@ function updateDashProgress(){
         </div>
         ${tot>0&&!upcoming?`
         <div class="prog"><div class="prog-lbl"><span>Base</span><span>${base.col}/${base.total}</span></div>
-          <div class="prog-t"><div class="prog-f" style="width:${base.total>0?(base.col/base.total*100).toFixed(1):0}%;background:${color}"></div></div></div>
+          <div class="prog-t" aria-hidden="true"><div class="prog-f" style="width:${base.total>0?(base.col/base.total*100).toFixed(1):0}%;background:${color}"></div></div></div>
         ${sec.total>0?`<div class="prog" style="margin:0"><div class="prog-lbl"><span>Especiais</span><span>${sec.col}/${sec.total}</span></div>
-          <div class="prog-t"><div class="prog-f" style="width:${(sec.col/sec.total*100).toFixed(1)}%;background:${color}88"></div></div></div>`:''}
+          <div class="prog-t" aria-hidden="true"><div class="prog-f" style="width:${(sec.col/sec.total*100).toFixed(1)}%;background:${color}88"></div></div></div>`:''}
         ${valorRow}
         `:`<div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;padding:6px 0">
           ${upcoming?'Lançamento em breve':'Ative o set no Fichário para carregar as cartas'}</div>`}
       </div>`;
     }
-  }).filter(Boolean).join('');
+  });
+
+  // 17/10/2026: antes os painéis saíam na ordem do catálogo — CEL30 (0%), ME06 ("em breve") e ME2.5 (0%) vinham
+  // ANTES das coleções que a pessoa realmente está montando. Agora: coleções com cartas, da mais completa pra
+  // menos; as sem cartas e as "em breve" ficam numa seção recolhida, em linhas de uma linha.
+  const _items=activeIds.map((id,i)=>({html:_htmlArr[i],info:_info[id]})).filter(x=>x.html&&x.info);
+  const _started=_items.filter(x=>x.info.started).sort((a,b)=>b.info.pct-a.info.pct||b.info.have-a.info.have);
+  const _rest=_items.filter(x=>!x.info.started).sort((a,b)=>(a.info.upcoming-b.info.upcoming)||String(a.info.lbl).localeCompare(String(b.info.lbl)));
+  const _restRows=_rest.map(x=>{
+    const i=x.info;
+    const right=i.upcoming?'em breve':(i.tot>0?'0% · faltam R$'+fmtR(i.missing):'sem dados');
+    return `<button type="button" class="dash-row" style="border-left-color:${i.color}" onclick="goToTab('fichario');switchSet('${i.id}',null)">
+      <span class="dash-row-lbl">${i.lbl}</span><span class="dash-row-val">${right}</span></button>`;
+  }).join('');
+  const html=_started.map(x=>x.html).join('')+(_rest.length
+    ?`<details class="dash-others"${_started.length?'':' open'}><summary>Outras coleções (${_rest.length}) — ainda sem cartas ou em breve</summary><div class="dash-others-list">${_restRows}</div></details>`
+    :'');
 
   // NOVO 27/07/2026: pedido do Eduardo — o Progresso Master Set deve incluir
   // também os fichários personalizados que ele fixou (pinnedBinders), com o
@@ -1783,7 +1805,7 @@ function updateDashProgress(){
     const pct=total>0?(col/total*100).toFixed(0):0;
     const color=b.cover_color||'#a855f7';
     // CORRIGIDO 02/08/2026: mesmo bug do switchSet() sem goToTab — ver nota acima nos cards de "Destaques do Fichário".
-    return`<div class="panel panel-link" style="border-color:${color}44;overflow:hidden;position:relative" onclick="goToTab('fichario');switchSet('__cb__${pid}',null)">
+    return`<div class="panel panel-link" role="link" tabindex="0" style="border-color:${color}44;overflow:hidden;position:relative" onclick="goToTab('fichario');switchSet('__cb__${pid}',null)">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
         <div style="font-size:26px;line-height:1">${b.emoji||'📚'}</div>
         <div style="flex:1"><div style="font-weight:700;font-size:12px;line-height:1.3">${b.name}</div>
@@ -1792,7 +1814,7 @@ function updateDashProgress(){
         <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:${color};line-height:1">${total>0?pct+'%':'–'}</div>
       </div>
       ${total>0?`<div class="prog"><div class="prog-lbl"><span>Slots</span><span>${col}/${total}</span></div>
-        <div class="prog-t"><div class="prog-f" style="width:${pct}%;background:${color}"></div></div></div>
+        <div class="prog-t" aria-hidden="true"><div class="prog-f" style="width:${pct}%;background:${color}"></div></div></div>
         <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;font-family:'Space Mono',monospace">
           <span style="color:var(--teal)">R$${fmtR(have)} coletado</span>
           <span style="color:var(--muted)">faltam R$${fmtR(missing)}</span>
@@ -4492,7 +4514,7 @@ function renderEvolucao(){
   el.innerHTML=keys.map(k=>{
     const{inv,pull}=byMonth[k];accI+=inv;accP+=pull;
     const lbl=k===SEM_DATA?'sem data':new Date(k+'-15T12:00:00').toLocaleDateString('pt-BR',{month:'short',year:'2-digit'});
-    return barHTML(lbl,inv,maxV,'var(--accent)','R$'+fmtR(inv))+
+    return (k===SEM_DATA&&inv===0?'':barHTML(lbl,inv,maxV,'var(--accent)','R$'+fmtR(inv)))+
            (pull>0?barHTML('↳ pulls',pull,maxV,'var(--teal)','R$'+fmtR(pull)):'');
   }).join('')+
   `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-family:'Space Mono',monospace;font-size:11px;display:flex;gap:18px;flex-wrap:wrap">
@@ -4887,3 +4909,13 @@ async function saveUserProfile(){
   _profileAfterSaveCb=null;
   if(cb)cb();
 }
+
+
+// 17/10/2026: cartões do Dashboard (KPIs, painéis de coleção, destaques) são <div onclick>; role=link + tabindex=0 os
+// deixam focáveis, e aqui Enter/Espaço dispara o mesmo clique do mouse.
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Enter'&&e.key!==' ')return;
+  const el=e.target;
+  if(!el||!el.matches||!el.matches('.panel-link[tabindex],.kpi[tabindex],.pc[tabindex]'))return;
+  e.preventDefault();el.click();
+});
