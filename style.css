@@ -3976,3 +3976,13 @@ body.inicio-modal-open { overflow: hidden; }
 .cent-loupe-cross::after { top: 50%; left: 0; right: 0; height: 1px; }
 .cent-upload-zone.cent-drop-over { border-color: var(--accent); background: rgba(var(--accent-rgb, 230,57,70), .08); }
 .cent-handle:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+/* Leilão em tempo real (17/10/2026): o valor atual pisca quando chega um lance novo */
+@keyframes aucflash { 0% { background: rgba(247,183,49,.55); } 100% { background: transparent; } }
+.auc-flash { animation: aucflash 1.3s ease-out; border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) { .auc-flash { animation: none; } }
+
+/* Leilão em tempo real (17/10/2026): o valor atual pisca quando chega um lance novo */
+@keyframes aucflash { 0% { background: rgba(247,183,49,.55); } 100% { background: transparent; } }
+.auc-flash { animation: aucflash 1.3s ease-out; border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) { .auc-flash { animation: none; } }

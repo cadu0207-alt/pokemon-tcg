@@ -180,6 +180,9 @@ async function renderLeilaoTab(){
   switchLeilaoSubtab(allowed.includes(aucActiveSubtab)?aucActiveSubtab:'leiloes');
 
   await loadRoundsAndAuctions();
+  await aucSyncServerTime();     // hora do servidor (contador e "já acabou?" usam isto)
+  aucStartTicker();              // contador anda a cada segundo
+  aucSubscribeRealtime();        // lances e prazos chegam sem recarregar
   await loadLeiloeiroNames();
   await loadMyBidAuctionIds();
   await loadMyAuctionOrders();
@@ -982,7 +985,7 @@ async function loadMyBidAuctionIds(){
 function aucRoundById(id){return aucRounds.find(r=>r.id===id);}
 
 function aucStatusLabel(a){
-  const now=new Date();
+  const now=aucNow();
   if(a.status==='cancelado')return{txt:'Cancelado',color:'var(--muted)'};
   if(a.status==='agendado')return{txt:'Agendado',color:'var(--gold)'};
   if(a.status==='encerrado')return a.winner_id?{txt:'Arrematado',color:'var(--teal)'}:{txt:'Encerrado sem vencedor',color:'var(--muted)'};
@@ -993,14 +996,125 @@ function aucStatusLabel(a){
   return{txt:a.status,color:'var(--muted)'};
 }
 
-function aucCountdown(endAt){
-  const diff=new Date(endAt)-new Date();
-  if(diff<=0)return'encerrando…';
-  const mins=Math.floor(diff/60000);
-  const d=Math.floor(mins/1440),h=Math.floor((mins%1440)/60),m=mins%60;
+// ── TEMPO REAL (17/10/2026) ─────────────────────────────────────────────────────────────────────────────
+// Antes o prazo era calculado UMA vez ao desenhar o cartão (ficava congelado: "2min restantes" para sempre), com o relógio
+// do aparelho, e o lance de outra pessoa só aparecia ao recarregar. Agora: (1) o contador anda a cada segundo, usando a
+// hora do SERVIDOR (RPC server_now — relógio errado no celular não engana mais o prazo; quem decide o fim do leilão
+// continua sendo o banco); (2) a tabela auctions está no Realtime: lance novo, extensão do prazo (anti-sniping) e
+// encerramento aparecem na hora, sem apagar o valor que a pessoa está digitando; (3) rede de segurança: uma consulta leve
+// dos leilões ativos a cada 20 s, caso o Realtime esteja fora do ar.
+let aucServerOffset=0;   // servidor − aparelho, em ms
+function aucNow(){return new Date(Date.now()+aucServerOffset);}
+async function aucSyncServerTime(){
+  try{
+    const t0=Date.now();
+    const{data,error}=await sbClient.rpc('server_now');
+    const t1=Date.now();
+    if(!error&&data)aucServerOffset=new Date(data).getTime()-(t0+t1)/2;
+  }catch(e){/* sem RPC/rede: segue com o relógio do aparelho */}
+}
+function aucFmtLeft(ms){
+  if(ms<=0)return'encerrando…';
+  const s=Math.floor(ms/1000),d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60),sec=s%60;
   if(d>0)return`${d}d ${h}h restantes`;
   if(h>0)return`${h}h ${m}min restantes`;
-  return`${m}min restantes`;
+  return`${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')} restantes`;
+}
+function aucCountdown(endAt){return aucFmtLeft(new Date(endAt)-aucNow());}
+const AUC_HOT_MS=5*60*1000;   // últimos 5 min: contador em vermelho
+function aucCountdownSpan(endAt){
+  const end=new Date(endAt).getTime(),left=end-aucNow().getTime();
+  return`<span class="auc-cd" data-end="${end}" style="color:${left<AUC_HOT_MS?'var(--accent)':'var(--gold)'}">${aucFmtLeft(left)}</span>`;
+}
+let aucTickTimer=null,aucTickRefreshAt=0;
+function aucTick(){
+  if(document.hidden)return;
+  const spans=document.querySelectorAll('.auc-cd');
+  if(!spans.length)return;
+  const now=aucNow().getTime();
+  let expired=false;
+  spans.forEach(el=>{
+    const left=+el.dataset.end-now;
+    el.textContent=aucFmtLeft(left);
+    el.style.color=left<AUC_HOT_MS?'var(--accent)':'var(--gold)';
+    if(left<=0)expired=true;
+  });
+  // prazo acabou na tela: dá 2,5 s pro banco fechar/estender e recarrega
+  if(expired&&Date.now()-aucTickRefreshAt>5000){aucTickRefreshAt=Date.now();setTimeout(aucReloadLive,2500);}
+}
+function aucStartTicker(){if(!aucTickTimer)aucTickTimer=setInterval(aucTick,1000);}
+function aucTabActive(){const pn=document.getElementById('leilao');return!!pn&&pn.classList.contains('active');}
+
+// re-desenha a lista sem perder o que a pessoa estava digitando num campo de lance
+function aucRenderSafe(){
+  const vals={};
+  document.querySelectorAll('input[id^="auc-bid-"]').forEach(i=>{if(i.value)vals[i.id]=i.value;});
+  const focusId=document.activeElement&&document.activeElement.id;
+  renderAuctionsList();
+  Object.keys(vals).forEach(id=>{const el=document.getElementById(id);if(el)el.value=vals[id];});
+  if(focusId&&String(focusId).startsWith('auc-bid-')){const el=document.getElementById(focusId);if(el)el.focus();}
+}
+async function aucReloadLive(){
+  if(!uid())return;
+  await loadRoundsAndAuctions();
+  if(aucTabActive())aucRenderSafe();
+}
+
+// atualiza só o bloco de informações do leilão que mudou (valor atual, lances, prazo, botões de lance mínimo)
+function aucPatchAuction(id){
+  const a=aucAuctions.find(x=>x.id===id);
+  if(!a)return;
+  document.querySelectorAll(`.auc-info[data-auc="${id}"]`).forEach(box=>{
+    const suffix=box.dataset.suffix||'';
+    const inp=box.querySelector('input[id^="auc-bid-"]');
+    const val=inp?inp.value:'',hadFocus=!!inp&&document.activeElement===inp;
+    box.innerHTML=aucInfoBlockInner(a,suffix);
+    const ni=box.querySelector('input[id^="auc-bid-"]');
+    if(ni&&val){ni.value=val;if(hadFocus)ni.focus();}
+    const bid=box.querySelector('[data-bid]');
+    if(bid){bid.classList.add('auc-flash');setTimeout(()=>bid.classList.remove('auc-flash'),1300);}
+  });
+}
+function aucOnAuctionChange(payload){
+  const row=payload.new,old=payload.old;
+  if(payload.eventType==='DELETE'){
+    aucAuctions=aucAuctions.filter(a=>a.id!==(old&&old.id));
+    if(aucTabActive())aucRenderSafe();
+    return;
+  }
+  if(!row)return;
+  const i=aucAuctions.findIndex(a=>a.id===row.id);
+  const prev=i>=0?aucAuctions[i]:null;
+  if(i>=0)aucAuctions[i]={...prev,...row};else aucAuctions.push(row);
+  if(!aucTabActive())return;
+  // leilão novo ou mudança de status (abriu / encerrou / cancelou): reorganiza a lista; senão só atualiza o bloco
+  if(!prev||prev.status!==row.status)aucRenderSafe();
+  else aucPatchAuction(row.id);
+}
+let aucChannel=null,aucRtOk=false,aucPollTimer=null;
+// Consulta leve dos leilões ATIVOS (poucas linhas): rede de segurança que roda sempre, em paralelo ao Realtime — se o
+// canal estiver fora do ar (ou não entregar) a tela ainda atualiza em até 20 s. Só roda com a aba visível e leilão ativo.
+async function aucPollActive(){
+  if(!uid()||document.hidden||!aucTabActive())return;
+  if(!aucAuctions.some(a=>a.status==='ativo'))return;
+  const{data,error}=await sbClient.from('auctions').select('*').eq('status','ativo');
+  if(error||!data)return;
+  data.forEach(row=>{
+    const cur=aucAuctions.find(a=>a.id===row.id);
+    if(!cur||cur.updated_at!==row.updated_at||cur.end_at!==row.end_at||cur.bid_count!==row.bid_count)aucOnAuctionChange({eventType:'UPDATE',new:row,old:{}});
+  });
+  const ids=new Set(data.map(r=>r.id));
+  if(aucAuctions.some(a=>a.status==='ativo'&&!ids.has(a.id)))aucReloadLive();   // sumiu dos ativos = encerrou
+}
+function aucSubscribeRealtime(){
+  if(aucChannel||!sbClient||!uid())return;
+  aucChannel=sbClient.channel('auctions-live')
+    .on('postgres_changes',{event:'*',schema:'public',table:'auctions'},aucOnAuctionChange)
+    .subscribe(status=>{
+      aucRtOk=(status==='SUBSCRIBED');
+      if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')console.warn('[leilao] realtime',status);
+    });
+  if(!aucPollTimer)aucPollTimer=setInterval(aucPollActive,20000);
 }
 
 // Incremento mínimo por faixa (regra do leiloeiro, 12/08/2026): até R$10 →
@@ -1424,8 +1538,12 @@ function aucToggleRoundLeiloeiroTile(tileKey){
 // isso os dois formulários de lance colidiriam no mesmo id.
 function aucInfoBlockHtml(a,idSuffix){
   idSuffix=idSuffix||'';
+  return`<div class="auc-info" data-auc="${a.id}" data-suffix="${idSuffix}">${aucInfoBlockInner(a,idSuffix)}</div>`;
+}
+function aucInfoBlockInner(a,idSuffix){
+  idSuffix=idSuffix||'';
   const st=aucStatusLabel(a);
-  const isActive=a.status==='ativo'&&new Date(a.end_at)>new Date();
+  const isActive=a.status==='ativo'&&new Date(a.end_at)>aucNow();
   const isOwnAuction=a.created_by===uid();
   const iAmWinning=a.current_bidder===uid();
   return`<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1441,14 +1559,15 @@ function aucInfoBlockHtml(a,idSuffix){
     ${a.description?`<div style="font-size:11px;color:var(--text);margin-bottom:6px">${esc(a.description)}</div>`:''}
     <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:8px">
       <div><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">LANCE ATUAL</div>
-        <div style="font-size:17px;font-weight:700;color:var(--teal)">R$ ${fmtR(a.current_bid||a.starting_price)}</div></div>
+        <div data-bid="1" style="font-size:17px;font-weight:700;color:var(--teal)">R$ ${fmtR(a.current_bid||a.starting_price)}</div></div>
       <div><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">LANCES</div>
         <div style="font-size:17px;font-weight:700">${a.bid_count||0}</div></div>
       ${a.buy_now_price&&isActive?`<div><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">ARREMATE</div>
         <div style="font-size:17px;font-weight:700;color:var(--gold)">R$ ${fmtR(a.buy_now_price)}</div></div>`:''}
       ${isActive?`<div><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">PRAZO</div>
-        <div style="font-size:13px;font-weight:600;color:var(--gold)">${aucCountdown(a.end_at)}</div></div>`:''}
+        <div style="font-size:13px;font-weight:600">${aucCountdownSpan(a.end_at)}</div></div>`:''}
     </div>
+    ${isActive&&a.anti_snipe_minutes>0?`<div style="font-size:9.5px;color:var(--muted);margin-top:4px">⏱️ Anti-sniping: um lance nos últimos ${a.anti_snipe_minutes} min reinicia o prazo por mais ${a.anti_snipe_minutes} min — o leilão só fecha quando passa esse tempo sem lance.</div>`:''}
     ${iAmWinning&&isActive?`<div style="font-size:10.5px;color:var(--teal);margin-top:6px">✓ Você está na frente</div>`:''}
     ${isActive&&!isOwnAuction&&!aucBlocked?`
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
