@@ -133,6 +133,9 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .card-face.r-ir{border-color:#63b3ed;box-shadow:0 0 20px rgba(99,179,237,.6);}
 .card-face.r-ur{border-color:var(--purple);box-shadow:0 0 24px rgba(168,85,247,.7);}
 .card-face.r-ire{border-color:var(--pink);box-shadow:0 0 40px rgba(236,72,153,.9);animation:pulse-ire 1.5s ease-in-out infinite;}
+.card-face.r-pik{border-color:#ffd166;box-shadow:0 0 12px rgba(255,209,102,.4);}
+.card-face.r-fut{border-color:#06d6a0;box-shadow:0 0 28px rgba(6,214,160,.7);}
+.card-face.r-cls{border-color:#f7b731;box-shadow:0 0 28px rgba(247,183,49,.7);}
 .card-face.r-mhr{border-color:var(--gold);box-shadow:0 0 60px rgba(255,215,0,1),0 0 120px rgba(255,200,0,.6);animation:pulse-mhr .6s ease-in-out infinite;}
 
 @keyframes pulse-ire{0%,100%{box-shadow:0 0 30px rgba(236,72,153,.7);}50%{box-shadow:0 0 60px rgba(236,72,153,1),0 0 90px rgba(168,85,247,.5);}}
@@ -287,9 +290,11 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
   <div class="stat-item"><div class="stat-lbl">Total Gasto</div><div class="stat-val red" id="stat-gasto">R$ 0,00</div></div>
   <div class="stat-item"><div class="stat-lbl">Valor Puxado</div><div class="stat-val green" id="stat-valor">R$ 0,00</div></div>
   <div class="stat-item"><div class="stat-lbl">Saldo</div><div class="stat-val" id="stat-saldo">R$ 0,00</div></div>
-  <div class="stat-item"><div class="stat-lbl">Rara Dupla</div><div class="stat-val gold" id="stat-rd">0</div></div>
-  <div class="stat-item"><div class="stat-lbl">IR / UR</div><div class="stat-val" id="stat-ir" style="color:#63b3ed">0 / 0</div></div>
-  <div class="stat-item"><div class="stat-lbl">SAR / MHR</div><div class="stat-val" id="stat-sar" style="color:var(--pink)">0 / 0</div></div>
+  <div class="stat-item"><div class="stat-lbl" title="Valor médio esperado dos packs abertos (simulação com as mesmas taxas e preços)">Esperado</div><div class="stat-val white" id="stat-esperado">—</div></div>
+  <div class="stat-item"><div class="stat-lbl" title="Onde seu resultado fica entre 1.500 aberturas simuladas do mesmo número de packs">Sua sorte</div><div class="stat-val white" id="stat-sorte">—</div></div>
+  <div class="stat-item"><div class="stat-lbl" id="lbl-rd">Rara Dupla</div><div class="stat-val gold" id="stat-rd">0</div></div>
+  <div class="stat-item"><div class="stat-lbl" id="lbl-ir">IR / UR</div><div class="stat-val" id="stat-ir" style="color:#63b3ed">0 / 0</div></div>
+  <div class="stat-item"><div class="stat-lbl" id="lbl-sar">SAR / MHR</div><div class="stat-val" id="stat-sar" style="color:var(--pink)">0 / 0</div></div>
 </div>
 
 <div class="products-wrap">
@@ -300,6 +305,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
     <div class="product-card set-tab" id="set-tab-me02" onclick="selectSet('me02')" style="min-width:120px"><div class="pc-name">👻 ME02</div></div>
     <div class="product-card set-tab" id="set-tab-meg" onclick="selectSet('meg')" style="min-width:120px"><div class="pc-name">🌿 MEG</div></div>
     <div class="product-card set-tab" id="set-tab-me05" onclick="selectSet('me05')" style="min-width:120px"><div class="pc-name">🌑 ME05</div></div>
+    <div class="product-card set-tab" id="set-tab-cel30" onclick="selectSet('cel30')" style="min-width:120px"><div class="pc-name">🎉 CEL30</div></div>
   </div>
   <div class="products-label">Escolha o produto para simular</div>
   <div class="products-grid" id="products-grid"></div>
@@ -313,59 +319,16 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
   </div>
   <div class="btn-row">
     <button class="open-btn" id="btn-open" onclick="openPacks(1)" disabled>ABRIR 1 PACK</button>
-    <button class="open-btn multi" id="btn-open10" onclick="openPacks(10)" disabled>ABRIR 10 PACKS</button>
+    <button class="open-btn multi" id="btn-open10" onclick="openPacks(currentMult2())" disabled>ABRIR 10 PACKS</button>
     <button class="open-btn" style="background:#1c2238;box-shadow:none;font-size:14px;padding:16px 24px" onclick="resetSim()">RESETAR</button>
+    <button class="open-btn" style="background:#1c2238;box-shadow:none;font-size:14px;padding:16px 24px" onclick="shareOpening()">📤 COMPARTILHAR</button>
   </div>
 </div>
 
 <div class="rates-wrap">
   <div class="rates-title">Pull Rates — <span id="rates-title-set">ME04 — Caos Ascendente</span></div>
-  <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:14px;line-height:1.6">
-    Pack BR: 6 cartas · 1 energia obrigatória + 4 comuns + 1 slot raro.<br>
-    Taxas do slot raro calibradas para 6–11 hits por display (36 packs).
-  </div>
-  <div class="rate-row">
-    <div class="rate-name" style="color:var(--gold)">⭐ Mega Hiper Raro</div>
-    <div class="rate-bar-wrap"><div class="rate-bar" style="width:.11%;background:var(--gold)"></div></div>
-    <div class="rate-pct" style="color:var(--gold)">0,11%</div>
-    <div class="rate-1in">1 em 909</div>
-  </div>
-  <div class="rate-row">
-    <div class="rate-name" style="color:var(--pink)">✦ Ilustr. Rara Especial (SAR)</div>
-    <div class="rate-bar-wrap"><div class="rate-bar" style="width:1%;background:var(--pink)"></div></div>
-    <div class="rate-pct" style="color:var(--pink)">1,00%</div>
-    <div class="rate-1in">1 em 100</div>
-  </div>
-  <div class="rate-row">
-    <div class="rate-name" style="color:var(--purple)">◆ Rara Ultra (UR)</div>
-    <div class="rate-bar-wrap"><div class="rate-bar" style="width:3.5%;background:var(--purple)"></div></div>
-    <div class="rate-pct" style="color:var(--purple)">3,50%</div>
-    <div class="rate-1in">1 em 29</div>
-  </div>
-  <div class="rate-row">
-    <div class="rate-name" style="color:#63b3ed">◇ Ilustr. Rara (IR)</div>
-    <div class="rate-bar-wrap"><div class="rate-bar" style="width:7%;background:#63b3ed"></div></div>
-    <div class="rate-pct" style="color:#63b3ed">7,00%</div>
-    <div class="rate-1in">1 em 14</div>
-  </div>
-  <div class="rate-row">
-    <div class="rate-name" style="color:var(--gold)">◈ Rara Dupla (RD)</div>
-    <div class="rate-bar-wrap"><div class="rate-bar" style="width:12%;background:var(--gold)"></div></div>
-    <div class="rate-pct" style="color:var(--gold)">12,00%</div>
-    <div class="rate-1in">1 em 8</div>
-  </div>
-  <div class="rate-row">
-    <div class="rate-name" style="color:var(--muted)">— Comum / Incomum / Rara</div>
-    <div class="rate-bar-wrap"><div class="rate-bar" style="width:76.39%;background:#3a4060"></div></div>
-    <div class="rate-pct" style="color:var(--muted)">76,39%</div>
-    <div class="rate-1in">garantida</div>
-  </div>
-  <div class="rate-row" style="border-top:1px dashed var(--border);margin-top:4px">
-    <div class="rate-name" style="color:#3a4060">⚡ Energia (slot fixo)</div>
-    <div class="rate-bar-wrap"><div class="rate-bar" style="width:100%;background:#1c2238"></div></div>
-    <div class="rate-pct" style="color:#3a4060">sempre</div>
-    <div class="rate-1in">1 por pack</div>
-  </div>
+  <div id="rates-note" style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:14px;line-height:1.6"></div>
+  <div id="rates-body"></div>
 </div>
 
 <div class="history-wrap">
@@ -375,11 +338,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
   </div>
 </div>
 
-<div class="disclaimer">
-  ⚠️ Simulador educativo. Pack BR: 6 cartas, sendo 1 energia obrigatória (sem valor) + 4 comuns + 1 slot raro.
-  Taxas do slot raro calibradas para refletir experiência real de 6–11 hits por display de 36 packs.
-  Preços baseados no mercado BR. Cada abertura é independente — não garante resultado real.
-</div>
+<div class="disclaimer" id="disclaimer"></div>
 
 <!-- Supabase JS v2 — usado so pra puxar preco real de produtos rastreados em Lojas & Ofertas -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -389,49 +348,59 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 <script src="cards_meg.js"></script>
 <script src="cards_me05.js"></script>
 <script src="pull_rates.js"></script>
+<script src="cards_cel30.js"></script>
+<script src="img_cel30.js"></script>
+<script src="produtos_catalogo.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
-// DADOS DAS CARTAS — dinâmico por set (le direto dos cards_*.js reais,
-// mesma fonte usada pelo Ficha rio/EV calculator — sem precos fixos aqui).
+// DADOS DAS CARTAS — dinâmico por set (lê direto dos cards_*.js reais, mesma
+// fonte do Fichário/Preço Justo). Produtos e preços de tabela vêm do
+// produtos_catalogo.js; as taxas, do pull_rates.js (17/10/2026: antes eram
+// cópias escritas à mão aqui — a causa do incidente de divergência de 2026).
 // ═══════════════════════════════════════════════════════════════
 const SET_CONFIGS = {
-  me04:{label:'ME04 — Caos Ascendente',        img:'me4', get:()=>(typeof CARDS!=='undefined'?CARDS:[])},
-  me03:{label:'ME03 — Equilíbrio Perfeito',         img:'me3', get:()=>(typeof CARDS_ME03!=='undefined'?CARDS_ME03:[])},
-  me02:{label:'ME02 — Fogo Fantasmagórico',    img:'me2', get:()=>(typeof CARDS_ME02!=='undefined'?CARDS_ME02:[])},
-  meg: {label:'MEG — Megaevolução',            img:'me1', get:()=>(typeof CARDS_MEG!=='undefined'?CARDS_MEG:[])},
-  me05:{label:'ME05 — Escuridão Absoluta',     img:'me5', get:()=>(typeof CARDS_ME05!=='undefined'?CARDS_ME05:[])},
+  me04:{label:'ME04 — Caos Ascendente',     img:'me4', sub:'Metodologia BR (pack de 6 cartas)', get:()=>(typeof CARDS!=='undefined'?CARDS:[])},
+  me03:{label:'ME03 — Equilíbrio Perfeito', img:'me3', sub:'Metodologia BR (pack de 6 cartas)', get:()=>(typeof CARDS_ME03!=='undefined'?CARDS_ME03:[])},
+  me02:{label:'ME02 — Fogo Fantasmagórico', img:'me2', sub:'Metodologia BR (pack de 6 cartas)', get:()=>(typeof CARDS_ME02!=='undefined'?CARDS_ME02:[])},
+  meg: {label:'MEG — Megaevolução',         img:'me1', sub:'Metodologia BR (pack de 6 cartas)', get:()=>(typeof CARDS_MEG!=='undefined'?CARDS_MEG:[])},
+  me05:{label:'ME05 — Escuridão Absoluta',  img:'me5', sub:'Metodologia BR (pack de 6 cartas)', get:()=>(typeof CARDS_ME05!=='undefined'?CARDS_ME05:[])},
+  cel30:{label:'CEL30 — Celebração de 30 Anos', img:'', model:'cel30', sub:'5 cartas + 1 energia · Pikachu garantida · taxas da comunidade', get:()=>(typeof CARDS_CEL30!=='undefined'?CARDS_CEL30:[])},
 };
 
-// Precos de varejo de referencia (mesmos valores do ev_calculator.js/CATALOG).
-// me05 ainda nao lancou — preco estimado (mesma linha ME).
-const RETAIL = {
-  me04:{avulso:14.99,duplo:29.99,triplo:44.99,quad:59.99,box:539.99},
-  me03:{avulso:14.99,duplo:29.99,triplo:44.99,quad:59.99,box:539.99},
-  me02:{avulso:14.99,duplo:29.99,triplo:44.99,quad:59.99,box:539.99},
-  me05:{avulso:14.99,duplo:29.99,triplo:44.99,quad:59.99,box:539.99},
-  meg: {avulso:13.99,duplo:27.99,triplo:39.99,quad:54.99,box:499.99},
-};
-
-// normalizeRareBucket() agora vem de pull_rates.js (script carregado acima) —
-// era uma cópia própria daqui que só reconhecia os nomes de raridade em
-// português no padrão ME04/ME03/ME02/MEG. Nunca foi atualizada com os nomes
-// provisórios do ME05 ("Art Rare", "Super Rare", "Special Art Rare", "Mega
-// Ultra Rare"), então todo hit raro do ME05 caía no bucket BASE (comuns) aqui
-// dentro — mesmo com o EV calculator (Preço Justo) já reconhecendo esses
-// nomes corretamente desde o incidente de julho. Unificado agora: as duas
-// telas usam a mesma função, então um nome de raridade novo só precisa ser
-// ensinado uma vez (em pull_rates.js).
-
-let CARD_DATA={}, BASE_NUMS=[], RD_POOL=[], IR_POOL=[], UR_POOL=[], IRE_POOL=[], MHR_POOL=[], ENERGIA_NUMS=[];
+let CARD_DATA={}, BASE_NUMS=[], RD_POOL=[], IR_POOL=[], UR_POOL=[], IRE_POOL=[], MHR_POOL=[], ENERGIA_NUMS=[], CEL30_POOLS={};
 let IMG_PREFIX='me4', currentSetId='me04';
+const isCel30=()=>currentSetId==='cel30';
+const BUCKET_POOL=()=>({MHR:MHR_POOL,IRE:IRE_POOL,UR:UR_POOL,IR:IR_POOL,RD:RD_POOL});
+// cartas que contam como "hit" (histórico, resumo do lote, compartilhar). PIK = Pikachu garantida (1 por pack): não é hit.
+const HIT_CODES=['MHR','IRE','FUT','UR','CLS','IR','RD'];
+const BASE_CODES=['COMUM','RH','ENERGIA','PIK'];
+
+function cardImg(num){
+  if(isCel30()&&typeof imgCel30==='function') return imgCel30(String(num),'en');
+  return `https://images.scrydex.com/pokemon/${IMG_PREFIX}-${num}/large`;
+}
 
 function buildSetPools(id){
   const cfg=SET_CONFIGS[id];
   if(!cfg) return false;
   const cards=cfg.get();
   if(!cards.length) return false;
-  CARD_DATA={};BASE_NUMS=[];RD_POOL=[];IR_POOL=[];UR_POOL=[];IRE_POOL=[];MHR_POOL=[];ENERGIA_NUMS=[];
-  IMG_PREFIX=cfg.img;currentSetId=id;
+  CARD_DATA={};BASE_NUMS=[];RD_POOL=[];IR_POOL=[];UR_POOL=[];IRE_POOL=[];MHR_POOL=[];ENERGIA_NUMS=[];CEL30_POOLS={};
+  IMG_PREFIX=cfg.img||'';currentSetId=id;
+  if(cfg.model==='cel30'){
+    CEL30_RATES.forEach(r=>{CEL30_POOLS[r.key]=[];});
+    cards.forEach(c=>{
+      const key=String(c.n);   // a Coleção Clássica usa números como "4/102" — não dá pra usar parseInt aqui
+      if(c.type==='Energia'||/^MEE/.test(key)){ ENERGIA_NUMS.push(key); CARD_DATA[key]={name:c.name,price:c.price>0?c.price:.15,rare:c.rare}; return; }
+      if(!c.price||c.price<=0) return;
+      CARD_DATA[key]={name:c.name,price:c.price,rare:c.rare};
+      const k=cel30Classify(c);
+      if(k) CEL30_POOLS[k].push(key);
+      else if(c.rare==='Comum'||c.rare==='Incomum') BASE_NUMS.push(key);   // Mews RGB (Rara Secreta) ficam fora, como no EV
+    });
+    if(!ENERGIA_NUMS.length) ENERGIA_NUMS=BASE_NUMS.slice(0,6);
+    return BASE_NUMS.length>0;
+  }
   cards.forEach(c=>{
     if(!c.price||c.price<=0) return;
     const num=parseInt(c.n,10);
@@ -449,63 +418,71 @@ function buildSetPools(id){
   return true;
 }
 
+// Produtos do set = os do catálogo compartilhado (mesmos ids do Preço Justo e dos vínculos de Lojas & Ofertas).
 function productsForSet(id){
-  const r=RETAIL[id]||RETAIL.me04;
-  return [
-    {id:'avulso',   name:'Booster Avulso',  packs:1,  defaultPrice:r.avulso,  emoji:'📦'},
-    {id:'duplo',    name:'Blister Duplo',   packs:2,  defaultPrice:r.duplo,   emoji:'📦📦'},
-    {id:'triplo',   name:'Blister Triplo',  packs:3,  defaultPrice:r.triplo,  emoji:'📦📦📦'},
-    {id:'quaripack',name:'QuadriPack',       packs:4,  defaultPrice:r.quad,    emoji:'🎁'},
-    {id:'box36',    name:'Box 36 Boosters', packs:36, defaultPrice:r.box,    emoji:'📦✕36'},
-  ];
+  const list=(typeof CATALOG!=='undefined'?CATALOG:[]).filter(p=>p.set===id&&p.boosters>0);
+  const emoji=n=>n===1?'📦':n===2?'📦📦':n===3?'📦📦📦':n>=36?'📦✕36':'🎁';
+  return list.map(p=>({
+    id:p.id,
+    name:String(p.nome).replace(/\s*\(\d+ boost\w*\.?\)\s*/i,' ').replace(/\s*\[estimado\]\s*/i,'').trim(),
+    packs:p.boosters, defaultPrice:p.varejo, emoji:emoji(p.boosters), estimado:!!p.estimado,
+    mult2:p.boosters>=9?2:10
+  })).sort((a,b)=>a.packs-b.packs);
 }
+function currentMult2(){ return selectedProduct?selectedProduct.mult2:10; }
 
 // Mesmo projeto Supabase usado no site principal — chaves publicas, seguras de expor.
 const SIM_SUPABASE_URL='https://dvkiodmhtzlkvmyyzelx.supabase.co';
 const SIM_SUPABASE_KEY='sb_publishable_f4d1JHAzTWPWYAI0Vm6aRA_NwM-uzr3';
 const simSb=window.supabase?window.supabase.createClient(SIM_SUPABASE_URL,SIM_SUPABASE_KEY):null;
 
-// Mapeia o id do produto aqui no simulador pro sufixo usado como product_key
-// em Lojas & Ofertas (mesmo padrao do ev_calculator.js: "<set>-<sufixo>").
-const PRODUCT_KEY_SUFFIX={avulso:'booster',duplo:'blister2',triplo:'blister3',quaripack:'blister4',box36:'display'};
-
-async function simGetRealPrice(productKey){
-  if(!simSb||!productKey) return null;
-  const {data:term}=await simSb.from('ml_search_terms').select('id').eq('product_key',productKey).eq('active',true).limit(1).maybeSingle();
-  if(!term) return null;
-  // 17/10/2026: mesma correção do lojas.js (mydeckGetRealPrice) — antes pegava o MENOR preço de todo o histórico, e um
-  // anúncio errado antigo virava o "preço real". Agora: últimos 7 dias, ignorando outliers (< 50% da mediana).
-  const since=new Date(Date.now()-7*86400000).toISOString();
-  const {data:rows}=await simSb.from('ml_price_history').select('price,found_at').eq('term_id',term.id).gte('found_at',since).order('price',{ascending:true}).limit(500);
-  if(!rows||!rows.length) return null;
-  const mid=Math.floor(rows.length/2);
-  const median=rows.length%2?+rows[mid].price:(+rows[mid-1].price+ +rows[mid].price)/2;
-  const best=rows.find(r=>+r.price>=median*0.5);
-  if(!best) return null;
-  return {price:+best.price,updatedAt:best.found_at};
+// Preço real do ML de TODOS os produtos monitorados, numa busca só (2 consultas, paginadas — o PostgREST corta em 1000
+// linhas). 17/10/2026: antes eram 2 consultas por produto, em sequência (10 por set). Menor preço dos últimos 7 dias,
+// ignorando outliers (< 50% da mediana) — mesma regra do Preço Justo (lojas.js).
+let REAL_PRICES=null;
+async function simGetAllRealPrices(){
+  if(REAL_PRICES) return REAL_PRICES;
+  const out={};
+  if(!simSb){ REAL_PRICES=out; return out; }
+  try{
+    const {data:terms,error}=await simSb.from('ml_search_terms').select('id,product_key').eq('active',true).not('product_key','is',null);
+    if(error||!terms||!terms.length){ REAL_PRICES=out; return out; }
+    const since=new Date(Date.now()-7*86400000).toISOString();
+    const rows=[];
+    for(let from=0;from<20000;from+=1000){
+      const {data,error:e2}=await simSb.from('ml_price_history').select('id,term_id,price,found_at')
+        .in('term_id',terms.map(t=>t.id)).gte('found_at',since)
+        .order('price',{ascending:true}).order('id',{ascending:true}).range(from,from+999);
+      if(e2) break;
+      rows.push(...(data||[]));
+      if(!data||data.length<1000) break;
+    }
+    terms.forEach(t=>{
+      const rs=rows.filter(r=>r.term_id===t.id);
+      if(!rs.length) return;
+      const mid=Math.floor(rs.length/2);
+      const median=rs.length%2?+rs[mid].price:(+rs[mid-1].price+ +rs[mid].price)/2;
+      const best=rs.find(r=>+r.price>=median*0.5);
+      if(best) out[t.product_key]={price:+best.price,updatedAt:best.found_at};
+    });
+  }catch(e){ /* sem rede: segue com o preço de tabela */ }
+  REAL_PRICES=out;
+  return out;
 }
 
 async function applyRealPrices(setId){
-  for(const p of PRODUCTS){
-    const suffix=PRODUCT_KEY_SUFFIX[p.id];
-    if(!suffix) continue;
-    const real=await simGetRealPrice(setId+'-'+suffix);
-    const input=priceInputs[p.id];
-    if(real&&input){
-      input.value=real.price.toFixed(2);
-      const card=document.getElementById('pc-'+p.id);
-      if(card&&!card.querySelector('.pc-real-badge')){
-        const badge=document.createElement('div');
-        badge.className='pc-real-badge';
-        badge.style.cssText='font-size:8px;color:var(--green);margin-top:2px;letter-spacing:.5px';
-        badge.textContent='PRECO REAL · ML';
-        card.querySelector('.pc-price').after(badge);
-      }
-    }
-  }
+  const real=await simGetAllRealPrices();
+  if(currentSetId!==setId) return;   // trocou de coleção enquanto carregava
+  PRODUCTS.forEach(p=>{
+    const r=real[p.id], input=priceInputs[p.id];
+    if(!r||!input) return;
+    input.value=r.price.toFixed(2);
+    const src=document.getElementById('src-'+p.id);
+    if(src){ src.textContent='PREÇO REAL · ML (7 dias)'; src.style.color='var(--green)'; }
+  });
 }
 
-let PRODUCTS=productsForSet('me04');
+let PRODUCTS=[];
 let selectedProduct=null;
 const priceInputs={};
 
@@ -525,8 +502,9 @@ function buildProducts(){
       <div class="pc-packs">${p.packs} pack${p.packs>1?'s':''}</div>
       <div class="pc-price">
         <div class="pc-price-prefix">R$</div>
-        <input type="number" id="price-${p.id}" value="${p.defaultPrice.toFixed(2)}" step="0.01" min="0" onclick="event.stopPropagation()">
-      </div>`;
+        <input type="number" id="price-${p.id}" value="${p.defaultPrice.toFixed(2)}" step="0.01" min="0" onclick="event.stopPropagation()" aria-label="Preço de ${p.name}">
+      </div>
+      <div id="src-${p.id}" style="font-size:8px;letter-spacing:.5px;margin-top:2px;color:var(--muted)">${p.estimado?'⚠ preço de tabela estimado':'preço de tabela'}</div>`;
     card.addEventListener('click',()=>selectProduct(p));
     grid.appendChild(card);
     priceInputs[p.id]=card.querySelector('input');
@@ -540,8 +518,49 @@ function selectProduct(p){
   document.getElementById('btn-open').disabled=false;
   document.getElementById('btn-open10').disabled=false;
   document.getElementById('btn-open').textContent=p.packs===1?'ABRIR 1 PACK':`ABRIR (${p.packs} PACKS)`;
-  document.getElementById('btn-open10').textContent=p.packs===36?'ABRIR 2 BOX (72 PACKS)':`ABRIR 10× (${p.packs*10} PACKS)`;
+  document.getElementById('btn-open10').textContent=p.mult2===2?`ABRIR 2× (${p.packs*2} PACKS)`:`ABRIR 10× (${p.packs*10} PACKS)`;
   resetCards();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PAINEL DE TAXAS — gerado a partir do pull_rates.js (ME) ou do CEL30_RATES
+// ═══════════════════════════════════════════════════════════════
+const CEL30_COLOR={pik:'#ffd166',ir:'#63b3ed',rara:'var(--teal)',dr:'var(--gold)',sir:'var(--pink)',fur:'#06d6a0',classic:'#f7b731'};
+const CEL30_CODE={ir:'IR',rara:'RH',dr:'RD',sir:'IRE',fur:'FUT',classic:'CLS'};
+function renderRatesPanel(){
+  const cfg=SET_CONFIGS[currentSetId];
+  const body=document.getElementById('rates-body'), note=document.getElementById('rates-note'), disc=document.getElementById('disclaimer');
+  let rows=[];
+  if(cfg.model==='cel30'){
+    note.innerHTML='Pack: 5 cartas laminadas + 1 Energia Básica laminada · 1 Pikachu ilustrada garantida (30 artes).<br>⚠ Taxas NÃO oficiais: média de contagens da comunidade (~400 a ~4.000 pacotes por fonte). Os 3 Mews RGB ficam fora (sem taxa confiável).';
+    rows=CEL30_RATES.map(r=>({name:r.nome,prob:r.freq,count:(CEL30_POOLS[r.key]||[]).length,color:CEL30_COLOR[r.key],once:r.freq>=1}));
+    disc.innerHTML='⚠️ Simulador educativo. Pack da Celebração de 30 Anos: 5 cartas + 1 energia, com 1 Pikachu garantida. As taxas são estimativas da comunidade (a Pokémon Company não publica) e os preços das cartas são de lançamento. Cada abertura é independente — não garante resultado real.';
+  }else{
+    note.innerHTML='Pack BR: 6 cartas · 1 energia obrigatória + 4 comuns + 1 slot raro.<br>Taxas do slot raro calibradas para 6–11 hits por display (36 packs) — as mesmas do Preço Justo (pull_rates.js).';
+    const pools=BUCKET_POOL();
+    const defs=[['Mega Hyper Rare','MHR','⭐ Mega Hiper Raro','var(--gold)'],['Ilustr. Esp. Rara','IRE','✦ Ilustr. Rara Especial (SAR)','var(--pink)'],['Rara Ultra','UR','◆ Rara Ultra (UR)','var(--purple)'],['Ilustr. Rara','IR','◇ Ilustr. Rara (IR)','#63b3ed'],['Dupla Rara','RD','◈ Rara Dupla (RD)','var(--gold)']];
+    let used=0;
+    defs.forEach(d=>{ const pr=PULL_RATES[d[0]].prob; used+=pr; rows.push({name:d[2],prob:pr,count:pools[d[1]].length,color:d[3]}); });
+    rows.push({name:'— Comum / Incomum / Rara',prob:1-used,count:BASE_NUMS.length,color:'#3a4060',base:true});
+    disc.innerHTML='⚠️ Simulador educativo. Pack BR: 6 cartas, sendo 1 energia obrigatória (sem valor) + 4 comuns + 1 slot raro. Taxas do slot raro calibradas para refletir experiência real de 6–11 hits por display de 36 packs. Preços baseados no mercado BR. Cada abertura é independente — não garante resultado real.';
+  }
+  body.innerHTML=rows.map(r=>{
+    const pct=r.once?'1 por pack':(r.prob*100).toFixed(2).replace('.',',')+'%';
+    const um=r.once||r.base?'garantida':('1 em '+Math.round(1/r.prob));
+    const cnt=r.count===0?' · ⚠ sem carta cadastrada (vira comum)':` · ${r.count} carta${r.count===1?'':'s'}`;
+    return `<div class="rate-row"><div class="rate-name" style="color:${r.color}">${r.name}</div>
+      <div class="rate-bar-wrap"><div class="rate-bar" style="width:${Math.min(100,r.prob*100)}%;background:${r.color}"></div></div>
+      <div class="rate-pct" style="color:${r.color}">${pct}</div><div class="rate-1in">${um}${cnt}</div></div>`;
+  }).join('')+`<div class="rate-row" style="border-top:1px dashed var(--border);margin-top:4px">
+      <div class="rate-name" style="color:#3a4060">⚡ Energia (slot fixo)</div><div class="rate-bar-wrap"><div class="rate-bar" style="width:100%;background:#1c2238"></div></div>
+      <div class="rate-pct" style="color:#3a4060">sempre</div><div class="rate-1in">1 por pack</div></div>`;
+}
+
+function setStatLabels(){
+  const c=isCel30();
+  document.getElementById('lbl-rd').textContent='Rara Dupla';
+  document.getElementById('lbl-ir').textContent=c?'IR / Futurista':'IR / UR';
+  document.getElementById('lbl-sar').textContent=c?'SAR / Clássica':'SAR / MHR';
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -563,35 +582,43 @@ function selectSet(id){
   }
   PRODUCTS=productsForSet(id);
   const cfg=SET_CONFIGS[id];
-  document.getElementById('sim-sub').textContent=cfg.label+' · Metodologia BR (pack de 6 cartas)';
+  document.getElementById('sim-sub').textContent=cfg.label+' · '+cfg.sub;
   document.getElementById('rates-title-set').textContent=cfg.label;
   buildProducts();
+  selectedProduct=null;
+  document.getElementById('btn-open').disabled=true;
+  document.getElementById('btn-open10').disabled=true;
+  setStatLabels();
+  renderRatesPanel();
+  buildPackValues();
   resetSim();
   applyRealPrices(id);
 }
 
 // ═══════════════════════════════════════════════════════════════
 // PULL ENGINE
-// Estrutura do pack BR (ME series): 6 cartas
-//   1 Energia (obrigatória, slot fixo, sem chance de hit)
-//   4 Comuns/Incomuns
-//   1 Slot Raro (único roll de pull rate)
-// Taxas calibradas para 6-11 hits por display de 36 packs.
+// ME: 6 cartas = 1 energia + 4 comuns + 1 slot raro (1 único roll de pull rate, taxas do pull_rates.js).
+// CEL30: 5 cartas + 1 energia; Pikachu garantida + um sorteio INDEPENDENTE por raridade (CEL30_RATES); o resto é comum.
 // ═══════════════════════════════════════════════════════════════
+const RATE_ORDER=[['Mega Hyper Rare','MHR'],['Ilustr. Esp. Rara','IRE'],['Rara Ultra','UR'],['Ilustr. Rara','IR'],['Dupla Rara','RD']];
 function rollRareSlot(){
-  const r=Math.random()*100;
-  // Cumulative: 0.11 | 1.11 | 4.61 | 11.61 | 23.61
-  if(r<0.11)  return {pool:MHR_POOL,rare:'MHR'};   // 0.11%  · 1 em ~909
-  if(r<1.11)  return {pool:IRE_POOL,rare:'IRE'};   // 1.00%  · 1 em 100
-  if(r<4.61)  return {pool:UR_POOL, rare:'UR'};    // 3.50%  · 1 em ~29
-  if(r<11.61) return {pool:IR_POOL, rare:'IR'};    // 7.00%  · 1 em ~14
-  if(r<23.61) return {pool:RD_POOL, rare:'RD'};    // 12.00% · 1 em ~8
-  return {pool:BASE_NUMS,rare:'COMUM'};              // 76.39% · garantida
+  const pools=BUCKET_POOL();
+  let r=Math.random();
+  for(const [name,code] of RATE_ORDER){
+    const pr=PULL_RATES[name].prob;
+    if(r<pr){
+      const pool=pools[code];
+      // set sem nenhuma carta dessa raridade cadastrada: vira comum (antes sorteava de uma lista vazia e gerava carta "undefined")
+      return pool.length?{pool,rare:code}:{pool:BASE_NUMS,rare:'COMUM'};
+    }
+    r-=pr;
+  }
+  return {pool:BASE_NUMS,rare:'COMUM'};
 }
 
 function randomFrom(arr){return arr[Math.floor(Math.random()*arr.length)];}
 
-function openOnePack(){
+function openOnePackMe(){
   // Estrutura BR: 1 energia + 4 comuns + 1 slot raro = 6 cartas
   const result=[];
   result.push({num:randomFrom(ENERGIA_NUMS),rare:'ENERGIA'});
@@ -600,12 +627,59 @@ function openOnePack(){
   result.push({num:randomFrom(rareSlot.pool),rare:rareSlot.rare});
   return result;
 }
+function openOnePackCel30(){
+  const result=[{num:randomFrom(ENERGIA_NUMS),rare:'ENERGIA'}];
+  if(CEL30_POOLS.pik&&CEL30_POOLS.pik.length) result.push({num:randomFrom(CEL30_POOLS.pik),rare:'PIK'});
+  CEL30_RATES.forEach(r=>{
+    if(r.key==='pik') return;
+    const pool=CEL30_POOLS[r.key];
+    if(!pool||!pool.length) return;
+    let n=Math.floor(r.freq);
+    if(Math.random()<r.freq-n) n++;
+    for(let i=0;i<n;i++) result.push({num:randomFrom(pool),rare:CEL30_CODE[r.key]});
+  });
+  while(result.length<6) result.push({num:randomFrom(BASE_NUMS),rare:'COMUM'});   // completa as 5 cartas + energia
+  return result;
+}
+function openOnePack(){ return isCel30()?openOnePackCel30():openOnePackMe(); }
+
+// ═══════════════════════════════════════════════════════════════
+// SORTE — onde o resultado fica entre aberturas simuladas (17/10/2026)
+// Guarda o valor de 3.000 packs simulados com o MESMO motor da abertura e sorteia, com reposição, N packs 1.500 vezes
+// (bootstrap): dá o valor esperado e o percentil do que você tirou. Preços/cartas = os da tela.
+// ═══════════════════════════════════════════════════════════════
+let PACK_VALUES=null;
+function packValue(cards){ let v=0; cards.forEach(c=>{ const d=CARD_DATA[c.num]; v+=d?d.price:(c.rare==='ENERGIA'?.15:.48); }); return v; }
+function buildPackValues(){
+  PACK_VALUES=new Float64Array(3000);
+  for(let i=0;i<PACK_VALUES.length;i++) PACK_VALUES[i]=packValue(openOnePack());
+}
+function updateLuck(){
+  const e=document.getElementById('stat-esperado'), s=document.getElementById('stat-sorte');
+  if(!totalPacks||!PACK_VALUES){ e.textContent='—'; s.textContent='—'; s.style.color='var(--text)'; return; }
+  let mean=0; for(let i=0;i<PACK_VALUES.length;i++) mean+=PACK_VALUES[i]; mean/=PACK_VALUES.length;
+  const trials=1500, n=totalPacks;
+  let below=0;
+  for(let t=0;t<trials;t++){
+    let sum=0;
+    for(let k=0;k<n;k++) sum+=PACK_VALUES[(Math.random()*PACK_VALUES.length)|0];
+    if(sum<totalValor) below++;
+  }
+  const pct=Math.round(below/trials*100);
+  e.textContent='R$ '+fmtR(mean*n);
+  if(pct>=60){ s.textContent='🍀 Top '+Math.max(1,100-pct)+'%'; s.style.color='var(--green)'; }
+  else if(pct<=40){ s.textContent='😬 Pior '+Math.max(1,pct)+'%'; s.style.color='var(--red)'; }
+  else { s.textContent='😐 Na média'; s.style.color='var(--text)'; }
+  luckText=s.textContent;
+}
+let luckText='';
 
 // ═══════════════════════════════════════════════════════════════
 // STATS STATE
 // ═══════════════════════════════════════════════════════════════
 let totalPacks=0,totalGasto=0,totalValor=0;
 let countRD=0,countIR=0,countUR=0,countIRE=0,countMHR=0;
+let sessionHits=[];
 
 function updateStats(price,cards){
   totalPacks++;totalGasto+=price;
@@ -619,6 +693,9 @@ function updateStats(price,cards){
     if(c.rare==='UR')countUR++;
     if(c.rare==='IRE')countIRE++;
     if(c.rare==='MHR')countMHR++;
+    if(c.rare==='FUT')countUR++;    // CEL30: Rara Futurista ocupa o contador de UR
+    if(c.rare==='CLS')countMHR++;   // CEL30: Coleção Clássica ocupa o contador de MHR
+    if(HIT_CODES.includes(c.rare)&&data) sessionHits.push({name:data.name,rare:c.rare,price:data.price});
   });
   totalValor+=packVal;
   const saldo=totalValor-totalGasto;
@@ -640,9 +717,9 @@ function fmtR(v){return(+v||0).toFixed(2).replace('.',',');}
 // Agrupa duplicatas, ordena por preço (maior→menor), badge xN
 // instant=true: todas viradas de uma vez (batch grande)
 // ═══════════════════════════════════════════════════════════════
-const RAR_LABEL={'ENERGIA':'Energia','COMUM':'Comum','RH':'Rev. Holo','RD':'Rara Dupla','IR':'Ilustr. Rara','UR':'Rara Ultra','IRE':'Ilust. Rara Esp.','MHR':'Mega Hiper Raro'};
-const RAR_BG  ={'RD':'rgba(247,183,49,.2)','IR':'rgba(99,179,237,.2)','UR':'rgba(168,85,247,.2)','IRE':'rgba(236,72,153,.25)','MHR':'rgba(255,215,0,.3)'};
-const RAR_CLR ={'RD':'var(--gold)','IR':'#63b3ed','UR':'var(--purple)','IRE':'var(--pink)','MHR':'var(--gold)','RH':'var(--teal)','ENERGIA':'#3a4060'};
+const RAR_LABEL={'ENERGIA':'Energia','COMUM':'Comum','RH':'Rara Holo','RD':'Rara Dupla','IR':'Ilustr. Rara','UR':'Rara Ultra','IRE':'Ilust. Rara Esp.','MHR':'Mega Hiper Raro','PIK':'Pikachu','FUT':'Rara Futurista','CLS':'Coleção Clássica'};
+const RAR_BG  ={'RD':'rgba(247,183,49,.2)','IR':'rgba(99,179,237,.2)','UR':'rgba(168,85,247,.2)','IRE':'rgba(236,72,153,.25)','MHR':'rgba(255,215,0,.3)','PIK':'rgba(255,209,102,.2)','FUT':'rgba(6,214,160,.25)','CLS':'rgba(247,183,49,.25)'};
+const RAR_CLR ={'RD':'var(--gold)','IR':'#63b3ed','UR':'var(--purple)','IRE':'var(--pink)','MHR':'var(--gold)','RH':'var(--teal)','ENERGIA':'#3a4060','PIK':'#ffd166','FUT':'#06d6a0','CLS':'#f7b731'};
 
 let lastBatchCards=null; // última abertura em lote (pra "ver todas as cartas")
 function showAllBatchCards(){ if(lastBatchCards) renderCards(lastBatchCards,true,true); }
@@ -660,7 +737,7 @@ function renderCards(allCards, instant=false, showAll=false){
   });
 
   // Ordena por preço decrescente (energia/comum ficam no fim)
-  const RARITY_ORDER={'MHR':0,'IRE':1,'UR':2,'IR':3,'RD':4,'RH':5,'COMUM':6,'ENERGIA':7};
+  const RARITY_ORDER={'MHR':0,'IRE':1,'FUT':2,'CLS':3,'UR':4,'IR':5,'RD':6,'PIK':7,'RH':8,'COMUM':9,'ENERGIA':10};
   const sorted=Object.values(groups).sort((a,b)=>{
     const pa=CARD_DATA[a.num]?.price||(a.rare==='ENERGIA'?.15:.48);
     const pb=CARD_DATA[b.num]?.price||(b.rare==='ENERGIA'?.15:.48);
@@ -670,7 +747,7 @@ function renderCards(allCards, instant=false, showAll=false){
 
   // 17/10/2026: abrir 1 box (36 packs) gerava ~78 cartas na tela, comuns e energias incluídas, e os hits sumiam no meio.
   // Em lote (instant) só os hits viram carta; o resto vira uma linha de resumo com botão "ver todas".
-  const isBase=c=>['COMUM','RH','ENERGIA'].includes(c.rare);
+  const isBase=c=>BASE_CODES.includes(c.rare);
   const summarize=instant&&!showAll;
   const toShow=summarize?sorted.filter(c=>!isBase(c)):sorted;
   if(summarize){
@@ -692,7 +769,7 @@ function renderCards(allCards, instant=false, showAll=false){
     const data=CARD_DATA[c.num];
     const name=data?data.name:(c.rare==='ENERGIA'?'Energia':'Carta #'+c.num);
     const price=data?data.price:(c.rare==='ENERGIA'?.15:.48);
-    const img=`https://images.scrydex.com/pokemon/${IMG_PREFIX}-${c.num}/large`;
+    const img=cardImg(c.num);
     const rarClass='r-'+c.rare.toLowerCase();
     const rarLabel=RAR_LABEL[c.rare]||c.rare;
     const rarBg=RAR_BG[c.rare]||'rgba(30,40,60,.5)';
@@ -736,7 +813,7 @@ function renderCards(allCards, instant=false, showAll=false){
 
   // Registra melhor hit no histórico (apenas para abertura animada)
   if(!instant){
-    const hit=sorted.find(c=>['MHR','IRE','UR','IR','RD'].includes(c.rare));
+    const hit=sorted.find(c=>HIT_CODES.includes(c.rare));
     if(hit){
       const data=CARD_DATA[hit.num];
       addHistory(totalPacks,data?data.name:'Carta #'+hit.num,hit.rare,data?data.price:.48);
@@ -748,8 +825,8 @@ function renderCards(allCards, instant=false, showAll=false){
 function addHistory(packN,name,rare,price){
   const list=document.getElementById('history-list');
   if(list.querySelector('[data-empty]'))list.innerHTML='';
-  const rarLabel={'RD':'Rara Dupla','IR':'Ilustr. Rara','UR':'Rara Ultra','IRE':'Ilust. Rara Esp.','MHR':'★ MEGA HIPER RARO'}[rare]||rare;
-  const rarClr={'RD':'gold','IR':'#63b3ed','UR':'var(--purple)','IRE':'var(--pink)','MHR':'var(--gold)'}[rare]||'var(--muted)';
+  const rarLabel={'RD':'Rara Dupla','IR':'Ilustr. Rara','UR':'Rara Ultra','IRE':'Ilust. Rara Esp.','MHR':'★ MEGA HIPER RARO','FUT':'Rara Futurista','CLS':'Coleção Clássica'}[rare]||rare;
+  const rarClr={'RD':'gold','IR':'#63b3ed','UR':'var(--purple)','IRE':'var(--pink)','MHR':'var(--gold)','FUT':'#06d6a0','CLS':'#f7b731'}[rare]||'var(--muted)';
   const item=document.createElement('div');
   item.className=`history-item hi-${rare.toLowerCase()}`;
   item.innerHTML=`<div class="hi-pack">#${packN}</div>
@@ -778,7 +855,7 @@ function spawnParticles(anchor,color){
 }
 
 function showMHR(num,name,price){
-  document.getElementById('mhr-img').src=`https://images.scrydex.com/pokemon/${IMG_PREFIX}-${num}/large`;
+  document.getElementById('mhr-img').src=cardImg(num);
   document.getElementById('mhr-sub').textContent=`${name} · R$ ${fmtR(price)}`;
   document.getElementById('mhr-overlay').classList.add('active');
   // Screen shake
@@ -817,7 +894,7 @@ async function openPacks(multiplier){
     // Batch: mostra tudo agrupado e ordenado, instantaneamente
     renderCards(allCards,true);
     // Registra os top 5 hits no histórico
-    const hits=allCards.filter(c=>['MHR','IRE','UR','IR','RD'].includes(c.rare));
+    const hits=allCards.filter(c=>HIT_CODES.includes(c.rare));
     hits.sort((a,b)=>(CARD_DATA[b.num]?.price||0)-(CARD_DATA[a.num]?.price||0));
     hits.slice(0,5).forEach(c=>{
       const d=CARD_DATA[c.num];
@@ -841,6 +918,8 @@ async function openPacks(multiplier){
   opening=false;
   document.getElementById('btn-open').disabled=false;
   document.getElementById('btn-open10').disabled=false;
+  updateLuck();
+  try{ if(window.gtag) gtag('event','sim_open',{sim_set:currentSetId,sim_product:selectedProduct.id,sim_packs:totalPacksToOpen}); }catch(e){}
 }
 
 function showBatchSummary(numPacks,hits,totalPrice){
@@ -859,6 +938,51 @@ function showBatchSummary(numPacks,hits,totalPrice){
 
 function wait(ms){return new Promise(r=>setTimeout(r,ms));}
 
+// ── COMPARTILHAR (17/10/2026) ──────────────────────────────────────────────────────────────────────────────
+// Gera uma imagem com o resumo da sessão (set, packs, gasto, valor, saldo, sorte e os melhores hits). Só texto/cores:
+// as artes das cartas vêm de outros domínios e "contaminariam" o canvas (não dá pra exportar). Usa o compartilhar do
+// celular quando existe; senão baixa o PNG.
+async function shareOpening(){
+  if(!totalPacks){ alert('Abra alguns packs antes de compartilhar.'); return; }
+  const cfg=SET_CONFIGS[currentSetId];
+  const hits=sessionHits.slice().sort((a,b)=>b.price-a.price).slice(0,8);
+  const W=1080, rowH=64, H=520+Math.max(1,hits.length)*rowH;
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const g=c.getContext('2d');
+  g.fillStyle='#08090d'; g.fillRect(0,0,W,H);
+  g.fillStyle='#0f1626'; g.fillRect(40,40,W-80,H-80);
+  g.strokeStyle='#1c2238'; g.lineWidth=2; g.strokeRect(40,40,W-80,H-80);
+  g.fillStyle='#dde1f0'; g.font='bold 54px Impact, sans-serif'; g.fillText('🎴 SIMULADOR MYDECK',80,125);
+  g.fillStyle='#00b4d8'; g.font='28px monospace'; g.fillText(cfg.label,80,170);
+  const saldo=totalValor-totalGasto, pos=saldo>=0;
+  const stat=(x,label,val,color)=>{ g.fillStyle='#52597a'; g.font='22px monospace'; g.fillText(label,x,235); g.fillStyle=color; g.font='bold 50px Impact, sans-serif'; g.fillText(val,x,290); };
+  stat(80,'PACKS ABERTOS',String(totalPacks),'#dde1f0');
+  stat(340,'GASTO','R$ '+fmtR(totalGasto),'#e63946');
+  stat(640,'VALOR PUXADO','R$ '+fmtR(totalValor),'#22c55e');
+  g.fillStyle='#52597a'; g.font='22px monospace'; g.fillText('SALDO',80,350);
+  g.fillStyle=pos?'#22c55e':'#e63946'; g.font='bold 64px Impact, sans-serif'; g.fillText((pos?'+ ':'- ')+'R$ '+fmtR(Math.abs(saldo)),80,415);
+  if(luckText){ g.fillStyle='#dde1f0'; g.font='bold 38px sans-serif'; g.fillText('Sorte: '+luckText.replace(/[🍀😬😐]\s?/u,''),560,405); }
+  g.fillStyle='#52597a'; g.font='24px monospace'; g.fillText(hits.length?'MELHORES CARTAS':'Nenhum hit dessa vez',80,480);
+  const CLR={MHR:'#f7b731',IRE:'#ec4899',FUT:'#06d6a0',UR:'#a855f7',CLS:'#f7b731',IR:'#63b3ed',RD:'#f7b731'};
+  hits.forEach((h,i)=>{
+    const y=520+i*rowH;
+    g.fillStyle=CLR[h.rare]||'#dde1f0'; g.fillRect(80,y,8,44);
+    g.fillStyle='#dde1f0'; g.font='bold 30px sans-serif'; g.fillText(h.name.length>34?h.name.slice(0,33)+'…':h.name,108,y+22);
+    g.fillStyle=CLR[h.rare]||'#52597a'; g.font='20px monospace'; g.fillText(RAR_LABEL[h.rare]||h.rare,108,y+46);
+    g.fillStyle='#22c55e'; g.font='bold 32px sans-serif'; g.textAlign='right'; g.fillText('R$ '+fmtR(h.price),W-80,y+34); g.textAlign='left';
+  });
+  g.fillStyle='#52597a'; g.font='20px monospace'; g.fillText('Simulação educativa · mydecktcg.com.br',80,H-62);
+  const blob=await new Promise(r=>c.toBlob(r,'image/png'));
+  if(!blob){ alert('Não consegui gerar a imagem.'); return; }
+  const file=new File([blob],'abertura-mydeck.png',{type:'image/png'});
+  const text=`Abri ${totalPacks} packs de ${cfg.label} no simulador do MyDeck: saldo ${pos?'+':'-'}R$ ${fmtR(Math.abs(saldo))} 🎴 mydecktcg.com.br`;
+  try{
+    if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],text,title:'Simulador MyDeck'}); return; }
+  }catch(e){ if(e&&e.name==='AbortError') return; }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='abertura-mydeck.png';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+
 function resetCards(){
   const row=document.getElementById('cards-row');
   row.innerHTML='<div style="font-family:Space Mono,monospace;font-size:12px;color:var(--muted);text-align:center;padding:40px 0">Clique em Abrir para simular</div>';
@@ -867,6 +991,7 @@ function resetCards(){
 function resetSim(){
   totalPacks=0;totalGasto=0;totalValor=0;
   countRD=0;countIR=0;countUR=0;countIRE=0;countMHR=0;
+  sessionHits=[];
   document.getElementById('stat-packs').textContent='0';
   document.getElementById('stat-gasto').textContent='R$ 0,00';
   document.getElementById('stat-valor').textContent='R$ 0,00';
@@ -875,6 +1000,7 @@ function resetSim(){
   document.getElementById('stat-rd').textContent='0';
   document.getElementById('stat-ir').textContent='0 / 0';
   document.getElementById('stat-sar').textContent='0 / 0';
+  updateLuck();
   document.getElementById('history-list').innerHTML='<div data-empty style="font-family:Space Mono,monospace;font-size:10px;color:var(--muted);padding:8px">Nenhum pack aberto ainda.</div>';
   resetCards();
 }
