@@ -1310,6 +1310,26 @@ function calcCollectedValue(){
 }
 
 // ── DASHBOARD ────────────────────────────────────────────────────
+// 17/10/2026: etiqueta de raridade dos "Destaques". O código antigo usava c.rare.split(' ')[0], então "Rara Dupla",
+// "Rara Ilustrada", "Rara Holo" e "Rara" viravam todas "RARA". Agora cada raridade tem sigla própria; as cores
+// existentes em style.css são .br (vermelho), .bi (dourado), .bp (verde) e .bx (cinza).
+function dashRarBadge(rare){
+  const r=String(rare||'');
+  if(/Hiper|Hyper|Secreta/i.test(r))return{lbl:'HIPER',cls:'br'};
+  if(/Mega|Attack/i.test(r))return{lbl:'MEGA',cls:'br'};
+  if(/Ilustr/i.test(r)&&/Esp/i.test(r))return{lbl:'SAR',cls:'br'};
+  if(/Ultra/i.test(r))return{lbl:'UR',cls:'br'};
+  if(/Ilustr/i.test(r))return{lbl:'IR',cls:'bi'};
+  if(/Dupla/i.test(r))return{lbl:'RR',cls:'bi'};
+  if(/Holo/i.test(r))return{lbl:'HOLO',cls:'bi'};
+  if(/^Promo/i.test(r))return{lbl:'PROMO',cls:'bp'};
+  if(/Cl[aá]ssica/i.test(r))return{lbl:'CLÁSSICA',cls:'bx'};
+  if(/^Incomum/i.test(r))return{lbl:'INCOMUM',cls:'bx'};
+  if(/^Comum/i.test(r))return{lbl:'COMUM',cls:'bx'};
+  return{lbl:(r.split(' ')[0]||'').toUpperCase(),cls:'bx'};
+}
+window.dashRarBadge=dashRarBadge;
+
 function renderDash(){
   const invested=purchases.reduce((s,p)=>s+Number(p.price),0);
   const bst=purchases.filter(p=>!p.acessorio);
@@ -1324,7 +1344,7 @@ function renderDash(){
   const apb=tb>0?(tg/tb).toFixed(2):'0,00';
   document.getElementById('kpi-dash').innerHTML=
     kpiHTML('red',dico('wallet')+' Total Investido','R$'+fmtR(invested),purchases.length+' compras','gastos')+
-    kpiHTML('orange',dico('box')+' Boosters',''+tb,'~'+(tb*6)+' cartas','gastos')+
+    kpiHTML('orange',dico('box')+' Boosters',''+tb,'~'+bst.reduce((a,p)=>a+(Number(p.cards)||0),0)+' cartas','gastos')+
     kpiHTML('gold',dico('coins')+' R$/Booster','R$'+apb.replace('.',','),'média ponderada','gastos')+
     kpiHTML('teal',dico('book')+' Valor Fichário','R$'+fmtR(fichVal),collected.size+' slots coletados','fichario')+
     kpiHTML('blue',dico('trend')+' Fichário ÷ Investido',roi+'%','valor do fichário ÷ investido em cartas','fichario');
@@ -1379,26 +1399,12 @@ function renderDash(){
   document.getElementById('chart-gastos').innerHTML=Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0]))
     .map(([d,v])=>barHTML(d.slice(5),v,dMax,'linear-gradient(90deg,var(--accent),var(--accent2))','R$'+fmtR(v))).join('');
 
-  // Destaques do Fichário — cartas coletadas (aleatório, priorizando especiais e importantes)
-  const rl={'Dupla Rara (RR)':'RR','Ilustração Rara (SAR)':'SAR','Ilustracao Rara (SAR)':'SAR',
-    'Ilustração Rara (IR)':'IR','Ilustracao Rara (IR)':'IR','Rara Ultra (UR)':'UR',
-    'Rara (Holo)':'HOLO','Incomum (RH)':'RH','Comum (RH)':'RH','Promocional':'PROMO'};
-  const bcMap={SAR:'bs',UR:'bur',IR:'bi',RR:'brr',HOLO:'bh',RH:'brh',PROMO:'bp'};
+  // Destaques do Fichário — as 6 cartas MAIS VALIOSAS que o usuário tem.
+  // 17/10/2026: antes era sorteio (sort(()=>Math.random()-0.5)) — a lista mudava a cada visita e a cada slot salvo,
+  // e o sorteio era enviesado. Agora é determinístico: maior preço primeiro, empate por nome.
   const allFich=getAllCardsWithSet();
-  // cartas que o usuário coletou E têm algum destaque (importante, especial, ou preço ≥ R$20)
-  const colFich=allFich.filter(c=>{
-    const sid=c._setId;
-    const slots=getSlots(c,sid);
-    const hasCol=slots.some(s=>collected.has(slotKey(sid+':',c.n,s.ver)));
-    return hasCol&&(c.important||!c.base||(c.price>=20));
-  });
-  // se tiver poucos destaques, complementa com qualquer carta coletada com preço
-  const fallback=colFich.length<6?allFich.filter(c=>{
-    const sid=c._setId;
-    const slots=getSlots(c,sid);
-    return slots.some(s=>collected.has(slotKey(sid+':',c.n,s.ver)))&&c.price>0&&!colFich.includes(c);
-  }):[];
-  const pool=[...colFich,...fallback].sort(()=>Math.random()-0.5).slice(0,6);
+  const owned=allFich.filter(c=>getSlots(c,c._setId).some(s=>collected.has(slotKey(c._setId+':',c.n,s.ver))));
+  const pool=owned.sort((a,b)=>(b.price||0)-(a.price||0)||String(a.name).localeCompare(String(b.name))).slice(0,6);
   document.getElementById('dash-highlights').innerHTML=pool.length>0?pool.map(c=>{
     const sid=c._setId;
     const slots=getSlots(c,sid);
@@ -1407,7 +1413,7 @@ function renderDash(){
     const imgSrc=getBinderImg(c,sid);
     const catMeta=SET_CATALOG.find(s=>s.id===sid);
     const setShort=sid.toUpperCase().replace('SV3PT5','151').replace('SV8PT5','SV8.5').replace('SV6PT5','SV6.5').replace('SV4PT5','SV4.5');
-    const rarLbl=rl[c.rare]||c.rare?.split(' ')[0]||'';
+    const rb=dashRarBadge(c.rare);
     // CORRIGIDO 02/08/2026: só chamava switchSet(), que atualiza o fichário
     // por baixo dos panos mas nunca ativa a pane #fichario — clicar aqui a
     // partir do Dashboard não levava a lugar nenhum visualmente. goToTab
@@ -1421,7 +1427,7 @@ function renderDash(){
         <div class="pc-meta">${setShort} · ${c.n}</div>
         <div class="pc-src">Fichário</div>
         <div class="ver-dots"><div class="ver-dot" style="background:${VER_COLOR[ver]};border-color:${VER_COLOR[ver]}" title="${VER_LABEL[ver]}"></div></div></div>
-      <div class="pc-right"><span class="rb ${bcMap[rarLbl]||'bx'}">${rarLbl}</span>
+      <div class="pc-right"><span class="rb ${rb.cls}">${rb.lbl}</span>
         ${c.price?`<div class="pc-price">R$${fmtR(c.price)}</div>`:''}</div>
     </div>`;
   }).join(''):`<div style="color:var(--muted);padding:16px;font-size:.85rem">Nenhuma carta coletada no fichário ainda.</div>`;

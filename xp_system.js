@@ -296,15 +296,14 @@ function xpRenderLoading() {
   if (!wrap) {
     wrap = document.createElement('div');
     wrap.id = 'xp-panel-wrap';
-    dash.insertBefore(wrap, dash.firstChild);
+    xpInsertPanelWrap(dash, wrap);
   }
+  // esqueleto do tamanho da faixa fechada (nível + barra + botão) — pra o painel não "pular" quando carrega
   wrap.innerHTML = `
-    <div class="sec-title" style="margin-top:0">🏆 Seu Progresso</div>
-    <div class="xp-skel xp-skel-bar"></div>
-    <div class="xp-skel xp-skel-line" style="width:60%"></div>
-    <div class="dual" style="margin-top:16px">
-      <div class="panel"><div class="xp-skel xp-skel-line" style="width:40%"></div><div class="xp-skel xp-skel-block"></div></div>
-      <div class="panel"><div class="xp-skel xp-skel-line" style="width:40%"></div><div class="xp-skel xp-skel-block"></div></div>
+    <div class="xp-progress-panel">
+      <div class="xp-skel xp-skel-line" style="width:35%"></div>
+      <div class="xp-skel xp-skel-bar"></div>
+      <div class="xp-skel xp-skel-line" style="width:60%"></div>
     </div>`;
 }
 
@@ -316,7 +315,7 @@ function xpRenderDashPanel() {
   if (!wrap) {
     wrap = document.createElement('div');
     wrap.id = 'xp-panel-wrap';
-    dash.insertBefore(wrap, dash.firstChild);
+    xpInsertPanelWrap(dash, wrap);
   }
 
   const prog = xpState.progress || { total_xp: 0, level: 1 };
@@ -395,19 +394,23 @@ function xpRenderDashPanel() {
     return `<div class="xp-activity-row"><b>${nm}</b> desbloqueou <span>${xpEscapeHtml(label)}</span><span class="xp-activity-when">${when}</span></div>`;
   }).join('');
 
+  // 17/10/2026: a faixa de nível (barra + XP) fica sempre visível logo abaixo dos KPIs; roteiro de conquistas,
+  // ranking e atividade ficam recolhidos por padrão (a escolha da pessoa é lembrada em localStorage).
+  const open = xpPanelOpen();
   wrap.innerHTML = `
-    <div class="sec-title" style="margin-top:0">🏆 Seu Progresso</div>
     <div class="xp-progress-panel">
       <div class="xp-progress-top">
-        <div class="xp-progress-level">Nível ${prog.level}</div>
+        <div class="xp-progress-level">🏆 Nível ${prog.level}</div>
         <div class="xp-progress-title">${title}</div>
-        <button id="xp-mute-btn" class="xp-btn xp-btn-ghost xp-btn-sm" style="margin-left:auto" onclick="xpToggleMute()" title="Ligar/desligar som">${xpSoundMuted() ? '🔇' : '🔊'}</button>
+        <button id="xp-mute-btn" class="xp-btn xp-btn-ghost xp-btn-sm" style="margin-left:auto" onclick="xpToggleMute()" title="Ligar/desligar som" aria-label="Ligar ou desligar o som">${xpSoundMuted() ? '🔇' : '🔊'}</button>
       </div>
-      <div class="xp-progress-bar-track"><div class="xp-progress-bar-fill" style="width:${pct}%"></div></div>
+      <div class="xp-progress-bar-track" role="progressbar" aria-label="Progresso para o próximo nível" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><div class="xp-progress-bar-fill" style="width:${pct}%"></div></div>
       <div class="xp-progress-sub">${(prog.total_xp || 0).toLocaleString('pt-BR')} XP — faltam ${Math.max(0, next - prog.total_xp).toLocaleString('pt-BR')} XP pro nível ${prog.level + 1}</div>
-      <div class="xp-name-row">Você é <b>${myNameEsc}</b> no ranking. <button class="xp-btn xp-btn-ghost xp-btn-sm" onclick="xpRerollName()">🎲 sortear outro nome</button></div>
+      <button type="button" id="xp-toggle-btn" class="xp-btn xp-btn-ghost xp-btn-sm xp-toggle-btn" aria-expanded="${open}" aria-controls="xp-details" onclick="xpTogglePanel()">${open ? '▴ Ocultar conquistas e ranking' : '🎖️ Ver conquistas, ranking e atividade ▾'}</button>
     </div>
 
+    <div id="xp-details"${open ? '' : ' hidden'}>
+    <div class="xp-name-row" style="margin-top:12px">Você é <b>${myNameEsc}</b> no ranking. <button class="xp-btn xp-btn-ghost xp-btn-sm" onclick="xpRerollName()">🎲 sortear outro nome</button></div>
     <div class="dual" style="margin-top:16px">
       <div class="panel">
         <div class="panel-t">🎖️ Conquistas — roteiro completo</div>
@@ -422,7 +425,30 @@ function xpRenderDashPanel() {
     <div class="panel" style="margin-top:16px">
       <div class="panel-t">📰 Atividade recente</div>
       <div class="xp-activity-feed">${activityRows || '<div class="xp-empty">Ninguém desbloqueou nada ainda.</div>'}</div>
+    </div>
     </div>`;
+}
+
+function xpPanelOpen() {
+  try { return localStorage.getItem('xp_panel_open') === '1'; } catch (e) { return false; }
+}
+function xpTogglePanel() {
+  const d = document.getElementById('xp-details'), b = document.getElementById('xp-toggle-btn');
+  if (!d || !b) return;
+  const open = d.hasAttribute('hidden');   // estava fechado => abre
+  if (open) d.removeAttribute('hidden'); else d.setAttribute('hidden', '');
+  b.setAttribute('aria-expanded', open ? 'true' : 'false');
+  b.textContent = open ? '▴ Ocultar conquistas e ranking' : '🎖️ Ver conquistas, ranking e atividade ▾';
+  try { localStorage.setItem('xp_panel_open', open ? '1' : '0'); } catch (e) { /* ok */ }
+}
+window.xpTogglePanel = xpTogglePanel;
+
+// 17/10/2026: o painel de XP agora entra logo DEPOIS dos KPIs do colecionador (antes era o 1º elemento da página,
+// empurrando os números da coleção pra baixo — e, por chegar de forma assíncrona, fazia a página "pular").
+function xpInsertPanelWrap(dash, wrap) {
+  const kpi = document.getElementById('kpi-dash');
+  if (kpi && kpi.parentNode === dash) kpi.insertAdjacentElement('afterend', wrap);
+  else dash.insertBefore(wrap, dash.firstChild);
 }
 
 function xpShareAchievement(code) {
@@ -543,6 +569,8 @@ document.addEventListener('DOMContentLoaded', function () {
 .xp-progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--accent2));transition:width .4s ease;}
 .xp-progress-sub{margin-top:6px;font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;}
 .xp-name-row{margin-top:10px;font-size:12px;color:var(--text2);}
+.xp-toggle-btn{margin-top:10px;}
+#xp-details[hidden]{display:none;}
 .xp-achv-group-title{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted2);margin:10px 0 4px;font-family:'Space Mono',monospace;}
 .xp-achv-grid{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto;}
 .xp-achv-chip{position:relative;display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border-radius:10px;font-size:12px;color:var(--text2);}

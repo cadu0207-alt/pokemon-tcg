@@ -3906,3 +3906,8 @@ body.inicio-modal-open { overflow: hidden; }
   #fic-more-btn .fic-more-txt { display: none; }
   #fic-more-btn { margin-left: auto; }
 }
+
+/* ── Dashboard: KPI órfão no celular (17/10/2026) ── o 5º cartão ocupa a linha toda em vez de ficar sozinho em meia coluna */
+@media (max-width: 600px) {
+  .kpi-grid > .kpi:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
