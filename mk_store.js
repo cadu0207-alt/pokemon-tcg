@@ -223,7 +223,7 @@ function mkOpenProduct(id) {
         (typeof mkShipBoxHtml === 'function' ? mkShipBoxHtml(p) : '') +
         (qty > 0 && p.status === 'ativo' ? '<button type="button" class="mk-buy-btn mk-add-cart" onclick="mkCartAdd(' + p.id + ')">🛒 Adicionar ao carrinho</button>' : '') +
         (typeof mkBuyBtnHtml === 'function' ? mkBuyBtnHtml(p) : '') +
-        (wa && qty > 0 ? '<a class="mk-buy-btn' + (mk.seller.checkout_enabled ? ' mk-buy-alt' : '') + '" target="_blank" rel="noopener" href="https://wa.me/' + wa + '?text=' + encodeURIComponent(msg) + '">💬 Chamar a loja no WhatsApp</a>' +
+        (wa && qty > 0 ? '<a class="mk-buy-btn' + (mk.seller.checkout_enabled ? ' mk-buy-alt' : '') + '" target="_blank" rel="noopener" href="https://wa.me/' + wa + '?text=' + encodeURIComponent(msg) + '" onclick="mkProductWaClicked(' + p.id + ')">💬 Chamar a loja no WhatsApp</a>' +
           (mk.seller.checkout_enabled ? '' : '<div class="mk-prod-hint">A compra direto pelo site chega em breve. Por enquanto a loja combina pagamento e envio pelo WhatsApp.</div>') : '') +
         (qty <= 0 ? '<div class="mk-prod-hint">Produto esgotado no momento. Pergunte à loja se vai repor.</div>' : '') +
         (mk.isMember ? '<button type="button" class="btn-mini" style="margin-top:12px" onclick="mkCloseModal();mkGoPanel(\'produtos\');setTimeout(function(){mkOpenProductForm(' + p.id + ')},60)">✏️ Editar este produto</button>' : '') +

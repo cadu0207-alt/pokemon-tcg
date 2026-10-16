@@ -347,7 +347,55 @@ async function mkCancelMine(id) {
 window.mkReopenPayment = mkReopenPayment; window.mkCancelMine = mkCancelMine;
 
 // ══════════════════ painel do lojista: Pedidos ══════════════════
+// ── interesses via WhatsApp (17/10/2026): valem 2 h, não mexem no estoque; "vendido" baixa o estoque ──
+let mkInterests = [];
+function mkInterestCardHtml(i) {
+  const open = i.status === 'aberto';
+  const exp = new Date(i.expires_at).getTime();
+  const left = exp - Date.now();
+  const expired = open && left <= 0;
+  const when = new Date(i.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+  const items = (i.items || []).map(function (x) { return mkEsc(x.qty + '× ' + x.title); }).join('<br>');
+  let tag, tagCls;
+  if (i.status === 'vendido') { tag = 'Vendido'; tagCls = 'mk-ord-pago'; }
+  else if (i.status === 'cancelado') { tag = 'Descartado'; tagCls = 'mk-ord-cancelado'; }
+  else if (expired) { tag = 'Expirou'; tagCls = 'mk-ord-expirado'; }
+  else { const m = Math.max(1, Math.round(left / 60000)); tag = 'Interessado · ' + (m >= 60 ? Math.floor(m / 60) + 'h' + (m % 60 ? ' ' + (m % 60) + 'min' : '') : m + ' min'); tagCls = 'mk-ord-aguardando_pagamento'; }
+  const actions = open
+    ? '<button class="btn-mini mk-primary" onclick="mkInterestAct(' + i.id + ',\'vender\')">✅ Marcar como vendido</button>' +
+      '<button class="btn-mini" onclick="mkInterestAct(' + i.id + ',\'descartar\')">✖ Descartar</button>'
+    : '';
+  return '<div class="mk-ord"><div class="mk-ord-head"><b>💬 ' + mkEsc(i.buyer_name) + '</b><span class="mk-ord-st ' + tagCls + '">' + tag + '</span>' +
+    '<span class="mk-ord-when">' + when + '</span></div><div class="mk-ord-items">' + items + '</div>' +
+    (i.buyer_email ? '<div class="mk-ord-line">✉️ ' + mkEsc(i.buyer_email) + '</div>' : '') +
+    '<div class="mk-ord-foot"><span>Total <b>' + mkMoney(i.total) + '</b> (sem frete)</span><span class="mk-row-actions-inline">' + actions + '</span></div></div>';
+}
+function mkInterestsHtml() {
+  const open = mkInterests.filter(function (i) { return i.status === 'aberto'; });
+  const closed = mkInterests.filter(function (i) { return i.status !== 'aberto'; }).slice(0, 15);
+  if (!mkInterests.length) return '';
+  return '<h4 class="mk-sub">💬 Interesses pelo WhatsApp (' + open.length + ')</h4>' +
+    '<div class="mk-prod-hint" style="margin:0 0 8px">Cliente que clicou em “Chamar a loja no WhatsApp”. Vale 2 horas e <b>não tira nada do estoque</b>. Fechou a venda na conversa? Toque em <b>Marcar como vendido</b> — só aí o estoque baixa.</div>' +
+    (open.length ? open.map(mkInterestCardHtml).join('') : '<div class="mk-empty">Nenhum interesse em aberto.</div>') +
+    (closed.length ? '<details class="mk-info"><summary>Interesses encerrados (' + closed.length + ')</summary>' + closed.map(mkInterestCardHtml).join('') + '</details>' : '');
+}
+async function mkInterestAct(id, action) {
+  const i = mkInterests.find(function (x) { return x.id === id; }); if (!i) return;
+  if (action === 'vender') {
+    const resumo = (i.items || []).map(function (x) { return x.qty + '× ' + x.title; }).join('\n');
+    if (!confirm('Confirmar a venda para ' + i.buyer_name + '?\n\n' + resumo + '\n\nIsso baixa do estoque.')) return;
+  } else if (!confirm('Descartar este interesse? O estoque não muda.')) return;
+  const r = action === 'vender' ? await sbClient.rpc('mk_interest_sell', { p_interest: id }) : await sbClient.rpc('mk_interest_cancel', { p_interest: id });
+  if (r.error) { mkToast(r.error.message, true); return; }
+  mkToast(action === 'vender' ? 'Venda registrada e estoque atualizado.' : 'Interesse descartado.');
+  await mkLoadSellerOrders();
+  if (action === 'vender') mkLoadAll(true);
+}
+window.mkInterestAct = mkInterestAct;
+
 async function mkLoadSellerOrders() {
+  const ir = await sbClient.from('mk_interests').select('id,buyer_name,buyer_email,items,total,status,expires_at,created_at').eq('seller_id', mk.seller.id).order('created_at', { ascending: false }).limit(60);
+  mkInterests = ir.error ? [] : (ir.data || []);
   const { data, error } = await sbClient.from('mk_orders').select(MK_ORDER_SELECT).eq('seller_id', mk.seller.id).order('created_at', { ascending: false }).limit(100);
   const body = document.getElementById('mk-panel-body'); if (!body || mk.panelTab !== 'pedidos') return;
   if (error) { body.innerHTML = '<div class="mk-empty">Não consegui carregar os pedidos.</div>'; return; }
@@ -395,7 +443,7 @@ function mkRenderSellerOrders() {
   const open = mkOrders.filter(function (o) { return ['aguardando_pagamento', 'pago', 'em_separacao', 'enviado'].indexOf(o.status) >= 0; });
   const done = mkOrders.filter(function (o) { return open.indexOf(o) < 0; });
   const note = !mk.seller.checkout_enabled ? '<div class="mk-note mk-note-warn">A compra pelo site ainda não está liberada (o MyDeck libera quando os pagamentos estiverem prontos). Pedidos só aparecem aqui depois disso.</div>' : '';
-  body.innerHTML = mkAlertBannerHtml() + note +
+  body.innerHTML = mkAlertBannerHtml() + note + mkInterestsHtml() +
     '<h4 class="mk-sub">Em andamento (' + open.length + ')</h4>' + (open.length ? open.map(function (o) { return mkOrderCardHtml(o, true); }).join('') : '<div class="mk-empty">Nenhum pedido em andamento.</div>') +
     (done.length ? '<h4 class="mk-sub">Encerrados</h4>' + done.map(function (o) { return mkOrderCardHtml(o, true); }).join('') : '');
 }

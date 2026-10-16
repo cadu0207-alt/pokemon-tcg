@@ -188,7 +188,27 @@ function mkCartWhatsMessage(r) {
 function mkCartWhatsUrl(r, wa) { return 'https://wa.me/' + wa + '?text=' + encodeURIComponent(mkCartWhatsMessage(r)); }
 function mkCartWaClicked() {
   if (typeof gtag === 'function') { try { gtag('event', 'mk_cart_whatsapp', { itens: mkCartCount() }); } catch (e) { /* ok */ } }
+  const r = mkCartResolve();
+  mkRegisterInterest(r.lines.map(function (l) { return { product_id: l.p.id, qty: l.qty }; }));
 }
+
+// 17/10/2026: clicar em "Chamar a loja no WhatsApp" NÃO cria pedido nem mexe no estoque: registra um INTERESSE de 2 horas
+// (aparece no painel da loja e avisa a equipe). Quando a venda fecha no WhatsApp, o lojista marca "vendido" e só aí o
+// estoque baixa. Só cliente logado gera interesse; visitante só abre o WhatsApp. Nunca bloqueia nem atrasa a abertura do WhatsApp.
+function mkRegisterInterest(items) {
+  try {
+    if (!items || !items.length || !mk.seller || !(typeof uid === 'function' && uid()) || typeof sbClient === 'undefined') return;
+    const name = (typeof userProfile !== 'undefined' && userProfile && userProfile.full_name) || mkLsGetSafe('mk_name') || null;
+    sbClient.rpc('mk_register_interest', { p_seller: mk.seller.id, p_items: items, p_name: name }).then(function (res) {
+      if (res && res.error) console.warn('[mk] interesse não registrado:', res.error.message);
+    }, function () { /* sem rede: o WhatsApp já abriu, segue */ });
+  } catch (e) { /* nunca atrapalha o clique */ }
+}
+function mkProductWaClicked(pid) {
+  if (typeof gtag === 'function') { try { gtag('event', 'mk_product_whatsapp', { product_id: pid }); } catch (e) { /* ok */ } }
+  mkRegisterInterest([{ product_id: pid, qty: 1 }]);
+}
+window.mkProductWaClicked = mkProductWaClicked;
 
 // Frete do carrinho INTEIRO (o servidor soma peso/medidas num pacote). Mensagens específicas pra cada causa.
 async function mkCartQuote() {
