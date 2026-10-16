@@ -429,6 +429,23 @@
     document.getElementById('msheetBackdrop').classList.contains('show') ? closeMSheet() : openMSheet();
   }
   function mNav(id){ closeMSheet(); goToTab(id); }
+  // 17/10/2026: no Safari do iPhone, depois de digitar num campo e fechar o teclado a barra fixa de baixo fica "presa" na altura
+  // onde o teclado estava (no meio da tela). Esconde a barra enquanto um campo de texto está focado (o teclado cobriria de
+  // qualquer jeito) e, ao sair, dá um empurrão de 1px na rolagem pra o Safari recalcular a posição dos elementos fixos.
+  (function(){
+    var t;
+    function isText(e){ return !!e && /^(INPUT|TEXTAREA|SELECT)$/.test(e.tagName) && !/^(checkbox|radio|button|submit|range|file|color)$/.test(e.type || ''); }
+    document.addEventListener('focusin', function(e){ if (isText(e.target)) { clearTimeout(t); document.body.classList.add('kbd-open'); } });
+    document.addEventListener('focusout', function(e){
+      if (!isText(e.target)) return;
+      clearTimeout(t);
+      t = setTimeout(function(){
+        if (isText(document.activeElement)) return;
+        document.body.classList.remove('kbd-open');
+        var y = window.scrollY; window.scrollTo(0, y + 1); window.scrollTo(0, y);
+      }, 250);
+    });
+  })();
   </script>
 
   <!-- INÍCIO 23/08/2026: nova página inicial da coleção — ver inicio.js.

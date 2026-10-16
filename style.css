@@ -620,6 +620,7 @@ h1 {
     -webkit-backface-visibility: hidden;
   }
   [data-theme="dark"] .mnav { background: rgba(17,20,34,.96); box-shadow: 0 -6px 20px rgba(0,0,0,.4); }
+  body.kbd-open .mnav { display: none; } /* teclado aberto: some (ver script em index.html) */
 }
 
 .mnav-btn {
