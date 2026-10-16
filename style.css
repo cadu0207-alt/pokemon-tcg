@@ -191,6 +191,10 @@ body {
   font-family: 'DM Sans', sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
+  overflow-x: clip; /* 17/10/2026: 'clip' não cria contêiner de rolagem no body — no iOS Safari o 'hidden' faz a barra fixa de baixo acompanhar a rolagem */
+}
+@media (max-width: 900px) {
+  body { background-attachment: scroll; } /* iOS ignora 'fixed' e repinta a página inteira a cada rolagem (a barra inferior "treme") */
 }
 
 .page { display: none; }
@@ -610,6 +614,10 @@ h1 {
     background: rgba(255,255,255,.96);
     border-top: 1px solid var(--border);
     box-shadow: 0 -6px 20px rgba(28,34,56,.1);
+    /* própria camada de composição: o Safari do iPhone não reposiciona a barra durante a rolagem/recolhimento da barra do navegador */
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+    -webkit-backface-visibility: hidden;
   }
   [data-theme="dark"] .mnav { background: rgba(17,20,34,.96); box-shadow: 0 -6px 20px rgba(0,0,0,.4); }
 }

@@ -322,3 +322,7 @@ body.mk-modal-open { overflow: hidden; }
 .mk-policy > summary { cursor: pointer; }
 .mk-policy .mk-md { max-height: 340px; overflow: auto; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 12.5px; line-height: 1.55; }
 .mk-note-ok { background: rgba(22,163,74,.14); border: 1px solid rgba(22,163,74,.4); color: var(--text); }
+@media (max-width: 900px) {
+  /* a barra do carrinho ficava escondida atrás da barra de páginas fixa (.mnav, ~56px) */
+  .mk-cart-bar { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+}
