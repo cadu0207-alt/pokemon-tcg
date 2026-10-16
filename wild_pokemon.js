@@ -268,17 +268,20 @@
   // colorida por tier + tarja preta + botão central, igual ao formato
   // real de cada bola (Great Ball com friso vermelho, Ultra com dourado,
   // Master roxa com botão rosa).
-  function wpBallSpriteUrl(imgSlug) {
-    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${imgSlug}.png`;
+  // 17/10/2026: sprites servidos pelo próprio site (assets/wild/, gerados por scripts/build_wild_sprites.py): WebP de
+  // 160 px (~7 KB) em vez do artwork de 475 px (~118 KB) do raw.githubusercontent.com — que alguns provedores bloqueiam.
+  // Se o arquivo local falhar, o listener de erro abaixo cai no PokeAPI (raw -> jsDelivr -> pokemondb) como antes.
+  function wpBallSpriteUrl(tier) {
+    return `assets/wild/ball-${tier}.png`;
   }
   function wpBallIconHtml(tier, size) {
     size = size || 26;
     const meta = WP_BALL_META[tier];
-    return `<img class="wp-ball-icon" src="${wpBallSpriteUrl(meta.img)}" alt="${meta.label}" style="width:${size}px;height:${size}px">`;
+    return `<img class="wp-ball-icon" src="${wpBallSpriteUrl(tier)}" alt="${meta.label}" style="width:${size}px;height:${size}px">`;
   }
 
   function wpSpriteUrl(dex) {
-    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${dex}.png`;
+    return `assets/wild/${dex}.webp`;
   }
 
   // 15/10/2026: raw.githubusercontent.com é bloqueado em alguns provedores/
@@ -294,6 +297,10 @@
     const img = ev.target;
     if (!img || img.tagName !== 'IMG') return;
     const src = img.currentSrc || img.src || '';
+    const local = src.match(/assets\/wild\/(\d+)\.webp$/);
+    if (local) { img.src = WP_RAW_PREFIX + 'sprites/pokemon/other/official-artwork/' + local[1] + '.png'; return; }
+    const localBall = src.match(/assets\/wild\/ball-(\w+)\.png$/);
+    if (localBall && WP_BALL_META[localBall[1]]) { img.src = WP_RAW_PREFIX + 'sprites/items/' + WP_BALL_META[localBall[1]].img + '.png'; return; }
     if (src.startsWith(WP_RAW_PREFIX)) {
       img.src = WP_JSD_PREFIX + src.slice(WP_RAW_PREFIX.length);
     } else if (src.startsWith(WP_JSD_PREFIX) && !img.dataset.wpFb2) {
@@ -584,6 +591,40 @@
     return mon ? mon.n : entry.pokemon_slug;
   }
 
+  // ── Limite pessoal de média no time (17/10/2026, pedido do Eduardo) ─────
+  // Preferência SÓ da própria pessoa (não é regra da Arena): com o limite ligado, Pokémon cuja média de stats passa
+  // do teto NÃO FICAM NA MOCHILA — ao capturar, voltam pra natureza na hora (a captura continua valendo na Pokédex
+  // e dando XP, e a bola é gasta) — e nunca entram como Principal nem na Equipe. Os que já estavam na mochila antes
+  // de ligar o limite aparecem apagados, com um botão pra liberar todos de uma vez. Fica na conta
+  // (user_metadata.wp_team_cap, sincroniza entre aparelhos) com cópia no localStorage; null = desligado. Não depende
+  // do servidor: o banco continua aceitando qualquer time, quem barra é este arquivo.
+  const WP_STORAGE_TEAM_CAP = 'wp_team_cap_v1';
+  const WP_TEAM_CAP_DEFAULT = 60;
+  function wpTeamCap() {
+    const meta = (typeof currentUser !== 'undefined' && currentUser && currentUser.user_metadata) ? currentUser.user_metadata.wp_team_cap : undefined;
+    const raw = meta !== undefined ? meta : wpLoadJSON(WP_STORAGE_TEAM_CAP, null);
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 1 && n <= 100 ? Math.round(n) : null;
+  }
+  function wpSetTeamCap(n) {
+    wpSaveJSON(WP_STORAGE_TEAM_CAP, n);
+    if (typeof currentUser !== 'undefined' && currentUser && currentUser.user_metadata) currentUser.user_metadata.wp_team_cap = n;
+    if (wpHasClient() && wpUid() && sbClient.auth && sbClient.auth.updateUser) {
+      sbClient.auth.updateUser({ data: { wp_team_cap: n } }).then(({ error }) => {
+        if (error) console.warn('[wp] não salvei o limite do time na conta (fica só neste aparelho):', error.message);
+      });
+    }
+  }
+  function wpOverCap(entry) {
+    const cap = wpTeamCap();
+    return cap !== null && wpStatAvg(entry) > cap;
+  }
+  function wpEntryById(id) { return wpBackpack.find(b => b.id === id) || null; }
+  function wpTeamViolations() {
+    const ids = [wpLoadout.principal_id, ...(wpLoadout.team_ids || [])].filter(Boolean);
+    return ids.map(wpEntryById).filter(e => e && wpOverCap(e));
+  }
+
   // ── Loadout: Principal + Equipe ─────────────────────────────────
   async function wpFetchLoadout() {
     if (!wpHasClient() || !wpUid()) { wpLoadout = { principal_id: null, team_ids: [] }; wpLoadoutLoaded = true; return; }
@@ -612,7 +653,17 @@
     return true;
   }
 
+  function wpBlockedByCap(entryId) {
+    const e = wpEntryById(entryId);
+    if (e && wpOverCap(e)) {
+      wpToastRaw('🎚️', `${esc(wpBackpackDisplayName(e))} tem média ${wpStatAvg(e)} — acima do seu limite de ${wpTeamCap()} pro time.`, false);
+      return true;
+    }
+    return false;
+  }
+
   async function wpTogglePrincipal(entryId) {
+    if (wpLoadout.principal_id !== entryId && wpBlockedByCap(entryId)) return false;
     const next = wpLoadout.principal_id === entryId ? null : entryId;
     const ok = await wpSetLoadout(next, wpLoadout.team_ids);
     if (ok) wpToastRaw('⭐', next ? 'Definido como Principal.' : 'Não é mais o Principal.', true);
@@ -628,6 +679,7 @@
       wpToastRaw('🛡️', 'Sua equipe já tem 3 — tire alguém antes de adicionar outro.', false);
       return false;
     }
+    if (wpBlockedByCap(entryId)) return false;
     const ok = await wpSetLoadout(wpLoadout.principal_id, [...cur, entryId]);
     if (ok) wpToastRaw('🛡️', 'Adicionado à Equipe.', true);
     return ok;
@@ -702,7 +754,7 @@
       0%, 100% { opacity: 0; transform: scale(.3); }
       50%      { opacity: 1; transform: scale(1); }
     }
-    .wp-spawn.wp-bl { left: -78px; bottom: 18px; }
+    .wp-spawn.wp-bl { left: -78px; bottom: 112px; } /* 17/10/2026: acima do contador (14px) e do botão Batalhar (64px) */
     /* 15/10/2026: --wpx por canto. As animações peek/shy/fled usam
        translateX(var(--wpx,86px)) e sobrescrevem o transform do .wp-in — sem
        isso, o canto direito andava +86px PARA FORA da tela e o Pokémon
@@ -717,7 +769,8 @@
        "pokémon não aparece"). Mesmo delta (+52px) aplicado ao badge.
        wp-tl fica no topo, não precisa de ajuste. */
     @media (max-width: 900px) {
-      .wp-spawn.wp-bl, .wp-spawn.wp-br { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+      .wp-spawn.wp-br { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+      .wp-spawn.wp-bl { bottom: calc(168px + env(safe-area-inset-bottom, 0px)); } /* acima de contador (66px) + Batalhar (116px) */
     }
     .wp-spawn.wp-in.wp-bl { transform: translateX(86px); }
     .wp-spawn.wp-in.wp-br { transform: translateX(-86px); }
@@ -774,7 +827,7 @@
       75% { transform: rotate(18deg); }
     }
     .wp-toast {
-      position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%) translateY(20px);
+      position: fixed; left: 50%; bottom: 150px; transform: translateX(-50%) translateY(20px);
       background: linear-gradient(135deg, #111422, #181c2e);
       border: 1px solid #ffd16655;
       color: #f2f2f2;
@@ -897,6 +950,12 @@
       font-size: 13px; margin-bottom: 12px; color: #ffd166;
     }
     .wp-bp-tag-row { display: flex; gap: 6px; margin-top: 8px; }
+    .wp-cap-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; padding: 8px 10px; border: 1px dashed #ffffff1f; border-radius: 10px; font-size: 12px; color: #9aa0c0; }
+    .wp-cap-lbl { font-weight: 700; color: #f2f2f2; }
+    .wp-cap-input { width: 64px; padding: 5px 8px; border-radius: 8px; border: 1px solid #ffffff22; background: #111422; color: #f2f2f2; font: inherit; }
+    .wp-cap-bar .wp-bp-btn { padding: 6px 12px; }
+    .wp-cap-note { flex: 1 1 180px; font-size: 11px; }
+    .wp-bp-cell.wp-bp-over { opacity: .5; filter: grayscale(.5); }
     .wp-bp-tag-btn {
       flex: 1; text-align: center; padding: 8px; border-radius: 10px; cursor: pointer; font-size: 12px;
       border: 1px solid #ffffff14; background: #111422; color: #9aa0c0;
@@ -937,6 +996,14 @@
     .wp-battle-record { text-align: center; font-size: 12px; color: #9aa0c0; margin-top: 6px; }
   `;
   document.head.appendChild(wpStyle);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const el = e.target;
+    if (!el || !el.matches || !el.matches('[data-wp-kb]') || el.getAttribute('aria-disabled') === 'true') return;
+    e.preventDefault();
+    el.click();
+  });
 
   // ── Spawn engine ─────────────────────────────────────────────
   let wpActiveEl = null;
@@ -999,8 +1066,11 @@
 
     const el = document.createElement('div');
     el.className = `wp-spawn ${corner}`;
-    el.innerHTML = `${wpAuraHtml(mon.r)}<img src="${wpSpriteUrl(mon.d)}" alt="${mon.n}">`;
+    el.innerHTML = `${wpAuraHtml(mon.r)}<img src="${wpSpriteUrl(mon.d)}" alt="" decoding="async">`;
     el.title = '???';
+    // 17/10/2026: acessível por teclado (Enter/Espaço) e sem entregar o nome no alt ("???" é parte do jogo)
+    el.setAttribute('role', 'button'); el.setAttribute('tabindex', '0'); el.setAttribute('data-wp-kb', '1');
+    el.setAttribute('aria-label', 'Um Pokémon selvagem apareceu. Pressione Enter para tentar capturar.');
     document.body.appendChild(el);
     wpActiveEl = el;
     wpActiveMon = mon;
@@ -1053,7 +1123,7 @@
     picker.innerHTML = WP_BALL_ORDER.map(tier => {
       const qty = wpBalls[tier] || 0;
       const disabled = qty <= 0;
-      return `<div class="wp-ball-btn ${disabled ? 'wp-ball-disabled' : ''}" data-tier="${tier}">
+      return `<div class="wp-ball-btn ${disabled ? 'wp-ball-disabled' : ''}" data-tier="${tier}" role="button" tabindex="${disabled ? '-1' : '0'}" data-wp-kb="1" aria-disabled="${disabled}" aria-label="${WP_BALL_META[tier].label}: ${qty}">
         ${wpBallIconHtml(tier, 24)}
         <span class="wp-ball-qty">${qty}</span>
       </div>`;
@@ -1195,15 +1265,23 @@
       if (typeof result.backpack_cap === 'number') wpBackpackCap = result.backpack_cap;
       wpUpdateBadge();
 
+      // 17/10/2026: limite pessoal de média — o indivíduo que passou do teto não fica na mochila: é liberado já.
+      // (O servidor ainda o gravou; o release_wild_pokemon logo abaixo o apaga. Se a liberação falhar, ele fica
+      // na mochila marcado como acima do limite e dá pra liberar pelo botão da barra do limite.)
+      const wpOverNow = (result.backpack_entry && wpTeamCap() !== null && wpBackpack[0] && wpOverCap(wpBackpack[0])) ? wpBackpack[0] : null;
+      if (wpOverNow) wpReleaseBackpack(wpOverNow.id);
+
       el.classList.add('wp-caught');
       setTimeout(() => el.remove(), 500);
       wpSoundCatch();
-      if (result.backpack_entry && result.backpack_entry.exceptional) {
+      if (wpOverNow) {
+        wpToastRaw('🎚️', `${mon.n} (média ${wpStatAvg(wpOverNow)}) passou do seu limite de ${wpTeamCap()} — voltou pra natureza. Conta na Pokédex e deu XP.`, true);
+      } else if (result.backpack_entry && result.backpack_entry.exceptional) {
         wpToastRaw('💠', `Espécime PERFEITO! ${mon.n} rolou os 5 stats altos — abra a mochila pra ver.`, true);
       } else {
         wpToastCatch(mon, true, null, result.backpack_entry);
       }
-      if (result.backpack_full) {
+      if (result.backpack_full && !wpOverNow) {
         setTimeout(() => wpToastRaw('🎒', `Mochila cheia (${result.backpack_count}/${result.backpack_cap}) — abra e libere algum Pokémon quando quiser.`, false), 1600);
       }
 
@@ -1230,6 +1308,7 @@
   function wpToastRaw(emoji, text, success) {
     const el = document.createElement('div');
     el.className = `wp-toast ${success === false ? 'wp-fail' : ''}`;
+    el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
     el.innerHTML = `<span style="font-size:22px">${emoji}</span><span>${text}</span>`;
     document.body.appendChild(el);
     requestAnimationFrame(() => el.classList.add('wp-show'));
@@ -1240,6 +1319,7 @@
     const meta = WP_RARITY_META[mon.r];
     const el = document.createElement('div');
     el.className = `wp-toast ${success ? '' : 'wp-fail'}`;
+    el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
     if (success) {
       const isNew = wpCatches[mon.s].count === 1;
       // Média dos 5 stats no próprio toast (04/09/2026, pedido do Eduardo) —
@@ -1322,8 +1402,8 @@
     if (wpBadgeEl) return;
     wpBadgeEl = document.createElement('div');
     wpBadgeEl.className = 'wp-badge';
-    wpBadgeEl.innerHTML = `<span class="wp-badge-text"></span><span class="wp-sound-btn" title="Som">${wpSoundOn ? '🔊' : '🔇'}</span><span class="wp-power-btn" title="Minimizar minigame e batalha">🎮</span>`;
-    wpBadgeEl.querySelector('.wp-badge-text').addEventListener('click', wpOpenDex);
+    wpBadgeEl.innerHTML = `<span class="wp-badge-text" role="button" tabindex="0" data-wp-kb="1" aria-label="Abrir Pokédex, mochila e inventário"></span><span class="wp-sound-btn" role="button" tabindex="0" data-wp-kb="1" aria-label="Ligar ou desligar o som do minigame" title="Som">${wpSoundOn ? '🔊' : '🔇'}</span><span class="wp-power-btn" role="button" tabindex="0" data-wp-kb="1" aria-label="Minimizar o minigame e a batalha" title="Minimizar minigame e batalha">🎮</span>`;
+    wpBadgeEl.querySelector('.wp-badge-text').addEventListener('click', () => wpOpenDex('dex')); // 17/10/2026: antes passava o MouseEvent como "tab" e o modal abria vazio
     wpBadgeEl.querySelector('.wp-sound-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       wpSoundOn = !wpSoundOn;
@@ -1339,6 +1419,7 @@
     wpEdgeTabEl = document.createElement('div');
     wpEdgeTabEl.className = 'wp-edge-tab wp-min';
     wpEdgeTabEl.title = 'Mostrar minigame e batalha';
+    wpEdgeTabEl.setAttribute('role', 'button'); wpEdgeTabEl.setAttribute('tabindex', '0'); wpEdgeTabEl.setAttribute('data-wp-kb', '1'); wpEdgeTabEl.setAttribute('aria-label', 'Mostrar minigame e batalha');
     wpEdgeTabEl.textContent = '🎮';
     wpEdgeTabEl.addEventListener('click', () => wpSetEnabled(true));
     document.body.appendChild(wpEdgeTabEl);
@@ -1366,7 +1447,7 @@
       const got = !!wpCatches[mon.s];
       const meta = WP_RARITY_META[mon.r];
       return `<div class="wp-cell ${got ? 'wp-got' : ''}">
-        <img src="${wpSpriteUrl(mon.d)}" alt="">
+        <img src="${wpSpriteUrl(mon.d)}" alt="" loading="lazy" decoding="async">
         <div class="wp-n">${got ? mon.n : '???'}</div>
         <div class="wp-r" style="color:${got ? meta.color : '#52597a'}">${got ? meta.label : ''}</div>
       </div>`;
@@ -1425,19 +1506,58 @@
 
     if (!wpLoadoutLoaded) await wpFetchLoadout();
 
-    container.innerHTML = fullBanner + `<div class="wp-grid">${wpBackpack.map(entry => {
+    const capNow = wpTeamCap();
+    const bad = wpTeamViolations();
+    const capBar = `<div class="wp-cap-bar">
+      <span class="wp-cap-lbl">🎚️ Limite de média no meu time</span>
+      <input type="number" id="wp-cap-input" class="wp-cap-input" min="1" max="100" value="${capNow !== null ? capNow : WP_TEAM_CAP_DEFAULT}" aria-label="Média máxima de stats permitida no time">
+      <button type="button" id="wp-cap-btn" class="wp-bp-btn">${capNow !== null ? 'Desligar' : 'Ligar'}</button>
+      <span class="wp-cap-note">${capNow !== null ? `Pokémon com média acima de ${capNow} não ficam na mochila nem entram no time (a captura vale na Pokédex e dá XP). Vale só pra você.` : 'Desligado — qualquer Pokémon fica na mochila e pode ir pro time.'}</span>
+      ${capNow !== null && wpBackpack.some(e => wpOverCap(e)) ? `<button type="button" id="wp-cap-purge" class="wp-bp-btn wp-bp-btn-danger">Liberar os ${wpBackpack.filter(e => wpOverCap(e)).length} acima do limite</button>` : ''}
+    </div>
+    ${bad.length ? `<div class="wp-bp-full-banner">⚠️ ${bad.length === 1 ? '1 Pokémon do seu time passa' : bad.length + ' Pokémon do seu time passam'} do limite (${bad.map(e => `${esc(wpBackpackDisplayName(e))} ${wpStatAvg(e)}`).join(', ')}). Troque antes de batalhar.</div>` : ''}`;
+
+    container.innerHTML = fullBanner + capBar + `<div class="wp-grid">${wpBackpack.map(entry => {
       const meta = WP_RARITY_META[entry.rarity];
       const isPrincipal = wpLoadout.principal_id === entry.id;
       const isTeam = (wpLoadout.team_ids || []).includes(entry.id);
       const tags = (isPrincipal ? '⭐' : '') + (isTeam ? '🛡️' : '');
-      return `<div class="wp-cell wp-bp-cell ${entry.exceptional ? 'wp-bp-exceptional' : ''}" data-id="${entry.id}">
+      const over = wpOverCap(entry);
+      return `<div class="wp-cell wp-bp-cell ${entry.exceptional ? 'wp-bp-exceptional' : ''} ${over ? 'wp-bp-over' : ''}" data-id="${entry.id}" ${over ? `title="Média ${wpStatAvg(entry)} — acima do seu limite de ${capNow}"` : ''}>
         ${entry.exceptional ? '<span class="wp-bp-exceptional-tag">💠</span>' : ''}
         ${tags ? `<span class="wp-bp-cell-tags">${tags}</span>` : ''}
-        <img src="${wpSpriteUrl(entry.dex)}" alt="">
+        <img src="${wpSpriteUrl(entry.dex)}" alt="" loading="lazy" decoding="async">
         <div class="wp-bp-nick">${esc(wpBackpackDisplayName(entry))}</div>
-        <div class="wp-r" style="color:${meta.color}">${meta.label}</div>
+        <div class="wp-r" style="color:${meta.color}">${meta.label}${over ? ` · ⛔ ${wpStatAvg(entry)}` : ''}</div>
       </div>`;
     }).join('')}</div>`;
+
+    const capInput = container.querySelector('#wp-cap-input');
+    const applyCap = (n) => { wpSetTeamCap(n); wpRenderMochilaGrid(container); };
+    container.querySelector('#wp-cap-btn').addEventListener('click', () => {
+      if (wpTeamCap() !== null) { applyCap(null); return; }
+      const v = Math.round(Number(capInput.value));
+      applyCap(Number.isFinite(v) && v >= 1 && v <= 100 ? v : WP_TEAM_CAP_DEFAULT);
+    });
+    const purgeBtn = container.querySelector('#wp-cap-purge');
+    if (purgeBtn) purgeBtn.addEventListener('click', async () => {
+      const inTeam = new Set([wpLoadout.principal_id, ...(wpLoadout.team_ids || [])].filter(Boolean));
+      const victims = wpBackpack.filter(e => wpOverCap(e) && !inTeam.has(e.id));
+      const kept = wpBackpack.filter(e => wpOverCap(e) && inTeam.has(e.id)).length;
+      if (!victims.length) { wpToastRaw('🎚️', 'Os que passam do limite estão no seu time — tire-os do time primeiro.', false); return; }
+      const lista = victims.slice(0, 12).map(e => `${wpBackpackDisplayName(e)} (${wpStatAvg(e)})`).join(', ') + (victims.length > 12 ? '…' : '');
+      if (!confirm(`Liberar ${victims.length} Pokémon acima de ${capNow} de média pra sempre?\n\n${lista}\n\nNão dá pra desfazer.` + (kept ? `\n(${kept} acima do limite estão no time e ficam de fora.)` : ''))) return;
+      purgeBtn.disabled = true; purgeBtn.textContent = 'Liberando…';
+      let ok = 0;
+      for (const e of victims) { if (await wpReleaseBackpack(e.id)) ok++; }
+      wpToastRaw('🎒', `${ok} Pokémon voltaram pra natureza.`, true);
+      wpRenderMochilaGrid(container);
+    });
+    capInput.addEventListener('change', () => {
+      if (wpTeamCap() === null) return; // desligado: o número só vale quando ligar
+      const v = Math.round(Number(capInput.value));
+      if (Number.isFinite(v) && v >= 1 && v <= 100) applyCap(v);
+    });
 
     container.querySelectorAll('.wp-bp-cell').forEach(cell => {
       cell.addEventListener('click', () => {
@@ -1474,6 +1594,7 @@
         <span class="wp-bp-avg-val">${avg}</span>
       </div>
       ${statsHtml}
+      ${wpOverCap(entry) ? `<div class="wp-bp-full-banner">🎚️ Média ${avg} — acima do seu limite de ${wpTeamCap()}. ${(wpLoadout.principal_id === entry.id || (wpLoadout.team_ids || []).includes(entry.id)) ? 'Ele ainda está no time: tire pra poder batalhar.' : 'Não dá pra colocar no time.'}</div>` : ''}
       <div class="wp-bp-tag-row">
         <div class="wp-bp-tag-btn ${wpLoadout.principal_id === entry.id ? 'wp-bp-tag-active' : ''}" data-act="principal">⭐ Principal (1x1)</div>
         <div class="wp-bp-tag-btn ${(wpLoadout.team_ids || []).includes(entry.id) ? 'wp-bp-tag-active' : ''}" data-act="team">🛡️ Equipe (3x3)</div>
@@ -1529,6 +1650,7 @@
     if (wpArenaEl) return;
     wpArenaEl = document.createElement('div');
     wpArenaEl.className = 'wp-arena-btn';
+    wpArenaEl.setAttribute('role', 'button'); wpArenaEl.setAttribute('tabindex', '0'); wpArenaEl.setAttribute('data-wp-kb', '1');
     wpArenaEl.textContent = '⚔️ Batalhar';
     wpArenaEl.addEventListener('click', wpStartBattle);
     document.body.appendChild(wpArenaEl);
@@ -1571,6 +1693,15 @@
       wpToastRaw('🛡️', 'Defina seu Pokémon Principal e sua Equipe de 3 na mochila primeiro.', false);
       wpOpenDex('mochila');
       return;
+    }
+    if (wpTeamCap() !== null) {
+      if (!wpBackpackLoaded) await wpFetchBackpack();
+      const bad = wpTeamViolations();
+      if (bad.length) {
+        wpToastRaw('🎚️', `Seu time tem ${bad.length} Pokémon acima do limite de ${wpTeamCap()} (${bad.map(e => `${esc(wpBackpackDisplayName(e))} ${wpStatAvg(e)}`).join(', ')}). Troque na mochila.`, false);
+        wpOpenDex('mochila');
+        return;
+      }
     }
 
     wpBattleBusy = true;
