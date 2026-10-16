@@ -1881,26 +1881,38 @@ function renderGastos(){
   const total=purchases.reduce((s,p)=>s+Number(p.price),0);
   const bst=purchases.filter(p=>!p.acessorio);
   const tb=bst.reduce((s,p)=>s+p.boost,0),tc=bst.reduce((s,p)=>s+p.cards,0),tg=bst.reduce((s,p)=>s+Number(p.price),0);
-  const pull=pulledCards.reduce((s,c)=>s+Number(c.price||0),0);
-  const roi=total>0?(pull/total*100).toFixed(0):0;
+  // 17/10/2026 (revisão da página): saíram "Valor Tirado", "Recuperado em Pulls" e o "lucro por compra" — dividiam o
+  // valor de TODAS as cartas tiradas pelo gasto total sem vínculo real (0 de 137 cartas tinham purchase_id no banco),
+  // então o número era uma soma de universos diferentes. Entrou "Neste mês", que responde "quanto gastei agora?".
   const apb=tb>0?(tg/tb).toFixed(2):'0,00',apc=tc>0?(tg/tc).toFixed(2):'0,00';
+  const _now=new Date(),_ym=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0');
+  const _mes=purchases.filter(p=>String(p.date||'').slice(0,7)===_ym);
+  const _mesTotal=_mes.reduce((s,p)=>s+Number(p.price),0);
+  const _tlDet=document.getElementById('gastos-tl-wrap');
+  if(!purchases.length){
+    // sem compras: em vez de cinco KPIs zerados e uma tela em branco, convida a registrar a primeira
+    document.getElementById('gastos-resumo').innerHTML=`<div style="text-align:center;padding:36px 16px;margin-bottom:24px;border:1px dashed var(--border2);border-radius:12px;color:var(--muted)">
+      <div style="font-size:34px;margin-bottom:8px">🧾</div>
+      <div style="font-weight:700;color:var(--text);margin-bottom:6px">Nenhuma compra registrada ainda</div>
+      <div style="font-size:13px;line-height:1.5;margin-bottom:16px">Registre blisters, boxes e coleções que você comprou pra ver quanto investiu, quanto paga por booster e por carta, e como seus gastos evoluem mês a mês.</div>
+      <button class="btn-add" onclick="openModal('mp')">+ REGISTRAR PRIMEIRA COMPRA</button></div>`;
+    document.getElementById('gastos-cards').innerHTML='';
+    document.getElementById('tlwrap').innerHTML='';
+    if(_tlDet)_tlDet.style.display='none';
+    return;
+  }
+  if(_tlDet)_tlDet.style.display='';
   document.getElementById('gastos-resumo').innerHTML=`<div class="kpi-grid">
     ${kpiHTML('red','💰 Total Investido','R$'+fmtR(total),purchases.length+' compras · '+tb+' boosters')}
-    ${kpiHTML('gold','📦 R$/Booster','R$'+apb.replace('.',','),'média ponderada')}
-    ${kpiHTML('orange','🃏 R$/Carta','R$'+apc.replace('.',','),'~'+tc+' cartas')}
-    ${kpiHTML('teal','💎 Valor Tirado','R$'+fmtR(pull),pulledCards.length+' cartas')}
-    ${kpiHTML('blue','📊 Recuperado em Pulls',roi+'%',(pull>=total?'✅ acima do gasto':'📉 abaixo do gasto')+' · R$ tirado ÷ R$ gasto')}
+    ${kpiHTML('gold','📦 R$/Booster','R$'+apb.replace('.',','),'média ponderada · só boosters, sem acessórios')}
+    ${kpiHTML('orange','🃏 R$/Carta','R$'+apc.replace('.',','),'~'+tc+' cartas (estimativa: 6 por booster)')}
+    ${kpiHTML('teal','🗓️ Neste mês','R$'+fmtR(_mesTotal),_mes.length?_mes.length+' compra'+(_mes.length!==1?'s':''):'nenhuma compra neste mês')}
   </div>`;
 
   document.getElementById('gastos-cards').innerHTML=purchases.map(p=>{
     const pb=p.boost>0?(Number(p.price)/p.boost).toFixed(2):null;
     const d=new Date(p.date+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
     const imgSrc=getPurchaseImg(p.product);
-    // Profit por compra: soma das cartas tiradas vinculadas via purchase_id - preço pago.
-    // Cartas antigas (lançadas antes do vínculo existir) não têm purchase_id e não entram aqui.
-    const linked=pulledCards.filter(c=>String(c.purchase_id)===String(p.id));
-    const linkedVal=linked.reduce((s,c)=>s+Number(c.price||0),0);
-    const profit=linked.length?linkedVal-Number(p.price):null;
     return`<div class="pcard">
       <div class="pcard-img-wrap">
         <img src="${imgSrc}" alt="${esc(p.product)}" onerror="this.style.display='none'">
@@ -1917,7 +1929,6 @@ function renderGastos(){
             </div>
             <div style="font-weight:700;font-size:14px;margin-bottom:4px">${esc(p.product)}</div>
             ${p.boost>0?`<div style="font-size:11px;color:var(--muted)">${p.boost} boosters · ~${p.cards} cartas</div>`:''}
-            ${profit!==null?`<div style="font-size:11px;margin-top:4px;color:${profit>=0?'var(--teal)':'var(--accent)'}">${profit>=0?'▲':'▼'} R$${fmtR(Math.abs(profit))} ${profit>=0?'de lucro':'abaixo do gasto'} · ${linked.length} carta${linked.length!==1?'s':''} vinculada${linked.length!==1?'s':''}</div>`:''}
           </div>
           <div style="display:flex;gap:16px;align-items:center">
             <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--accent);line-height:1">R$${fmtR(p.price)}</div>
@@ -3422,8 +3433,15 @@ const rBC={'Dupla Rara (RR)':'br','Ilustração Rara (IR)':'bi','Ilustracao Rara
 // Compra em edição (null = criando nova). Setado por editPurchase().
 let _editPurchaseId=null;
 
+let _savingPurchase=false;
 async function addPurchase(){
   if(!uid()) return;
+  if(_savingPurchase) return; // 17/10/2026: clique duplo em "Salvar" criava a compra duas vezes
+  _savingPurchase=true;
+  const _btn=document.querySelector('#mp .btn-add');if(_btn)_btn.disabled=true;
+  try{await _addPurchaseInner();}finally{_savingPurchase=false;if(_btn)_btn.disabled=false;}
+}
+async function _addPurchaseInner(){
   const prod=document.getElementById('m-prod').value.trim();
   const tipo=document.getElementById('m-tipo').value;
   const date=document.getElementById('m-data').value;

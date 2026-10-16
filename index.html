@@ -540,8 +540,11 @@
     </div>
     <div id="gastos-resumo"></div>
     <div id="gastos-cards" style="display:flex;flex-direction:column;gap:16px;margin-bottom:32px"></div>
-    <div class="sec-title" role="heading" aria-level="2">📅 Timeline</div>
-    <div class="tl" id="tlwrap"></div>
+    <!-- 17/10/2026: a Timeline repetia as mesmas compras dos cartões acima, só em outra ordem — fica recolhida por padrão -->
+    <details id="gastos-tl-wrap" class="gastos-tl">
+      <summary class="sec-title">📅 Linha do tempo das compras</summary>
+      <div class="tl" id="tlwrap"></div>
+    </details>
   </div>
 
   <div id="cartas" class="pane">
