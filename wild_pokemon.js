@@ -36,7 +36,7 @@
 // quando migrar pro Supabase). Por enquanto: uso do site (timer +
 // troca de aba) dá chance de Poké Ball, e existe uma função pública
 // pra simular outros gatilhos:
-//   window.wpGrantBall('greatball', 1, 'teste manual')
+//   (wpGrantBall saiu no pacote B de 17/10/2026: bola só muda no servidor — ver wild_servidor_pacote_b_17out2026.sql)
 //
 // ── Botões no badge (canto inferior esquerdo) ──────────────────
 //   🎮     MINIMIZA o minigame inteiro: para de aparecer e de dar bola,
@@ -47,9 +47,7 @@
 //
 // ── Debug no console ─────────────────────────────────────────
 //   wpForceSpawn()              → força um Pokémon aparecer agora
-//   wpGrantBall(tier, qty, why) → dá bolas (tier: pokeball/greatball/ultraball/masterball)
 //   wpToggle()                  → liga/desliga o minigame (mesmo botão do badge)
-//   wpReset()                   → zera capturas E bolas
 //   wpStatus()                  → mostra progresso + inventário
 // ================================================================
 
@@ -339,17 +337,18 @@
   function wpDailyBallsIncrement() {
     const today = wpTodayStr();
     wpSaveJSON(WP_STORAGE_DAILY_BALLS, { date: today, count: wpDailyBallsCount() + 1 });
-    wpDbSaveDaily();
   }
 
   // ── Bônus de primeiro acesso do dia: 1 Great Ball ───────────────
   function wpCheckDailyLoginBonus() {
     if (!wpEnabled) return; // minigame minimizado — não mostra aviso nem dá bola
+    // Logado: quem decide é o servidor (1 Great Ball por dia por CONTA, vale em qualquer aparelho).
+    if (wpHasClient() && wpUid()) { wpServerGrant('wild_claim_daily_bonus', 'primeiro acesso do dia'); return; }
+    // Visitante: continua só no aparelho (não persiste nada de verdade)
     const today = wpTodayStr();
-    if (wpLoadJSON(WP_STORAGE_DAILY_BONUS, null) === today) return; // já deu hoje (neste aparelho, ou já sincronizado da conta)
+    if (wpLoadJSON(WP_STORAGE_DAILY_BONUS, null) === today) return;
     wpSaveJSON(WP_STORAGE_DAILY_BONUS, today);
-    window.wpGrantBall('greatball', 1, 'primeiro acesso do dia');
-    wpDbSaveDaily();
+    wpGrantLocalBall('greatball', 1, 'primeiro acesso do dia');
   }
 
   let wpCatches = wpLoadJSON(WP_STORAGE_CATCHES, {}); // { [slug]: { count, firstCaughtAt } }
@@ -398,55 +397,32 @@
   // xp_events_migration_23ago2026.sql). Escrever aqui NÃO concede XP —
   // a concessão de XP só acontece dentro da RPC, então nem editar
   // wild_catches manualmente pelo console dá pra farmar XP.
-  function wpDbUpsertCatch(mon) {
-    if (!wpHasClient() || !wpUid()) return;
-    const rec = wpCatches[mon.s];
-    sbClient.from('wild_catches').upsert({
-      user_id: wpUid(),
-      pokemon_slug: mon.s,
-      dex: mon.d,
-      rarity: mon.r,
-      count: rec.count,
-      first_caught_at: new Date(rec.firstCaughtAt).toISOString(),
-      last_caught_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,pokemon_slug' }).then(({ error }) => {
-      if (error) console.warn('[wp] falha ao salvar captura no Supabase:', error.message);
-    });
+  // 17/10/2026 (pacote B): o navegador NÃO grava mais em wild_balls / wild_catches / wild_daily (o banco recusa
+  // INSERT/UPDATE direto). Tudo que muda saldo ou captura passa por função no servidor: catch_wild_pokemon,
+  // wild_init_balls, wild_claim_daily_bonus e wild_grant_passive_ball. Aqui só lemos e mostramos.
+  // Ganho de bola decidido pelo servidor (bônus diário / ganho passivo). Se a função ainda não existir no banco
+  // (cliente novo antes da migração) ou o servidor recusar, simplesmente não ganha nada — sem erro na tela.
+  async function wpServerGrant(rpcName, reason) {
+    if (!wpHasClient() || !wpUid()) return false;
+    try {
+      const { data, error } = await sbClient.rpc(rpcName);
+      if (error) { console.warn('[wp] ' + rpcName + ':', error.message); return false; }
+      if (data && data.balls) { wpBalls = data.balls; wpSaveBalls(); wpUpdateBadge(); }
+      if (data && data.granted && data.tier) {
+        wpToastRaw(wpBallIconHtml(data.tier, 22), `+1 ${WP_BALL_META[data.tier].label}${reason ? ' — ' + reason : ''}`, true);
+        return true;
+      }
+    } catch (e) { console.warn('[wp] ' + rpcName + ' — falha de conexão:', e); }
+    return false;
   }
 
-  function wpDbSaveBalls() {
-    if (!wpHasClient() || !wpUid()) return;
-    sbClient.from('wild_balls').upsert({
-      user_id: wpUid(),
-      pokeball: wpBalls.pokeball || 0,
-      greatball: wpBalls.greatball || 0,
-      ultraball: wpBalls.ultraball || 0,
-      masterball: wpBalls.masterball || 0,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' }).then(({ error }) => {
-      if (error) console.warn('[wp] falha ao salvar pokébolas no Supabase:', error.message);
-    });
-  }
+  // (wpDbSaveBalls removida no pacote B — saldo de bolas só muda no servidor)
 
   // Teto de Poké Ball/dia + bônus de login, por CONTA (não mais só por
   // dispositivo) — evita logar em dois aparelhos e ganhar o bônus/teto
   // em dobro. Lê o que já está no localStorage (fonte imediata) e sobe
   // pra tabela wild_daily.
-  function wpDbSaveDaily() {
-    if (!wpHasClient() || !wpUid()) return;
-    const today = wpTodayStr();
-    const ballsState = wpLoadJSON(WP_STORAGE_DAILY_BALLS, { date: today, count: 0 });
-    const bonusDate = wpLoadJSON(WP_STORAGE_DAILY_BONUS, null);
-    sbClient.from('wild_daily').upsert({
-      user_id: wpUid(),
-      day: today,
-      passive_balls: ballsState.date === today ? ballsState.count : 0,
-      login_bonus_claimed: bonusDate === today,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' }).then(({ error }) => {
-      if (error) console.warn('[wp] falha ao salvar contadores diários no Supabase:', error.message);
-    });
-  }
+  // (wpDbSaveDaily removida no pacote B — teto diário e bônus de login agora vivem em wild_daily, no servidor)
 
   // Puxa a coleção/inventário da nuvem quando o usuário está logado.
   // IMPORTANTE: não sobrescreve o localStorage às cegas — quem já
@@ -459,91 +435,34 @@
   async function wpSyncFromCloud() {
     if (!wpHasClient() || !wpUid()) return; // visitante — só localStorage mesmo
     try {
-      const [catchesRes, ballsRes, dailyRes] = await Promise.all([
+      const [catchesRes, ballsRes] = await Promise.all([
         sbClient.from('wild_catches').select('pokemon_slug,count,first_caught_at').eq('user_id', wpUid()),
-        sbClient.from('wild_balls').select('*').eq('user_id', wpUid()).maybeSingle(),
-        sbClient.from('wild_daily').select('*').eq('user_id', wpUid()).maybeSingle(),
+        sbClient.from('wild_balls').select('pokeball,greatball,ultraball,masterball').eq('user_id', wpUid()).maybeSingle(),
       ]);
 
+      // 17/10/2026 (pacote B): o que está no banco manda — nada de "maior valor entre aparelho e nuvem" (isso deixava
+      // editar o localStorage e subir o resultado) e nada de enviar capturas do aparelho.
       if (!catchesRes.error && catchesRes.data) {
         const cloudCatches = {};
         catchesRes.data.forEach(row => {
           cloudCatches[row.pokemon_slug] = { count: row.count, firstCaughtAt: new Date(row.first_caught_at).getTime() };
         });
-
-        const merged = {};
-        const toUpload = [];
-        const allSlugs = new Set([...Object.keys(wpCatches), ...Object.keys(cloudCatches)]);
-        allSlugs.forEach(slug => {
-          const local = wpCatches[slug];
-          const cloud = cloudCatches[slug];
-          if (local && cloud) {
-            const count = Math.max(local.count, cloud.count);
-            const firstCaughtAt = Math.min(local.firstCaughtAt, cloud.firstCaughtAt);
-            merged[slug] = { count, firstCaughtAt };
-            if (count !== cloud.count || firstCaughtAt !== cloud.firstCaughtAt) toUpload.push(slug);
-          } else if (local) {
-            merged[slug] = local;
-            toUpload.push(slug); // só existia local — sobe pra nuvem
-          } else {
-            merged[slug] = cloud;
-          }
-        });
-
-        wpCatches = merged;
+        wpCatches = cloudCatches;
         wpSaveJSON(WP_STORAGE_CATCHES, wpCatches);
-
-        toUpload.forEach(slug => {
-          const mon = WP_KANTO151.find(m => m.s === slug);
-          if (mon) wpDbUpsertCatch(mon);
-        });
       }
 
-      if (!ballsRes.error && ballsRes.data) {
-        // Mesmo cuidado: se o saldo local (de antes da migração) for
-        // maior que o da nuvem, mantém o maior em vez de sobrescrever
-        // pra baixo — assim ninguém "perde" bolas que já tinha.
-        const cloudBalls = {
-          pokeball: ballsRes.data.pokeball || 0,
-          greatball: ballsRes.data.greatball || 0,
-          ultraball: ballsRes.data.ultraball || 0,
-          masterball: ballsRes.data.masterball || 0,
-        };
-        const mergedBalls = {
-          pokeball: Math.max(wpBalls.pokeball || 0, cloudBalls.pokeball),
-          greatball: Math.max(wpBalls.greatball || 0, cloudBalls.greatball),
-          ultraball: Math.max(wpBalls.ultraball || 0, cloudBalls.ultraball),
-          masterball: Math.max(wpBalls.masterball || 0, cloudBalls.masterball),
-        };
-        wpBalls = mergedBalls;
-        wpSaveJSON(WP_STORAGE_BALLS, wpBalls);
-        if (JSON.stringify(mergedBalls) !== JSON.stringify(cloudBalls)) wpDbSaveBalls();
-      } else if (!ballsRes.error && !ballsRes.data) {
-        // primeira vez desse usuário logado — cria a linha na nuvem com o saldo atual
-        wpDbSaveBalls();
-      }
-
-      // Teto diário de Poké Ball + bônus de login — por CONTA agora, não
-      // mais só por dispositivo. Se a nuvem já tem um registro de HOJE,
-      // funde com o que está no localStorage (o maior valor de cada,
-      // "já reclamado" vence "não reclamado") pra ninguém dobrar o teto
-      // ou o bônus logando em outro aparelho. Se o dia da nuvem for
-      // diferente de hoje (ou não existir linha ainda), é dia novo — o
-      // local já começa zerado e o primeiro grant/bônus cria a linha.
-      if (!dailyRes.error && dailyRes.data && dailyRes.data.day === wpTodayStr()) {
-        const today = wpTodayStr();
-        const localBalls = wpDailyBallsCount();
-        const localBonus = wpLoadJSON(WP_STORAGE_DAILY_BONUS, null) === today;
-        const cloudBalls = dailyRes.data.passive_balls || 0;
-        const cloudBonus = !!dailyRes.data.login_bonus_claimed;
-
-        const mergedBalls = Math.max(localBalls, cloudBalls);
-        const mergedBonus = localBonus || cloudBonus;
-
-        wpSaveJSON(WP_STORAGE_DAILY_BALLS, { date: today, count: mergedBalls });
-        if (mergedBonus) wpSaveJSON(WP_STORAGE_DAILY_BONUS, today);
-
-        if (mergedBalls !== cloudBalls || mergedBonus !== cloudBonus) wpDbSaveDaily();
+      if (!ballsRes.error) {
+        if (ballsRes.data) {
+          wpBalls = {
+            pokeball: ballsRes.data.pokeball || 0, greatball: ballsRes.data.greatball || 0,
+            ultraball: ballsRes.data.ultraball || 0, masterball: ballsRes.data.masterball || 0,
+          };
+        } else {
+          // primeira vez dessa conta: o servidor cria o saldo inicial (5/2/1/0)
+          const { data, error } = await sbClient.rpc('wild_init_balls');
+          if (!error && data) wpBalls = data;
+        }
+        wpSaveBalls();
       }
 
       wpUpdateBadge();
@@ -1232,7 +1151,8 @@
       wpBalls[tier] = (wpBalls[tier] || 0) + 1;
       wpUpdateBadge();
       el.classList.remove('wp-fled', 'wp-caught');
-      wpToastRaw('⚠️', 'Não deu pra confirmar agora — sua bola não foi gasta, tente de novo.', false);
+      // 17/10/2026: o servidor agora também recusa por limite/intervalo — mostra o motivo dele (a bola não é gasta)
+      wpToastRaw('⚠️', (result.error && result.error !== 'conexão') ? `${result.error} (sua bola não foi gasta)` : 'Não deu pra confirmar agora — sua bola não foi gasta, tente de novo.', false);
       wpActiveMon = null;
       return;
     }
@@ -1336,23 +1256,24 @@
   }
 
   // ── Ganho de pokébolas (uso do site) ────────────────────────
-  window.wpGrantBall = function (tier, qty, reason) {
+  // 17/10/2026 (pacote B): antes era window.wpGrantBall — qualquer um digitava no console e o saldo ia pro banco.
+  // Agora só existe a versão LOCAL (visitante, sem login): muda a tela e o localStorage, nunca o servidor.
+  function wpGrantLocalBall(tier, qty, reason) {
     qty = qty || 1;
-    if (!WP_BALL_META[tier]) { console.warn('[wp] tier inválido:', tier); return; }
+    if (!WP_BALL_META[tier]) return;
     wpBalls[tier] = (wpBalls[tier] || 0) + qty;
     wpSaveBalls();
-    wpDbSaveBalls();
     wpUpdateBadge();
     wpToastRaw(wpBallIconHtml(tier, 22), `+${qty} ${WP_BALL_META[tier].label}${reason ? ' — ' + reason : ''}`, true);
-  };
+  }
 
   function wpMaybeGrantBallFromUsage(baseChance) {
     if (!wpEnabled) return; // minigame desligado — não ganha bola nem spawna
-    if (wpDailyBallsCount() >= WP_DAILY_BALL_CAP) return; // teto diário de bola por uso passivo já batido
-    if (Math.random() < baseChance) {
-      window.wpGrantBall('pokeball', 1, 'por usar o site');
-      wpDailyBallsIncrement();
-    }
+    if (Math.random() >= baseChance) return;
+    if (wpHasClient() && wpUid()) { wpServerGrant('wild_grant_passive_ball', 'por usar o site'); return; } // teto de 5/dia no servidor
+    if (wpDailyBallsCount() >= WP_DAILY_BALL_CAP) return; // visitante: teto só no aparelho
+    wpGrantLocalBall('pokeball', 1, 'por usar o site');
+    wpDailyBallsIncrement();
   }
 
   // ── Liga/desliga o minigame inteiro ─────────────────────────
@@ -1900,16 +1821,7 @@
 
   // ── Debug (console) ─────────────────────────────────────────
   window.wpForceSpawn = () => wpSpawn(1);
-  window.wpReset = () => {
-    wpCatches = {};
-    wpBalls = { pokeball: 5, greatball: 2, ultraball: 1, masterball: 0 };
-    wpSaveCatches();
-    wpSaveBalls();
-    localStorage.removeItem(WP_STORAGE_DAILY_BALLS);
-    localStorage.removeItem(WP_STORAGE_DAILY_BONUS);
-    if (wpHasClient() && wpUid()) wpDbSaveDaily(); // zera também na conta (dia "hoje" com contadores em 0/false)
-    wpUpdateBadge();
-  };
+  // (window.wpReset removido no pacote B — mexia em saldo local e no banco; wpGrantBall também saiu)
   window.wpStatus = () => {
     const balls = WP_BALL_ORDER.map(t => `${WP_BALL_META[t].emoji}${wpBalls[t] || 0}`).join(' ');
     return `${Object.keys(wpCatches).length}/${WP_KANTO151.length} capturados · bolas: ${balls} · Poké Ball hoje: ${wpDailyBallsCount()}/${WP_DAILY_BALL_CAP}`;
