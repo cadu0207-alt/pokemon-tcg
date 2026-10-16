@@ -1877,6 +1877,11 @@ function updateDashProgress(){
 }
 
 // ── GASTOS ──────────────────────────────────────────────────────
+let _gastosFilter={tipo:'',mes:''};
+function setGastosFilter(k,v){
+  if(k===undefined)_gastosFilter={tipo:'',mes:''}; else _gastosFilter[k]=v||'';
+  renderGastos();
+}
 function renderGastos(){
   const total=purchases.reduce((s,p)=>s+Number(p.price),0);
   const bst=purchases.filter(p=>!p.acessorio);
@@ -1897,6 +1902,8 @@ function renderGastos(){
       <div style="font-size:13px;line-height:1.5;margin-bottom:16px">Registre blisters, boxes e coleções que você comprou pra ver quanto investiu, quanto paga por booster e por carta, e como seus gastos evoluem mês a mês.</div>
       <button class="btn-add" onclick="openModal('mp')">+ REGISTRAR PRIMEIRA COMPRA</button></div>`;
     document.getElementById('gastos-cards').innerHTML='';
+    document.getElementById('gastos-charts').innerHTML='';
+    document.getElementById('gastos-filter').innerHTML='';
     document.getElementById('tlwrap').innerHTML='';
     if(_tlDet)_tlDet.style.display='none';
     return;
@@ -1909,7 +1916,39 @@ function renderGastos(){
     ${kpiHTML('teal','🗓️ Neste mês','R$'+fmtR(_mesTotal),_mes.length?_mes.length+' compra'+(_mes.length!==1?'s':''):'nenhuma compra neste mês')}
   </div>`;
 
-  document.getElementById('gastos-cards').innerHTML=purchases.map(p=>{
+  // ── 17/10/2026 (pacote 2): para onde vai o dinheiro + filtros por tipo e mês ──
+  const _mesLbl=k=>new Date(k+'-15T12:00:00').toLocaleDateString('pt-BR',{month:'short',year:'2-digit'});
+  const _byTipo={},_byMes={};
+  purchases.forEach(p=>{
+    const t=p.tipo||'Outro',m=String(p.date||'').slice(0,7),v=Number(p.price)||0;
+    (_byTipo[t]=_byTipo[t]||{v:0,n:0}).v+=v;_byTipo[t].n++;
+    if(m)_byMes[m]=(_byMes[m]||0)+v;
+  });
+  const _tipos=Object.entries(_byTipo).sort((a,b)=>b[1].v-a[1].v);
+  const _meses=Object.keys(_byMes).sort();
+  if(_gastosFilter.tipo&&!_byTipo[_gastosFilter.tipo])_gastosFilter.tipo='';
+  if(_gastosFilter.mes&&!_byMes[_gastosFilter.mes])_gastosFilter.mes='';
+  const _maxT=Math.max(..._tipos.map(([,o])=>o.v),1),_maxM=Math.max(...Object.values(_byMes),1);
+  document.getElementById('gastos-charts').innerHTML=`<div class="dual" style="margin-bottom:22px">
+    <div class="panel"><div class="panel-t">💸 Gasto por tipo</div><div class="bc">${_tipos.map(([t,o])=>
+      barHTML(esc(t)+' <span style="color:var(--muted)">('+o.n+')</span>',o.v,_maxT,'var(--accent)','R$'+fmtR(o.v)+' · '+(total>0?Math.round(o.v/total*100):0)+'%')).join('')}</div></div>
+    <div class="panel"><div class="panel-t">🗓️ Gasto por mês</div><div class="bc">${_meses.slice(-12).map(k=>
+      barHTML(_mesLbl(k),_byMes[k],_maxM,'var(--gold)','R$'+fmtR(_byMes[k]))).join('')}</div></div>
+  </div>`;
+  const shown=purchases.filter(p=>(!_gastosFilter.tipo||(p.tipo||'Outro')===_gastosFilter.tipo)&&(!_gastosFilter.mes||String(p.date||'').slice(0,7)===_gastosFilter.mes));
+  const shownTotal=shown.reduce((s,p)=>s+Number(p.price),0);
+  const _selCss='padding:7px 10px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font:inherit;font-size:13px';
+  const _filtActive=!!(_gastosFilter.tipo||_gastosFilter.mes);
+  document.getElementById('gastos-filter').innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+    <select style="${_selCss}" aria-label="Filtrar compras por tipo" onchange="setGastosFilter('tipo',this.value)">
+      <option value="">Todos os tipos</option>${_tipos.map(([t])=>`<option value="${esc(t)}"${t===_gastosFilter.tipo?' selected':''}>${esc(t)}</option>`).join('')}</select>
+    <select style="${_selCss}" aria-label="Filtrar compras por mês" onchange="setGastosFilter('mes',this.value)">
+      <option value="">Todos os meses</option>${[..._meses].reverse().map(k=>`<option value="${k}"${k===_gastosFilter.mes?' selected':''}>${_mesLbl(k)}</option>`).join('')}</select>
+    <span style="font-size:12px;color:var(--muted)">${_filtActive?'Mostrando '+shown.length+' de '+purchases.length+' compras · R$'+fmtR(shownTotal):purchases.length+' compras'}</span>
+    ${_filtActive?'<button type="button" class="btn-cx" onclick="setGastosFilter()">Limpar filtro</button>':''}
+  </div>`;
+
+  document.getElementById('gastos-cards').innerHTML=!shown.length?'<div style="color:var(--muted);font-size:13px;padding:18px;text-align:center">Nenhuma compra com esse filtro.</div>':shown.map(p=>{
     const pb=p.boost>0?(Number(p.price)/p.boost).toFixed(2):null;
     const d=new Date(p.date+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
     const imgSrc=getPurchaseImg(p.product);
@@ -1945,7 +1984,7 @@ function renderGastos(){
     </div>`;
   }).join('');
 
-  document.getElementById('tlwrap').innerHTML=[...purchases].reverse().map(p=>{
+  document.getElementById('tlwrap').innerHTML=[...shown].reverse().map(p=>{
     const d=new Date(p.date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
     const pb=p.boost>0?(Number(p.price)/p.boost).toFixed(2):null;
     return`<div class="tli"><div class="tl-date">${d}</div><div class="tl-desc">${esc(p.product)}</div>

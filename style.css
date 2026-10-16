@@ -3963,3 +3963,5 @@ body.inicio-modal-open { overflow: hidden; }
 .gastos-tl > summary::after { content: '▸'; margin-left: auto; color: var(--muted); transition: transform .15s; }
 .gastos-tl[open] > summary::after { transform: rotate(90deg); }
 .gastos-tl > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+/* Gastos: barras pequenas não podem quebrar o texto do valor (a barra cresce até caber o rótulo) */
+#gastos-charts .bfill { white-space: nowrap; min-width: max-content; padding: 0 8px; box-sizing: border-box; }
