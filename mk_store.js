@@ -87,7 +87,7 @@ function mkStoreHeaderHtml() {
   else if (s.free_shipping_over != null) info.push('<li><b>Frete grátis</b> acima de ' + mkMoney(s.free_shipping_over) + '.</li>');
   if (s.pickup_enabled) info.push('<li><b>Retirada em mãos:</b> ' + mkEsc(s.pickup_note || 'combine com a loja') + '</li>');
   if (s.return_policy) info.push('<li><details class="mk-policy"><summary><b>Trocas e devoluções</b> — ler a política completa</summary><div class="mk-md">' + mkMd(s.return_policy) + '</div></details></li>');
-  return '<div class="mk-hero"' + (banner ? ' style="background-image:linear-gradient(rgba(10,14,25,.55),rgba(10,14,25,.75)),url(\'' + mkEsc(banner) + '\')"' : '') + '>' +
+  return '<div class="mk-hero"' + (banner ? ' style="background-image:linear-gradient(rgba(10,14,25,.2),rgba(10,14,25,.45)),url(\'' + mkEsc(banner) + '\')"' : '') + '>' +
     (logo ? '<img class="mk-logo" src="' + mkEsc(logo) + '" alt="" onerror="this.style.display=\'none\'">' : '<div class="mk-logo mk-logo-fb">🧸</div>') +
     '<div class="mk-hero-txt">' +
       '<h2 class="mk-hero-name">' + mkEsc(s.name) + '</h2>' +

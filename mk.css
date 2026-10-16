@@ -171,8 +171,11 @@ body.mk-modal-open { overflow: hidden; }
 .mk-table .pos { color: var(--teal); } .mk-table .neg { color: var(--accent); }
 
 @media (max-width: 560px) {
-  .mk-hero { flex-direction: column; text-align: center; padding-top: 44px; }
-  .mk-hero-links { justify-content: center; }
+  /* 17/10/2026: no celular o cabeçalho deixa de centralizar tudo em coluna: avatar à esquerda e texto alinhado, como no desktop */
+  .mk-hero { align-items: flex-start; text-align: left; padding: 56px 16px 16px; gap: 14px; }
+  .mk-logo { width: 68px; height: 68px; border-radius: 14px; }
+  .mk-hero-name { font-size: 21px; }
+  .mk-hero-btns { left: 16px; right: 16px; justify-content: flex-start; }
   .mk-modal { padding: 0; }
   .mk-modal-box { border-radius: 0; min-height: 100vh; max-width: none; }
 }
