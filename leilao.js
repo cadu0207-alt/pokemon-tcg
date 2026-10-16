@@ -319,10 +319,54 @@ function renderLeilaoAnalises(){
     kpi('PAGAMENTOS PENDENTES',`${pendentes.length} · R$ ${fmtR(totalPendente)}`,'var(--gold)')+
     kpi('PAGAMENTOS VENCIDOS',vencidos.length,vencidos.length?'var(--accent)':'var(--text)');
   renderLeilaoComissao();
+  renderLeilaoAnalisesPorRodada(myAuctions);
   renderLeilaoAnalisesCountdown();
   renderLeilaoAnalisesPorLeiloeiro();
   renderLeilaoAnalisesChart();
   renderLeilaoAnalisesUltimosLances();
+}
+
+// Desempenho por rodada (17/10/2026): mostra o que o leiloeiro precisava adivinhar — quantos lotes ficaram sem lance,
+// quanto cada lote rendeu sobre o preço inicial, se os arremates se concentram em poucas pessoas e quantos pedidos foram
+// pagos. Tudo calculado no navegador com os dados que a tela já carrega (escopo: só os lotes do leiloeiro, ou todos
+// pro admin principal).
+function renderLeilaoAnalisesPorRodada(myAuctions){
+  const box=document.getElementById('leilao-analises-rodadas');
+  if(!box)return;
+  const rounds=aucRounds.filter(r=>r.status!=='cancelado'&&myAuctions.some(a=>a.round_id===r.id&&a.status!=='cancelado'))
+    .sort((x,y)=>new Date(y.start_at)-new Date(x.start_at));
+  if(!rounds.length){box.innerHTML='<div class="cv-item-empty">Sem rodadas ainda.</div>';return;}
+  const pct=(n,d)=>d>0?Math.round(n/d*100)+'%':'—';
+  const rows=rounds.map(r=>{
+    const lots=myAuctions.filter(a=>a.round_id===r.id&&a.status!=='cancelado');
+    const closed=lots.filter(a=>a.status==='encerrado');
+    const sold=closed.filter(a=>a.winner_id&&+a.winning_bid>0);
+    const semLance=closed.filter(a=>!(a.bid_count>0)).length;
+    const lances=lots.reduce((t,a)=>t+(a.bid_count||0),0);
+    const gmv=sold.reduce((t,a)=>t+(+a.winning_bid||0),0);
+    const ratios=sold.filter(a=>+a.starting_price>0).map(a=>+a.winning_bid/+a.starting_price);
+    const ratio=ratios.length?ratios.reduce((t,x)=>t+x,0)/ratios.length:null;
+    const byWinner={};sold.forEach(a=>{byWinner[a.winner_id]=(byWinner[a.winner_id]||0)+(+a.winning_bid||0);});
+    const vals=Object.values(byWinner).sort((x,y)=>y-x);
+    const top3=vals.slice(0,3).reduce((t,x)=>t+x,0);
+    const ords=aucAdminOrders.filter(o=>o.round_id===r.id&&o.status!=='cancelado');
+    const pagos=ords.filter(o=>['pago','enviado','concluido'].includes(o.status)).length;
+    const bad=closed.length&&semLance/closed.length>=0.2?'var(--accent)':'var(--text)';
+    return`<tr style="border-top:1px solid var(--border)">
+      <td style="padding:8px 10px;font-size:12px"><b>${esc(r.title)}</b><div style="font-size:9.5px;color:var(--muted)">${new Date(r.start_at).toLocaleDateString('pt-BR')} → ${new Date(r.end_at).toLocaleDateString('pt-BR')}</div></td>
+      <td style="padding:8px 10px;text-align:right">${lots.length}</td>
+      <td style="padding:8px 10px;text-align:right;color:${bad}">${closed.length?pct(semLance,closed.length):'—'}</td>
+      <td style="padding:8px 10px;text-align:right">${lots.length?(lances/lots.length).toFixed(1).replace('.',','):'—'}</td>
+      <td style="padding:8px 10px;text-align:right">${ratio!==null?ratio.toFixed(2).replace('.',',')+'×':'—'}</td>
+      <td style="padding:8px 10px;text-align:right;color:var(--teal)">R$ ${fmtR(gmv)}</td>
+      <td style="padding:8px 10px;text-align:right">${vals.length?`${vals.length} · ${pct(top3,gmv)}`:'—'}</td>
+      <td style="padding:8px 10px;text-align:right">${ords.length?`${pagos}/${ords.length}`:'—'}</td></tr>`;
+  }).join('');
+  const th=t=>`<th style="padding:8px 10px;font-size:9px;letter-spacing:1px;color:var(--muted);text-align:${t[1]||'right'};font-weight:400">${t[0]}</th>`;
+  box.innerHTML=`<div class="panel" style="padding:0;overflow:hidden"><table style="width:100%;border-collapse:collapse;min-width:640px">
+    <thead><tr style="background:var(--surface2)">${[['RODADA','left'],['LOTES'],['SEM LANCE'],['LANCES/LOTE'],['ARREMATE ÷ INICIAL'],['ARRECADADO'],['GANHADORES · TOP 3'],['PEDIDOS PAGOS']].map(th).join('')}</tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.6">Sem lance = % dos lotes encerrados sem nenhum lance (vermelho acima de 20%). Arremate ÷ inicial = quanto o lote rendeu sobre o preço inicial, em média. Top 3 = parte do arrecadado concentrada nas 3 pessoas que mais arremataram.</div>`;
 }
 
 // Rodada "atual" pra fins de contador/gráfico — entre as rodadas ainda
@@ -1267,6 +1311,37 @@ function aucComputeCheapCards(allCards,n){
 // 17/10/2026: com 0 leilões ativos a página mostrava só o resumo da última rodada encerrada — sem dizer quando vem o
 // próximo nem oferecer aviso (e é o que a maioria das visitas vê). Este bloco aparece no topo SÓ quando não há leilão
 // aberto: próximo leilão marcado (se houver), resultado da última rodada e os botões de aviso (sino + push).
+// 17/10/2026: quem dá lance em vários lotes da mesma rodada não via o conjunto. Este resumo mostra, por rodada, em
+// quantos lotes você está NA FRENTE (e quanto somam hoje), em quantos foi COBERTO, e lembra que tudo que você arrematar
+// na rodada vira 1 pedido/PIX e 1 envio só — o frete é um só, então juntar lotes da mesma rodada compensa.
+function aucMyLeadingSummaryHtml(allCards){
+  const me=uid();
+  if(!me)return'';
+  const now=aucNow();
+  const live=(allCards||[]).filter(a=>a.status==='ativo'&&new Date(a.end_at)>now&&aucMyBidAuctionIds.has(a.id));
+  if(!live.length)return'';
+  const byRound={};
+  live.forEach(a=>{(byRound[a.round_id]=byRound[a.round_id]||[]).push(a);});
+  const blocks=Object.keys(byRound).map(rid=>{
+    const round=aucRoundById(+rid),lots=byRound[rid];
+    const lead=lots.filter(a=>a.current_bidder===me),out=lots.filter(a=>a.current_bidder!==me);
+    const sum=lead.reduce((t,a)=>t+(+a.current_bid||0),0);
+    const end=round?round.end_at:lots[0].end_at;
+    return`<div style="padding:10px 0;border-top:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:700;margin-bottom:4px">🗓️ ${esc(round?round.title:('Rodada #'+rid))} <span style="font-weight:400;color:var(--muted)">· fecha em ${aucCountdownSpan(end)}</span></div>
+      <div style="font-size:12px;line-height:1.7">
+        ${lead.length?`<span style="color:var(--teal)">✓ Na frente em <b>${lead.length}</b> lote${lead.length===1?'':'s'}: R$ ${fmtR(sum)}</span>`:`<span style="color:var(--muted)">Você não está na frente em nenhum lote agora.</span>`}
+        ${out.length?` · <span style="color:var(--accent)">⚠ coberto em <b>${out.length}</b>: ${out.slice(0,3).map(a=>esc(a.card_name)).join(', ')}${out.length>3?'…':''}</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  return`<div class="panel" style="margin-bottom:18px">
+    <div style="font-size:14px;font-weight:700;margin-bottom:2px">🎯 Seus lances em andamento</div>
+    <div style="font-size:10.5px;color:var(--muted);margin-bottom:6px">O que você arrematar numa mesma rodada vira <b>1 pedido/PIX e 1 envio</b> — frete único. Juntar lotes da mesma rodada sai mais barato que vários pedidos.</div>
+    ${blocks}
+  </div>`;
+}
+
 function aucNoActiveHtml(visibleRounds,allCards){
   const now=new Date();
   if((allCards||[]).some(a=>a.status==='ativo'&&new Date(a.end_at)>now))return'';
@@ -1382,7 +1457,7 @@ function renderAuctionsList(){
     mainHtml=resumoHtml+mineHtml+hotHtml+cheapHtml;
   }
 
-  wrap.innerHTML=blockedNote+(noFiltro?aucNoActiveHtml(visibleRounds,allCards):'')+mainHtml;
+  wrap.innerHTML=blockedNote+(noFiltro?aucNoActiveHtml(visibleRounds,allCards)+aucMyLeadingSummaryHtml(allCards):'')+mainHtml;
   refreshOpenAuctionZoom();
 }
 
@@ -2269,10 +2344,32 @@ function aucOrderPackageType(items){
   return best;
 }
 
+// resumo do histórico de arremates: quantas cartas, quanto gastou, o que falta pagar (17/10/2026)
+function aucRenderMySummary(){
+  const box=document.getElementById('leilao-my-summary');
+  if(!box)return;
+  const orders=aucMyOrders.filter(o=>o.status!=='cancelado');
+  if(!orders.length){box.innerHTML='';return;}
+  const cartas=aucMyOrderItems.filter(it=>orders.some(o=>o.id===it.order_id)).length;
+  const total=orders.reduce((t,o)=>t+(+o.amount||0),0);
+  const pagos=orders.filter(o=>['pago','enviado','concluido'].includes(o.status));
+  const pend=orders.filter(o=>o.status==='aguardando_pagamento');
+  const pendVal=pend.reduce((t,o)=>t+(+o.amount||0),0);
+  const venc=pend.filter(o=>aucIsOverdue(o));
+  const kpi=(l,v,c)=>`<div class="panel" style="padding:12px 14px;flex:1 1 120px"><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${l}</div><div style="font-size:18px;font-weight:700;color:${c||'var(--text)'}">${v}</div></div>`;
+  box.innerHTML=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+    ${kpi('CARTAS ARREMATADAS',cartas)}
+    ${kpi('RODADAS',new Set(orders.map(o=>o.round_id)).size)}
+    ${kpi('TOTAL ARREMATADO','R$ '+fmtR(total),'var(--teal)')}
+    ${pend.length?kpi('A PAGAR',`R$ ${fmtR(pendVal)} <span style="font-size:11px;font-weight:400">(${pend.length} pedido${pend.length===1?'':'s'})</span>`,venc.length?'var(--accent)':'var(--gold)'):kpi('PEDIDOS PAGOS',pagos.length,'var(--teal)')}
+  </div>${venc.length?`<div class="mkt-note" style="border-color:var(--accent);color:var(--accent);margin-bottom:12px">⚠️ ${venc.length===1?'Você tem 1 pedido com pagamento vencido':`Você tem ${venc.length} pedidos com pagamento vencido`} — pedido vencido pode bloquear novos lances. Fale com o leiloeiro.</div>`:''}`;
+}
+
 function renderMyBidsAndOrders(){
   fillLeilaoAddressForm();
   const wrap=document.getElementById('leilao-my-orders');
   if(!wrap)return;
+  aucRenderMySummary();
   if(!aucMyOrders.length){
     wrap.innerHTML=`<div class="cv-item-empty">Você ainda não arrematou nenhum leilão.</div>`;
     return;
