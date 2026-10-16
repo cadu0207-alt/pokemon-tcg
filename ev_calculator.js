@@ -100,7 +100,20 @@ var CATALOG = [
       {nome:'IR',freq:0.07,valor:35.00,minValor:15.00,maxValor:70.00},
       {nome:'UR/SAR',freq:0.035,valor:120.00,minValor:40.00,maxValor:300.00},
       {nome:'Hyper Rare',freq:0.0011,valor:1500.00,minValor:500.00,maxValor:3500.00}
-    ], extras:[{descricao:'Promo Charizard Y ex',valor:15.00}] }
+    ], extras:[{descricao:'Promo Charizard Y ex',valor:15.00}] },
+  // ── CEL30 Celebração de 30 Anos (lançou 16/set/2026) ──────────────────────────────────
+  // Conteúdo e preço sugerido: pokemon.com/br (vitrine de produtos) e topdrawblog.com.br. Cada booster = 5 cartas
+  // laminadas + 1 Energia Básica laminada, com 1 Pikachu ilustrada garantida. Não existe Box Display (36) neste set.
+  // Promos, adesivos, moeda, fichário, capas e demais itens dos kits NÃO entram no EV (só as cartas dos boosters).
+  { id:'cel30-blister2', grupo:'CEL30 — Celebração de 30 Anos', nome:'Blister Duplo com Moeda (2 boosters)',     boosters:2, varejo:69.99,  set:'cel30', model:'cel30', extras:[] },
+  { id:'cel30-blister3', grupo:'CEL30 — Celebração de 30 Anos', nome:'Blister Triplo com Adesivo (3 boosters)',  boosters:3, varejo:99.99,  set:'cel30', model:'cel30', extras:[] },
+  { id:'cel30-poster',   grupo:'CEL30 — Celebração de 30 Anos', nome:'Box com Pôster (3 boosters)',              boosters:3, varejo:115.99, set:'cel30', model:'cel30', extras:[] },
+  { id:'cel30-exbox',    grupo:'CEL30 — Celebração de 30 Anos', nome:'Box Pokémon ex Sylveon/Greninja (4 boosters)', boosters:4, varejo:169.99, set:'cel30', model:'cel30', extras:[] },
+  { id:'cel30-binder',   grupo:'CEL30 — Celebração de 30 Anos', nome:'Coleção com Fichário (5 boosters)',        boosters:5, varejo:230.99, set:'cel30', model:'cel30', extras:[] },
+  { id:'cel30-figure',   grupo:'CEL30 — Celebração de 30 Anos', nome:'Box com Miniatura Mew/Mewtwo (5 boosters)', boosters:5, varejo:245.99, set:'cel30', model:'cel30', extras:[] },
+  { id:'cel30-combo',    grupo:'CEL30 — Celebração de 30 Anos', nome:'Combo de Boosters (6 boosters)',           boosters:6, varejo:199.99, set:'cel30', model:'cel30', extras:[] },
+  { id:'cel30-ditto',    grupo:'CEL30 — Celebração de 30 Anos', nome:'Coleção Premium Ditto (8 boosters)',       boosters:8, varejo:305.99, set:'cel30', model:'cel30', extras:[] },
+  { id:'cel30-etb',      grupo:'CEL30 — Celebração de 30 Anos', nome:'Coleção Treinador Avançado (9 boosters)',  boosters:9, varejo:399.99, set:'cel30', model:'cel30', extras:[] }
 ];
 
 // ── Sets SV (Escarlate & Violeta) — adicionados a partir do SET_CATALOG (app.js) ──
@@ -181,10 +194,65 @@ function evGetSetCards(setId) {
   return [];
 }
 
+// ── Celebração de 30 Anos: modelo de pacote próprio (17/10/2026) ─────────────────────────────
+// Este set NÃO segue o PULL_RATES da era ME (1 slot raro por pacote): cada booster tem 5 cartas + 1 energia, com
+// 1 Pikachu ilustrada garantida (30 artes), um slot "Ilustração Rara ou melhor" e um slot "Rara Holo ou melhor".
+// A Pokémon Company não publica pull rates; as taxas abaixo são a MÉDIA de contagens da comunidade (por pacote):
+//   • Ilustr. Rara (IR, fora as Pikachu)  ≈ 1 em 5     (TCGplayer, +3.000 pacotes; DigitalTQ, 420 pacotes: 20%; Japão: 18,5%)
+//   • Rara Dupla (ex)                      ≈ 1 em 4     (Wargamer, 4.063 pacotes; DigitalTQ: 27,6%; Japão: 22,6%)
+//   • Ilustr. Especial (SAR/SIR)           ≈ 1 em 20    (TCGplayer: 1 em 21; DigitalTQ: 5,2%; Japão, 57 caixas: 5,0%)
+//   • Rara Futurista (Mew ex / Mewtwo ex)  ≈ 1 em 110   (TCGplayer: 1 em 120; Wargamer: 1 em 99; DigitalTQ: 0,95%)
+//   • Coleção Clássica (reimpressão)       ≈ 1 em 10    (TCGplayer: 1 em 10; DigitalTQ: 10,5%; Japão: 10,3%)
+//   • Rara Holo                            ≈ 76%        (DigitalTQ)
+// Os 3 Mews RGB (Rara Secreta) ficam FORA: foram vistos só em pacotes de varejo, sem taxa confiável, e valem R$ 16–20 mil
+// cada — qualquer chute dominaria o resultado. Comuns/incomuns/energias = bulk (fora, como nos outros sets).
+var CEL30_RATES = [
+  { key:'pik',     nome:'Pikachu ilustrada (1 por pacote)',          freq:1 },
+  { key:'ir',      nome:'Ilustr. Rara (IR) 1/5',                      freq:0.20 },
+  { key:'rara',    nome:'Rara Holo (76%)',                            freq:0.76 },
+  { key:'dr',      nome:'Rara Dupla (ex) 1/4',                        freq:0.25 },
+  { key:'sir',     nome:'Ilustr. Especial (SAR) 1/20',                freq:0.05 },
+  { key:'fur',     nome:'Rara Futurista (Mew ex/Mewtwo ex) 1/110',    freq:1/110 },
+  { key:'classic', nome:'Coleção Clássica (reimpressão) 1/10',        freq:0.10 }
+];
+function cel30Pools() {
+  var cards = evGetSetCards('cel30').filter(function(c){ return c.price && c.price > 0; });
+  function isPik(c) { return c.rare === 'Rara Ilustrada' && /^Pikachu/.test(c.name || '') && /^0(2[3-9]|3\d|4\d|5[0-2])$/.test(String(c.n)); }
+  var pick = {
+    pik:     function(c){ return isPik(c); },
+    ir:      function(c){ return c.rare === 'Rara Ilustrada' && !isPik(c); },
+    rara:    function(c){ return c.rare === 'Rara'; },
+    dr:      function(c){ return c.rare === 'Rara Dupla'; },
+    sir:     function(c){ return c.rare === 'Ilustr. Esp. Rara'; },
+    fur:     function(c){ return c.rare === 'Rara Ultra'; },
+    classic: function(c){ return c.rare === 'Coleção Clássica'; }
+  };
+  var pools = [];
+  CEL30_RATES.forEach(function(r) {
+    var prices = cards.filter(pick[r.key]).map(function(c){ return c.price; });
+    if (prices.length) pools.push({ key:r.key, nome:r.nome, freq:r.freq, prices:prices });
+  });
+  return pools;
+}
+
 function calcEVForProduct(prod) {
   var evBooster = 0, evBoosterMin = 0, evBoosterMax = 0;
   var rarBreakdown = [];
-  if (prod.set) {
+  if (prod.model === 'cel30') {
+    var cpools = cel30Pools();
+    if (!cpools.length) {
+      return { evBooster:0, evBoosterMin:0, evBoosterMax:0, evBoostersTotal:0,
+               evExtras:0, evTotal:0, evTotalMin:0, evTotalMax:0, rarBreakdown:[], noData:true };
+    }
+    cpools.forEach(function(pl) {
+      var mean = pl.prices.reduce(function(a, v){ return a + v; }, 0) / pl.prices.length;
+      var c = pl.freq * mean;
+      evBooster += c;
+      evBoosterMin += pl.freq * Math.min.apply(null, pl.prices);
+      evBoosterMax += pl.freq * Math.max.apply(null, pl.prices);
+      rarBreakdown.push({ nome:pl.nome, freq:pl.freq, valor:mean, evContrib:c, key:pl.key });
+    });
+  } else if (prod.set) {
     var cards = evGetSetCards(prod.set).filter(function(c){return c.price && c.price > 0;});
     if (cards.length === 0) {
       return { evBooster:0, evBoosterMin:0, evBoosterMax:0, evBoostersTotal:0,
@@ -240,8 +308,11 @@ function evRng(seed) {
 function evSimulate(prod) {
   if (evSimCache[prod.id]) return evSimCache[prod.id];
   var rnd = evRng(evHashStr(prod.id));
-  var pools = [], rows = [];
-  if (prod.set) {
+  var pools = [], rows = [], indep = [];
+  if (prod.model === 'cel30') {
+    indep = cel30Pools();
+    if (!indep.length) return null;
+  } else if (prod.set) {
     var groups = {};
     evGetSetCards(prod.set).forEach(function(c) {
       if (!c.price || c.price <= 0) return;
@@ -263,7 +334,14 @@ function evSimulate(prod) {
   for (var t = 0; t < EV_SIM_TRIALS; t++) {
     var sum = extras;
     for (var b = 0; b < prod.boosters; b++) {
-      if (pools.length) {
+      if (indep.length) {
+        // Celebração 30 Anos: cada raridade é um sorteio independente por pacote (a Pikachu é garantida: freq 1)
+        for (var q = 0; q < indep.length; q++) {
+          var nq = Math.floor(indep[q].freq);
+          if (rnd() < indep[q].freq - nq) nq++;
+          for (var w = 0; w < nq; w++) sum += indep[q].prices[Math.floor(rnd() * indep[q].prices.length)];
+        }
+      } else if (pools.length) {
         var u = rnd(), acc = 0;
         for (var i = 0; i < pools.length; i++) {
           acc += pools[i].prob;
@@ -322,6 +400,7 @@ async function evRenderRanking() {
   var body = rows.map(function(r) {
     var v = getVerdict(100 / r.ret);
     var origem = r.isReal ? '<span style="color:#16a34a">ML · 7 dias</span>' : '<span style="color:var(--muted)">' + (r.p.estimado ? '⚠ tabela estimada' : 'preço de tabela') + '</span>';
+    if (r.p.model === 'cel30') origem += '<br><span style="color:var(--gold)">⚠ taxas de pull não oficiais</span>';
     var sel = r.p.id === evState.productId;
     return '<tr onclick="evPickFromRanking(\'' + r.p.id + '\')" style="cursor:pointer;border-top:1px solid var(--border);' + (sel ? 'background:var(--surface2)' : '') + '">' +
       '<td style="padding:8px 10px;font-size:12px">' + r.p.nome.replace(/ \[estimado\]/, '') + '<div style="font-size:10px;color:var(--muted)">' + r.p.grupo + '</div></td>' +
@@ -340,6 +419,57 @@ async function evRenderRanking() {
         '<th style="padding:8px 10px;font-size:9px;letter-spacing:2px;color:var(--muted);text-align:center;font-weight:400">NOTA</th>' +
       '</tr></thead><tbody>' + body + '</tbody></table></div>';
 }
+// ============================================================
+//  PREÇO vs SUGERIDO — Celebração 30 Anos (e qualquer coleção com preço oficial cadastrado)
+// ============================================================
+// A Celebração 30 Anos é um set comemorativo (reimpressões da Coleção Clássica, 3 Mews RGB…) e a composição dos
+// produtos (boosters por caixa, raridade por pacote) ainda não está cadastrada — então NÃO dá pra calcular EV. O que
+// já dá é comparar o preço do ML com o preço sugerido pela Copag (ml_search_terms.msrp): quanto de ágio o mercado cobra.
+var evMsrpCache = null;
+async function evRenderMsrp() {
+  var box = document.getElementById('ev-msrp');
+  if (!box) return;
+  if (!evMsrpCache) {
+    try { evMsrpCache = (typeof window.mydeckGetMsrpProducts === 'function') ? await window.mydeckGetMsrpProducts() : []; } catch (e) { evMsrpCache = []; }
+    box = document.getElementById('ev-msrp');
+    if (!box) return;
+  }
+  var rows = evMsrpCache.filter(function(r) { return r.price && +r.term.msrp > 0; }).map(function(r) {
+    var msrp = +r.term.msrp, price = r.price.price;
+    return { t: r.term, p: r.price, msrp: msrp, price: price, pct: (price - msrp) / msrp * 100 };
+  });
+  if (!rows.length) { box.innerHTML = ''; return; }
+  var tol = (typeof MSRP_TOLERANCE === 'number' ? MSRP_TOLERANCE : 0.10) * 100;
+  function nome(t) {
+    var n = (t.label && t.label.trim()) || t.term || '';
+    return n.length > 64 ? n.slice(0, 61) + '…' : n;
+  }
+  var body = rows.map(function(r) {
+    var cor = r.pct <= tol ? '#16a34a' : (r.pct <= 30 ? 'var(--gold)' : '#e74c3c');
+    var sel = r.pct <= tol ? '🎯 preço de tabela' : (r.pct <= 30 ? 'ágio moderado' : 'ágio alto');
+    var href = r.p.url ? String(r.p.url).replace(/"/g, '%22') : null;
+    return '<tr style="border-top:1px solid var(--border)">' +
+      '<td style="padding:8px 10px;font-size:12px">' + esc(nome(r.t)) + '</td>' +
+      '<td style="padding:8px 10px;font-size:12px;text-align:right;white-space:nowrap">R$' + fmtR(r.msrp) + '</td>' +
+      '<td style="padding:8px 10px;font-size:12px;text-align:right;color:var(--gold);white-space:nowrap">R$' + fmtR(r.price) + '</td>' +
+      '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:' + cor + '"><span style="font-family:\'Bebas Neue\',sans-serif;font-size:18px">' + (r.pct >= 0 ? '+' : '') + Math.round(r.pct) + '%</span><div style="font-size:9px">' + sel + '</div></td>' +
+      '<td style="padding:8px 10px;text-align:center">' + (href ? '<a href="' + href + '" target="_blank" rel="noopener sponsored" title="Ver no Mercado Livre" style="text-decoration:none">↗</a>' : '') + '</td></tr>';
+  }).join('');
+  var anyAff = rows.some(function(r) { return r.p.affiliate; });
+  box.innerHTML =
+    '<div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin:28px 0 6px">🎉 Celebração 30 Anos — preço no ML × sugerido Copag</div>' +
+    '<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Lançamento em 16/09/2026. O EV desses produtos está na calculadora acima (grupo CEL30), com taxas de pull da comunidade — não oficiais. Aqui aparece quanto o Mercado Livre cobra acima do preço sugerido pela Copag — menor preço dos últimos 7 dias.</div>' +
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow-x:auto">' +
+      '<table style="width:100%;border-collapse:collapse"><thead><tr style="background:var(--surface2)">' +
+        '<th style="padding:8px 10px;font-size:9px;letter-spacing:2px;color:var(--muted);text-align:left;font-weight:400">PRODUTO</th>' +
+        '<th style="padding:8px 10px;font-size:9px;letter-spacing:2px;color:var(--muted);text-align:right;font-weight:400">SUGERIDO</th>' +
+        '<th style="padding:8px 10px;font-size:9px;letter-spacing:2px;color:var(--muted);text-align:right;font-weight:400">ML HOJE</th>' +
+        '<th style="padding:8px 10px;font-size:9px;letter-spacing:2px;color:var(--muted);text-align:right;font-weight:400">ÁGIO</th>' +
+        '<th style="padding:8px 10px"></th>' +
+      '</tr></thead><tbody>' + body + '</tbody></table></div>' +
+    (anyAff ? '<div style="font-size:10px;color:var(--muted);margin-top:6px">🔗 Os links ↗ são de afiliado do Mercado Livre — o MyDeck pode receber uma pequena comissão, sem custo pra você.</div>' : '');
+}
+
 function evPickFromRanking(id) {
   evSelectProduct(id);
   var sel = document.getElementById('ev-product'); if (sel) sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -547,7 +677,19 @@ function renderEVResults() {
     '</div>'
   ) : '';
 
-  area.innerHTML = precoBanner + estimadoBanner + varianceBanner + updatedBanner + evLinksHtml(prod) +
+  var cel30Banner = '';
+  if (prod.model === 'cel30') {
+    var cl = ev.rarBreakdown.filter(function(r){ return r.key === 'classic'; })[0];
+    var semClassic = cl ? ev.evBooster - cl.evContrib : ev.evBooster;
+    cel30Banner =
+      '<div style="background:rgba(247,183,49,.12);border:1px solid var(--gold);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:11px;color:var(--gold);line-height:1.6">' +
+      '⚠ <b>Taxas não oficiais.</b> A Pokémon Company não publica pull rates; usamos a média de contagens da comunidade (de ~400 a ~4.000 pacotes por fonte). ' +
+      'Os preços das cartas são de lançamento e tendem a cair. O EV deste set é dominado pela <b>Coleção Clássica</b> (1 em cada 10 pacotes; o Charizard 4/102 vale R$ 1.220): ' +
+      'sem ela o EV por booster seria R$ ' + fmtR(semClassic) + ' (hoje R$ ' + fmtR(ev.evBooster) + '). Os 3 Mews RGB ficam fora do cálculo (sem taxa confiável). ' +
+      'Promos, adesivos, moeda, fichário e demais itens do kit não entram.' +
+      '</div>';
+  }
+  area.innerHTML = precoBanner + estimadoBanner + cel30Banner + varianceBanner + updatedBanner + evLinksHtml(prod) +
     '<div style="background:' + verdictBg + ';border-radius:16px;padding:24px 28px;' +
     'display:flex;align-items:center;gap:24px;margin-bottom:24px;flex-wrap:wrap">' +
       '<div style="background:rgba(0,0,0,0.25);border-radius:12px;width:72px;height:72px;' +
@@ -597,7 +739,9 @@ function renderEVResults() {
       '</table>' +
     '</div>' +
     '<div style="font-size:10px;color:var(--muted);line-height:1.7;padding:12px;background:var(--surface);border-radius:8px;border-left:3px solid var(--accent)">' +
-      'Pack BR: 6 cartas (1 energia + 4 comuns + 1 slot raro). Taxas calibradas para 6–11 hits por display · Teto = EV - 15% (margem de segurança). Bulk excluído do cálculo.' +
+      (prod.model === 'cel30'
+        ? 'Pack da Celebração de 30 Anos: 5 cartas laminadas + 1 Energia Básica laminada (1 Pikachu garantida). Taxas da comunidade · Teto = EV - 15% (margem de segurança). Bulk excluído do cálculo.'
+        : 'Pack BR: 6 cartas (1 energia + 4 comuns + 1 slot raro). Taxas calibradas para 6–11 hits por display · Teto = EV - 15% (margem de segurança). Bulk excluído do cálculo.') +
     '</div>';
 }
 
@@ -605,12 +749,13 @@ function renderEV() {
   var wrap = document.getElementById('ev-wrap');
   if (!wrap) return;
   if (!document.getElementById('ev-ctrl')) {
-    wrap.innerHTML = '<div id="ev-ctrl"></div><div id="ev-res"></div><div id="ev-rank"></div>';
+    wrap.innerHTML = '<div id="ev-ctrl"></div><div id="ev-res"></div><div id="ev-rank"></div><div id="ev-msrp"></div>';
   }
   renderEVControls();
   renderEVResults();
   evApplyRealPrice(evState.productId);
   evRenderRanking();
+  evRenderMsrp();
 }
 
 function initEV() { renderEV(); }

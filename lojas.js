@@ -391,31 +391,52 @@ function mydeckPickRealPrice(rows) {
   return best ? { price: +best.price, updatedAt: best.found_at } : null;
 }
 
-// 17/10/2026 (Preço Justo, ranking): todos os preços reais de uma vez — { product_key: {price, updatedAt} }.
-// Duas consultas no total (em vez de duas por produto).
-window.mydeckGetAllRealPrices = async function() {
-  if (!sbClient) return {};
-  const { data: terms, error } = await sbClient.from('ml_search_terms').select('id, product_key, affiliate_url, catalog_product_id').eq('active', true).not('product_key', 'is', null);
-  if (error || !terms || !terms.length) return {};
+// 17/10/2026 (Preço Justo): preço real (menor dos últimos 7 dias, sem outliers) de VÁRIOS termos de uma vez.
+// Recebe linhas de ml_search_terms (precisa de id; affiliate_url/catalog_product_id viram o link) e devolve
+// { term_id: {price, updatedAt, url, affiliate} }. Duas consultas no total, em vez de duas por produto.
+async function mydeckPricesByTerm(terms) {
+  const out = {};
+  if (!sbClient || !terms || !terms.length) return out;
   const since = new Date(Date.now() - 7 * 86400000).toISOString();
   // O PostgREST devolve no máximo 1000 linhas por chamada (e 14 produtos × ~78 leituras em 7 dias já passam disso):
   // sem paginar, as linhas de maior preço eram cortadas e produtos inteiros (ex.: ETB ME02) sumiam do resultado.
   const rows = [];
   for (let from = 0; from < 20000; from += 1000) {
-    const { data, error: e2 } = await sbClient.from('ml_price_history').select('id, term_id, price, found_at')
+    const { data, error } = await sbClient.from('ml_price_history').select('id, term_id, price, found_at')
       .in('term_id', terms.map(t => t.id)).gte('found_at', since)
       .order('price', { ascending: true }).order('id', { ascending: true }).range(from, from + 999);
-    if (e2) return {};
+    if (error) return out;
     rows.push(...(data || []));
     if (!data || data.length < 1000) break;
   }
-  if (!rows.length) return {};
-  const out = {};
   terms.forEach(t => {
     const p = mydeckPickRealPrice(rows.filter(r => r.term_id === t.id));
-    if (p) out[t.product_key] = Object.assign(p, mydeckRealPriceLink(t));
+    if (p) out[t.id] = Object.assign(p, mydeckRealPriceLink(t));
   });
   return out;
+}
+
+// todos os produtos ligados ao catálogo do Preço Justo — { product_key: {price, updatedAt, url, affiliate} }
+window.mydeckGetAllRealPrices = async function() {
+  if (!sbClient) return {};
+  const { data: terms, error } = await sbClient.from('ml_search_terms').select('id, product_key, affiliate_url, catalog_product_id').eq('active', true).not('product_key', 'is', null);
+  if (error || !terms || !terms.length) return {};
+  const byTerm = await mydeckPricesByTerm(terms);
+  const out = {};
+  terms.forEach(t => { if (byTerm[t.id]) out[t.product_key] = byTerm[t.id]; });
+  return out;
+};
+
+// Celebração 30 Anos & cia: termos com preço sugerido do fabricante (msrp) — usado pelo Preço Justo pra mostrar
+// o ágio do ML sobre o preço oficial. Devolve [{ term, price: {…} | null }].
+window.mydeckGetMsrpProducts = async function() {
+  if (!sbClient) return [];
+  const { data: terms, error } = await sbClient.from('ml_search_terms')
+    .select('id, term, label, collection, msrp, release_date, affiliate_url, catalog_product_id')
+    .eq('active', true).not('msrp', 'is', null).order('msrp', { ascending: true });
+  if (error || !terms || !terms.length) return [];
+  const byTerm = await mydeckPricesByTerm(terms);
+  return terms.map(t => ({ term: t, price: byTerm[t.id] || null }));
 };
 
 function applyCouponDiscount(price, coupon) {
