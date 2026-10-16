@@ -29,6 +29,7 @@
     { key: 'all', label: 'Total' },
   ];
   let irkActivePeriod = 'day';
+  const IRK_MIN_BATTLES = { day: 3, week: 10, month: 15, all: 30 }; // espelha wild_ranking_compute (17/10/2026)
 
   function irkHasClient() { return typeof sbClient !== 'undefined' && !!sbClient; }
   function irkUid() { return (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : null; }
@@ -111,7 +112,7 @@
       return;
     }
     if (!data || !data.length) {
-      listEl.innerHTML = '<div class="inicio-ranking-empty">Ninguém venceu uma batalha neste período ainda.</div>';
+      listEl.innerHTML = `<div class="inicio-ranking-empty">Ninguém chegou a ${IRK_MIN_BATTLES[irkActivePeriod] || 3}+ batalhas neste período ainda. O ranking é por % de vitórias, com mínimo de partidas.</div>`;
       return;
     }
 
@@ -120,7 +121,7 @@
       return `<div class="inicio-ranking-row ${isMe ? 'inicio-ranking-me' : ''}">
         <span class="inicio-ranking-pos">${irkMedal(i + 1)}</span>
         <span class="inicio-ranking-name">${irkEsc(row.display_name)}</span>
-        <span class="inicio-ranking-wins">${row.wins}V</span>
+        <span class="inicio-ranking-wins" title="${row.wins} vitórias e ${row.losses} derrotas">${row.win_rate != null ? Number(row.win_rate).toFixed(0) + '% · ' : ''}${row.wins}V${row.losses != null ? ' ' + row.losses + 'D' : ''}</span>
       </div>`;
     }).join('');
   }

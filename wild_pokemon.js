@@ -452,6 +452,8 @@
       }
 
       if (!ballsRes.error) {
+        const prevBalls = { ...wpBalls };
+        const wasSynced = wpLoadJSON('wp_balls_synced_for', null) === wpUid();
         if (ballsRes.data) {
           wpBalls = {
             pokeball: ballsRes.data.pokeball || 0, greatball: ballsRes.data.greatball || 0,
@@ -463,6 +465,13 @@
           if (!error && data) wpBalls = data;
         }
         wpSaveBalls();
+        // 17/10/2026 (pacote C): conquistas concedem bolas no servidor — se o saldo subiu desde a última vez que este
+        // aparelho viu a conta, avisa. (Só compara quando este aparelho já tinha sincronizado essa conta antes.)
+        if (wasSynced) {
+          const gains = WP_BALL_ORDER.map(t => [t, (wpBalls[t] || 0) - (prevBalls[t] || 0)]).filter(x => x[1] > 0);
+          if (gains.length) wpToastRaw('🎁', `Bolas novas na sua conta: ${gains.map(([t, n]) => `+${n} ${WP_BALL_META[t].label}`).join(', ')}`, true);
+        }
+        wpSaveJSON('wp_balls_synced_for', wpUid());
       }
 
       wpUpdateBadge();
@@ -971,16 +980,36 @@
     return html;
   }
 
-  function wpSpawn(chance) {
+  // 17/10/2026 (pacote C): pra quem está logado, o Pokémon que aparece é sorteado PELO SERVIDOR (wild_spawn) e vem
+  // com um id de uso único — a captura só é aceita pra esse id (ver catch_wild_pokemon). O servidor também limita a
+  // cadência (mín. 20 s entre aparições, 450/dia); se ele disser "não" ou falhar, simplesmente não aparece nada.
+  // Visitante (sem login) continua com o sorteio local, que é só decoração (não grava nada).
+  let wpActiveSpawnId = null;
+  let wpSpawnPending = false;
+  async function wpSpawn(chance) {
     if (!wpEnabled) return; // minigame desligado pelo usuário
-    if (wpActiveEl) return; // só 1 por vez na tela
+    if (wpActiveEl || wpSpawnPending) return; // só 1 por vez na tela
     // 15/10/2026: aba em segundo plano (PC com o site aberto em outra aba)
     // — antes o Pokémon nascia e sumia em 8s sem ninguém ver. Guarda o
     // spawn pra quando a pessoa voltar pra aba.
     if (document.hidden) { wpPendingSpawn = true; return; }
     if (Math.random() > chance) return;
 
-    const mon = wpPickMon();
+    let mon, spawnId = null;
+    if (wpHasClient() && wpUid()) {
+      wpSpawnPending = true;
+      try {
+        const { data, error } = await sbClient.rpc('wild_spawn');
+        if (error || !data || !data.ok) return;
+        mon = WP_KANTO151.find(m => m.s === data.slug);
+        spawnId = data.spawn_id;
+      } catch (e) { return; }
+      finally { wpSpawnPending = false; }
+      if (!mon || !wpEnabled || wpActiveEl || document.hidden) return; // a tela mudou enquanto esperava: o spawn vence sozinho
+    } else {
+      mon = wpPickMon();
+    }
+    wpActiveSpawnId = spawnId;
     const corner = WP_CORNERS[Math.floor(Math.random() * WP_CORNERS.length)];
 
     const el = document.createElement('div');
@@ -1076,6 +1105,7 @@
   function wpThrowBall(tier, mon, el) {
     if (el !== wpActiveEl || mon !== wpActiveMon) return; // já sumiu/mudou
     clearTimeout(wpActiveTimeoutId);
+    const spawnId = wpActiveSpawnId; wpActiveSpawnId = null;
     wpActiveEl = null; // trava novo spawn enquanto resolve
 
     // Feedback visual otimista (bola sumindo do inventário) — o saldo
@@ -1104,7 +1134,7 @@
     let resultPromise;
     if (wpHasClient() && wpUid()) {
       resultPromise = sbClient.rpc('catch_wild_pokemon', {
-        p_pokemon_slug: mon.s, p_dex: mon.d, p_rarity: mon.r, p_tier: tier,
+        p_pokemon_slug: mon.s, p_dex: mon.d, p_rarity: mon.r, p_tier: tier, p_spawn_id: spawnId,
       }).then(({ data, error }) => {
         if (error) { console.warn('[wp] catch_wild_pokemon falhou:', error.message); return { error: error.message }; }
         return data; // { success, balls, count, total_xp, level }
@@ -1385,7 +1415,7 @@
       </div>
       <div class="wp-panel-dex wp-grid" style="display:${tab === 'dex' ? 'grid' : 'none'}">${dexHtml}</div>
       <div class="wp-panel-mochila" style="display:${tab === 'mochila' ? 'block' : 'none'}"></div>
-      <div class="wp-panel-inv" style="display:${tab === 'inv' ? 'block' : 'none'}">${invHtml}</div>
+      <div class="wp-panel-inv" style="display:${tab === 'inv' ? 'block' : 'none'}">${invHtml}<div class="wp-sub" style="margin-top:12px">Poké Ball: use o site (até 5 por dia) · Great Ball: primeiro acesso do dia · Great, Ultra e Master Ball também vêm de conquistas (coleção, leilão, loja, master set e minigame).</div></div>
     </div>`;
 
     document.body.appendChild(backdrop);
