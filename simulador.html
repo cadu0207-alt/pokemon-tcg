@@ -211,6 +211,57 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .rate-1in{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);min-width:70px;}
 
 .disclaimer{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);padding:16px 32px 32px;opacity:.6;line-height:1.6;}
+
+/* ── RESUMO DO LOTE (17/10/2026) ── abertura de vários packs mostra só os hits; o resto vira esta linha */
+.base-summary{
+  flex-basis:100%;order:99;text-align:center;margin-top:10px;padding:12px 16px;
+  background:var(--surface);border:1px dashed var(--border);border-radius:10px;
+  font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);line-height:1.7;
+}
+.base-summary b{color:var(--text);}
+.base-summary button{
+  margin-left:8px;background:none;border:1px solid var(--border);color:var(--teal);border-radius:6px;
+  padding:4px 10px;font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;
+}
+.no-hits{flex-basis:100%;text-align:center;font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);padding:24px 0 6px;}
+.batch-banner{
+  position:fixed;top:80px;right:20px;background:#0f1626;border:1px solid #22c55e;border-radius:12px;
+  padding:16px 20px;z-index:500;font-family:'Space Mono',monospace;font-size:11px;max-width:280px;animation:floatin .3s ease-out;
+}
+.product-card:focus-visible,.open-btn:focus-visible,.base-summary button:focus-visible{outline:3px solid var(--teal);outline-offset:2px;}
+
+/* ── CELULAR (17/10/2026): antes não havia nenhuma media query — a página passava da largura da tela, o cabeçalho
+   espremia o título em 3 linhas e o resumo da abertura saía cortado ── */
+@media (max-width:720px){
+  .sim-header{flex-wrap:wrap;gap:6px 12px;padding:12px 16px;}
+  .sim-title{font-size:22px;letter-spacing:1px;}
+  .sim-sub{margin-left:0;width:100%;font-size:9px;}
+  .stats-bar{flex-wrap:wrap;}
+  .stat-item{flex:1 1 25%;min-width:25%;padding:10px 4px;border-bottom:1px solid var(--border);}
+  .stat-val{font-size:20px;}
+  .stat-lbl{font-size:8px;letter-spacing:.5px;}
+  .products-wrap,.history-wrap,.rates-wrap{padding:18px 16px;}
+  .arena{padding:20px 10px;gap:20px;}
+  .product-card{min-width:0;flex:1 1 calc(50% - 10px);padding:12px;}
+  .set-tab{min-width:0!important;flex:1 1 calc(33% - 10px);}
+  .card-slot{width:84px;height:118px;}
+  .cards-row{gap:8px;}
+  .btn-row{width:100%;}
+  .open-btn{padding:14px 18px;font-size:20px;flex:1 1 100%;}
+  .rate-row{flex-wrap:wrap;gap:6px 10px;}
+  .rate-name{min-width:0;flex:1 1 100%;}
+  .rate-bar-wrap{flex:1 1 40%;}
+  .rate-pct,.rate-1in{min-width:0;}
+  #mhr-title{font-size:40px;letter-spacing:2px;padding:0 12px;}
+  #mhr-img{width:150px;}
+  .history-item{flex-wrap:wrap;gap:4px 10px;}
+  .hi-pack{min-width:40px;}
+  .disclaimer{padding:12px 16px 28px;}
+  .batch-banner{top:auto;bottom:12px;left:12px;right:12px;max-width:none;}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;}
+}
 </style>
 </head>
 <body>
@@ -466,6 +517,9 @@ function buildProducts(){
     const card=document.createElement('div');
     card.className='product-card';
     card.id='pc-'+p.id;
+    card.setAttribute('role','button'); card.setAttribute('tabindex','0');
+    card.setAttribute('aria-label',p.name+', '+p.packs+(p.packs>1?' packs':' pack'));
+    card.addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&e.target===card){ e.preventDefault(); selectProduct(p); } });
     card.innerHTML=`
       <div class="pc-name">${p.emoji} ${p.name}</div>
       <div class="pc-packs">${p.packs} pack${p.packs>1?'s':''}</div>
@@ -590,7 +644,10 @@ const RAR_LABEL={'ENERGIA':'Energia','COMUM':'Comum','RH':'Rev. Holo','RD':'Rara
 const RAR_BG  ={'RD':'rgba(247,183,49,.2)','IR':'rgba(99,179,237,.2)','UR':'rgba(168,85,247,.2)','IRE':'rgba(236,72,153,.25)','MHR':'rgba(255,215,0,.3)'};
 const RAR_CLR ={'RD':'var(--gold)','IR':'#63b3ed','UR':'var(--purple)','IRE':'var(--pink)','MHR':'var(--gold)','RH':'var(--teal)','ENERGIA':'#3a4060'};
 
-function renderCards(allCards, instant=false){
+let lastBatchCards=null; // última abertura em lote (pra "ver todas as cartas")
+function showAllBatchCards(){ if(lastBatchCards) renderCards(lastBatchCards,true,true); }
+
+function renderCards(allCards, instant=false, showAll=false){
   const row=document.getElementById('cards-row');
   row.innerHTML='';
 
@@ -611,7 +668,27 @@ function renderCards(allCards, instant=false){
     return (RARITY_ORDER[a.rare]??6)-(RARITY_ORDER[b.rare]??6);
   });
 
-  sorted.forEach((c,i)=>{
+  // 17/10/2026: abrir 1 box (36 packs) gerava ~78 cartas na tela, comuns e energias incluídas, e os hits sumiam no meio.
+  // Em lote (instant) só os hits viram carta; o resto vira uma linha de resumo com botão "ver todas".
+  const isBase=c=>['COMUM','RH','ENERGIA'].includes(c.rare);
+  const summarize=instant&&!showAll;
+  const toShow=summarize?sorted.filter(c=>!isBase(c)):sorted;
+  if(summarize){
+    const baseCards=allCards.filter(isBase);
+    const baseVal=baseCards.reduce((t,c)=>t+((CARD_DATA[c.num]&&CARD_DATA[c.num].price)||(c.rare==='ENERGIA'?.15:.48)),0);
+    const nBase=baseCards.filter(c=>c.rare!=='ENERGIA').length, nEn=baseCards.filter(c=>c.rare==='ENERGIA').length;
+    lastBatchCards=allCards;
+    if(!toShow.length){
+      const nh=document.createElement('div'); nh.className='no-hits';
+      nh.textContent='Nenhum hit nessa abertura — só comuns e energias.'; row.appendChild(nh);
+    }
+    const sum=document.createElement('div'); sum.className='base-summary';
+    sum.innerHTML=`🃏 + <b>${nBase}</b> comuns/incomuns e <b>${nEn}</b> energias (juntas valem R$ ${fmtR(baseVal)})
+      <button type="button" onclick="showAllBatchCards()">ver todas as cartas</button>`;
+    row.appendChild(sum);
+  }
+
+  toShow.forEach((c,i)=>{
     const data=CARD_DATA[c.num];
     const name=data?data.name:(c.rare==='ENERGIA'?'Energia':'Carta #'+c.num);
     const price=data?data.price:(c.rare==='ENERGIA'?.15:.48);
@@ -770,7 +847,7 @@ function showBatchSummary(numPacks,hits,totalPrice){
   const mhr=hits.filter(h=>h.rare==='MHR');
   const ire=hits.filter(h=>h.rare==='IRE');
   const banner=document.createElement('div');
-  banner.style.cssText='position:fixed;top:80px;right:20px;background:#0f1626;border:1px solid #22c55e;border-radius:12px;padding:16px 20px;z-index:500;font-family:Space Mono,monospace;font-size:11px;max-width:280px;animation:floatin .3s ease-out;';
+  banner.className='batch-banner';
   banner.innerHTML=`<div style="font-family:Bebas Neue,sans-serif;font-size:18px;color:#22c55e;margin-bottom:8px">ABERTURA DE ${numPacks} PACKS</div>
     ${mhr.length?`<div style="color:var(--gold)">⭐ ${mhr.length}× Mega Hiper Raro!</div>`:''}
     ${ire.length?`<div style="color:var(--pink)">✦ ${ire.length}× Ilustr. Rara Esp.</div>`:''}
@@ -803,6 +880,11 @@ function resetSim(){
 }
 
 // Init
+// 17/10/2026: as abas de coleção eram <div> só de mouse — agora Enter/Espaço também selecionam
+document.querySelectorAll('.set-tab').forEach(t=>{
+  t.setAttribute('role','button'); t.setAttribute('tabindex','0');
+  t.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); t.click(); } });
+});
 selectSet('me04');
 </script>
 </body>
