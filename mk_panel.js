@@ -146,7 +146,8 @@ async function mkOpenProductForm(id) {
     const { data } = await sbClient.from('mk_product_costs').select('cost_price').eq('product_id', p.id).maybeSingle();
     cost = data ? data.cost_price : null;
   }
-  mkForm = {
+  // atribuído a mkForm só DEPOIS de abrir o modal: mkOpenModal() fecha o modal anterior, e o fechamento zera mkForm
+  const form0 = {
     id: p ? p.id : null,
     images: p ? (p.images || []).map(function (i) { return { id: i.id, path: i.path, url: i.url, isNew: false }; }) : [],
     removed: [], uploading: 0, saved: false,
@@ -203,6 +204,7 @@ async function mkOpenProductForm(id) {
         '<button type="button" class="btn-mini" onclick="mkCloseModal()">Cancelar</button></div>' +
     '</div>';
   mkOpenModal(html, { wide: true, sticky: true });
+  mkForm = form0;
   mkFormRenderPhotos();
   mkFormRenderLinked();
   const drop = document.getElementById('mkf-drop');
