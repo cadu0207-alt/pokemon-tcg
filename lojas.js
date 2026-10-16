@@ -356,14 +356,23 @@ window.mydeckGetRealPrice = async function(productKey) {
     .limit(1)
     .maybeSingle();
   if (e1 || !term) return null;
+  // 17/10/2026: antes devolvia o MENOR preço de TODO o histórico — um anúncio errado antigo (ME05 Display a R$ 19,90,
+  // com mediana de R$ 360) virava o "preço real" e a calculadora dava "compra imediata". Agora: só os últimos 7 dias e
+  // sem outliers (abaixo de 50% da mediana da janela). Sem dado recente = null (a calculadora volta ao preço de tabela).
+  const since = new Date(Date.now() - 7 * 86400000).toISOString();
   const { data: rows, error: e2 } = await sbClient
     .from('ml_price_history')
     .select('price, found_at')
     .eq('term_id', term.id)
+    .gte('found_at', since)
     .order('price', { ascending: true })
-    .limit(1);
+    .limit(500);
   if (e2 || !rows || !rows.length) return null;
-  return { price: +rows[0].price, updatedAt: rows[0].found_at };
+  const mid = Math.floor(rows.length / 2);
+  const median = rows.length % 2 ? +rows[mid].price : (+rows[mid - 1].price + +rows[mid].price) / 2;
+  const best = rows.find(r => +r.price >= median * 0.5);
+  if (!best) return null;
+  return { price: +best.price, updatedAt: best.found_at };
 };
 
 function applyCouponDiscount(price, coupon) {

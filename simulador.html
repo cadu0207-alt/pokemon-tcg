@@ -422,9 +422,16 @@ async function simGetRealPrice(productKey){
   if(!simSb||!productKey) return null;
   const {data:term}=await simSb.from('ml_search_terms').select('id').eq('product_key',productKey).eq('active',true).limit(1).maybeSingle();
   if(!term) return null;
-  const {data:rows}=await simSb.from('ml_price_history').select('price,found_at').eq('term_id',term.id).order('price',{ascending:true}).limit(1);
+  // 17/10/2026: mesma correção do lojas.js (mydeckGetRealPrice) — antes pegava o MENOR preço de todo o histórico, e um
+  // anúncio errado antigo virava o "preço real". Agora: últimos 7 dias, ignorando outliers (< 50% da mediana).
+  const since=new Date(Date.now()-7*86400000).toISOString();
+  const {data:rows}=await simSb.from('ml_price_history').select('price,found_at').eq('term_id',term.id).gte('found_at',since).order('price',{ascending:true}).limit(500);
   if(!rows||!rows.length) return null;
-  return {price:+rows[0].price,updatedAt:rows[0].found_at};
+  const mid=Math.floor(rows.length/2);
+  const median=rows.length%2?+rows[mid].price:(+rows[mid-1].price+ +rows[mid].price)/2;
+  const best=rows.find(r=>+r.price>=median*0.5);
+  if(!best) return null;
+  return {price:+best.price,updatedAt:best.found_at};
 }
 
 async function applyRealPrices(setId){

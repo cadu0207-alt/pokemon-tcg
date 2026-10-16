@@ -39,15 +39,18 @@ function normalizeRare(r) {
   if (s === 'Dupla Rara' || s === 'Rara Dupla' || s === 'Double Rare') return 'Dupla Rara';
   // Illustration Rare (IR) — ME: "Ilustr. Rara" · SV: "Rara Ilustrada" · Promo: "Ilustração Rara (IR)" · ME05 (provisório): "Art Rare"
   if (s === 'Ilustr. Rara' || s === 'Illustration Rare' || s === 'Rara Ilustrada' ||
-      s === 'Ilustração Rara (IR)' || s === 'Art Rare') return 'Ilustr. Rara';
+      s === 'Ilustração Rara (IR)' || s === 'Ilustração Rara' || s === 'Art Rare') return 'Ilustr. Rara';
   // Ultra Rare (UR) — ME: "Rara Ultra" · SV: "Ultra Rara" (ordem invertida) · ME05 (provisório): "Super Rare"
   if (s === 'Rara Ultra' || s === 'Ultra Rare' || s === 'Ultra Rara' || s === 'Super Rare') return 'Rara Ultra';
   // Special Illustration Rare (SAR/SIR) — ME: "Ilustr. Esp. Rara" · SV: "Rara Ilustrada Especial" · ME05 (provisório): "Special Art Rare"
   if (s === 'Ilustr. Esp. Rara' || s === 'Special Illustration Rare' || s === 'Rara Ilustrada Especial' ||
-      s === 'Special Art Rare') return 'Ilustr. Esp. Rara';
+      s === 'Ilustração Rara Especial' || s === 'Special Art Rare') return 'Ilustr. Esp. Rara';
   // Hyper Rare (topo da raridade) — ME: "Mega Hyper Rare"/"Mega Attack Rare" · SV: "Hiper Rara" · ME05 (provisório): "Mega Ultra Rare"
   if (s === 'Mega Hyper Rare' || s === 'Hyper Rare' || s === 'Mega Attack Rare' ||
-      s === 'Hiper Rara' || s === 'Mega Ultra Rare') return 'Mega Hyper Rare';
+      s === 'Hiper Rara' || s === 'Mega Ultra Rare' ||
+      // 17/10/2026: ME05 grava "Hiper Rara Mega" e ME2.5 "Mega Hiper Raro" — sem isso a carta caía em "Rara" (76%
+      // de chance por booster) e inflava o EV da ME05 ~5x (Mega Darkrai Gold, R$ 400, virava "rara base").
+      s === 'Hiper Rara Mega' || s === 'Mega Hiper Raro') return 'Mega Hyper Rare';
   // Holo Rare (slot bônus, sem valor de mercado relevante — fica fora do EV, prob 0)
   if (s === 'Rara (Holo)' || s === 'Holo Rare' || s === 'Rara Holo') return 'Rara (Holo)';
   // ACE SPEC e Shiny Vault (Rara Brilhante / Ultra Rara Brilhante) — mecânica exclusiva

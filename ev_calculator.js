@@ -50,35 +50,35 @@ var CATALOG = [
   // ── ME04 Caos Ascendente ──────────────────────────────────
   { id:'me04-display',  grupo:'ME04 — Caos Ascendente', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me04', extras:[] },
   { id:'me04-etb',      grupo:'ME04 — Caos Ascendente', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me04', extras:[] },
-  { id:'me04-blister4', grupo:'ME04 — Caos Ascendente', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me04', extras:[] },
+  { id:'me04-blister4', grupo:'ME04 — Caos Ascendente', nome:'Blister Quádruplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me04', extras:[] },
   { id:'me04-blister3', grupo:'ME04 — Caos Ascendente', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me04', extras:[] },
   { id:'me04-blister2', grupo:'ME04 — Caos Ascendente', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me04', extras:[] },
   { id:'me04-booster',  grupo:'ME04 — Caos Ascendente', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me04', extras:[] },
   // ME05 — Escuridão Absoluta (lançou 17/jul/2026 — varejo ainda copiado do ME04, urgente confirmar preço real de tabela)
   { id:'me05-display',  grupo:'ME05 — Escuridão Absoluta', nome:'Box Display (36 boosters)',      boosters:36, varejo:539.99, set:'me05', extras:[], estimado:true },
   { id:'me05-etb',      grupo:'ME05 — Escuridão Absoluta', nome:'Elite Trainer Box (9 boosters)', boosters:9,  varejo:199.99, set:'me05', extras:[], estimado:true },
-  { id:'me05-blister4', grupo:'ME05 — Escuridão Absoluta', nome:'Blister Quadriplo (4 boosters)',boosters:4,  varejo:59.99,  set:'me05', extras:[], estimado:true },
+  { id:'me05-blister4', grupo:'ME05 — Escuridão Absoluta', nome:'Blister Quádruplo (4 boosters)',boosters:4,  varejo:59.99,  set:'me05', extras:[], estimado:true },
   { id:'me05-blister3', grupo:'ME05 — Escuridão Absoluta', nome:'Blister Triplo (3 boosters)',   boosters:3,  varejo:44.99,  set:'me05', extras:[], estimado:true },
   { id:'me05-booster',  grupo:'ME05 — Escuridão Absoluta', nome:'Booster Avulso',                boosters:1,  varejo:14.99,  set:'me05', extras:[], estimado:true },
   // ── ME03 Equilíbrio Perfeito ───────────────────────────────────
   { id:'me03-display',  grupo:'ME03 — Equilíbrio Perfeito', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me03', extras:[] },
   { id:'me03-etb',      grupo:'ME03 — Equilíbrio Perfeito', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me03', extras:[] },
-  { id:'me03-blister4', grupo:'ME03 — Equilíbrio Perfeito', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me03', extras:[] },
+  { id:'me03-blister4', grupo:'ME03 — Equilíbrio Perfeito', nome:'Blister Quádruplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me03', extras:[] },
   { id:'me03-blister3', grupo:'ME03 — Equilíbrio Perfeito', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me03', extras:[] },
   { id:'me03-blister2', grupo:'ME03 — Equilíbrio Perfeito', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me03', extras:[] },
   { id:'me03-booster',  grupo:'ME03 — Equilíbrio Perfeito', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me03', extras:[] },
-  // ── ME02 Fogo Fantasmagorico ──────────────────────────────
-  { id:'me02-display',  grupo:'ME02 — Fogo Fantasmagorico', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me02', extras:[] },
-  { id:'me02-etb',      grupo:'ME02 — Fogo Fantasmagorico', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me02', extras:[] },
-  { id:'me02-blister4', grupo:'ME02 — Fogo Fantasmagorico', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me02', extras:[] },
-  { id:'me02-blister3', grupo:'ME02 — Fogo Fantasmagorico', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me02', extras:[] },
-  { id:'me02-blister2', grupo:'ME02 — Fogo Fantasmagorico', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me02', extras:[] },
-  { id:'me02-booster',  grupo:'ME02 — Fogo Fantasmagorico', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me02', extras:[] },
-  // ── MEG Megaevolucao ──────────────────────────────────────
-  { id:'meg-display',   grupo:'MEG — Megaevolucao', nome:'Box Display (36 boosters)',       boosters:36, varejo:499.99, set:'meg', extras:[] },
-  { id:'meg-blister4',  grupo:'MEG — Megaevolucao', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:54.99,  set:'meg', extras:[] },
-  { id:'meg-blister3',  grupo:'MEG — Megaevolucao', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:39.99,  set:'meg', extras:[] },
-  { id:'meg-booster',   grupo:'MEG — Megaevolucao', nome:'Booster Avulso',                 boosters:1,  varejo:13.99,  set:'meg', extras:[] },
+  // ── ME02 Fogo Fantasmagórico ──────────────────────────────
+  { id:'me02-display',  grupo:'ME02 — Fogo Fantasmagórico', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me02', extras:[] },
+  { id:'me02-etb',      grupo:'ME02 — Fogo Fantasmagórico', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me02', extras:[] },
+  { id:'me02-blister4', grupo:'ME02 — Fogo Fantasmagórico', nome:'Blister Quádruplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me02', extras:[] },
+  { id:'me02-blister3', grupo:'ME02 — Fogo Fantasmagórico', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me02', extras:[] },
+  { id:'me02-blister2', grupo:'ME02 — Fogo Fantasmagórico', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me02', extras:[] },
+  { id:'me02-booster',  grupo:'ME02 — Fogo Fantasmagórico', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me02', extras:[] },
+  // ── MEG Megaevolução ──────────────────────────────────────
+  { id:'meg-display',   grupo:'MEG — Megaevolução', nome:'Box Display (36 boosters)',       boosters:36, varejo:499.99, set:'meg', extras:[] },
+  { id:'meg-blister4',  grupo:'MEG — Megaevolução', nome:'Blister Quádruplo (4 boosters)', boosters:4,  varejo:54.99,  set:'meg', extras:[] },
+  { id:'meg-blister3',  grupo:'MEG — Megaevolução', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:39.99,  set:'meg', extras:[] },
+  { id:'meg-booster',   grupo:'MEG — Megaevolução', nome:'Booster Avulso',                 boosters:1,  varejo:13.99,  set:'meg', extras:[] },
   // ── Caixas Especiais ──────────────────────────────────────
   // Bandas min/max destas duas caixas eram fabricadas (evBoosterMin = c*0.6, evBoosterMax = c*1.5,
   // sem base em dado nenhum). Trocado por minValor/maxValor reais por raridade (mesmo padrão dos
@@ -123,10 +123,10 @@ var CATALOG = [
 })();
 
 function getVerdict(mult) {
-  if (mult < 1.00) return { label:'ABAIXO DO EV', grade:'S', cls:'verdict-s', desc:'Voce paga MENOS que o EV. Rarissimo — compra imediata.' };
-  if (mult < 1.15) return { label:'EXCELENTE',    grade:'A', cls:'verdict-a', desc:'Ate 15% acima do EV. Compra recomendada.' };
+  if (mult < 1.00) return { label:'ABAIXO DO EV', grade:'S', cls:'verdict-s', desc:'Você paga MENOS que o EV. Raríssimo — compra imediata.' };
+  if (mult < 1.15) return { label:'EXCELENTE',    grade:'A', cls:'verdict-a', desc:'Até 15% acima do EV. Compra recomendada.' };
   if (mult < 1.35) return { label:'BOM',           grade:'B', cls:'verdict-b', desc:'Preco justo para colecionador. Vale a pena.' };
-  if (mult < 1.55) return { label:'ACEITAVEL',     grade:'C', cls:'verdict-c', desc:'So com interesse especifico (promo, exclusivo).' };
+  if (mult < 1.55) return { label:'ACEITÁVEL',     grade:'C', cls:'verdict-c', desc:'Só com interesse específico (promo, exclusivo).' };
   return              { label:'CARO',           grade:'D', cls:'verdict-d', desc:'Prefira comprar singles avulsos no mercado.' };
 }
 
@@ -230,8 +230,19 @@ function renderEVControls() {
   var prod = CATALOG.find(function(p){return p.id===evState.productId;}) || CATALOG[0];
   var pixPrice = evState.pixPrice !== null ? evState.pixPrice : prod.varejo;
 
+  // 17/10/2026: produtos de sets sem NENHUM preço de carta cadastrado (hoje: os 14 sets SV) levavam a "Banco de dados em
+  // construção" — 42 dos 70 itens do menu. Ficam fora do menu até haver dados (o produto selecionado fica sempre).
+  var dataBySet = {}, hidden = 0;
+  function hasData(p) {
+    if (!p.set) return true;
+    if (!(p.set in dataBySet)) dataBySet[p.set] = evGetSetCards(p.set).some(function(c){ return c.price && c.price > 0; });
+    return dataBySet[p.set];
+  }
   var grupos = {};
-  CATALOG.forEach(function(p){ if(!grupos[p.grupo]) grupos[p.grupo]=[]; grupos[p.grupo].push(p); });
+  CATALOG.forEach(function(p){
+    if (!hasData(p) && p.id !== evState.productId) { hidden++; return; }
+    if(!grupos[p.grupo]) grupos[p.grupo]=[]; grupos[p.grupo].push(p);
+  });
   var sel = '<select id="ev-product" onchange="evSelectProduct(this.value)" style="' +
     'background:var(--surface2);border:1px solid var(--border);color:var(--fg);' +
     'padding:10px 14px;border-radius:8px;font-size:14px;cursor:pointer;min-width:260px">';
@@ -251,7 +262,7 @@ function renderEVControls() {
         sel +
       '</div>' +
       '<div>' +
-        '<div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Preco Pix (R$)</div>' +
+        '<div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Preço Pix (R$)</div>' +
         '<input type="number" id="ev-pix-price" value="' + pixPrice.toFixed(2) + '" min="0" step="0.01"' +
         ' oninput="evSetPrice(this.value)"' +
         ' style="background:var(--surface2);border:1px solid var(--accent);color:var(--fg);' +
@@ -259,11 +270,12 @@ function renderEVControls() {
       '</div>' +
       '<div style="font-size:11px;color:var(--muted);padding-bottom:14px">' +
         (evRealPriceInfo
-          ? '<span style="color:#16a34a">Preco real (menor achado no ML' + (evRealPriceInfo.updatedAt ? ' · ' + new Date(evRealPriceInfo.updatedAt).toLocaleDateString('pt-BR') : '') + ')</span>'
+          ? '<span style="color:#16a34a">Preço real (menor achado no ML, últimos 7 dias' + (evRealPriceInfo.updatedAt ? ' · ' + new Date(evRealPriceInfo.updatedAt).toLocaleDateString('pt-BR') : '') + ')</span>'
           : 'MSRP estimado') +
         ' &nbsp;|&nbsp; ' + prod.boosters + ' booster' + (prod.boosters>1?'s':'') +
       '</div>' +
-    '</div>';
+    '</div>' +
+    (hidden ? '<div style="font-size:10px;color:var(--muted);margin:-12px 0 20px">' + hidden + ' produtos de sets antigos (Escarlate e Violeta) ficam fora da lista até os preços das cartas serem cadastrados.</div>' : '');
 }
 
 function renderEVResults() {
@@ -274,6 +286,7 @@ function renderEVResults() {
   var pixPrice = inp ? parseFloat(inp.value)||prod.varejo : (evState.pixPrice!==null?evState.pixPrice:prod.varejo);
   // Clamp >= 0 (auditoria 03/08/2026): valor negativo no input caía direto aqui
   // e saía "ABAIXO DO EV — compra imediata" com lucro fictício.
+  var precoInvalido = !!inp && !(parseFloat(inp.value) > 0);
   if (!(pixPrice > 0)) pixPrice = prod.varejo;
   var ev = calcEVForProduct(prod);
 
@@ -281,9 +294,9 @@ function renderEVResults() {
     area.innerHTML = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;' +
       'padding:32px;text-align:center;color:var(--muted)">' +
       '<div style="font-size:32px;margin-bottom:12px">🚧</div>' +
-      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:2px;margin-bottom:8px">Banco de dados em construcao</div>' +
-      '<div style="font-size:12px">Os precos das cartas deste set ainda nao foram cadastrados.<br>' +
-      'Adicione os cards ao arquivo correspondente para habilitar o calculo de EV.</div></div>';
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:2px;margin-bottom:8px">Banco de dados em construção</div>' +
+      '<div style="font-size:12px">Os preços das cartas deste set ainda não foram cadastrados.<br>' +
+      'Adicione os cards ao arquivo correspondente para habilitar o cálculo de EV.</div></div>';
     return;
   }
 
@@ -332,7 +345,7 @@ function renderEVResults() {
   var estimadoBanner = prod.estimado ? (
     '<div style="background:rgba(247,183,49,.12);border:1px solid var(--gold);border-radius:8px;' +
     'padding:10px 14px;margin-bottom:16px;font-size:11px;color:var(--gold)">' +
-    '⚠ Preco de varejo estimado — ainda sem referencia real de compra para este set. O EV/booster usa dados reais de mercado.' +
+    '⚠ Preço de varejo estimado — ainda sem referência real de compra para este set. O EV/booster usa dados reais de mercado.' +
     '</div>'
   ) : '';
 
@@ -362,7 +375,15 @@ function renderEVResults() {
     '</div>'
   ) : '';
 
-  area.innerHTML = estimadoBanner + varianceBanner + updatedBanner +
+  // campo vazio/inválido: antes voltava ao preço de tabela em silêncio, parecendo que era o preço digitado
+  var precoBanner = precoInvalido ? (
+    '<div style="background:rgba(230,57,70,.10);border:1px solid var(--accent);border-radius:8px;' +
+    'padding:10px 14px;margin-bottom:16px;font-size:11px;color:var(--accent)">' +
+    'Informe o preço que você pagaria — enquanto isso o cálculo usa o preço de tabela (R$ ' + fmtR(prod.varejo) + ').' +
+    '</div>'
+  ) : '';
+
+  area.innerHTML = precoBanner + estimadoBanner + varianceBanner + updatedBanner +
     '<div style="background:' + verdictBg + ';border-radius:16px;padding:24px 28px;' +
     'display:flex;align-items:center;gap:24px;margin-bottom:24px;flex-wrap:wrap">' +
       '<div style="background:rgba(0,0,0,0.25);border-radius:12px;width:72px;height:72px;' +
@@ -381,7 +402,7 @@ function renderEVResults() {
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px">' +
       kpi('EV / booster', fmtR(ev.evBooster), 'var(--fg)') +
       kpi('EV total (' + prod.boosters + 'x)', fmtR(ev.evTotal), 'var(--fg)') +
-      kpi('Voce paga', fmtR(pixPrice), 'var(--gold)') +
+      kpi('Você paga', fmtR(pixPrice), 'var(--gold)') +
       kpi('Lucro esperado', (lucro>=0?'+':'') + fmtR(lucro), lucroColor) +
     '</div>' +
     '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;' +
@@ -390,7 +411,7 @@ function renderEVResults() {
       '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:28px;color:var(--gold)">' + fmtR(precoAlvo) + '</div></div>' +
       '<div style="font-size:12px">' + topoAlvo + '</div>' +
     '</div>' +
-    '<div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:10px">Composicao do EV por raridade</div>' +
+    '<div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:10px">Composição do EV por raridade</div>' +
     '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:24px">' +
       '<table style="width:100%;border-collapse:collapse">' +
         '<thead><tr style="background:var(--surface2);border-bottom:1px solid var(--border)">' +
@@ -407,7 +428,7 @@ function renderEVResults() {
       '</table>' +
     '</div>' +
     '<div style="font-size:10px;color:var(--muted);line-height:1.7;padding:12px;background:var(--surface);border-radius:8px;border-left:3px solid var(--accent)">' +
-      'Pack BR: 6 cartas (1 energia + 4 comuns + 1 slot raro). Taxas calibradas para 6–11 hits por display · Teto = EV - 15% (margem de seguranca). Bulk excluido do calculo.' +
+      'Pack BR: 6 cartas (1 energia + 4 comuns + 1 slot raro). Taxas calibradas para 6–11 hits por display · Teto = EV - 15% (margem de segurança). Bulk excluído do cálculo.' +
     '</div>';
 }
 
