@@ -346,6 +346,35 @@ function evPickFromRanking(id) {
   evRenderRanking();
 }
 
+// ── Onde comprar (pacote 3, 17/10/2026): link do anúncio no ML (quando o produto é monitorado) e atalho pra Toybox ──
+var evToyboxCache = {}; // set -> true/false (há produto ativo da Toybox naquela coleção?)
+function evLinksHtml(prod) {
+  var btn = 'display:inline-block;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--fg);font-size:12px;text-decoration:none;cursor:pointer';
+  var html = '';
+  if (evRealPriceInfo && evRealPriceInfo.url) {
+    html += '<a href="' + String(evRealPriceInfo.url).replace(/"/g, '%22') + '" target="_blank" rel="noopener sponsored" style="' + btn + '">🛒 Ver no Mercado Livre ↗</a>' +
+      (evRealPriceInfo.affiliate ? ' <span style="font-size:10px;color:var(--muted)">(link de afiliado — o MyDeck pode receber uma pequena comissão, sem custo pra você)</span>' : '');
+  }
+  if (prod.set && evToyboxCache[prod.set]) {
+    html += ' <a onclick="evGoToybox(\'' + prod.set + '\')" style="' + btn + '">🧸 Ver na Loja Toybox</a>';
+  } else if (prod.set && !(prod.set in evToyboxCache)) {
+    evCheckToybox(prod.set);
+  }
+  return html ? '<div id="ev-links" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px">' + html + '</div>' : '';
+}
+async function evCheckToybox(setId) {
+  evToyboxCache[setId] = false; // marca já (evita consultas repetidas); vira true se achar
+  try {
+    if (typeof sbClient === 'undefined' || !sbClient) return;
+    var r = await sbClient.from('mk_products').select('id', { count: 'exact', head: true }).eq('set_id', setId).eq('status', 'ativo');
+    if (!r.error && r.count > 0) { evToyboxCache[setId] = true; renderEVResults(); }
+  } catch (e) { /* sem Toybox: sem botão */ }
+}
+function evGoToybox(setId) {
+  if (typeof goToTab === 'function') goToTab('mk');
+  setTimeout(function() { if (typeof mkSetFilter === 'function') mkSetFilter('setId', setId); }, 450);
+}
+
 function kpi(label, value, color) {
   return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">' +
     '<div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">' + label + '</div>' +
@@ -518,7 +547,7 @@ function renderEVResults() {
     '</div>'
   ) : '';
 
-  area.innerHTML = precoBanner + estimadoBanner + varianceBanner + updatedBanner +
+  area.innerHTML = precoBanner + estimadoBanner + varianceBanner + updatedBanner + evLinksHtml(prod) +
     '<div style="background:' + verdictBg + ';border-radius:16px;padding:24px 28px;' +
     'display:flex;align-items:center;gap:24px;margin-bottom:24px;flex-wrap:wrap">' +
       '<div style="background:rgba(0,0,0,0.25);border-radius:12px;width:72px;height:72px;' +
