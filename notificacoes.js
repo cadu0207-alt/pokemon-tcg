@@ -25,7 +25,7 @@ let notifLotsEnabled=null;  // e-mails de novos leilões (notification_prefs.lot
 let notifLotsBusy=false;
 
 const NOTIF_LIMIT=30;
-const NOTIF_ICON={auction_outbid:'🔔',auction_closed:'🏁',auction_won:'🏆',auction_ending:'⏰',site_update:'🆕',news:'🗞️',new_auction:'🔨',new_raffle:'🎟️',mk_order_new:'🛒',mk_order_update:'📦'};
+const NOTIF_ICON={auction_outbid:'🔔',auction_closed:'🏁',auction_won:'🏆',auction_ending:'⏰',site_update:'🆕',news:'🗞️',new_auction:'🔨',new_raffle:'🎟️',mk_order_new:'🛒',mk_order_update:'📦',wild_event:'⚡',wild_event_info:'⚡'};
 
 // ── CARGA ──────────────────────────────────────────────────────────
 async function notifLoad(){
@@ -180,6 +180,11 @@ function notifRoute(n){
   if(d.news_id){
     if(typeof goToTab==='function')goToTab('inicio');
     if(typeof openInicioArticle==='function')setTimeout(()=>openInicioArticle(d.news_id),250);
+    return;
+  }
+  if(d.event_id){   // evento de aparição do minigame: leva pra Início, onde fica o banner
+    if(typeof goToTab==='function')goToTab('inicio');
+    setTimeout(()=>{const w=document.getElementById('inicio-wild-event-slot');if(w)w.scrollIntoView({behavior:'smooth',block:'center'});},300);
     return;
   }
   if(n.type==='site_update'){

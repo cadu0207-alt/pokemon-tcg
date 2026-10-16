@@ -883,6 +883,23 @@
     .wp-cap-input { width: 64px; padding: 5px 8px; border-radius: 8px; border: 1px solid #ffffff22; background: #111422; color: #f2f2f2; font: inherit; }
     .wp-cap-bar .wp-bp-btn { padding: 6px 12px; }
     .wp-cap-note { flex: 1 1 180px; font-size: 11px; }
+    /* Eventos de aparição (pacote D, 17/10/2026) */
+    .wp-ev-banner { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin: 0 0 14px; border-radius: 12px; border: 1px solid #ffd16655; background: linear-gradient(135deg, #ffd16622, #e6394622); color: #f2f2f2; font-size: 13px; line-height: 1.4; }
+    .wp-ev-banner b { font-size: 14px; }
+    .wp-ev-banner img { width: 48px; height: 48px; image-rendering: pixelated; flex: none; }
+    .wp-ev-ic { font-size: 26px; flex: none; }
+    .wp-ev-sub { color: #c9cee6; font-size: 12px; margin-top: 2px; }
+    .wp-ev-live { border-color: #ffd166; box-shadow: 0 0 0 1px #ffd16633, 0 0 18px #ffd16633; }
+    .wp-ev-live .wp-ev-dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: #e63946; animation: wp-ev-pulse 1.2s ease-in-out infinite; }
+    .wp-ev-count { font-variant-numeric: tabular-nums; font-weight: 700; color: #ffd166; }
+    @keyframes wp-ev-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+    @media (prefers-reduced-motion: reduce) { .wp-ev-live .wp-ev-dot { animation: none; } }
+    .wp-ev-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 12px; }
+    .wp-ev-form label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #9aa0c0; }
+    .wp-ev-form select, .wp-ev-form input { padding: 7px 8px; border-radius: 8px; border: 1px solid #ffffff22; background: #111422; color: #f2f2f2; font: inherit; font-size: 13px; }
+    .wp-ev-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .wp-ev-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #ffffff14; border-radius: 10px; margin-bottom: 6px; font-size: 12px; color: #c9cee6; }
+    .wp-ev-row > span:first-child { flex: 1; }
     .wp-bp-cell.wp-bp-over { opacity: .5; filter: grayscale(.5); }
     .wp-bp-tag-btn {
       flex: 1; text-align: center; padding: 8px; border-radius: 10px; cursor: pointer; font-size: 12px;
@@ -1408,11 +1425,14 @@
       <button class="wp-close" aria-label="Fechar">×</button>
       <h3>🐾 Pokémon Escondidos</h3>
       <div class="wp-sub">${totalCaught}/${WP_KANTO151.length} capturados — flagre os Pokémon que aparecem espiando pelo site</div>
+      <div class="wp-ev-modal-banner" style="margin-top:10px">${wpEventBannerHtml()}</div>
       <div class="wp-tabs">
         <div class="wp-tab" data-tab="dex">Pokédex</div>
         <div class="wp-tab" data-tab="mochila">Mochila</div>
         <div class="wp-tab" data-tab="inv">Inventário</div>
+        ${wpEventIsAdmin() ? '<div class="wp-tab" data-tab="ev">⚡ Eventos</div>' : ''}
       </div>
+      <div class="wp-panel-ev" style="display:${tab === 'ev' ? 'block' : 'none'}"></div>
       <div class="wp-panel-dex wp-grid" style="display:${tab === 'dex' ? 'grid' : 'none'}">${dexHtml}</div>
       <div class="wp-panel-mochila" style="display:${tab === 'mochila' ? 'block' : 'none'}"></div>
       <div class="wp-panel-inv" style="display:${tab === 'inv' ? 'block' : 'none'}">${invHtml}<div class="wp-sub" style="margin-top:12px">Poké Ball: use o site (até 5 por dia) · Great Ball: primeiro acesso do dia · Great, Ultra e Master Ball também vêm de conquistas (coleção, leilão, loja, master set e minigame).</div></div>
@@ -1430,11 +1450,15 @@
         backdrop.querySelector('.wp-panel-dex').style.display = t.dataset.tab === 'dex' ? 'grid' : 'none';
         backdrop.querySelector('.wp-panel-mochila').style.display = t.dataset.tab === 'mochila' ? 'block' : 'none';
         backdrop.querySelector('.wp-panel-inv').style.display = t.dataset.tab === 'inv' ? 'block' : 'none';
+        backdrop.querySelector('.wp-panel-ev').style.display = t.dataset.tab === 'ev' ? 'block' : 'none';
         if (t.dataset.tab === 'mochila') wpRenderMochilaGrid(mochilaPanel);
+        if (t.dataset.tab === 'ev') wpRenderEventAdmin(backdrop.querySelector('.wp-panel-ev'));
       });
     });
 
     if (tab === 'mochila') wpRenderMochilaGrid(mochilaPanel);
+    if (tab === 'ev') wpRenderEventAdmin(backdrop.querySelector('.wp-panel-ev'));
+    wpEventTickUI();
   }
 
   // ── Mochila: grid de indivíduos + detalhe de stats ──────────────
@@ -1772,6 +1796,169 @@
     }
   }
 
+  // ── Eventos de aparição (pacote D, 17/10/2026) ──────────────────────────────────────────
+  // O admin agenda uma janela (ex.: hoje 15h–16h) em que raros / ultra-raros / uma espécie aparecem bem mais. Quem
+  // decide o que aparece é o servidor (wild_spawn); aqui o cliente só (1) mostra o banner com contagem regressiva,
+  // (2) encurta o intervalo entre aparições durante o evento (~90 s → ~16 Pokémon do evento por hora com 40%) e
+  // (3) oferece ao administrador a aba "Eventos" pra agendar/cancelar. wild_event_status é público (visitante vê o banner).
+  const WP_EVENT_INTERVAL_MS = 90 * 1000;
+  const WP_EVENT_TZ = 'America/Sao_Paulo';
+  let wpEvent = { active: null, next: null, skew: 0 }; // skew = relógio do servidor − relógio do aparelho (ms)
+  let wpEventSeenId = null;
+  let wpEventRefreshTimer = null;
+
+  function wpEventNow() { return Date.now() + wpEvent.skew; }
+  function wpEventCurrent() {
+    const n = wpEventNow();
+    for (const ev of [wpEvent.active, wpEvent.next]) {
+      if (ev && n >= Date.parse(ev.starts_at) && n < Date.parse(ev.ends_at)) return ev;
+    }
+    return null;
+  }
+  function wpEventUpcoming() {
+    const ev = wpEvent.next;
+    return ev && wpEventNow() < Date.parse(ev.starts_at) ? ev : null;
+  }
+  function wpEventHm(iso) {
+    const p = new Intl.DateTimeFormat('pt-BR', { timeZone: WP_EVENT_TZ, hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date(iso));
+    const g = (t) => (p.find(x => x.type === t) || {}).value || '00';
+    return `${g('hour')}h${g('minute') === '00' ? '' : g('minute')}`;
+  }
+  function wpEventDay(iso) {
+    const day = (ms) => new Intl.DateTimeFormat('en-CA', { timeZone: WP_EVENT_TZ }).format(new Date(ms));
+    const d = day(Date.parse(iso)), today = day(wpEventNow()), tomorrow = day(wpEventNow() + 86400000);
+    if (d === today) return 'Hoje';
+    if (d === tomorrow) return 'Amanhã';
+    return new Intl.DateTimeFormat('pt-BR', { timeZone: WP_EVENT_TZ, day: '2-digit', month: '2-digit' }).format(new Date(iso));
+  }
+  function wpEventEmoji(ev) { return ev.kind === 'species' ? '🎯' : (ev.rarity === 'ultra_rara' ? '🌟' : '⚡'); }
+  function wpEventDesc(ev) {
+    if (ev.kind === 'species') return `${esc(ev.name || ev.slug)} aparece bem mais`;
+    return ev.rarity === 'ultra_rara' ? 'Pokémon ultra-raros aparecem bem mais' : 'Pokémon raros aparecem bem mais';
+  }
+  function wpEventFmtCount(ms) {
+    const s = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+    const mm = String(m).padStart(2, '0'), ss = String(r).padStart(2, '0');
+    return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+  }
+  function wpEventBannerHtml() {
+    const cur = wpEventCurrent(), up = cur ? null : wpEventUpcoming();
+    const ev = cur || up;
+    if (!ev) return '';
+    const sprite = ev.kind === 'species' && ev.dex ? `<img src="${wpSpriteUrl(ev.dex)}" alt="">` : `<span class="wp-ev-ic" aria-hidden="true">${wpEventEmoji(ev)}</span>`;
+    const hint = (wpHasClient() && wpUid()) ? '' : ' · entre na sua conta pra participar';
+    if (cur) {
+      return `<div class="wp-ev-banner wp-ev-live" role="status">${sprite}<div><b><span class="wp-ev-dot" aria-hidden="true"></span>AO VIVO · ${esc(ev.title)}</b><div class="wp-ev-sub">${wpEventDesc(ev)} · até ${wpEventHm(ev.ends_at)} · faltam <span class="wp-ev-count" data-t="${Date.parse(ev.ends_at)}">…</span>${hint}</div></div></div>`;
+    }
+    return `<div class="wp-ev-banner" role="status">${sprite}<div><b>${esc(ev.title)}</b><div class="wp-ev-sub">${wpEventDay(ev.starts_at)}, das ${wpEventHm(ev.starts_at)} às ${wpEventHm(ev.ends_at)} · ${wpEventDesc(ev)} · começa em <span class="wp-ev-count" data-t="${Date.parse(ev.starts_at)}">…</span></div></div></div>`;
+  }
+  function wpEventRenderBanners() {
+    const html = wpEventBannerHtml();
+    const slot = document.getElementById('inicio-wild-event-slot');
+    if (slot) slot.innerHTML = html;
+    document.querySelectorAll('.wp-ev-modal-banner').forEach(n => { n.innerHTML = html; });
+    wpEventTickUI();
+  }
+  function wpEventTickUI() {
+    document.querySelectorAll('.wp-ev-count').forEach(n => {
+      const left = Number(n.dataset.t) - wpEventNow();
+      n.textContent = wpEventFmtCount(left);
+      if (left <= 0 && !n.dataset.fired) { n.dataset.fired = '1'; setTimeout(wpEventRefresh, 1200); } // virou a hora: pergunta ao servidor
+    });
+  }
+
+  async function wpEventRefresh() {
+    if (!wpHasClient()) return;
+    try {
+      const { data, error } = await sbClient.rpc('wild_event_status');
+      if (error || !data) return;
+      wpEvent = { active: data.active || null, next: data.next || null, skew: Date.parse(data.now) - Date.now() };
+      const cur = wpEventCurrent();
+      if (cur && cur.id !== wpEventSeenId) {
+        wpEventSeenId = cur.id;
+        // quem já estava com o site aberto quando começou ganha o aviso + um Pokémon logo; quem abriu no meio só vê o banner
+        if (wpEventNow() - Date.parse(cur.starts_at) < 3 * 60 * 1000) {
+          wpToastRaw(wpEventEmoji(cur), `${esc(cur.title)} começou!`, true);
+          wpRescheduleBase(6000 + Math.random() * 6000);
+        } else {
+          wpRescheduleBase(WP_EVENT_INTERVAL_MS * (0.3 + Math.random() * 0.4));
+        }
+      }
+      // acorda no instante em que o próximo evento começa (o poll de 60 s sozinho atrasaria o aviso em até 1 min)
+      clearTimeout(wpEventRefreshTimer);
+      const up = wpEventUpcoming();
+      if (up) wpEventRefreshTimer = setTimeout(wpEventRefresh, Math.min(Date.parse(up.starts_at) - wpEventNow() + 1500, 2147000000));
+      wpEventRenderBanners();
+    } catch (e) { /* sem rede: segue sem banner */ }
+  }
+
+  // ── aba "Eventos" (só administrador) ──
+  function wpEventIsAdmin() { return typeof isAdminEditor === 'function' && isAdminEditor(); }
+  function wpEventNextHourLocal() {
+    const d = new Date(Date.now() + 3600000); d.setMinutes(0, 0, 0);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`;
+  }
+  async function wpRenderEventAdmin(container) {
+    if (!wpEventIsAdmin()) { container.innerHTML = ''; return; }
+    const speciesOpts = [...WP_KANTO151].sort((a, b) => a.d - b.d).map(m => `<option value="${m.s}">#${m.d} ${esc(m.n)}</option>`).join('');
+    container.innerHTML = `
+      <div class="wp-sub" style="margin-bottom:10px">Agende uma aparição extraordinária. Quem tem o site aberto recebe o banner, o aviso no sino (e push quando começa).</div>
+      <div class="wp-ev-form">
+        <label>O que vai aparecer<select id="wp-ev-kind"><option value="rarity:ultra_rara">Pokémon ultra-raro</option><option value="rarity:rara">Pokémon raro</option><option value="species">Pokémon específico</option></select></label>
+        <label id="wp-ev-sp-wrap" style="display:none">Pokémon<select id="wp-ev-sp">${speciesOpts}</select></label>
+        <label>Início<input type="datetime-local" id="wp-ev-start" value="${wpEventNextHourLocal()}"></label>
+        <label>Duração<select id="wp-ev-dur"><option value="30">30 minutos</option><option value="60" selected>1 hora</option><option value="120">2 horas</option><option value="180">3 horas</option></select></label>
+        <label>Intensidade<select id="wp-ev-boost"><option value="25">Leve (~10 por hora)</option><option value="40" selected>Normal (~16 por hora)</option><option value="60">Forte (~24 por hora)</option></select></label>
+      </div>
+      <div class="wp-ev-actions">
+        <button type="button" class="wp-bp-btn" id="wp-ev-go">Agendar</button>
+        <button type="button" class="wp-bp-btn" id="wp-ev-now">Começar agora</button>
+      </div>
+      <div id="wp-ev-list" class="wp-sub">Carregando…</div>`;
+    const kindSel = container.querySelector('#wp-ev-kind');
+    kindSel.addEventListener('change', () => { container.querySelector('#wp-ev-sp-wrap').style.display = kindSel.value === 'species' ? '' : 'none'; });
+
+    const create = async (startNow) => {
+      const [kind, rarity] = kindSel.value.split(':');
+      const startVal = container.querySelector('#wp-ev-start').value;
+      const startIso = startNow ? new Date().toISOString() : (startVal ? new Date(startVal).toISOString() : null);
+      if (!startIso) { wpToastRaw('⚠️', 'Escolha o horário de início.', false); return; }
+      const btns = container.querySelectorAll('.wp-ev-actions button'); btns.forEach(b => { b.disabled = true; });
+      const { error } = await sbClient.rpc('wild_event_create', {
+        p_kind: kind, p_rarity: rarity || null, p_slug: kind === 'species' ? container.querySelector('#wp-ev-sp').value : null,
+        p_starts_at: startIso, p_minutes: Number(container.querySelector('#wp-ev-dur').value), p_boost: Number(container.querySelector('#wp-ev-boost').value),
+      });
+      btns.forEach(b => { b.disabled = false; });
+      if (error) { wpToastRaw('⚠️', esc(error.message), false); return; }
+      wpToastRaw('✅', startNow ? 'Evento começou!' : 'Evento agendado — o aviso já foi pro sino de todo mundo.', true);
+      await wpEventRefresh();
+      loadList();
+    };
+    container.querySelector('#wp-ev-go').addEventListener('click', () => create(false));
+    container.querySelector('#wp-ev-now').addEventListener('click', () => create(true));
+
+    const loadList = async () => {
+      const box = container.querySelector('#wp-ev-list');
+      const { data, error } = await sbClient.rpc('wild_event_list_admin');
+      if (error) { box.textContent = 'Não foi possível carregar a lista.'; return; }
+      if (!data || !data.length) { box.textContent = 'Nenhum evento agendado.'; return; }
+      box.innerHTML = data.map(ev => {
+        const live = Date.parse(ev.starts_at) <= wpEventNow() && wpEventNow() < Date.parse(ev.ends_at);
+        const past = Date.parse(ev.ends_at) <= wpEventNow();
+        return `<div class="wp-ev-row"><span>${wpEventEmoji(ev)} <b>${esc(ev.title)}</b><br>${wpEventDay(ev.starts_at)}, ${wpEventHm(ev.starts_at)}–${wpEventHm(ev.ends_at)} · ${ev.boost_pct}% · ${live ? '🔴 ao vivo' : (past ? 'encerrado' : 'agendado')}</span>${past ? '' : `<button type="button" class="wp-bp-btn wp-bp-btn-danger" data-cancel="${ev.id}">Cancelar</button>`}</div>`;
+      }).join('');
+      box.querySelectorAll('[data-cancel]').forEach(b => b.addEventListener('click', async () => {
+        if (!confirm('Cancelar este evento? O aviso ainda não lido some do sino de todo mundo.')) return;
+        const { error: e2 } = await sbClient.rpc('wild_event_cancel', { p_id: Number(b.dataset.cancel) });
+        if (e2) { wpToastRaw('⚠️', esc(e2.message), false); return; }
+        await wpEventRefresh();
+        loadList();
+      }));
+    };
+    loadList();
+  }
+
   // ── Timer base ───────────────────────────────────────────────
   // Intervalo médio derivado direto da cadência diária (384 aparições/dia
   // no total, distribuídas por raridade em wpPickMon). No modo teste, o
@@ -1789,15 +1976,19 @@
     }
   });
 
-  function wpScheduleBase() {
+  let wpBaseTimer = null;
+  function wpScheduleBase(firstDelayMs) {
+    clearTimeout(wpBaseTimer);
     const jitter = 0.5 + Math.random(); // 0.5x–1.5x pra não ficar num ritmo mecânico
-    const intervalMs = WP_AVG_INTERVAL_MS * jitter;
-    setTimeout(() => {
+    // 17/10/2026 (pacote D): durante um evento de aparição o intervalo cai pra ~90 s
+    const intervalMs = firstDelayMs != null ? firstDelayMs : (wpEventCurrent() ? WP_EVENT_INTERVAL_MS : WP_AVG_INTERVAL_MS) * jitter;
+    wpBaseTimer = setTimeout(() => {
       wpSpawn(1);
-      wpMaybeGrantBallFromUsage(WP_TEST_MODE ? 0.03 : 0.06);
+      if (!wpEventCurrent()) wpMaybeGrantBallFromUsage(WP_TEST_MODE ? 0.03 : 0.06); // no evento o intervalo é curto: sem chance extra de bola
       wpScheduleBase();
     }, intervalMs);
   }
+  function wpRescheduleBase(delayMs) { wpScheduleBase(delayMs); }
 
   // ── Hook em window.go (troca de aba) — mesmo padrão de xp_system.js ──
   // Chance extra (bônus por interação), independente da cadência base acima.
@@ -1822,6 +2013,11 @@
     wpBuildBadge();
     wpBuildArenaButton();
     wpScheduleBase();
+    // 17/10/2026 (pacote D): banner/cadência dos eventos de aparição — consulta no boot, a cada 60 s e ao voltar pra aba
+    setTimeout(wpEventRefresh, 1200);
+    setInterval(() => { if (!document.hidden) wpEventRefresh(); }, 60000);
+    setInterval(wpEventTickUI, 1000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) wpEventRefresh(); });
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', wpInit);
