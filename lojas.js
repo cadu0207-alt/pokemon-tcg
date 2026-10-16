@@ -791,14 +791,14 @@ async function renderAdminPanel() {
         return (
         '<div class="ml-term-card">' +
           '<div class="ml-term-hdr">' +
-            '<span class="ml-term-name">' + (t.featured ? '🔥 ' : '🔎 ') + (t.label || t.term) + '</span>' +
+            '<span class="ml-term-name">' + (t.featured ? '🔥 ' : '🔎 ') + esc(t.label || t.term) + '</span>' +
             '<span class="ml-term-actions">' +
               '<button class="btn-mini" onclick="runSearchForTerm(' + JSON.stringify(t).replace(/"/g, '&quot;') + ', document.getElementById(\'res-' + t.id + '\'))">Buscar agora</button>' +
               '<button class="btn-mini' + (t.featured ? ' btn-mini-active' : '') + '" onclick="toggleFeatured(' + t.id + ',' + (!!t.featured) + ')">' + (t.featured ? '★ Destaque' : '☆ Destacar') + '</button>' +
               '<button class="btn-mini btn-mini-danger" onclick="removeSearchTerm(' + t.id + ')">✕</button>' +
             '</span>' +
           '</div>' +
-          '<div class="ml-term-sub">catálogo: <code>' + (t.catalog_product_id || t.term) + '</code>' +
+          '<div class="ml-term-sub">catálogo: <code>' + esc(t.catalog_product_id || t.term) + '</code>' +
             ' · <a href="https://www.mercadolivre.com.br/p/' + (t.catalog_product_id || '') + '" target="_blank" rel="noopener">ver no ML →</a></div>' +
           '<div class="ml-aff-row">' +
             '<input id="aff-' + t.id + '" placeholder="Cole aqui o link meli.la gerado" value="' + (t.affiliate_url || '') + '">' +

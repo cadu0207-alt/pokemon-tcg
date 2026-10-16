@@ -3986,3 +3986,17 @@ body.inicio-modal-open { overflow: hidden; }
 @keyframes aucflash { 0% { background: rgba(247,183,49,.55); } 100% { background: transparent; } }
 .auc-flash { animation: aucflash 1.3s ease-out; border-radius: 4px; }
 @media (prefers-reduced-motion: reduce) { .auc-flash { animation: none; } }
+
+/* Painel Admin — Visão Geral (17/10/2026) */
+.admin-ov-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-bottom: 6px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); cursor: pointer; font-size: 13px; }
+.admin-ov-row:hover, .admin-ov-row:focus-visible { border-color: var(--accent); outline: none; }
+.admin-ov-n { min-width: 30px; text-align: center; font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--accent); }
+.admin-ov-go { margin-left: auto; font-size: 11px; color: var(--muted); }
+.admin-ov-ok { padding: 12px; border: 1px dashed var(--border); border-radius: 10px; color: var(--muted); font-size: 13px; }
+.admin-ov-health > div { padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; line-height: 1.5; }
+.admin-ov-pill { display: inline-block; min-width: 54px; text-align: center; padding: 1px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; margin-right: 6px; }
+.admin-ov-pill.ok { background: rgba(6,163,127,.15); color: var(--teal); }
+.admin-ov-pill.bad { background: rgba(230,57,70,.15); color: var(--accent); }
+.admin-ov-details { margin-top: 10px; font-size: 12px; }
+.admin-ov-details summary { cursor: pointer; color: var(--muted); }
+.admin-ov-bad td { color: var(--accent); }

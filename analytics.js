@@ -206,6 +206,50 @@ async function renderAdminSetDistribution() {
 }
 
 // ── PAINEL ADMIN: USUÁRIOS ──────────────────────────────────────────
+// Lista de usuários (17/10/2026): ordena clicando no cabeçalho e mostra 25 por vez ("mostrar mais") — com 200+ contas a
+// tabela inteira virava uma rolagem enorme, sem como achar quem voltou recentemente ou quem tem mais cartas.
+let adminUsersRows = [], adminUsersSort = { key: 'last_seen', dir: -1 }, adminUsersLimit = 25, adminUsersQuery = '';
+
+function adminUsersFiltered() {
+  const q = adminUsersQuery.trim().toLowerCase();
+  const rows = adminUsersRows.filter(function (u) { return !q || String(u.email || '').toLowerCase().indexOf(q) !== -1; });
+  const k = adminUsersSort.key, d = adminUsersSort.dir;
+  rows.sort(function (a, b) {
+    let x = a[k], y = b[k];
+    if (k === 'last_seen' || k === 'signed_up_at') { x = x ? new Date(x).getTime() : 0; y = y ? new Date(y).getTime() : 0; }
+    else if (k === 'email') { x = String(x || '').toLowerCase(); y = String(y || '').toLowerCase(); return x < y ? -d : (x > y ? d : 0); }
+    else { x = +x || 0; y = +y || 0; }
+    return (x - y) * d;
+  });
+  return rows;
+}
+
+function adminUsersRender() {
+  const holder = document.getElementById('admin-userlist-body');
+  if (!holder) return;
+  const all = adminUsersFiltered();
+  const rows = all.slice(0, adminUsersLimit);
+  const arrow = function (k) { return adminUsersSort.key === k ? (adminUsersSort.dir === 1 ? ' ▲' : ' ▼') : ''; };
+  const th = function (k, label) { return '<th style="cursor:pointer" onclick="adminUsersSortBy(\'' + k + '\')">' + label + arrow(k) + '</th>'; };
+  const rowsHtml = rows.map(function (u) {
+    const signup = u.signed_up_at ? new Date(u.signed_up_at).toLocaleDateString('pt-BR') : '-';
+    const lastSeen = u.last_seen ? new Date(u.last_seen).toLocaleDateString('pt-BR') : 'nunca voltou';
+    return '<tr><td>' + esc(u.email || '(sem e-mail)') + '</td><td>' + signup + '</td><td>' + lastSeen + '</td><td>' + (u.cards_collected ?? 0) + '</td><td>' + (u.purchases_count ?? 0) + '</td></tr>';
+  }).join('');
+  holder.innerHTML =
+    '<div style="overflow-x:auto"><table class="admin-users-table" id="admin-users-table"><thead><tr>' +
+      th('email', 'E-mail') + th('signed_up_at', 'Cadastro') + th('last_seen', 'Última visita') + th('cards_collected', 'Cartas') + th('purchases_count', 'Compras') +
+    '</tr></thead><tbody>' + (rowsHtml || '<tr><td colspan="5">Nenhum usuário encontrado.</td></tr>') + '</tbody></table></div>' +
+    '<div class="admin-stats-loading" style="margin-top:8px">Mostrando ' + rows.length + ' de ' + all.length +
+      (all.length > rows.length ? ' · <a href="#" onclick="adminUsersMore();return false">mostrar mais 25</a>' : '') + '</div>';
+}
+function adminUsersSortBy(key) {
+  adminUsersSort = { key: key, dir: adminUsersSort.key === key ? -adminUsersSort.dir : (key === 'email' ? 1 : -1) };
+  adminUsersLimit = 25;
+  adminUsersRender();
+}
+function adminUsersMore() { adminUsersLimit += 25; adminUsersRender(); }
+
 async function renderAdminUserList() {
   const holder = document.getElementById('admin-userlist-wrap');
   if (!holder) return;
@@ -217,46 +261,28 @@ async function renderAdminUserList() {
   if (error) {
     holder.innerHTML =
       '<div class="sec-title" style="margin-top:28px">👥 Usuários</div>' +
-      '<div class="admin-stats-loading">Erro ao carregar — rodou o analytics_setup.sql no Supabase? (' + error.message + ')</div>';
+      '<div class="admin-stats-loading">Erro ao carregar — rodou o analytics_setup.sql no Supabase? (' + esc(error.message) + ')</div>';
     return;
   }
 
-  const rows = data || [];
-  if (!rows.length) {
+  adminUsersRows = data || [];
+  adminUsersLimit = 25; adminUsersQuery = '';
+  if (!adminUsersRows.length) {
     holder.innerHTML = '<div class="sec-title" style="margin-top:28px">👥 Usuários</div><div class="admin-stats-loading">Nenhum usuário ainda.</div>';
     return;
   }
 
-  const rowsHtml = rows.map(function(u) {
-    const signup = u.signed_up_at ? new Date(u.signed_up_at).toLocaleDateString('pt-BR') : '-';
-    const lastSeen = u.last_seen ? new Date(u.last_seen).toLocaleDateString('pt-BR') : 'nunca voltou';
-    return (
-      '<tr>' +
-        '<td>' + (u.email || '(sem e-mail)') + '</td>' +
-        '<td>' + signup + '</td>' +
-        '<td>' + lastSeen + '</td>' +
-        '<td>' + (u.cards_collected ?? 0) + '</td>' +
-        '<td>' + (u.purchases_count ?? 0) + '</td>' +
-      '</tr>'
-    );
-  }).join('');
-
   holder.innerHTML =
-    '<div class="sec-title" style="margin-top:28px">👥 Usuários <span style="opacity:.6;font-size:11px">(' + rows.length + ')</span></div>' +
-    '<input id="admin-userlist-search" placeholder="🔎 Filtrar por e-mail..." style="width:100%;box-sizing:border-box;margin:8px 0 12px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text)" oninput="filterAdminUserList(this.value)">' +
-    '<div style="overflow-x:auto"><table class="admin-users-table" id="admin-users-table">' +
-      '<thead><tr><th>E-mail</th><th>Cadastro</th><th>Última visita</th><th>Cartas</th><th>Compras</th></tr></thead>' +
-      '<tbody>' + rowsHtml + '</tbody>' +
-    '</table></div>';
+    '<div class="sec-title" style="margin-top:28px">👥 Usuários <span style="opacity:.6;font-size:11px">(' + adminUsersRows.length + ')</span></div>' +
+    '<input id="admin-userlist-search" placeholder="🔎 Filtrar por e-mail..." oninput="filterAdminUserList(this.value)" style="width:100%;box-sizing:border-box;margin:8px 0 12px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit">' +
+    '<div id="admin-userlist-body"></div>';
+  adminUsersRender();
 }
 
 function filterAdminUserList(query) {
-  const q = (query || '').trim().toLowerCase();
-  const rows = document.querySelectorAll('#admin-users-table tbody tr');
-  rows.forEach(function(tr) {
-    const email = (tr.children[0] && tr.children[0].textContent || '').toLowerCase();
-    tr.style.display = (!q || email.indexOf(q) !== -1) ? '' : 'none';
-  });
+  adminUsersQuery = query || '';
+  adminUsersLimit = 25;
+  adminUsersRender();
 }
 
 // ── HOOKS ────────────────────────────────────────────────────────

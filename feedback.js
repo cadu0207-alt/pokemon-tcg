@@ -26,7 +26,7 @@ async function renderFeedbackBar() {
     const r = mine[0];
     holder.innerHTML =
       '<div class="feedback-reply-bar">' +
-        '<span>💬 <strong>Eduardo respondeu sua mensagem:</strong> "' + r.reply + '"</span>' +
+        '<span>💬 <strong>Eduardo respondeu sua mensagem:</strong> "' + esc(r.reply) + '"</span>' +
         '<button class="btn-mini" onclick="ackFeedbackReply(' + r.id + ')">OK, entendi</button>' +
       '</div>';
     return;
@@ -95,12 +95,12 @@ async function renderAdminFeedback() {
     return (
       '<div class="feedback-msg-card">' +
         '<div class="feedback-msg-hdr">' +
-          '<span class="feedback-msg-user">👤 ' + (m.user_email || 'usuário') + '</span>' +
+          '<span class="feedback-msg-user">👤 ' + esc(m.user_email || 'usuário') + '</span>' +
           '<span class="feedback-msg-date">' + dt + '</span>' +
         '</div>' +
-        '<div class="feedback-msg-text">' + m.message + '</div>' +
+        '<div class="feedback-msg-text">' + esc(m.message) + '</div>' +
         (m.reply
-          ? '<div class="feedback-msg-reply"><strong>Sua resposta</strong> (' + replyDt + '): ' + m.reply + '</div>'
+          ? '<div class="feedback-msg-reply"><strong>Sua resposta</strong> (' + replyDt + '): ' + esc(m.reply) + '</div>'
           : '') +
         '<div class="feedback-reply-row">' +
           '<input id="reply-input-' + m.id + '" placeholder="' + (m.reply ? 'Atualizar resposta...' : 'Responder pro usuário...') + '" value="">' +

@@ -32,7 +32,7 @@ async function renderAdminStats() {
     { label: 'Usuarios cadastrados', value: s.total_users ?? '-', icon: '01' },
     { label: 'Cadastros (7 dias)', value: s.signups_7d ?? '-', icon: '02' },
     { label: 'Cadastros (30 dias)', value: s.signups_30d ?? '-', icon: '03' },
-    { label: 'Usuarios ativos', value: s.active_users ?? '-', icon: '04' },
+    { label: 'Com fichário (≥1 carta)', value: s.active_users ?? '-', icon: '04' }, // era "Usuarios ativos": contava só quem tem carta no fichário (atividade real: Visão Geral)
     { label: 'Cartas coletadas (total)', value: s.total_cards_collected ?? '-', icon: '05' },
     { label: 'Compras registradas', value: s.total_purchases ?? '-', icon: '06' },
     { label: 'Produtos rastreados (ML)', value: s.tracked_products ?? '-', icon: '07' },

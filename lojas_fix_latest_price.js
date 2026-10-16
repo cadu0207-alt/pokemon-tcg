@@ -26,8 +26,10 @@
 
 function renderProductCard(term, history, featured, coupon, rules, dealScore) {
   const latest = latestRecord(history);
-  const label = term.label || term.term;
-  const linkUrl = term.affiliate_url || (latest ? latest.url : null);
+  // 17/10/2026 (segurança): o nome vem do cadastro/ML e as URLs do ML — escapa o texto e só aceita https nos links/imagens
+  const label = esc(term.label || term.term);
+  const safeUrl = function (u) { return (typeof u === 'string' && /^https:\/\//i.test(u)) ? u.replace(/"/g, '%22') : null; };
+  const linkUrl = safeUrl(term.affiliate_url) || (latest ? safeUrl(latest.url) : null);
 
   const collectionAttr = ' data-collection="' + (term.collection || '').replace(/"/g, '&quot;') + '"';
   const scoreAttr = ' data-deal-score="' + (dealScore == null ? '' : dealScore) + '"';
@@ -45,7 +47,7 @@ function renderProductCard(term, history, featured, coupon, rules, dealScore) {
   }
 
   const updatedStr = latest.found_at ? new Date(latest.found_at).toLocaleDateString('pt-BR') : '';
-  const imgSrc = term.image_url || latest.thumbnail;
+  const imgSrc = safeUrl(term.image_url) || safeUrl(latest.thumbnail) || '';
 
   // Compara o cupom vinculado direto ao produto (manual) com a melhor
   // regra geral aplicável ao preço — usa o que der mais desconto.
@@ -88,7 +90,7 @@ function renderProductCard(term, history, featured, coupon, rules, dealScore) {
       )
     : '<div class="product-price">R$ ' + fmtBRLLoja(latest.price) + '</div>';
   return (
-    '<a class="product-card' + (featured ? ' product-card-featured' : '') + '"' + collectionAttr + scoreAttr + ' href="' + linkUrl + '" target="_blank" rel="noopener' + (term.affiliate_url ? ' sponsored' : '') + '">' +
+    '<a class="product-card' + (featured ? ' product-card-featured' : '') + '"' + collectionAttr + scoreAttr + ' href="' + (linkUrl || '#') + '" target="_blank" rel="noopener' + (term.affiliate_url ? ' sponsored' : '') + '">' +
       (featured ? '<div class="product-badge">🔥 OFERTA IMPERDÍVEL</div>' : '') +
       '<img class="product-img" src="' + imgSrc + '" alt="' + label + '">' +
       '<div class="product-info">' +

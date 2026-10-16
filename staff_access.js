@@ -90,13 +90,13 @@ async function renderStaffAccessPanel() {
     return (
       '<div class="ml-term-card" data-staff-row="' + s.uid + '">' +
         '<div class="ml-term-hdr">' +
-          '<span class="ml-term-name">👤 ' + (s.display_name || s.email) + '</span>' +
+          '<span class="ml-term-name">👤 ' + esc(s.display_name || s.email) + '</span>' +
           '<span class="ml-term-actions">' +
             '<button class="btn-mini" onclick="saveStaffPermissions(\'' + s.uid + '\')">Salvar permissões</button>' +
             '<button class="btn-mini btn-mini-danger" onclick="removeStaffMember(\'' + s.uid + '\')">Remover</button>' +
           '</span>' +
         '</div>' +
-        '<div class="ml-term-sub">' + s.email + ' · vê tudo na aba Admin' + ((s.permissions || []).length ? '' : ' (só visualização — nenhuma permissão marcada)') + '</div>' +
+        '<div class="ml-term-sub">' + esc(s.email) + ' · vê tudo na aba Admin' + ((s.permissions || []).length ? '' : ' (só visualização — nenhuma permissão marcada)') + '</div>' +
         '<div class="staff-perm-grid">' + checks + '</div>' +
       '</div>'
     );

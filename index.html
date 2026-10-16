@@ -1680,6 +1680,15 @@
     <!-- SEÇÕES COLAPSÁVEIS (23/08/2026) — ver admin_panel.js/toggleAdminSection.
          Cada bloco nasce fechado, exceto os que tiverem pendência (badge > 0);
          o estado que o Eduardo escolher manualmente fica salvo em localStorage. -->
+    <!-- 17/10/2026: visão geral — pendências de todos os módulos, atividade real e saúde do sistema (admin_overview.js) -->
+    <div class="admin-section" id="asec-overview">
+      <div class="admin-section-hdr" onclick="toggleAdminSection('overview')">
+        <span class="admin-section-hdr-left"><span class="admin-section-caret">▶</span>🧭 Visão Geral — Pendências e Saúde</span>
+        <span class="admin-section-badge" id="asec-badge-overview"></span>
+      </div>
+      <div class="admin-section-body"><div id="admin-overview-wrap"></div></div>
+    </div>
+
     <div class="admin-section" id="asec-staff">
       <div class="admin-section-hdr" onclick="toggleAdminSection('staff')">
         <span class="admin-section-hdr-left"><span class="admin-section-caret">▶</span>👥 Equipe — Acesso Admin</span>
@@ -2211,6 +2220,7 @@ window.loadJsPdf=function(){
 <script defer src="iniciantes.js"></script>
 <script defer src="centralizacao.js"></script>
 <script defer src="admin_stats.js"></script>
+<script defer src="admin_overview.js"></script>
 <script defer src="feedback.js"></script>
 <script defer src="updates.js"></script>
 <script defer src="inicio.js"></script>

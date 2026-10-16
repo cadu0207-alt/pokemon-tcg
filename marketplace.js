@@ -111,15 +111,15 @@ function mktStoreCard(s,{pending}={}){
   const canEdit=typeof hasPerm==='function'&&hasPerm('marketplace');
   return`<div class="mkt-store-card">
     <div class="mkt-store-top">
-      <div class="mkt-store-name">${s.nome_fantasia}</div>
-      <span class="mkt-store-badge mkt-badge-${s.status}">${s.status}</span>
+      <div class="mkt-store-name">${esc(s.nome_fantasia)}</div>
+      <span class="mkt-store-badge mkt-badge-${esc(s.status)}">${esc(s.status)}</span>
     </div>
-    <div class="mkt-store-meta">${s.cidade} — ${s.uf} · CNPJ ${s.cnpj}</div>
-    ${s.logradouro?`<div class="mkt-store-meta">${s.logradouro}</div>`:''}
-    <div class="mkt-store-meta">Comissão: ${s.comissao_pct}% ${s.whatsapp?` · 📱 ${s.whatsapp}`:''}</div>
+    <div class="mkt-store-meta">${esc(s.cidade)} — ${esc(s.uf)} · CNPJ ${esc(s.cnpj)}</div>
+    ${s.logradouro?`<div class="mkt-store-meta">${esc(s.logradouro)}</div>`:''}
+    <div class="mkt-store-meta">Comissão: ${esc(s.comissao_pct)}% ${s.whatsapp?` · 📱 ${esc(s.whatsapp)}`:''}</div>
     ${pending&&canEdit?`<div style="display:flex;gap:8px;margin-top:10px">
-      <button class="btn-add" style="padding:5px 10px;font-size:10px" onclick="approveStore('${s.id}')">✓ Aprovar</button>
-      <button class="cv-item-remove" onclick="rejectStore('${s.id}')">Rejeitar</button>
+      <button class="btn-add" style="padding:5px 10px;font-size:10px" onclick="approveStore('${esc(s.id)}')">✓ Aprovar</button>
+      <button class="cv-item-remove" onclick="rejectStore('${esc(s.id)}')">Rejeitar</button>
     </div>`:''}
   </div>`;
 }
