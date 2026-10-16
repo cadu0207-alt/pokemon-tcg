@@ -533,7 +533,7 @@ function mkConfigTabHtml() {
     '</div>' +
     '<label class="mk-check"><input type="checkbox" id="mkc-pickup_enabled"' + (s.pickup_enabled ? ' checked' : '') + '> Aceito retirada em mãos</label>' +
     f('pickup_note', 'Onde / como retirar', s.pickup_note) +
-    '<label class="mk-f"><span>Política de trocas e devoluções</span><textarea id="mkc-return_policy" rows="3" maxlength="2000">' + mkEsc(s.return_policy || '') + '</textarea></label>' +
+    '<label class="mk-f"><span>Política de trocas e devoluções</span><textarea id="mkc-return_policy" rows="6" maxlength="8000">' + mkEsc(s.return_policy || '') + '</textarea></label>' +
     (mk.isAdmin ? '<h4 class="mk-sub">Administração do MyDeck</h4><div class="mk-f-row">' +
         '<label class="mk-f"><span>Situação da loja</span><select id="mkc-status">' + ['pendente', 'ativa', 'pausada', 'suspensa'].map(function (x) { return '<option value="' + x + '"' + (s.status === x ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label>' +
         '<label class="mk-f"><span>Comissão do MyDeck (%)</span><input id="mkc-commission_pct" type="number" min="0" max="50" step="0.5" value="' + (s.commission_pct == null ? 5 : s.commission_pct) + '"></label></div>'

@@ -46,9 +46,14 @@ export function buildEmail(n: EmailSource): { subject: string; html: string; tex
   const link = SITE_URL + path;
   const prefsLink = SITE_URL + '/?notif=prefs';
   const subject = card ? `${n.title} — ${card}` : n.title;
-  const cta = n.type === 'auction_outbid' ? 'Dar um novo lance'
+  // 17/10/2026: pedidos da Loja Toybox (mk_order_new → equipe da loja) usam o mesmo modelo, com outra marca/rodapé
+  const isMk = n.type === 'mk_order_new';
+  const cta = isMk ? 'Abrir pedidos da loja'
+    : n.type === 'auction_outbid' ? 'Dar um novo lance'
     : n.type === 'auction_won' ? 'Ver meu pedido e pagar'
     : 'Ver o leilão';
+  const brand = isMk ? 'MyDeck &middot; Loja Toybox' : 'MyDeck &middot; Leilão';
+  const why = isMk ? 'faz parte da equipe da Loja Toybox no MyDeck' : 'participou de um leilão no MyDeck';
   const body = n.body ?? '';
 
   const html = `<!doctype html>
@@ -57,21 +62,21 @@ export function buildEmail(n: EmailSource): { subject: string; html: string; tex
 <div style="display:none;max-height:0;overflow:hidden">${escapeHtml(body)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f0f1f6;padding:24px 12px"><tr><td align="center">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;overflow:hidden">
-    <tr><td style="background:#e63946;padding:16px 24px;color:#ffffff;font-size:18px;font-weight:bold">MyDeck &middot; Leilão</td></tr>
+    <tr><td style="background:#e63946;padding:16px 24px;color:#ffffff;font-size:18px;font-weight:bold">${brand}</td></tr>
     <tr><td style="padding:24px">
       <h1 style="margin:0 0 12px;font-size:20px;line-height:1.3">${escapeHtml(n.title)}</h1>
       <p style="margin:0 0 20px;font-size:15px;line-height:1.55">${escapeHtml(body)}</p>
       <a href="${escapeHtml(link)}" style="display:inline-block;background:#06a37f;color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:12px 22px;border-radius:8px">${cta}</a>
     </td></tr>
     <tr><td style="padding:16px 24px;border-top:1px solid #dcdfe8;font-size:12px;line-height:1.5;color:#676d84">
-      Você recebe este e-mail porque participou de um leilão no MyDeck.
+      Você recebe este e-mail porque ${why}.
       Para parar de receber, <a href="${escapeHtml(prefsLink)}" style="color:#676d84">desative os avisos por e-mail</a>.
     </td></tr>
   </table>
 </td></tr></table>
 </body></html>`;
 
-  const text = `${n.title}\n\n${body}\n\n${cta}: ${link}\n\n---\nVocê recebe este e-mail porque participou de um leilão no MyDeck.\nPara parar de receber: ${prefsLink}\n`;
+  const text = `${n.title}\n\n${body}\n\n${cta}: ${link}\n\n---\nVocê recebe este e-mail porque ${why.replace('&middot;', '·')}.\nPara parar de receber: ${prefsLink}\n`;
   return { subject, html, text };
 }
 

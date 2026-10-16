@@ -93,7 +93,9 @@ const DEFAULT_FROM = 'MyDeck Leilão <leilao@mydecktcg.com.br>';
 // Resend e arriscaria spam. Tipo novo nasce SEM e-mail até entrar aqui.
 // auction_won = "você ganhou" (quem precisa pagar); auction_ending ("encerra em
 // breve") fica de fora de propósito: só sino + push.
-const EMAIL_TYPES = new Set(['auction_outbid', 'auction_closed', 'auction_won']);
+// mk_order_new (17/10/2026): avisos de pedido da Loja Toybox pra equipe da loja (novo pedido, pagamento confirmado, divergências).
+// Só quem é da equipe recebe esse tipo (mk_notify_members); a preferência de e-mail de cada um continua valendo.
+const EMAIL_TYPES = new Set(['auction_outbid', 'auction_closed', 'auction_won', 'mk_order_new']);
 // plano gratuito da Resend: 2 requisições/segundo
 const EMAIL_SPACING_MS = 600;
 

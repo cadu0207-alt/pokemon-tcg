@@ -269,3 +269,53 @@ body.mk-modal-open { overflow: hidden; }
 .mk-ord-line { color: var(--text2); margin: 2px 0; }
 .mk-ord-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .mk-row-actions-inline { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ── Carrinho da Loja Toybox (17/10/2026) ───────────────────────────────────────────── */
+.mk-card-img { position: relative; }
+.mk-add-btn { position: absolute; right: 8px; bottom: 8px; width: 34px; height: 34px; border-radius: 50%; border: 0; background: #16a34a; color: #fff; font-size: 20px; line-height: 1; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; }
+.mk-add-btn:hover, .mk-add-btn:focus-visible { background: #15803d; outline: 2px solid #fff; }
+.mk-add-cart { margin-bottom: 8px; border: 0; width: 100%; cursor: pointer; font-family: inherit; }
+.mk-cart-hero { position: relative; }
+.mk-cart-badge { display: inline-block; min-width: 18px; margin-left: 6px; padding: 0 5px; border-radius: 99px; background: #e63946; color: #fff; font-size: 11px; line-height: 18px; text-align: center; }
+.mk-cart-badge[hidden] { display: none; }
+.mk-cart-bar { position: sticky; bottom: 10px; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; padding: 10px 14px; border-radius: 12px; background: #14516a; color: #fff; box-shadow: 0 4px 16px rgba(0,0,0,.35); font-size: 14px; }
+.mk-cart-bar[hidden] { display: none; }
+.mk-cart-bar-btn { border: 0; border-radius: 99px; padding: 7px 14px; background: #fff; color: #14516a; font-weight: 800; cursor: pointer; font-family: inherit; }
+.mk-cart-h { margin: 0 0 12px; font-size: 18px; }
+.mk-cart-n { font-weight: 400; color: var(--muted); font-size: 13px; }
+.mk-cart-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.mk-cart-row { display: grid; grid-template-columns: 52px 1fr auto auto auto; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--border); border-radius: 10px; }
+.mk-cart-img { width: 52px; height: 52px; border-radius: 8px; overflow: hidden; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 22px; }
+.mk-cart-img img { width: 100%; height: 100%; object-fit: cover; }
+.mk-cart-t { font-size: 13px; font-weight: 700; line-height: 1.3; }
+.mk-cart-p { font-size: 11px; color: var(--muted); }
+.mk-cart-low { color: #e63946; }
+.mk-cart-qty { display: flex; align-items: center; gap: 6px; }
+.mk-cart-qty button { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; font-size: 16px; line-height: 1; }
+.mk-cart-qty button:disabled { opacity: .35; cursor: not-allowed; }
+.mk-cart-sub { font-weight: 700; font-size: 13px; min-width: 70px; text-align: right; }
+.mk-cart-x { border: 0; background: transparent; cursor: pointer; font-size: 15px; }
+.mk-cart-total { display: flex; justify-content: space-between; padding: 6px 2px; font-size: 14px; }
+.mk-cart-total b { font-size: 16px; }
+.mk-cart-total-sub { color: var(--muted); font-size: 13px; padding-top: 0; }
+.mk-cart-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.mk-cart-clear { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; text-decoration: underline; font-family: inherit; }
+@media (max-width: 560px) {
+  .mk-cart-row { grid-template-columns: 44px 1fr auto; }
+  .mk-cart-row .mk-cart-qty { grid-column: 2; }
+  .mk-cart-row .mk-cart-sub { grid-column: 3; grid-row: 1; }
+  .mk-cart-row .mk-cart-x { grid-column: 3; grid-row: 2; }
+  .mk-cart-img { width: 44px; height: 44px; }
+}
+
+/* ── texto do lojista em Markdown (17/10/2026) ── */
+.mk-md p { margin: 0 0 8px; }
+.mk-md h4 { margin: 12px 0 4px; font-size: 14px; }
+.mk-md ul { margin: 0 0 8px; padding-left: 20px; }
+.mk-md li { margin: 2px 0; }
+.mk-hero-desc.mk-md { cursor: pointer; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.mk-hero-desc.mk-md p { margin: 0 0 4px; }
+.mk-hero-desc.mk-md.mk-open { display: block; }
+.mk-policy > summary { cursor: pointer; }
+.mk-policy .mk-md { max-height: 340px; overflow: auto; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 12.5px; line-height: 1.55; }
+.mk-note-ok { background: rgba(22,163,74,.14); border: 1px solid rgba(22,163,74,.4); color: var(--text); }

@@ -66,7 +66,7 @@ async function mkQuoteShip(pid) {
   if (!document.getElementById('mk-ship-out')) return;
   if (!r.ok) { out.innerHTML = '<span class="mk-ship-err">' + mkEsc(r.error || 'Não consegui calcular.') + '</span>'; return; }
   if (!r.options.length) {
-    out.innerHTML = '<span class="mk-ship-err">A loja ainda não tem frete automático configurado. Combine o envio pelo WhatsApp.</span>'; return;
+    out.innerHTML = '<span class="mk-ship-err">' + mkEsc(typeof mkShipEmptyMessage === 'function' ? mkShipEmptyMessage(r) : 'A loja ainda não tem frete automático configurado. Combine o envio pelo WhatsApp.') + '</span>'; return;
   }
   out.innerHTML = '<ul class="mk-ship-list">' + r.options.map(function (o) { return '<li>' + mkEsc(mkShipLabel(o)) + '</li>'; }).join('') + '</ul>' +
     '<div class="mk-prod-hint">Para 1 unidade. Postagem em até ' + mkEsc(r.handling_days) + ' dias úteis após o pagamento.</div>';
@@ -82,18 +82,36 @@ function mkBuyBtnHtml(p) {
 window.mkBuyBtnHtml = mkBuyBtnHtml; window.mkShipBoxHtml = mkShipBoxHtml;
 
 // ══════════════════ checkout ══════════════════
+// 17/10/2026: o checkout agora trabalha com uma LISTA de itens (antes, um produto só). "Comprar pelo site" na página do
+// produto abre com 1 item; "Finalizar compra" no carrinho abre com o carrinho inteiro (o servidor e o banco já aceitavam
+// até 20 itens por pedido).
 function mkOpenCheckout(pid) {
+  const p = mk.products.find(function (x) { return x.id === pid; });
+  if (!p) return;
+  mkStartCheckout([{ p: p, qty: 1 }], false);
+}
+function mkOpenCartCheckout() {
+  const r = typeof mkCartResolve === 'function' ? mkCartResolve() : { lines: [] };
+  if (!r.lines.length) { mkToast('Seu carrinho está vazio.', true); return; }
+  mkStartCheckout(r.lines.map(function (l) { return { p: l.p, qty: l.qty }; }), true);
+}
+function mkCartCheckoutBtnHtml() {   // botão "Finalizar compra" dentro do carrinho (só com o checkout liberado)
+  const s = mk.seller;
+  if (!s || !s.checkout_enabled || mk.isMember) return '';
+  return '<button type="button" class="mk-buy-btn mk-buy-site" style="border:0;cursor:pointer;font-family:inherit" onclick="mkOpenCartCheckout()">🛒 Finalizar compra pelo site</button>';
+}
+window.mkOpenCartCheckout = mkOpenCartCheckout; window.mkCartCheckoutBtnHtml = mkCartCheckoutBtnHtml;
+
+function mkStartCheckout(lines, fromCart) {
   if (!(typeof uid === 'function' && uid())) {
-    mkCloseModal();
+    mkCloseModal();   // o carrinho fica guardado no navegador: volta depois do login
     if (typeof _showAuth === 'function') _showAuth(true); else mkToast('Faça login para comprar.', true);
     return;
   }
-  const p = mk.products.find(function (x) { return x.id === pid; });
-  if (!p) return;
   const s = mk.seller;
   const methods = (s.pay_methods || []).filter(function (m) { return MK_PAY_LBL[m]; });
   mkCk = {
-    p: p, qty: 1, delivery: 'envio', options: null, shipOpt: null, method: methods[0] || null, methods: methods, busy: false,
+    lines: lines, fromCart: !!fromCart, delivery: 'envio', options: null, shipOpt: null, method: methods[0] || null, methods: methods, busy: false,
     name: mkLsGet('mk_name'), whatsapp: mkLsGet('mk_wa'), email: '', cep: mkLsGet('mk_cep'),
     street: '', number: '', complement: '', district: '', city: '', uf: '', note: '',
   };
@@ -107,22 +125,27 @@ function mkCkReadForm() {
   ['name', 'whatsapp', 'email', 'cep', 'street', 'number', 'complement', 'district', 'city', 'uf', 'note'].forEach(function (k) {
     const e = document.getElementById('mkck-' + k); if (e) c[k] = e.value;
   });
-  const q = document.getElementById('mkck-qty'); if (q) c.qty = Math.max(1, Math.min(parseInt(q.value, 10) || 1, mkQty(c.p)));
+  (c.lines || []).forEach(function (l) {
+    const q = document.getElementById('mkck-qty-' + l.p.id);
+    if (q) l.qty = Math.max(1, Math.min(parseInt(q.value, 10) || 1, mkQty(l.p)));
+  });
 }
 
 function mkRenderCheckout() {
   const c = mkCk; if (!c) return;
-  const s = mk.seller, p = c.p;
-  const maxQ = Math.min(mkQty(p), 20);
+  const s = mk.seller;
   const pickup = !!s.pickup_enabled;
-  const sub = Number(p.price) * c.qty;
+  const sub = Math.round(c.lines.reduce(function (t, l) { return t + Number(l.p.price) * l.qty; }, 0) * 100) / 100;
   const ship = c.delivery === 'retirada' ? 0 : (c.shipOpt ? c.shipOpt.price : null);
   const f = function (id, label, val, extra) {
     return '<label class="mk-f"><span>' + label + '</span><input id="mkck-' + id + '" value="' + mkEsc(val) + '" ' + (extra || '') + '></label>';
   };
   let html = '<h3 class="mk-form-title">Finalizar compra</h3><div class="mk-form">' +
-    '<div class="mk-ck-item"><b>' + mkEsc(p.title) + '</b><span>' + mkMoney(p.price) + ' × ' +
-      '<input id="mkck-qty" type="number" min="1" max="' + maxQ + '" value="' + c.qty + '" onchange="mkCkQty()" style="width:58px"></span></div>' +
+    c.lines.map(function (l) {
+      const maxQ = Math.min(mkQty(l.p), 20);
+      return '<div class="mk-ck-item"><b>' + mkEsc(l.p.title) + '</b><span>' + mkMoney(l.p.price) + ' × ' +
+        '<input id="mkck-qty-' + l.p.id + '" type="number" min="1" max="' + maxQ + '" value="' + l.qty + '" onchange="mkCkQty()" style="width:58px"></span></div>';
+    }).join('') +
     '<h4 class="mk-sub">Seus dados</h4>' +
     '<div class="mk-f-row">' + f('name', 'Nome completo *', c.name, 'autocomplete="name"') + f('whatsapp', 'WhatsApp (com DDD)', c.whatsapp, 'inputmode="tel" autocomplete="tel"') + '</div>' +
     f('email', 'E-mail' + (c.method === 'pix' || c.method === 'card' || c.method === 'boleto' ? ' *' : ''), c.email, 'type="email" autocomplete="email"');
@@ -159,7 +182,7 @@ function mkRenderCheckout() {
     '<div id="mkck-err" class="mk-form-err"></div>' +
     '<div class="mk-form-actions"><button type="button" class="btn-mini mk-primary" id="mkck-go" onclick="mkCkSubmit()"' + (c.busy ? ' disabled' : '') + '>' + (c.busy ? 'Enviando…' : 'Fazer pedido') + '</button>' +
       '<button type="button" class="btn-mini" onclick="mkCloseModal()">Cancelar</button></div>' +
-    '<div class="mk-prod-hint">Ao fazer o pedido o produto fica reservado para você. Preço e frete são conferidos pelo servidor.</div></div>';
+    '<div class="mk-prod-hint">Ao fazer o pedido os produtos ficam reservados para você. Preço e frete são conferidos pelo servidor.</div></div>';
   mkOpenModal(html, { wide: true, sticky: true });
 }
 
@@ -187,9 +210,10 @@ async function mkCkQuote() {
   const cep = mkDigits(mkCk.cep);
   if (cep.length !== 8) { mkCkErr('Digite o CEP com 8 números.'); return; }
   mkCkErr('Calculando frete…');
-  const r = await mkShopCall({ action: 'quote', items: [{ product_id: mkCk.p.id, qty: mkCk.qty }], destination_cep: cep });
+  const r = await mkShopCall({ action: 'quote', items: mkCk.lines.map(function (l) { return { product_id: l.p.id, qty: l.qty }; }), destination_cep: cep });
   if (!mkCk) return;
   if (!r.ok) { mkCkErr(r.error || 'Não consegui calcular o frete.'); return; }
+  if (!r.options || !r.options.length) { mkCkErr(typeof mkShipEmptyMessage === 'function' ? mkShipEmptyMessage(r) : 'Sem frete automático para esse CEP.'); }
   mkLsSet('mk_cep', cep);
   mkCk.options = r.options; mkCk.shipOpt = r.options.filter(function (o) { return o.kind !== 'retirada'; })[0] || null;
   mkRenderCheckout();
@@ -203,7 +227,7 @@ async function mkCkSubmit() {
   if (c.delivery === 'envio' && !c.shipOpt) { mkCkErr('Calcule o frete e escolha uma opção.'); return; }
   c.busy = true; mkRenderCheckout(); mkCkErr('');
   const body = {
-    action: 'checkout', items: [{ product_id: c.p.id, qty: c.qty }], delivery: c.delivery, payment_method: c.method,
+    action: 'checkout', items: c.lines.map(function (l) { return { product_id: l.p.id, qty: l.qty }; }), delivery: c.delivery, payment_method: c.method,
     name: c.name.trim(), whatsapp: c.whatsapp, email: c.email.trim(), note: c.note,
   };
   if (c.delivery === 'envio') {
@@ -214,6 +238,11 @@ async function mkCkSubmit() {
   c.busy = false;
   if (!r.ok) { mkRenderCheckout(); mkCkErr(r.error || 'Não consegui criar o pedido.'); return; }
   mkLsSet('mk_name', c.name.trim()); mkLsSet('mk_wa', c.whatsapp);
+  if (c.fromCart && typeof mkCartLoad === 'function') {   // o que virou pedido sai do carrinho
+    const bought = c.lines.map(function (l) { return l.p.id; });
+    const st = mkCartLoad(); st.items = st.items.filter(function (i) { return bought.indexOf(i.id) < 0; });
+    mkCartSave(); if (typeof mkCartRefreshUI === 'function') mkCartRefreshUI();
+  }
   mkCk = null;
   mkLoadAll(true).then(function () { if (document.getElementById('mk-grid-holder')) mkRenderGridOnly(); });
   mkShowPayment(r.order, r.payment, false);
@@ -324,13 +353,49 @@ async function mkLoadSellerOrders() {
   if (error) { body.innerHTML = '<div class="mk-empty">Não consegui carregar os pedidos.</div>'; return; }
   mkOrders = data || [];
   mkRenderSellerOrders();
+  // o estado do push é descoberto de forma assíncrona: atualiza o aviso quando souber
+  if (typeof notifPushRefreshState === 'function') notifPushRefreshState().then(mkAlertRefresh, function () {});
 }
+// 17/10/2026: quem é da equipe recebe aviso de pedido novo/pago no sino, por e-mail e por push no celular. O push só funciona
+// depois que a pessoa ativa NESTE aparelho (o navegador exige o clique) — o aviso abaixo mostra o estado e traz o botão.
+function mkAlertBannerHtml() {
+  const st = typeof notifPushState === 'string' ? notifPushState : 'unknown';
+  let txt, btn = '', cls = 'mk-note';
+  if (st === 'on') {
+    txt = '🔔 <b>Alertas de pedido ligados neste aparelho.</b> Você também recebe por e-mail.';
+    cls += ' mk-note-ok';
+  } else if (st === 'ios-install') {
+    txt = '📲 <b>No iPhone:</b> adicione o MyDeck à Tela de Início (Compartilhar → Adicionar à Tela de Início), abra por lá e volte aqui para ativar o alerta de pedido no celular. Por e-mail você já recebe.';
+    cls += ' mk-note-warn';
+  } else if (st === 'blocked') {
+    txt = '🔕 As notificações estão bloqueadas neste navegador. Libere nas configurações do site para ser avisado de pedido no celular. Por e-mail você já recebe.';
+    cls += ' mk-note-warn';
+  } else if (st === 'unsupported') {
+    txt = '🔔 Este navegador não recebe notificação no celular. Você recebe os pedidos por e-mail e no sino do MyDeck.';
+  } else {
+    txt = '🔔 <b>Ative o alerta no celular</b> para ser avisado na hora quando entrar um pedido (mesmo com o app fechado). Por e-mail você já recebe.';
+    btn = '<button type="button" class="mk-buy-btn mk-buy-site" style="border:0;cursor:pointer;font-family:inherit;width:auto;padding:8px 16px" id="mk-alert-btn" onclick="mkAlertEnable()">Ativar neste aparelho</button>';
+    cls += ' mk-note-warn';
+  }
+  return '<div id="mk-alert-banner" class="' + cls + '" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap"><span>' + txt + '</span>' + btn + '</div>';
+}
+async function mkAlertEnable() {
+  if (typeof notifPushEnable !== 'function') return;
+  const b = document.getElementById('mk-alert-btn'); if (b) b.disabled = true;
+  try { await notifPushEnable(); } catch (e) { /* notifPushEnable já avisa o erro */ }
+  mkAlertRefresh();
+}
+function mkAlertRefresh() {
+  const el = document.getElementById('mk-alert-banner'); if (!el) return;
+  el.outerHTML = mkAlertBannerHtml();
+}
+window.mkAlertEnable = mkAlertEnable;
 function mkRenderSellerOrders() {
   const body = document.getElementById('mk-panel-body'); if (!body || mk.panelTab !== 'pedidos') return;
   const open = mkOrders.filter(function (o) { return ['aguardando_pagamento', 'pago', 'em_separacao', 'enviado'].indexOf(o.status) >= 0; });
   const done = mkOrders.filter(function (o) { return open.indexOf(o) < 0; });
   const note = !mk.seller.checkout_enabled ? '<div class="mk-note mk-note-warn">A compra pelo site ainda não está liberada (o MyDeck libera quando os pagamentos estiverem prontos). Pedidos só aparecem aqui depois disso.</div>' : '';
-  body.innerHTML = note +
+  body.innerHTML = mkAlertBannerHtml() + note +
     '<h4 class="mk-sub">Em andamento (' + open.length + ')</h4>' + (open.length ? open.map(function (o) { return mkOrderCardHtml(o, true); }).join('') : '<div class="mk-empty">Nenhum pedido em andamento.</div>') +
     (done.length ? '<h4 class="mk-sub">Encerrados</h4>' + done.map(function (o) { return mkOrderCardHtml(o, true); }).join('') : '');
 }

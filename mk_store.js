@@ -47,6 +47,29 @@ function mkStoreProducts() {
   return list;
 }
 
+// 17/10/2026: o lojista cola texto em Markdown (títulos #, **negrito**, listas -) na descrição e na política de trocas e
+// aparecia tudo cru, com asteriscos. Renderizador mínimo e SEGURO: escapa o texto ANTES de qualquer marcação, então
+// nada digitado vira HTML/JS; só viram tag os poucos padrões abaixo.
+function mkMdInline(t) {
+  return mkEsc(t).replace(/\*\*([^*\n]+?)\*\*/g, '<b>$1</b>');
+}
+function mkMd(src) {
+  const out = [];
+  let list = false, para = [];
+  const flushPara = function () { if (para.length) { out.push('<p>' + para.join('<br>') + '</p>'); para = []; } };
+  const closeList = function () { if (list) { out.push('</ul>'); list = false; } };
+  String(src || '').replace(/\r/g, '').split('\n').forEach(function (raw) {
+    const line = raw.trim();
+    let m;
+    if (!line) { flushPara(); closeList(); return; }
+    if ((m = line.match(/^(#{1,4})\s+(.+)$/))) { flushPara(); closeList(); out.push('<h4>' + mkMdInline(m[2]) + '</h4>'); return; }
+    if ((m = line.match(/^[-*•]\s+(.+)$/))) { flushPara(); if (!list) { out.push('<ul>'); list = true; } out.push('<li>' + mkMdInline(m[1]) + '</li>'); return; }
+    closeList(); para.push(mkMdInline(line));
+  });
+  flushPara(); closeList();
+  return out.join('');
+}
+
 function mkStoreHeaderHtml() {
   const s = mk.seller;
   const logo = mkSafeUrl(s.logo_url);
@@ -63,16 +86,17 @@ function mkStoreHeaderHtml() {
   if (s.flat_shipping != null) info.push('<li><b>Frete:</b> ' + mkMoney(s.flat_shipping) + (s.free_shipping_over != null ? ' (grátis acima de ' + mkMoney(s.free_shipping_over) + ')' : '') + '.</li>');
   else if (s.free_shipping_over != null) info.push('<li><b>Frete grátis</b> acima de ' + mkMoney(s.free_shipping_over) + '.</li>');
   if (s.pickup_enabled) info.push('<li><b>Retirada em mãos:</b> ' + mkEsc(s.pickup_note || 'combine com a loja') + '</li>');
-  if (s.return_policy) info.push('<li><b>Trocas e devoluções:</b> ' + mkEsc(s.return_policy) + '</li>');
+  if (s.return_policy) info.push('<li><details class="mk-policy"><summary><b>Trocas e devoluções</b> — ler a política completa</summary><div class="mk-md">' + mkMd(s.return_policy) + '</div></details></li>');
   return '<div class="mk-hero"' + (banner ? ' style="background-image:linear-gradient(rgba(10,14,25,.55),rgba(10,14,25,.75)),url(\'' + mkEsc(banner) + '\')"' : '') + '>' +
     (logo ? '<img class="mk-logo" src="' + mkEsc(logo) + '" alt="" onerror="this.style.display=\'none\'">' : '<div class="mk-logo mk-logo-fb">🧸</div>') +
     '<div class="mk-hero-txt">' +
       '<h2 class="mk-hero-name">' + mkEsc(s.name) + '</h2>' +
       (place ? '<div class="mk-hero-place">📍 ' + mkEsc(place) + '</div>' : '') +
-      (s.description ? '<p class="mk-hero-desc">' + mkEsc(s.description) + '</p>' : '') +
+      (s.description ? '<div class="mk-hero-desc mk-md" onclick="this.classList.toggle(\'mk-open\')" title="Clique para ' + 'ver tudo / recolher' + '">' + mkMd(s.description) + '</div>' : '') +
       (links.length ? '<div class="mk-hero-links">' + links.join('') + '</div>' : '') +
     '</div>' +
     '<div class="mk-hero-btns">' +
+      (typeof mkCartHeroBtnHtml === 'function' ? mkCartHeroBtnHtml() : '') +
       (mk.isMember ? '<button type="button" class="mk-manage-btn" onclick="mkGoPanel()">⚙️ Gerenciar loja</button>' : '') +
       (s.checkout_enabled && !mk.isMember && typeof mkOpenMyOrders === 'function' ? '<button type="button" class="mk-manage-btn" onclick="mkOpenMyOrders()">📦 Meus pedidos</button>' : '') +
     '</div>' +
@@ -130,7 +154,8 @@ function mkCardHtml(p) {
   }
   return '<article class="mk-card' + (qty <= 0 ? ' mk-card-out' : '') + '" tabindex="0" onclick="mkOpenProduct(' + p.id + ')" onkeydown="if(event.key===\'Enter\')mkOpenProduct(' + p.id + ')">' +
     '<div class="mk-card-img">' + (cover ? '<img loading="lazy" src="' + mkEsc(cover) + '" alt="' + mkEsc(p.title) + '">' : '<span class="mk-card-noimg">' + (MK_KIND_ICON[p.kind] || '🧸') + '</span>') +
-      badge + (off >= 5 ? '<span class="mk-badge mk-badge-off">-' + off + '%</span>' : '') + '</div>' +
+      badge + (off >= 5 ? '<span class="mk-badge mk-badge-off">-' + off + '%</span>' : '') +
+      (qty > 0 ? '<button type="button" class="mk-add-btn" aria-label="Adicionar ' + mkEsc(p.title) + ' ao carrinho" title="Adicionar ao carrinho" onclick="event.stopPropagation();mkCartAdd(' + p.id + ')" onkeydown="event.stopPropagation()">＋</button>' : '') + '</div>' +
     '<div class="mk-card-body">' +
       '<div class="mk-card-title">' + mkEsc(p.title) + '</div>' +
       (tags.length ? '<div class="mk-card-tags">' + tags.map(mkEsc).join(' · ') + '</div>' : '') +
@@ -158,7 +183,8 @@ function mkRenderStore() {
   const wrap = document.getElementById('mk-wrap');
   if (!wrap || !mk.seller) return;
   wrap.innerHTML = '<div class="mk-page">' + mkStoreHeaderHtml() + mkStoreFiltersHtml() +
-    '<div id="mk-grid-holder">' + mkGridHtml() + '</div></div>';
+    '<div id="mk-grid-holder">' + mkGridHtml() + '</div>' + (typeof mkCartBarHtml === 'function' ? mkCartBarHtml() : '') + '</div>';
+  if (typeof mkCartRefreshUI === 'function') mkCartRefreshUI();
 }
 
 // ── página do produto ──────────────────────────────────────────────────
@@ -195,6 +221,7 @@ function mkOpenProduct(id) {
         (p.description ? '<p class="mk-prod-desc">' + mkEsc(p.description).replace(/\n/g, '<br>') + '</p>' : '') +
         '<table class="mk-prod-table">' + rows.map(function (r) { return '<tr><th>' + mkEsc(r[0]) + '</th><td>' + mkEsc(r[1]) + '</td></tr>'; }).join('') + '</table>' +
         (typeof mkShipBoxHtml === 'function' ? mkShipBoxHtml(p) : '') +
+        (qty > 0 && p.status === 'ativo' ? '<button type="button" class="mk-buy-btn mk-add-cart" onclick="mkCartAdd(' + p.id + ')">🛒 Adicionar ao carrinho</button>' : '') +
         (typeof mkBuyBtnHtml === 'function' ? mkBuyBtnHtml(p) : '') +
         (wa && qty > 0 ? '<a class="mk-buy-btn' + (mk.seller.checkout_enabled ? ' mk-buy-alt' : '') + '" target="_blank" rel="noopener" href="https://wa.me/' + wa + '?text=' + encodeURIComponent(msg) + '">💬 Chamar a loja no WhatsApp</a>' +
           (mk.seller.checkout_enabled ? '' : '<div class="mk-prod-hint">A compra direto pelo site chega em breve. Por enquanto a loja combina pagamento e envio pelo WhatsApp.</div>') : '') +
