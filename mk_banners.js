@@ -123,7 +123,21 @@ function mkStripRender() {
 function mkHeroRender() {
   const slot = document.getElementById('mk-hero-slot');
   if (!slot) return;
-  if (!mkPromoActive()) { slot.innerHTML = ''; return; }
+  if (!mkPromoActive()) {
+    // 17/10/2026: enquanto o catálogo não existe, a Início ainda apresenta a loja ("em breve") — some sozinho
+    // quando o primeiro produto ativo com estoque aparecer (aí vale o banner normal abaixo).
+    const t = mkPromo.seller;
+    if (!t || t.status !== 'ativa') { slot.innerHTML = ''; return; }
+    slot.innerHTML = '<section class="mkb-hero" aria-label="Loja parceira Toybox">' +
+      '<div class="mkb-hero-tx"><span class="mkb-seal">Loja parceira</span>' +
+        '<h3>Loja Toybox chegando ao MyDeck</h3>' +
+        '<p>Cartas, selados e acessórios em 3D direto da Toybox' + ([t.city, t.uf].filter(Boolean).length ? ', de ' + mkEsc([t.city, t.uf].filter(Boolean).join(' ')) : '') + '. O catálogo está sendo montado.</p>' +
+        '<div class="mkb-hero-cta"><a href="#" class="mkb-btn" onclick="mkGoStoreAll();return false;">Conhecer a loja →</a>' +
+          '<span class="mkb-pill">Em breve</span></div></div>' +
+      '<div class="mkb-hero-art" aria-hidden="true"></div>' +
+      '</section>';
+    return;
+  }
   const s = mkPromo.seller;
   const title = s.promo_title || (mkPromo.newCount > 0 ? (mkPromo.newCount + ' novidade' + (mkPromo.newCount > 1 ? 's' : '') + ' na Toybox') : 'Loja Toybox no MyDeck');
   const text = s.promo_text || 'Pokémon TCG, acessórios em 3D e colecionáveis, direto de ' + [s.city, s.uf].filter(Boolean).join(' ') + '.';

@@ -73,6 +73,25 @@ function inicioTruncate(s, max) {
   return (lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut) + '…';
 }
 
+// 17/10/2026: "há 3 dias" em vez de só 09/10/2026 — dá noção de quão fresco é o conteúdo. Passou de 30 dias
+// volta pra data completa. inicioDateTitle() mantém a data exata ao passar o mouse.
+function inicioDateLabel(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (days < 0) return d.toLocaleDateString('pt-BR');
+  if (days === 0) return 'hoje';
+  if (days === 1) return 'ontem';
+  if (days < 7) return 'há ' + days + ' dias';
+  if (days < 30) { const w = Math.floor(days / 7); return 'há ' + w + (w === 1 ? ' semana' : ' semanas'); }
+  return d.toLocaleDateString('pt-BR');
+}
+function inicioDateTitle(iso) {
+  const d = iso ? new Date(iso) : null;
+  return d && !isNaN(d) ? ' title="' + inicioEsc(d.toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })) + '"' : '';
+}
+
 // ── VÍDEO EMBUTIDO — extrai ID do YouTube/TikTok pra tocar no site ──
 function inicioYoutubeId(url) {
   if (!url) return null;
@@ -241,7 +260,7 @@ async function loadInicioUpdates() {
   if (!rows.length) { holder.innerHTML = '<div class="admin-stats-loading">Nenhuma novidade publicada ainda.</div>'; return; }
 
   holder.innerHTML = '<div class="inicio-shelf">' + rows.map(function (u) {
-    const dt = u.created_at ? new Date(u.created_at).toLocaleDateString('pt-BR') : '';
+    const dt = inicioDateLabel(u.created_at);
     return (
       '<div class="inicio-update-card">' +
         '<div class="inicio-update-title">🆕 ' + inicioEsc(u.title) + '</div>' +
@@ -291,7 +310,7 @@ let INICIO_FEED_REQ = 0;
 // geração" do loadInicioFeed()/renderInicioHero() acima, pela mesma razão
 // (renderInicio() pode disparar mais de uma vez em sequência no login).
 let INICIO_MARKET_REQ = 0;
-const INICIO_MARKET_LIMIT = 24;
+const INICIO_MARKET_LIMIT = 16; // 17/10/2026: era 24 — a trilha duplica os cards (loop), então eram ~96 imagens
 
 async function loadInicioMarketFeed() {
   const targets = document.querySelectorAll('.inicio-market-feed-target');
@@ -344,6 +363,10 @@ function inicioMarketRow(items, kind, label) {
   );
 }
 
+// 17/10/2026: carta sem imagem (link quebrado ou sem arte) mostra um verso genérico em vez de sumir — o card
+// mantém o mesmo tamanho e a trilha não "pula".
+const INICIO_CARD_BACK = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="50" height="70" viewBox="0 0 50 70"><rect width="50" height="70" rx="4" fill="#2a2e42"/><rect x="5" y="5" width="40" height="60" rx="3" fill="none" stroke="#6b7194" stroke-width="1.5"/><circle cx="25" cy="35" r="9" fill="none" stroke="#6b7194" stroke-width="1.5"/><path d="M16 35h18" stroke="#6b7194" stroke-width="1.5"/></svg>');
+
 function inicioMarketCardHtml(it, kind) {
   const price = kind === 'sell' ? it.price : it.max_price;
   const priceTxt = 'R$ ' + Number(price || 0).toFixed(2).replace('.', ',');
@@ -364,7 +387,7 @@ function inicioMarketCardHtml(it, kind) {
   } catch (e) { img = ''; }
   return (
     '<button type="button" class="mkt-feed-card" onclick="goToTab(\'cartas\')" title="' + inicioEsc(it.card_name || '') + ' — ' + priceTxt + '">' +
-      (img ? '<img src="' + img + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '') +
+      '<img src="' + (img || INICIO_CARD_BACK) + '" alt="" width="50" height="70" loading="lazy" decoding="async" onerror="this.onerror=null;this.src=INICIO_CARD_BACK">' +
       '<span class="mkt-feed-name">' + name + '</span>' +
       '<span class="mkt-feed-price">' + priceTxt + '</span>' +
     '</button>'
@@ -492,11 +515,13 @@ function inicioNewsVideoEmbed(url, title) {
 }
 
 function inicioFeedNewsCard(n) {
-  const dt = n.published_at ? new Date(n.published_at).toLocaleDateString('pt-BR') : '';
-  const mediaTag = INICIO_MEDIA_LABEL[n.media_type] || '';
+  const dt = inicioDateLabel(n.published_at);
   const videoEmbed = n.media_type === 'video' && n.media_url ? inicioNewsVideoEmbed(n.media_url, n.title) : '';
+  // 17/10/2026: a etiqueta "🖼 imagem" não dizia nada ao leitor — só aparece quando é vídeo que não deu pra
+  // embutir (aí o card não mostra o vídeo e a etiqueta explica o que falta).
+  const mediaTag = (n.media_type === 'video' && n.media_url && !videoEmbed) ? (INICIO_MEDIA_LABEL.video || '') : '';
   const thumbBlock = n.media_type === 'image' && n.media_url
-    ? '<img class="inicio-news-media" src="' + inicioSafeUrl(n.media_url) + '" alt="" loading="lazy">'
+    ? '<img class="inicio-news-media" src="' + inicioSafeUrl(n.media_url) + '" alt="' + inicioEsc(n.title || '') + '" loading="lazy" decoding="async">'
     : '';
   const commentN = INICIO_FEED_COMMENT_COUNTS[n.id] || 0;
   const title = n.title ? inicioEsc(n.title) : inicioEsc(inicioTruncate(n.body, 70));
@@ -529,7 +554,7 @@ function inicioFeedNewsCard(n) {
       (n.subtitle ? '<div class="inicio-news-sub">' + inicioEsc(n.subtitle) + '</div>' : '') +
       snippetBlock +
       '<div class="inicio-news-foot">' +
-        '<span class="inicio-news-date">' + dt + '</span>' +
+        '<span class="inicio-news-date"' + inicioDateTitle(n.published_at) + '>' + dt + '</span>' +
         '<span class="inicio-news-comment-toggle">💬 ' + commentN + ' comentário' + (commentN === 1 ? '' : 's') + '</span>' +
       '</div>' +
     '</div>'
@@ -556,7 +581,7 @@ window.inicioToggleNewsExcerpt = function (btn) {
 // coluna só (não mais grid de várias colunas), então o embed 16:9 usa a
 // largura inteira da coluna (até 720px, ver .inicio-feed no style.css).
 function inicioFeedVideoCard(v) {
-  const dt = v.created_at ? new Date(v.created_at).toLocaleDateString('pt-BR') : '';
+  const dt = inicioDateLabel(v.created_at);
   const plat = v.platform === 'tiktok' ? 'TikTok' : 'YouTube';
   return (
     '<div class="inicio-video-card inicio-feed-video-card">' +
@@ -572,7 +597,7 @@ function inicioFeedVideoCard(v) {
 }
 
 function inicioFeedLinkCard(l) {
-  const dt = l.created_at ? new Date(l.created_at).toLocaleDateString('pt-BR') : '';
+  const dt = inicioDateLabel(l.created_at);
   return (
     '<a class="inicio-feed-link-card" href="' + inicioSafeUrl(l.url) + '" target="_blank" rel="noopener">' +
       '<span class="inicio-chip-ic">' + inicioEsc(l.icon || '🔗') + '</span>' +
@@ -586,7 +611,7 @@ function inicioFeedLinkCard(l) {
 }
 
 function inicioFeedArticleCard(a) {
-  const dt = a.published_at ? new Date(a.published_at).toLocaleDateString('pt-BR') : '';
+  const dt = inicioDateLabel(a.published_at);
   return (
     '<div class="inicio-article-row inicio-feed-article-card' + (a.is_featured ? ' inicio-article-featured' : '') + '">' +
       '<div class="inicio-article-tag">📖 ' + inicioEsc(a.tag || 'Revista') + (a.is_featured ? ' · Capa' : '') + '</div>' +

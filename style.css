@@ -3443,9 +3443,10 @@ body.share-view .btn-add { display: none !important; }
 @media (min-width: 901px) {
   #inicio-market-feed-wrap-top { display: none; }
   #inicio-market-feed-wrap-side:not(:empty) { display: block; }
-  .mkt-feed-card { width: 52px; }
-  .mkt-feed-card img { width: 44px; }
-  .mkt-feed-name, .mkt-feed-price { max-width: 52px; }
+  .mkt-feed-card { width: 64px; }
+  .mkt-feed-card img { width: 56px; }
+  .mkt-feed-name, .mkt-feed-price { max-width: 64px; }
+  .mkt-feed-name { font-size: 9px; }
 }
 
 .inicio-legal-footer {
@@ -3832,3 +3833,10 @@ body.inicio-modal-open { overflow: hidden; }
 .inicio-welcome-sec:hover { background: var(--surface2, rgba(0,0,0,.05)); }
 @media (min-width: 720px) { .inicio-welcome-list { grid-template-columns: repeat(3, 1fr); } .inicio-welcome-list li { flex-direction: column; gap: 2px; } }
 @media (max-width: 719px) { .inicio-welcome { padding: 18px 16px; } .inicio-welcome-title { font-size: 19px; } .inicio-welcome-actions > button { flex: 1 1 100%; } }
+
+/* ── Ajustes da Início (17/10/2026) ── */
+.wa-community-btn .wa-label-short { display: none; }
+@media (max-width: 640px) { .wa-community-btn .wa-label-short { display: inline; } }
+/* sidebar desktop: o contador do minigame (fixo no canto) cobria os últimos itens — folga no fim da lista */
+@media (min-width: 901px) { .tdesk { padding-bottom: 120px; } }
+.mkt-feed-card img { aspect-ratio: 5 / 7; object-fit: cover; }

@@ -52,9 +52,29 @@
     return data ? data.display_name : null;
   }
 
+  // 17/10/2026: com menos de IRK_MIN_PLAYERS jogadores no ranking geral o painel parecia site parado (um nome
+  // sozinho). Some (título + painel) até haver gente; a consulta "Total" é guardada por 5 min.
+  const IRK_MIN_PLAYERS = 3;
+  let irkTotalCache = { at: 0, n: null };
+  async function irkEnoughPlayers() {
+    if (!irkHasClient()) return false;
+    if (irkTotalCache.n != null && Date.now() - irkTotalCache.at < 5 * 60 * 1000) return irkTotalCache.n >= IRK_MIN_PLAYERS;
+    const { data, error } = await sbClient.rpc('wild_ranking', { p_period: 'all' });
+    if (error) return irkTotalCache.n != null ? irkTotalCache.n >= IRK_MIN_PLAYERS : true; // na dúvida, mostra
+    irkTotalCache = { at: Date.now(), n: (data || []).length };
+    return irkTotalCache.n >= IRK_MIN_PLAYERS;
+  }
+  function irkSetVisible(show) {
+    const t = document.getElementById('inicio-ranking-title'), w = document.getElementById('inicio-ranking-wrap');
+    if (t) t.style.display = show ? '' : 'none';
+    if (w) w.style.display = show ? '' : 'none';
+  }
+
   async function irkRenderPanel() {
     const holder = document.getElementById('inicio-ranking-wrap');
     if (!holder) return; // aba Início ainda não montou o container
+    if (!(await irkEnoughPlayers())) { irkSetVisible(false); return; }
+    irkSetVisible(true);
 
     holder.innerHTML = `
       <div class="inicio-ranking-panel">

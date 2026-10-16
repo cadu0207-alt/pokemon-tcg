@@ -1539,10 +1539,15 @@
   function wpUpdateArenaButton() {
     if (!wpArenaEl) return;
     if (!wpHasClient() || !wpUid()) {
+      // 17/10/2026: visitante não batalha — o balão "Faça login pra batalhar" ficava fixo por cima do conteúdo
+      // (celular) e da sidebar (desktop). Some até haver login; o convite pra criar conta é a faixa de
+      // boas-vindas da Início.
       wpArenaEl.textContent = '⚔️ Faça login pra batalhar';
       wpArenaEl.classList.add('wp-arena-disabled');
+      wpArenaEl.style.display = 'none';
       return;
     }
+    wpArenaEl.style.display = '';
     if (!wpLoadoutLoaded) {
       wpArenaEl.textContent = '⚔️ Batalhar';
       wpArenaEl.classList.remove('wp-arena-disabled');
