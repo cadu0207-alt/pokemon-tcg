@@ -3856,3 +3856,12 @@ body.inicio-modal-open { overflow: hidden; }
   .mkt-feed-row { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
   .inicio-news-card, .inicio-news-card:hover, .wa-community-btn:hover, .inicio-yt-play { transition: none !important; transform: none !important; }
 }
+
+/* ── Fichário: favoritos e foco por teclado (17/10/2026) ── */
+.fav-toggle { margin-top: 8px; padding: 5px 12px; border-radius: 99px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2, var(--text));
+  font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.fav-toggle:hover { border-color: #f5b301; color: #f5b301; }
+.fav-toggle.on { background: rgba(245,179,1,.16); border-color: #f5b301; color: #f5b301; }
+.fav-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fav-badge { position: absolute; top: 3px; left: 4px; font-size: 13px; line-height: 1; color: #f5b301; text-shadow: 0 0 3px rgba(0,0,0,.85); pointer-events: none; }
+.fic-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

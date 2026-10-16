@@ -583,6 +583,10 @@ function imgAltUrl(setId,n){
 function imgThumb(url){
   if(typeof url!=='string')return url;
   if(url.includes('images.scrydex.com'))return url.replace(/\/large$/,'/small');
+  // 17/10/2026: ME2.5/ME03/ME04/ME05 vêm do tcgdex em /high.png (~320 KB por carta). /low.webp tem 245×337 e
+  // ~15–25 KB (medido nas mesmas cartas) — mais que suficiente pro tamanho de grade/fichário. Impressão
+  // (imgMedium) e o modal da carta continuam na arte grande.
+  if(url.includes('assets.tcgdex.net')&&/\/high\.png$/.test(url))return url.replace(/\/high\.png$/,'/low.webp');
   return url;
 }
 // PERF 18/08/2026: variante intermediária pra impressão/PDF — /small (~55KB)
@@ -3896,7 +3900,7 @@ function openCustomBinderView(binder){
       const pinned=(typeof isBinderPinned==='function')&&binder.id&&isBinderPinned(binder.id);
       return `
     <div class="bctl" style="gap:10px;flex-wrap:wrap;margin-bottom:10px">
-      <input class="bsrch" id="cb-view-q" placeholder="Buscar carta..." oninput="_cbRefreshGrid()"
+      <input class="bsrch" id="cb-view-q" placeholder="Buscar carta..." oninput="cbSearchDebounced()"
         style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
                color:var(--text);font-size:12px;flex:1;min-width:120px;outline:none">
       <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer">

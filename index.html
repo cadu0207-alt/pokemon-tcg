@@ -718,7 +718,7 @@
 
       <!-- Linha 1 — busca e filtros (sempre visível) -->
       <div class="fic-toolbar-row1" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <input class="bsrch" id="bsrch" placeholder="Buscar carta..." oninput="renderBinder()">
+        <input class="bsrch" id="bsrch" placeholder="Buscar carta..." aria-label="Buscar carta neste fichário" oninput="ficSearchDebounced()">
         <label><input type="checkbox" id="fc"  onchange="renderBinder()"> Só coletadas</label>
         <label><input type="checkbox" id="fm"  onchange="renderBinder()"> Só faltantes</label>
         <label><input type="checkbox" id="fi2" onchange="renderBinder()"> Só importantes ★</label>
@@ -2138,6 +2138,7 @@ window.loadJsPdf=function(){
      pokedex_nacional.js (nessa ordem) — mesmo motivo do comentario acima.
      Ver cabecalho do proprio arquivo. -->
 <script defer src="fichario_melhorias_23jul.js"></script>
+<script defer src="fichario_favoritos.js"></script>
 <script defer src="fichario_masterdex.js"></script>
 <script defer src="fichario_accordion.js"></script>
 <script defer src="fichario_pokemon_binder.js"></script>

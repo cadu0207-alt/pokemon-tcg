@@ -631,6 +631,7 @@ function ficCardHtml(c, setId) {
   const allCol = vers.every(v => collected.has(`${setId}:${c.n}:${v}`));
   const hasAny = vers.some(v  => collected.has(`${setId}:${c.n}:${v}`));
   const isImp  = c.important;
+  const isFav  = (typeof favIsFav === 'function') && favIsFav(setId, c.n); // fichario_favoritos.js
 
   const imgFilter = allCol ? 'none' : hasAny ? 'saturate(.6) brightness(.75)' : 'grayscale(80%) brightness(.55)';
   const border    = allCol ? '2px solid var(--teal)' : hasAny ? '2px solid var(--blue)' : (isImp ? '2px solid var(--gold)' : '2px solid var(--border)');
@@ -665,6 +666,7 @@ function ficCardHtml(c, setId) {
   return `
   <div class="bc2 fic-card${allCol?' collected':''}${isImp?' important':''}"
        data-n="${c.n}" data-ver="${vers[0]}" data-setid="${setId}"
+       role="button" tabindex="0" aria-label="${String(lc.name).replace(/"/g,'&quot;')} #${c.n} — ${allCol?'coletada':hasAny?'parcialmente coletada':'faltando'}${isFav?' — favorita':''}. Enter para editar"
        style="cursor:pointer;border-radius:7px;transition:transform .2s"
        onmouseover="this.style.transform='scale(1.1) translateY(-4px)'"
        onmouseout="this.style.transform=''">
@@ -685,6 +687,7 @@ function ficCardHtml(c, setId) {
         background:var(--teal);color:var(--bg);font-size:11px;display:flex;align-items:center;
         justify-content:center;font-weight:900;box-shadow:0 2px 8px rgba(6,214,160,.6)">✓</div>`:''}
       ${isImp&&!hasAny?`<div style="position:absolute;top:3px;right:4px;font-size:11px;color:var(--gold)">★</div>`:''}
+      ${isFav?'<span class="fav-badge" aria-hidden="true">★</span>':''}
     </div>
     <!-- CORRIGIDO 04/09/2026 (pedido do Eduardo: "espaço abaixo da carta,
          imagens ficam apagadas") — dots de versão saíram de cima da imagem
@@ -948,6 +951,7 @@ async function openSlotModal(cardN, defaultVer, setIdOverride, cardOverride, onS
         <div class="slot-modal-rare">${card.rare||''}</div>
         ${_lcCard.price?`<div class="slot-modal-price">${_lcCard.symbol}${fmtR(_lcCard.price)}</div>`:''}
         ${card.important?'<div style="color:var(--gold);font-size:12px;margin-top:4px">★ Carta importante</div>':''}
+        ${typeof favButtonHtml === 'function' ? favButtonHtml(setId, card.n) : ''}
       </div>
     </div>
     <div id="slot-modal-body">
@@ -1226,3 +1230,21 @@ window.imgUrl            = imgUrl;
 // oferecer o toggle Grade/Fichário físico (renderBinderView já aceita setIdOf
 // explícito, então funciona com cartas de múltiplos sets misturados).
 window.renderBinderView  = renderBinderView;
+
+/* ─────────────────────────────────────────────
+   17/10/2026 — busca com atraso + teclado nas cartas
+   • A busca reconstruía a grade INTEIRA a cada tecla (oninput="renderBinder()"); agora espera 150 ms de pausa.
+   • As cartas (.fic-card) ganharam role=button/tabindex/aria-label em ficCardHtml(); Enter/Espaço dispara o mesmo
+     clique que o mouse (a delegação de clique em renderBinder() e o wireGridClicks() do fichário personalizado
+     continuam sendo o único caminho — aqui só traduzimos o teclado em clique).
+───────────────────────────────────────────── */
+function ficDebounceFn(fn, ms) { let t; return function () { clearTimeout(t); t = setTimeout(fn, ms); }; }
+window.ficSearchDebounced = ficDebounceFn(function () { renderBinder(); }, 150);
+window.cbSearchDebounced  = ficDebounceFn(function () { if (typeof window._cbRefreshGrid === 'function') window._cbRefreshGrid(); }, 150);
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const el = e.target;
+  if (!el || !el.matches || !el.matches('.fic-card[role="button"]')) return;
+  e.preventDefault();
+  el.click();
+});
