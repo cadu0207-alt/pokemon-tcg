@@ -167,7 +167,7 @@ function mkCartRenderModal() {
     shipHtml +
     '<div class="mk-cart-actions">' +
       (typeof mkCartCheckoutBtnHtml === 'function' ? mkCartCheckoutBtnHtml() : '') +
-      (wa ? '<a class="mk-buy-btn' + (s.checkout_enabled ? ' mk-buy-alt' : '') + '" target="_blank" rel="noopener" href="' + mkEsc(mkCartWhatsUrl(r, wa)) + '" onclick="mkCartWaClicked()">💬 Chamar a loja no WhatsApp com o carrinho</a>' : '') +
+      (wa ? '<a class="mk-buy-btn' + (s.checkout_enabled ? ' mk-buy-alt' : '') + '" target="_blank" rel="noopener" href="' + mkEsc(mkCartWhatsUrl(r, wa)) + '" onclick="return mkCartWaClicked()">💬 Chamar a loja no WhatsApp com o carrinho</a>' : '') +
       (!s.checkout_enabled && wa ? '<div class="mk-prod-hint">A compra direto pelo site chega em breve. Por enquanto a loja combina pagamento e envio pelo WhatsApp.</div>' : '') +
       '<button type="button" class="mk-cart-clear" onclick="if(confirm(\'Esvaziar o carrinho?\'))mkCartClear()">Esvaziar carrinho</button>' +
     '</div>';
@@ -186,15 +186,27 @@ function mkCartWhatsMessage(r) {
     '\nhttps://mydecktcg.com.br/#mk';
 }
 function mkCartWhatsUrl(r, wa) { return 'https://wa.me/' + wa + '?text=' + encodeURIComponent(mkCartWhatsMessage(r)); }
+// Pedir login ANTES de abrir o WhatsApp: sem conta a loja não sabe quem é o interessado (decisão do Eduardo, 17/10/2026).
+// O carrinho fica guardado no navegador; depois de entrar é só clicar de novo.
+function mkWaGate() {
+  if (typeof uid === 'function' && uid()) return true;
+  mkCloseModal();
+  mkToast('Entre na sua conta para chamar a loja no WhatsApp — assim a loja sabe quem é você. O carrinho fica guardado.');
+  if (typeof _showAuth === 'function') _showAuth(true);
+  return false;
+}
+window.mkWaGate = mkWaGate;
 function mkCartWaClicked() {
+  if (!mkWaGate()) return false;
   if (typeof gtag === 'function') { try { gtag('event', 'mk_cart_whatsapp', { itens: mkCartCount() }); } catch (e) { /* ok */ } }
   const r = mkCartResolve();
   mkRegisterInterest(r.lines.map(function (l) { return { product_id: l.p.id, qty: l.qty }; }));
+  return true;
 }
 
 // 17/10/2026: clicar em "Chamar a loja no WhatsApp" NÃO cria pedido nem mexe no estoque: registra um INTERESSE de 2 horas
 // (aparece no painel da loja e avisa a equipe). Quando a venda fecha no WhatsApp, o lojista marca "vendido" e só aí o
-// estoque baixa. Só cliente logado gera interesse; visitante só abre o WhatsApp. Nunca bloqueia nem atrasa a abertura do WhatsApp.
+// estoque baixa. Só cliente logado gera interesse; visitante é levado ao login antes (mkWaGate). Nunca bloqueia nem atrasa a abertura do WhatsApp.
 function mkRegisterInterest(items) {
   try {
     if (!items || !items.length || !mk.seller || !(typeof uid === 'function' && uid()) || typeof sbClient === 'undefined') return;
@@ -205,8 +217,10 @@ function mkRegisterInterest(items) {
   } catch (e) { /* nunca atrapalha o clique */ }
 }
 function mkProductWaClicked(pid) {
+  if (!mkWaGate()) return false;
   if (typeof gtag === 'function') { try { gtag('event', 'mk_product_whatsapp', { product_id: pid }); } catch (e) { /* ok */ } }
   mkRegisterInterest([{ product_id: pid, qty: 1 }]);
+  return true;
 }
 window.mkProductWaClicked = mkProductWaClicked;
 

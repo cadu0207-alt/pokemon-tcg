@@ -472,7 +472,7 @@ async function mkPaymentsTabHtml() {
   const s = mk.seller;
   const { data: st } = await sbClient.rpc('mk_seller_pay_status', { p_seller: s.id });
   const status = st || {};
-  const all = ['whatsapp', 'pix_manual', 'pix', 'card', 'boleto'];
+  const all = ['pix_manual', 'pix', 'card', 'boleto'];   // 17/10/2026: 'whatsapp' saiu do checkout (WhatsApp agora é só interesse, sem reservar estoque)
   const adm = mk.isAdmin;
   return '<div class="mk-form">' +
     '<h4 class="mk-sub">Chave Pix da loja</h4>' +
