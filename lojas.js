@@ -169,6 +169,19 @@ async function toggleFeatured(id, current) {
   renderLojas();
 }
 
+// Nº de boosters do produto (só preencha quando tiver certeza): a tela mostra o valor por booster.
+async function saveBoosters(id) {
+  if (!isAdminEditor()) return;
+  const input = document.getElementById('boost-' + id);
+  if (!input) return;
+  const n = parseInt(input.value, 10);
+  if (input.value.trim() && !(n >= 1 && n <= 100)) { alert('Informe um número de 1 a 100 (ou deixe em branco).'); return; }
+  const { error } = await sbClient.from('ml_search_terms').update({ boosters: input.value.trim() ? n : null }).eq('id', id);
+  if (error) { alert('Erro ao salvar boosters: ' + error.message); return; }
+  renderLojas();
+}
+window.saveBoosters = saveBoosters;
+
 async function saveAffiliateUrl(id) {
   if (!isAdminEditor()) return;
   const input = document.getElementById('aff-' + id);
@@ -800,6 +813,10 @@ async function renderAdminPanel() {
           '</div>' +
           '<div class="ml-term-sub">catálogo: <code>' + esc(t.catalog_product_id || t.term) + '</code>' +
             ' · <a href="https://www.mercadolivre.com.br/p/' + (t.catalog_product_id || '') + '" target="_blank" rel="noopener">ver no ML →</a></div>' +
+          '<div class="ml-aff-row">' +
+            '<input id="boost-' + t.id + '" type="number" min="1" max="100" style="max-width:90px" placeholder="Nº boosters" title="Quantos boosters (pacotes) vêm no produto — só preencha se tiver certeza" value="' + (t.boosters || '') + '">' +
+            '<button class="btn-mini" onclick="saveBoosters(' + t.id + ')">Salvar boosters</button>' +
+          '</div>' +
           '<div class="ml-aff-row">' +
             '<input id="aff-' + t.id + '" placeholder="Cole aqui o link meli.la gerado" value="' + (t.affiliate_url || '') + '">' +
             '<button class="btn-mini" onclick="saveAffiliateUrl(' + t.id + ')">Salvar link</button>' +

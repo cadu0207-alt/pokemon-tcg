@@ -89,13 +89,19 @@ function renderProductCard(term, history, featured, coupon, rules, dealScore) {
         '<div class="product-coupon-badge">🎟️ Cupom <code>' + badgeCode + '</code> · ' + badgeLabel + '</div>'
       )
     : '<div class="product-price">R$ ' + fmtBRLLoja(latest.price) + '</div>';
+  // 17/10/2026: valor por booster (preço ÷ nº de boosters), só quando o nº de boosters é conhecido (ml_search_terms.boosters)
+  const nBoost = term.boosters > 0 ? +term.boosters : 0;
+  const perBoost = nBoost ? (discounted != null ? discounted : +latest.price) / nBoost : null;
+  const boosterHtml = perBoost != null
+    ? '<div class="product-ppb" title="Preço do produto ÷ número de boosters. Não desconta brindes (moeda, adesivo, promo).">🃏 ≈ R$ ' + fmtBRLLoja(perBoost) + ' por booster <span>(' + nBoost + (nBoost === 1 ? ' booster' : ' boosters') + ')</span></div>'
+    : '';
   return (
     '<a class="product-card' + (featured ? ' product-card-featured' : '') + '"' + collectionAttr + scoreAttr + ' href="' + (linkUrl || '#') + '" target="_blank" rel="noopener' + (term.affiliate_url ? ' sponsored' : '') + '">' +
       (featured ? '<div class="product-badge">🔥 OFERTA IMPERDÍVEL</div>' : '') +
       '<img class="product-img" src="' + imgSrc + '" alt="' + label + '">' +
       '<div class="product-info">' +
         '<div class="product-name">' + label + '</div>' +
-        priceHtml +
+        priceHtml + boosterHtml +
         // AUDITORIA 03/08/2026: o aviso de raspagem repetia em TODOS os cards
         // (ruído visual) — a informação já está no aviso amarelo global no topo
         // da aba. Aqui fica só o "atualizado em", com tooltip pra quem quiser.

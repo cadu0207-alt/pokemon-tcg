@@ -2221,6 +2221,8 @@ body.share-view .btn-add { display: none !important; }
 .staff-perm-check { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text); cursor: pointer; }
 .staff-perm-check input[type=checkbox] { cursor: pointer; }
 .product-note { font-size: 10px; color: var(--muted); margin-top: 3px; }
+.product-ppb { font-size: 12px; font-weight: 700; color: var(--teal, #0e7898); margin-top: 3px; }
+.product-ppb span { font-weight: 400; color: var(--muted); }
 .product-note-warn { font-size: 10px; color: #a16207; background: #fef3c7; border-radius: 6px; padding: 4px 8px; margin-top: 6px; line-height: 1.4; }
 .product-stats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .product-stat {
