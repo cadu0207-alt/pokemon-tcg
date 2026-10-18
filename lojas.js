@@ -176,7 +176,7 @@ async function saveBoosters(id) {
   if (!input) return;
   const n = parseInt(input.value, 10);
   if (input.value.trim() && !(n >= 1 && n <= 100)) { alert('Informe um número de 1 a 100 (ou deixe em branco).'); return; }
-  const { error } = await sbClient.from('ml_search_terms').update({ boosters: input.value.trim() ? n : null }).eq('id', id);
+  const { error } = await sbClient.from('ml_search_terms').update({ boosters: input.value.trim() ? n : null, boosters_estimado: false }).eq('id', id);
   if (error) { alert('Erro ao salvar boosters: ' + error.message); return; }
   renderLojas();
 }

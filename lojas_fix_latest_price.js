@@ -93,7 +93,7 @@ function renderProductCard(term, history, featured, coupon, rules, dealScore) {
   const nBoost = term.boosters > 0 ? +term.boosters : 0;
   const perBoost = nBoost ? (discounted != null ? discounted : +latest.price) / nBoost : null;
   const boosterHtml = perBoost != null
-    ? '<div class="product-ppb" title="Preço do produto ÷ número de boosters. Não desconta brindes (moeda, adesivo, promo).">🃏 ≈ R$ ' + fmtBRLLoja(perBoost) + ' por booster <span>(' + nBoost + (nBoost === 1 ? ' booster' : ' boosters') + ')</span></div>'
+    ? '<div class="product-ppb" title="Preço do produto ÷ número de boosters. Não desconta brindes (moeda, adesivo, promo).' + (term.boosters_estimado ? ' O nº de boosters é uma estimativa (regra geral: inglês 9, português 6).' : '') + '">🃏 ≈ R$ ' + fmtBRLLoja(perBoost) + ' por booster <span>(' + nBoost + (nBoost === 1 ? ' booster' : ' boosters') + (term.boosters_estimado ? ', estimado' : '') + ')</span></div>'
     : '';
   return (
     '<a class="product-card' + (featured ? ' product-card-featured' : '') + '"' + collectionAttr + scoreAttr + ' href="' + (linkUrl || '#') + '" target="_blank" rel="noopener' + (term.affiliate_url ? ' sponsored' : '') + '">' +
