@@ -4037,3 +4037,6 @@ body.inicio-modal-open { overflow: hidden; }
 .pa-row-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
 .pa-hit { color: var(--teal, #16a34a); }
 .pa-row-act { display: flex; gap: 6px; flex: none; }
+.pa-modes { display: flex; gap: 6px; margin: 4px 0 12px; }
+.pa-mode { flex: 1; padding: 8px 6px; border-radius: 9px; border: 1px solid var(--border2); background: var(--surface); color: var(--text2); font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.pa-mode.on { background: var(--accent); border-color: var(--accent); color: #fff; }

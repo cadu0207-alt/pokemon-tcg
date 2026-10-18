@@ -16,7 +16,7 @@ function paLogged() { return typeof uid === 'function' && !!uid(); }
 async function paLoad(force) {
   if (!paLogged() || typeof sbClient === 'undefined') { paAlerts = null; paLoadedFor = null; return null; }
   if (!force && paAlerts && paLoadedFor === uid()) return paAlerts;
-  const { data, error } = await sbClient.from('ml_price_alerts').select('term_id,target_price,armed,last_notified_at').order('created_at', { ascending: false });
+  const { data, error } = await sbClient.from('ml_price_alerts').select('term_id,target_price,mode,armed,last_notified_at').order('created_at', { ascending: false });
   if (error) { console.warn('[alertas] não carregou:', error.message); return paAlerts; }
   paAlerts = new Map((data || []).map(function (a) { return [a.term_id, a]; }));
   paLoadedFor = uid();
@@ -34,9 +34,9 @@ function paParse(txt) {
 }
 
 // ── sino no card do produto ────────────────────────────────────────
-function paBellHtml(termId, price) {
+function paBellHtml(termId, price, boosters) {
   const on = paAlerts && paAlerts.has(termId);
-  return '<button type="button" class="pa-bell' + (on ? ' pa-on' : '') + '" data-pa-term="' + termId + '" data-pa-price="' + (price == null ? '' : price) + '"' +
+  return '<button type="button" class="pa-bell' + (on ? ' pa-on' : '') + '" data-pa-term="' + termId + '" data-pa-price="' + (price == null ? '' : price) + '" data-pa-boost="' + (boosters > 0 ? boosters : '') + '"' +
     ' title="' + (on ? 'Você tem um alerta neste produto' : 'Avisar quando chegar no meu preço') + '" aria-label="Alerta de preço"' +
     ' onclick="paOpen(' + termId + ',event)">🔔</button>';
 }
@@ -58,7 +58,7 @@ if (typeof window.renderProductCard === 'function') {
     if (!term || !latest) return html;
     const open = html.indexOf('>');                 // fim da tag de abertura do card (<a ...> ou <div ...>)
     if (open < 0) return html;
-    return html.slice(0, open + 1) + paBellHtml(term.id, +latest.price) + html.slice(open + 1);
+    return html.slice(0, open + 1) + paBellHtml(term.id, +latest.price, +term.boosters || 0) + html.slice(open + 1);
   };
 }
 
@@ -83,6 +83,8 @@ function paPushHint() {
   return '<div class="pa-hint">🔔 O aviso sempre chega no <b>sino</b> do MyDeck. Para receber também <b>no celular com o app fechado</b>, abra o sino e toque em “Ativar neste aparelho”.</div>';
 }
 
+let paCtx = null;   // { termId, name, price, boost, mode, existing } do alerta aberto na janela
+
 async function paOpen(termId, ev) {
   if (ev) { ev.preventDefault(); ev.stopPropagation(); }
   if (!paLogged()) {
@@ -94,24 +96,46 @@ async function paOpen(termId, ev) {
   const btn = ev && ev.currentTarget ? ev.currentTarget : document.querySelector('.pa-bell[data-pa-term="' + termId + '"]');
   const card = btn && btn.closest ? btn.closest('.product-card') : null;
   const nameEl = card ? card.querySelector('.product-name') : null;
-  const name = nameEl ? nameEl.textContent.trim() : ('Produto #' + termId);
-  const price = btn ? parseFloat(btn.getAttribute('data-pa-price')) : NaN;
   const cur = paAlerts && paAlerts.get(termId);
-  const suggest = cur ? +cur.target_price : (isFinite(price) ? Math.floor(price * 0.9 * 100) / 100 : '');
+  paCtx = {
+    termId: termId,
+    name: nameEl ? nameEl.textContent.trim() : ('Produto #' + termId),
+    price: btn ? parseFloat(btn.getAttribute('data-pa-price')) : NaN,
+    boost: btn ? (parseInt(btn.getAttribute('data-pa-boost'), 10) || 0) : 0,
+    mode: cur && cur.mode === 'booster' ? 'booster' : 'price',
+    existing: cur || null,
+  };
+  if (paCtx.mode === 'booster' && !paCtx.boost) paCtx.mode = 'price';
+  paRenderModal();
+}
+
+// valor "de referência" da janela: preço do produto ou preço por booster
+function paBase() { const c = paCtx; return c.mode === 'booster' ? (isFinite(c.price) && c.boost ? c.price / c.boost : NaN) : c.price; }
+function paSetMode(m) { if (!paCtx || (m === 'booster' && !paCtx.boost)) return; paCtx.mode = m; paRenderModal(); }
+
+function paRenderModal() {
+  const c = paCtx, base = paBase();
+  const ex = c.existing && c.existing.mode === c.mode ? +c.existing.target_price : null;
+  const suggest = ex != null ? ex : (isFinite(base) ? Math.floor(base * 0.9 * 100) / 100 : '');
+  const unit = c.mode === 'booster' ? ' por booster' : '';
   paShow(
     '<h3 class="pa-h">🔔 Alerta de preço</h3>' +
-    '<div class="pa-prod">' + paEsc(name) + '</div>' +
-    (isFinite(price) ? '<div class="pa-cur">Preço agora no Mercado Livre: <b>R$ ' + paBrl(price) + '</b></div>' : '') +
-    '<label class="pa-lbl" for="pa-target">Me avise quando chegar em (R$)</label>' +
-    '<input id="pa-target" class="pa-input" inputmode="decimal" autocomplete="off" placeholder="ex.: 299,90" value="' + (suggest === '' ? '' : paBrl(suggest)) + '" onkeydown="if(event.key===\'Enter\')paSave(' + termId + ')">' +
-    (isFinite(price) ? '<div class="pa-quick">' + [5, 10, 15, 20].map(function (p) {
-      return '<button type="button" class="btn-mini" onclick="paQuick(' + (Math.floor(price * (100 - p)) / 100) + ')">-' + p + '%</button>';
+    '<div class="pa-prod">' + paEsc(c.name) + '</div>' +
+    (isFinite(c.price) ? '<div class="pa-cur">Agora no Mercado Livre: <b>R$ ' + paBrl(c.price) + '</b>' +
+      (c.boost ? ' · <b>R$ ' + paBrl(c.price / c.boost) + '</b> por booster (' + c.boost + ')' : '') + '</div>' : '') +
+    (c.boost ? '<div class="pa-modes"><button type="button" class="pa-mode' + (c.mode === 'price' ? ' on' : '') + '" onclick="paSetMode(\'price\')">Preço do produto</button>' +
+      '<button type="button" class="pa-mode' + (c.mode === 'booster' ? ' on' : '') + '" onclick="paSetMode(\'booster\')">Valor por booster</button></div>' : '') +
+    '<label class="pa-lbl" for="pa-target">Me avise quando chegar em (R$' + unit + ')</label>' +
+    '<input id="pa-target" class="pa-input" inputmode="decimal" autocomplete="off" placeholder="ex.: ' + (c.mode === 'booster' ? '9,50' : '299,90') + '" value="' + (suggest === '' ? '' : paBrl(suggest)) + '" onkeydown="if(event.key===\'Enter\')paSave(' + c.termId + ')">' +
+    (isFinite(base) ? '<div class="pa-quick">' + [5, 10, 15, 20].map(function (p) {
+      return '<button type="button" class="btn-mini" onclick="paQuick(' + (Math.floor(base * (100 - p)) / 100) + ')">-' + p + '%</button>';
     }).join('') + '</div>' : '') +
     paPushHint() +
     '<div id="pa-err" class="pa-err"></div>' +
-    '<div class="pa-actions"><button type="button" class="btn-mini pa-save" onclick="paSave(' + termId + ')">' + (cur ? 'Atualizar alerta' : 'Criar alerta') + '</button>' +
-    (cur ? '<button type="button" class="btn-mini btn-mini-danger" onclick="paRemove(' + termId + ')">Remover alerta</button>' : '') + '</div>' +
-    '<div class="pa-note">O preço é conferido a cada 15 minutos. Você é avisado quando ele ficar igual ou menor que o seu valor, sem contar cupons.</div>'
+    '<div class="pa-actions"><button type="button" class="btn-mini pa-save" onclick="paSave(' + c.termId + ')">' + (c.existing ? 'Atualizar alerta' : 'Criar alerta') + '</button>' +
+    (c.existing ? '<button type="button" class="btn-mini btn-mini-danger" onclick="paRemove(' + c.termId + ')">Remover alerta</button>' : '') + '</div>' +
+    '<div class="pa-note">O preço é conferido a cada 15 minutos. Você é avisado quando ficar igual ou menor que o seu valor, sem contar cupons.' +
+    (c.mode === 'booster' ? ' O valor por booster é o preço do produto ÷ ' + c.boost + ' boosters (brindes não são descontados).' : '') + '</div>'
   );
   const inp = document.getElementById('pa-target'); if (inp) { try { inp.focus(); inp.select(); } catch (e) { /* ok */ } }
 }
@@ -122,12 +146,12 @@ async function paSave(termId) {
   const v = paParse(inp ? inp.value : '');
   if (!(v > 0)) { if (err) err.textContent = 'Digite o valor em reais (ex.: 299,90).'; return; }
   if (err) err.textContent = '';
-  const { error } = await sbClient.rpc('ml_set_price_alert', { p_term: termId, p_target: v });
+  const { error } = await sbClient.rpc('ml_set_price_alert', { p_term: termId, p_target: v, p_mode: paCtx && paCtx.termId === termId ? paCtx.mode : 'price' });
   if (error) { if (err) err.textContent = error.message; return; }
   await paLoad(true);
   paRefreshBells();
   paClose();
-  if (typeof toast === 'function') toast('Alerta criado: aviso em R$ ' + paBrl(v) + ' 🔔');
+  if (typeof toast === 'function') toast('Alerta criado: aviso em R$ ' + paBrl(v) + (paCtx && paCtx.mode === 'booster' ? ' por booster' : '') + ' 🔔');
 }
 async function paRemove(termId) {
   const { error } = await sbClient.rpc('ml_remove_price_alert', { p_term: termId });
@@ -150,19 +174,21 @@ async function paOpenList() {
   if (!ids.length) { paShow('<h3 class="pa-h">🔔 Meus alertas de preço</h3><div class="pa-empty">Você ainda não tem alertas.<br>Toque no 🔔 de qualquer produto para criar um.</div>'); return; }
   paShow('<h3 class="pa-h">🔔 Meus alertas de preço</h3><div class="pa-empty">Carregando…</div>');
   const [t, h] = await Promise.all([
-    sbClient.from('ml_search_terms').select('id,label,term').in('id', ids),
+    sbClient.from('ml_search_terms').select('id,label,term,boosters').in('id', ids),
     sbClient.from('ml_price_history').select('term_id,price,found_at').in('term_id', ids).order('found_at', { ascending: false }).limit(ids.length * 6),
   ]);
   const names = new Map((t.data || []).map(function (x) { return [x.id, x.label || x.term]; }));
+  const boosts = new Map((t.data || []).map(function (x) { return [x.id, +x.boosters || 0]; }));
   const now = new Map();
   (h.data || []).forEach(function (r) { if (!now.has(r.term_id)) now.set(r.term_id, +r.price); });
   const rows = ids.map(function (id) {
-    const a = paAlerts.get(id), p = now.get(id);
-    const hit = p != null && p <= +a.target_price;
+    const a = paAlerts.get(id), p = now.get(id), isB = a.mode === 'booster' && boosts.get(id) > 0;
+    const pv = p != null ? (isB ? p / boosts.get(id) : p) : null;
+    const hit = pv != null && pv <= +a.target_price;
     return '<div class="pa-row"><div class="pa-row-main"><div class="pa-row-name">' + paEsc(names.get(id) || ('Produto #' + id)) + '</div>' +
-      '<div class="pa-row-sub">Alvo <b>R$ ' + paBrl(a.target_price) + '</b> · agora ' + (p != null ? '<b class="' + (hit ? 'pa-hit' : '') + '">R$ ' + paBrl(p) + '</b>' : '—') +
+      '<div class="pa-row-sub">Alvo <b>R$ ' + paBrl(a.target_price) + (isB ? ' por booster' : '') + '</b> · agora ' + (pv != null ? '<b class="' + (hit ? 'pa-hit' : '') + '">R$ ' + paBrl(pv) + (isB ? ' por booster' : '') + '</b>' : '—') +
       (hit ? ' ✅ no alvo' : '') + '</div></div>' +
-      '<div class="pa-row-act"><button type="button" class="btn-mini" onclick="paOpenFrom(' + id + ',' + (p != null ? p : 'null') + ')">Editar</button>' +
+      '<div class="pa-row-act"><button type="button" class="btn-mini" onclick="paOpenFrom(' + id + ',' + (p != null ? p : 'null') + ',' + (boosts.get(id) || 0) + ')">Editar</button>' +
       '<button type="button" class="btn-mini btn-mini-danger" onclick="paRemoveFromList(' + id + ')">✕</button></div></div>';
   }).join('');
   paShow('<h3 class="pa-h">🔔 Meus alertas de preço <span class="pa-n">(' + ids.length + '/30)</span></h3><div class="pa-list">' + rows + '</div>' + paPushHint());
@@ -173,19 +199,14 @@ async function paRemoveFromList(termId) {
   if (error) { if (typeof toast === 'function') toast(error.message, 'error'); return; }
   await paLoad(true); paRefreshBells(); paOpenList();
 }
-// editar a partir da lista: cria um botão-fantasma com o preço atual pra reaproveitar paOpen
-function paOpenFrom(termId, price) {
+// editar a partir da lista: usa o sino do card se ele estiver na tela; senão monta o contexto com os dados da lista
+function paOpenFrom(termId, price, boost) {
   const card = document.querySelector('.pa-bell[data-pa-term="' + termId + '"]');
   if (card) { paOpen(termId, { preventDefault() {}, stopPropagation() {}, currentTarget: card }); return; }
-  paShowSimple(termId, price);
-}
-function paShowSimple(termId, price) {
   const cur = paAlerts && paAlerts.get(termId);
-  paShow('<h3 class="pa-h">🔔 Editar alerta</h3>' +
-    (price != null ? '<div class="pa-cur">Preço agora: <b>R$ ' + paBrl(price) + '</b></div>' : '') +
-    '<label class="pa-lbl" for="pa-target">Me avise quando chegar em (R$)</label>' +
-    '<input id="pa-target" class="pa-input" inputmode="decimal" value="' + (cur ? paBrl(cur.target_price) : '') + '" onkeydown="if(event.key===\'Enter\')paSave(' + termId + ')">' +
-    '<div id="pa-err" class="pa-err"></div><div class="pa-actions"><button type="button" class="btn-mini pa-save" onclick="paSave(' + termId + ')">Atualizar alerta</button></div>');
+  paCtx = { termId: termId, name: 'Produto #' + termId, price: price == null ? NaN : +price, boost: +boost || 0,
+            mode: cur && cur.mode === 'booster' && +boost ? 'booster' : 'price', existing: cur || null };
+  paRenderModal();
 }
 
 // ── barra "Meus alertas" no topo da aba ────────────────────────────
@@ -229,4 +250,4 @@ if (typeof window.renderLojas === 'function') {
 document.addEventListener('visibilitychange', function () { if (paLoadedFor && paLogged() && paLoadedFor !== uid()) { paAlerts = null; paLoadedFor = null; } });
 
 window.paOpen = paOpen; window.paClose = paClose; window.paSave = paSave; window.paRemove = paRemove; window.paQuick = paQuick;
-window.paOpenList = paOpenList; window.paRemoveFromList = paRemoveFromList; window.paOpenFrom = paOpenFrom;
+window.paSetMode = paSetMode; window.paOpenList = paOpenList; window.paRemoveFromList = paRemoveFromList; window.paOpenFrom = paOpenFrom;
