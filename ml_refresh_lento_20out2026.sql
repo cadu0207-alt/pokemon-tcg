@@ -6,3 +6,6 @@
 alter table public.ml_search_terms add column if not exists refresh_minutes smallint not null default 15 check (refresh_minutes in (5, 15, 30, 60));
 update public.ml_search_terms set refresh_minutes = 30 where active and created_at < '2026-10-15';
 -- cron.schedule('ml-refresh-slow-30min', '7,37 * * * *', 'select net.http_post(url := ''https://dvkiodmhtzlkvmyyzelx.supabase.co/functions/v1/ml-refresh-all?slow=1', ...)') — ver o job no banco.
+-- 20/10/2026 (2): Celebração 30 Anos passou de 5 em 5 para 2 em 2 minutos: cron.alter_job(job 'ml-refresh-cel30-5min', schedule '*/2 * * * *')
+-- (o nome do job ficou com "5min" por limitação do pg_cron). ml-refresh-all não grava linha de preço igual à anterior se ela tem
+-- menos de 10 min (ainda grava 1 a cada 10 min sem mudança).

@@ -136,6 +136,15 @@ async function refreshOneTerm(term: TermRow, token: string) {
   // destacar lá um vendedor diferente do mais barato registrado).
   const bestUrl = sellers[0].permalink || catalogUrl;
 
+  // 20/10/2026: com a atualização de 2 em 2 min (Celebração 30 Anos) o preço quase sempre se repete — não grava linha igual à
+  // anterior se ela tem menos de 10 min. Mantém um registro a cada 10 min mesmo sem mudança (o "atualizado há" e as janelas de
+  // 40 min dos alertas dependem de haver leitura recente).
+  const { data: lastRow } = await sbAdmin.from('ml_price_history').select('price, found_at')
+    .eq('term_id', term.id).order('found_at', { ascending: false }).limit(1).maybeSingle();
+  if (lastRow && Number(lastRow.price) === Number(lowestPrice) && Date.now() - new Date(lastRow.found_at).getTime() < 10 * 60 * 1000) {
+    return { id: term.id, ok: true, lowestPrice, sellersCount: sellers.length, skipped: true };
+  }
+
   await sbAdmin.from('ml_price_history').insert([{
     term_id: term.id,
     ml_item_id: catalogId,
