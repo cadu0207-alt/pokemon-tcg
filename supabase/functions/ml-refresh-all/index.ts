@@ -104,9 +104,10 @@ async function refreshOneTerm(term: TermRow, token: string) {
   const catalogId = term.catalog_product_id;
   if (!catalogId) return { id: term.id, ok: false, error: 'sem catalog_product_id' };
 
+  // 20/10/2026: limite de 15 s por chamada ao ML — uma chamada pendurada não pode travar a rodada inteira (limite da função: 150 s)
   const [productRes, itemsRes] = await Promise.all([
-    fetch(`${ML_API}/products/${catalogId}`, { headers: { Authorization: `Bearer ${token}` } }),
-    fetch(`${ML_API}/products/${catalogId}/items`, { headers: { Authorization: `Bearer ${token}` } }),
+    fetch(`${ML_API}/products/${catalogId}`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000) }),
+    fetch(`${ML_API}/products/${catalogId}/items`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000) }),
   ]);
 
   if (!productRes.ok) return { id: term.id, ok: false, error: `produto ${productRes.status}` };
