@@ -90,7 +90,8 @@ async function renderAdminPanel() {
   if (!holder) return;
   if (!isAdmin()) { holder.innerHTML = ''; return; }
 
-  const [terms, coupons, rules] = await Promise.all([loadSearchTerms(), loadCoupons(), loadCouponRules()]);
+  const [terms, coupons, rules, dealScope] = await Promise.all([loadSearchTerms(), loadCoupons(), loadCouponRules(), loadDealScope()]);
+  const watchCount = terms.filter(function (t) { return t.deal_watch; }).length;
 
   const termsListHtml = terms.length
     ? terms.map(t => {
@@ -107,12 +108,18 @@ async function renderAdminPanel() {
             '<span class="ml-term-actions">' +
               '<button class="btn-mini" onclick="event.stopPropagation(); expandTermCard(' + t.id + '); runSearchForTerm(' + JSON.stringify(t).replace(/"/g, '&quot;') + ', document.getElementById(\'res-' + t.id + '\'))">Buscar agora</button>' +
               '<button class="btn-mini' + (t.featured ? ' btn-mini-active' : '') + '" onclick="event.stopPropagation(); toggleFeatured(' + t.id + ',' + (!!t.featured) + ')">' + (t.featured ? '★ Destaque' : '☆ Destacar') + '</button>' +
+              '<button class="btn-mini' + (t.deal_watch ? ' btn-mini-active' : '') + '" title="Marca este produto para receber aviso de promoção (vale quando o escopo é só os marcados)" onclick="event.stopPropagation(); toggleDealWatch(' + t.id + ',' + (!!t.deal_watch) + ')">' + (t.deal_watch ? '🔔 Marcado' : '🔕 Marcar') + '</button>' +
               '<button class="btn-mini btn-mini-danger" onclick="event.stopPropagation(); removeSearchTerm(' + t.id + ')">✕</button>' +
             '</span>' +
           '</div>' +
           '<div class="ml-term-body">' +
             '<div class="ml-term-sub">catálogo: <code>' + (t.catalog_product_id || t.term) + '</code>' +
               ' · <a href="https://www.mercadolivre.com.br/p/' + (t.catalog_product_id || '') + '" target="_blank" rel="noopener">ver no ML →</a></div>' +
+            '<div class="ml-aff-row">' +
+              '<input id="boost-' + t.id + '" type="number" min="1" max="100" style="max-width:90px" placeholder="Nº boosters" title="Quantos boosters (pacotes) vêm no produto — só preencha se tiver certeza" value="' + (t.boosters || '') + '">' +
+              '<button class="btn-mini" onclick="saveBoosters(' + t.id + ')">Salvar boosters</button>' +
+              (t.boosters ? '<span style="font-size:11px;color:var(--muted)">' + (t.boosters_estimado ? 'estimado' : 'confirmado') + (t.boosters_nota ? ' · ' + String(t.boosters_nota).replace(/</g, '&lt;') : '') + '</span>' : '') +
+            '</div>' +
             '<div class="ml-aff-row">' +
               '<input id="aff-' + t.id + '" placeholder="Cole aqui o link meli.la gerado" value="' + (t.affiliate_url || '') + '">' +
               '<button class="btn-mini" onclick="saveAffiliateUrl(' + t.id + ')">Salvar link</button>' +
@@ -189,6 +196,11 @@ async function renderAdminPanel() {
         '<button class="btn-mini" id="btn-refresh-all" onclick="refreshAllTerms()">🔄 Atualizar todos agora</button>' +
         '<span id="refresh-all-status" style="font-size:11px;color:var(--muted)"></span>' +
       '</span>' +
+    '</div>' +
+    '<div class="ml-deal-scope" style="margin:6px 0 14px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);font-size:13px">' +
+      '<b>🔔 Avisos de promoção</b> <span style="color:var(--muted)">— preço parado por mais de 24 h não é promoção; só volta a avisar se o preço baixar.</span><br>' +
+      '<label style="margin-right:14px"><input type="radio" name="deal-scope" value="all"' + (dealScope !== 'marked' ? ' checked' : '') + ' onchange="saveDealScope(\'all\')"> Todas as promoções</label>' +
+      '<label><input type="radio" name="deal-scope" value="marked"' + (dealScope === 'marked' ? ' checked' : '') + ' onchange="saveDealScope(\'marked\')"> Só os produtos que eu marcar (' + watchCount + ' marcado' + (watchCount === 1 ? '' : 's') + ')</label>' +
     '</div>' +
     '<div class="ml-add-term">' +
       '<input id="new-ml-label" placeholder="Nome do produto (opcional — puxa do ML se deixar em branco)">' +

@@ -163,6 +163,25 @@ async function removeSearchTerm(id) {
   renderLojas();
 }
 
+// 21/10/2026: avisos de promoção — escopo (todas as promoções ou só os produtos marcados) e marcação por produto.
+// Regra do aviso (banco, ml_check_deals): preço parado por mais de 24 h não é promoção; só volta a ser se o preço baixar.
+async function loadDealScope() {
+  try { const { data, error } = await sbClient.rpc('ml_get_deal_scope'); return error ? 'all' : (data || 'all'); } catch (e) { return 'all'; }
+}
+async function saveDealScope(scope) {
+  if (!isAdminEditor()) return;
+  const { error } = await sbClient.rpc('ml_set_deal_scope', { p_scope: scope });
+  if (error) { alert('Não consegui salvar: ' + error.message); return; }
+  renderAdminPanel();
+}
+async function toggleDealWatch(id, current) {
+  if (!isAdminEditor()) return;
+  const { error } = await sbClient.from('ml_search_terms').update({ deal_watch: !current }).eq('id', id);
+  if (error) { alert('Erro ao salvar: ' + error.message); return; }
+  renderAdminPanel();
+}
+window.saveDealScope = saveDealScope; window.toggleDealWatch = toggleDealWatch;
+
 async function toggleFeatured(id, current) {
   if (!hasPerm('lojas')) return;
   await sbClient.from('ml_search_terms').update({ featured: !current }).eq('id', id);
@@ -797,7 +816,8 @@ async function renderAdminPanel() {
   if (!holder) return;
   if (!isAdmin()) { holder.innerHTML = ''; return; }
 
-  const [terms, coupons, rules] = await Promise.all([loadSearchTerms(), loadCoupons(), loadCouponRules()]);
+  const [terms, coupons, rules, dealScope] = await Promise.all([loadSearchTerms(), loadCoupons(), loadCouponRules(), loadDealScope()]);
+  const watchCount = terms.filter(function (t) { return t.deal_watch; }).length;
   const termsListHtml = terms.length
     ? terms.map(t => {
         const coupon = couponForTerm(coupons, t.id);
@@ -808,6 +828,7 @@ async function renderAdminPanel() {
             '<span class="ml-term-actions">' +
               '<button class="btn-mini" onclick="runSearchForTerm(' + JSON.stringify(t).replace(/"/g, '&quot;') + ', document.getElementById(\'res-' + t.id + '\'))">Buscar agora</button>' +
               '<button class="btn-mini' + (t.featured ? ' btn-mini-active' : '') + '" onclick="toggleFeatured(' + t.id + ',' + (!!t.featured) + ')">' + (t.featured ? '★ Destaque' : '☆ Destacar') + '</button>' +
+              '<button class="btn-mini' + (t.deal_watch ? ' btn-mini-active' : '') + '" title="Marca este produto para receber aviso de promoção (vale quando o escopo é \'só os marcados\')" onclick="toggleDealWatch(' + t.id + ',' + (!!t.deal_watch) + ')">' + (t.deal_watch ? '🔔 Marcado' : '🔕 Marcar') + '</button>' +
               '<button class="btn-mini btn-mini-danger" onclick="removeSearchTerm(' + t.id + ')">✕</button>' +
             '</span>' +
           '</div>' +
@@ -892,6 +913,11 @@ async function renderAdminPanel() {
         '<button class="btn-mini" id="btn-refresh-all" onclick="refreshAllTerms()">🔄 Atualizar todos agora</button>' +
         '<span id="refresh-all-status" style="font-size:11px;color:var(--muted)"></span>' +
       '</span>' +
+    '</div>' +
+    '<div class="ml-deal-scope" style="margin:6px 0 14px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);font-size:13px">' +
+      '<b>🔔 Avisos de promoção</b> <span style="color:var(--muted)">— preço parado por mais de 24 h não é promoção; só volta a avisar se o preço baixar.</span><br>' +
+      '<label style="margin-right:14px"><input type="radio" name="deal-scope" value="all"' + (dealScope !== 'marked' ? ' checked' : '') + ' onchange="saveDealScope(\'all\')"> Todas as promoções</label>' +
+      '<label><input type="radio" name="deal-scope" value="marked"' + (dealScope === 'marked' ? ' checked' : '') + ' onchange="saveDealScope(\'marked\')"> Só os produtos que eu marcar (' + watchCount + ' marcado' + (watchCount === 1 ? '' : 's') + ')</label>' +
     '</div>' +
     '<div class="ml-add-term">' +
       '<input id="new-ml-label" placeholder="Nome do produto (opcional — puxa do ML se deixar em branco)">' +
