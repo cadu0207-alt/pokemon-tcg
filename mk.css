@@ -326,3 +326,24 @@ body.mk-modal-open { overflow: hidden; }
   /* a barra do carrinho ficava escondida atrás da barra de páginas fixa (.mnav, ~56px) */
   .mk-cart-bar { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* ── Toybox discreta no Início e no Fichário (21/10/2026) ──────────────────────────────────────────── */
+.mk-nav-badge, .mk-nav-dot { display: none !important; }
+#mk-hero-slot { margin: 0 0 14px; }
+.mkb-lite { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); }
+.mkb-lite-main { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; text-decoration: none; color: inherit; }
+.mkb-lite-img { width: 46px; height: 46px; flex: none; border-radius: 8px; overflow: hidden; background: var(--surface2); display: grid; place-items: center; font-size: 22px; }
+.mkb-lite-img img { width: 100%; height: 100%; object-fit: cover; }
+.mkb-lite-tx { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.mkb-lite-tx small { font-size: 10.5px; color: var(--muted); letter-spacing: .02em; }
+.mkb-lite-tx b { font-size: 13px; font-weight: 700; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mkb-lite-tx em { font-style: normal; font-size: 12.5px; font-weight: 700; color: var(--text2); }
+.mkb-lite-tx s { font-weight: 400; color: var(--muted); margin-left: 4px; }
+.mkb-lite-go { flex: none; font-size: 12.5px; font-weight: 700; color: var(--accent); text-decoration: none; padding: 6px 4px; }
+.mkb-lite-x { flex: none; border: 0; background: transparent; color: var(--muted); font-size: 13px; cursor: pointer; padding: 6px; line-height: 1; }
+.mkb-lite-x:hover { color: var(--text); }
+@media (max-width: 480px) { .mkb-lite { padding: 6px 8px; gap: 8px; } .mkb-lite-img { width: 40px; height: 40px; } .mkb-lite-go { display: none; } }
+/* cartão do Fichário: mesmas cores do site, sem o roxo escuro */
+.mkb-card { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+.mkb-card-tx span { color: var(--muted); }
+.mkb-card .mkb-btn { background: transparent; color: var(--accent) !important; border: 1px solid var(--border); font-weight: 700; }

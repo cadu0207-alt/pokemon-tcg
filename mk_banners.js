@@ -96,59 +96,48 @@ function mkStripClose() {
 window.mkStripClose = mkStripClose;
 
 function mkStripRender() {
-  const old = document.getElementById('mk-strip');
-  const newest = mkPromo.items.reduce(function (m, p) { return Math.max(m, Date.parse(p.published_at || 0) || 0); }, 0);
-  const latestIso = newest ? new Date(newest).toISOString() : '';
-  const activePane = document.querySelector('.pane.active');
-  const onStore = activePane && activePane.id === 'mk';
-  const onInicio = activePane && activePane.id === 'inicio';   // no Início já existe o banner grande
-  if (!mkPromoActive() || onStore || onInicio || mkStripDismissed(latestIso)) { if (old) old.remove(); return; }
-  const first = mkPromo.items.find(mkIsNew) || mkPromo.items[0];
-  const txt = mkPromo.newCount > 0
-    ? '<b>' + mkPromo.newCount + ' novidade' + (mkPromo.newCount > 1 ? 's' : '') + ' na Toybox</b> · ' + mkEsc(first.title)
-    : '<b>Toybox</b> · ' + mkPromo.items.length + ' produto' + (mkPromo.items.length > 1 ? 's' : '') + ' na loja parceira do MyDeck';
-  const html = '<span class="mkb-strip-ic"></span><span class="mkb-strip-tx">' + txt + '</span>' +
-    '<a href="#" class="mkb-strip-go" onclick="mkGoStoreAll();return false;">Ver a loja →</a>' +
-    '<button type="button" class="mkb-strip-x" aria-label="Fechar aviso" onclick="mkStripClose()">✕</button>';
-  if (old) { old.innerHTML = html; return; }
-  const host = document.getElementById('pg-app');
-  if (!host) return;
-  const el = document.createElement('div');
-  el.id = 'mk-strip'; el.className = 'mkb-strip'; el.innerHTML = html;
-  const anchor = document.getElementById('feedback-bar-wrap') || host.querySelector('.stripe');
-  if (anchor && anchor.parentNode === host) anchor.after(el); else host.prepend(el);
+  // 21/10/2026: a faixa roxa no topo de todas as abas foi removida (feedback: propaganda demais, "cara de cassino")
+  const old = document.getElementById('mk-strip'); if (old) old.remove();
 }
 
 // ── Início ──────────────────────────────────────────────────────────
+// 21/10/2026: antes eram um banner grande + 4 produtos + selos "NOVO". O feedback foi de propaganda demais (parecia cassino),
+// então agora é UM cartão pequeno, nas cores do site, com 1 produto sorteado (dá preferência a quem está em promoção) e um ✕
+// que oculta por 7 dias. Some sozinho se a loja não tiver produto em estoque.
+const MK_LITE_KEY = 'mk_lite_dismissed';
+function mkLiteDismissed() {
+  try { const t = +localStorage.getItem(MK_LITE_KEY) || 0; return Date.now() - t < 7 * 86400000; } catch (e) { return false; }
+}
+function mkLiteClose() {
+  try { localStorage.setItem(MK_LITE_KEY, String(Date.now())); } catch (e) { /* sem storage */ }
+  const slot = document.getElementById('mk-hero-slot'); if (slot) slot.innerHTML = '';
+}
+window.mkLiteClose = mkLiteClose;
+function mkLitePick() {
+  const cur = mkPromo.items.find(function (p) { return p.id === mkPromo.pickId; });
+  if (cur) return cur;
+  const deals = mkPromo.items.filter(function (p) { return p.compare_at_price && p.compare_at_price > p.price; });
+  const pool = deals.length ? deals : mkPromo.items;
+  const p = pool[Math.floor(Math.random() * pool.length)];
+  mkPromo.pickId = p ? p.id : null;
+  return p;
+}
 function mkHeroRender() {
   const slot = document.getElementById('mk-hero-slot');
   if (!slot) return;
-  if (!mkPromoActive()) {
-    // 17/10/2026: enquanto o catálogo não existe, a Início ainda apresenta a loja ("em breve") — some sozinho
-    // quando o primeiro produto ativo com estoque aparecer (aí vale o banner normal abaixo).
-    const t = mkPromo.seller;
-    if (!t || t.status !== 'ativa') { slot.innerHTML = ''; return; }
-    slot.innerHTML = '<section class="mkb-hero" aria-label="Loja parceira Toybox">' +
-      '<div class="mkb-hero-tx"><span class="mkb-seal">Loja parceira</span>' +
-        '<h3>Loja Toybox chegando ao MyDeck</h3>' +
-        '<p>Cartas, selados e acessórios em 3D direto da Toybox' + ([t.city, t.uf].filter(Boolean).length ? ', de ' + mkEsc([t.city, t.uf].filter(Boolean).join(' ')) : '') + '. O catálogo está sendo montado.</p>' +
-        '<div class="mkb-hero-cta"><a href="#" class="mkb-btn" onclick="mkGoStoreAll();return false;">Conhecer a loja →</a>' +
-          '<span class="mkb-pill">Em breve</span></div></div>' +
-      '<div class="mkb-hero-art" aria-hidden="true"></div>' +
-      '</section>';
-    return;
-  }
-  const s = mkPromo.seller;
-  const title = s.promo_title || (mkPromo.newCount > 0 ? (mkPromo.newCount + ' novidade' + (mkPromo.newCount > 1 ? 's' : '') + ' na Toybox') : 'Loja Toybox no MyDeck');
-  const text = s.promo_text || 'Pokémon TCG, acessórios em 3D e colecionáveis, direto de ' + [s.city, s.uf].filter(Boolean).join(' ') + '.';
-  slot.innerHTML = '<section class="mkb-hero" aria-label="Loja parceira Toybox">' +
-    '<div class="mkb-hero-tx"><span class="mkb-seal">Loja parceira</span>' +
-      '<h3>' + mkEsc(title) + '</h3><p>' + mkEsc(text) + '</p>' +
-      '<div class="mkb-hero-cta"><a href="#" class="mkb-btn" onclick="mkGoStoreAll();return false;">Ver a loja →</a>' +
-        '<span class="mkb-pill">' + mkPromo.items.length + ' em estoque</span></div></div>' +
-    '<div class="mkb-hero-art" aria-hidden="true"></div>' +
-    '</section>' +
-    '<div class="mkb-row" aria-label="Produtos da Toybox">' + mkPromo.items.slice(0, 4).map(mkMiniCard).join('') + '</div>';
+  if (!mkPromoActive() || mkLiteDismissed()) { slot.innerHTML = ''; return; }
+  const p = mkLitePick();
+  if (!p) { slot.innerHTML = ''; return; }
+  const cover = mkSafeUrl(mkCover(p));
+  const off = p.compare_at_price && p.compare_at_price > p.price;
+  slot.innerHTML = '<section class="mkb-lite" aria-label="Loja parceira Toybox">' +
+    '<a href="#" class="mkb-lite-main" onclick="mkGoProduct(' + p.id + ');return false;">' +
+      '<span class="mkb-lite-img">' + (cover ? '<img loading="lazy" src="' + mkEsc(cover) + '" alt="">' : (MK_KIND_ICON[p.kind] || '🧸')) + '</span>' +
+      '<span class="mkb-lite-tx"><small>Da loja parceira Toybox</small><b>' + mkEsc(p.title) + '</b>' +
+        '<em>' + mkMoney(p.price) + (off ? ' <s>' + mkMoney(p.compare_at_price) + '</s>' : '') + '</em></span></a>' +
+    '<a href="#" class="mkb-lite-go" onclick="mkGoStoreAll();return false;">Ver loja</a>' +
+    '<button type="button" class="mkb-lite-x" aria-label="Ocultar por alguns dias" title="Ocultar" onclick="mkLiteClose()">✕</button>' +
+    '</section>';
 }
 
 // ── Fichário (coleção aberta) ───────────────────────────────────────
@@ -167,24 +156,14 @@ function mkFicRender() {
 }
 
 // ── Leilão ──────────────────────────────────────────────────────────
+// 21/10/2026: o cartão "Não levou o lote?" saiu (era mais uma propaganda da loja, fora do contexto do que a pessoa estava fazendo)
 function mkLeilaoRender() {
-  const pane = document.getElementById('leilao');
-  if (!pane) return;
-  let slot = document.getElementById('mk-leilao-slot');
-  if (!slot) {
-    const title = pane.querySelector('.sec-title');
-    if (!title) return;
-    slot = document.createElement('div'); slot.id = 'mk-leilao-slot'; title.after(slot);
-  }
-  if (!mkPromoActive()) { slot.innerHTML = ''; return; }
-  slot.innerHTML = '<div class="mkb-card"><span class="mkb-card-ic"></span><div class="mkb-card-tx"><b>Não levou o lote?</b>' +
-    '<span>Veja o que a Toybox, loja parceira, tem pronto para envio.</span></div>' +
-    '<a href="#" class="mkb-btn mkb-btn-sm" onclick="mkGoStoreAll();return false;">Ver loja</a></div>';
+  const slot = document.getElementById('mk-leilao-slot'); if (slot) slot.innerHTML = '';
 }
 
 // ── selo NOVO no menu ───────────────────────────────────────────────
 function mkNavBadges() {
-  document.querySelectorAll('.mk-nav-badge').forEach(function (b) { b.hidden = !(mkPromoActive() && mkPromo.newCount > 0); });
+  document.querySelectorAll('.mk-nav-badge').forEach(function (b) { b.hidden = true; });   // 21/10/2026: sem selo/ponto chamando atenção no menu
 }
 
 function mkBannersRender() {
