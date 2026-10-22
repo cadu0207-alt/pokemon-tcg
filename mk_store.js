@@ -198,7 +198,7 @@ function mkWholesaleHtml() {
     '<div class="mk-wh-actions">' +
       (url ? '<a class="mk-buy-btn mk-buy-site" target="_blank" rel="noopener" href="' + mkEsc(url) + '">📄 Ver catálogo de importação</a>' : '') +
       (wa ? '<a class="mk-buy-btn mk-buy-alt" target="_blank" rel="noopener" href="https://wa.me/' + wa + '?text=' + encodeURIComponent(msg) + '" onclick="return typeof mkWaGate === \'function\' ? mkWaGate() : true">💬 Pedir cotação pelo WhatsApp</a>' : '') +
-    '</div></section>';
+    '</div></section><div id="mk-wh-catalog" class="mk-wh-cat"></div>';
 }
 
 function mkRenderStore() {
@@ -209,6 +209,7 @@ function mkRenderStore() {
     (atacado ? mkWholesaleHtml()
              : mkStoreFiltersHtml() + '<div id="mk-grid-holder">' + mkGridHtml() + '</div>' + (typeof mkCartBarHtml === 'function' ? mkCartBarHtml() : '')) +
     '</div>';
+  if (atacado && typeof mkWhMount === 'function') mkWhMount();   // catálogo de importação (mk_atacado.js)
   if (typeof mkCartRefreshUI === 'function') mkCartRefreshUI();
 }
 
