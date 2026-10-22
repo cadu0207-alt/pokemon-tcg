@@ -4,7 +4,7 @@
 // Os produtos vêm de atacado_toybox/catalogo.json (143 itens do catálogo "TOYBOX ATACADO": Especial 30 Anos, China, Japão), com as fotos
 // na mesma pasta. NÃO tem preço: a cotação é feita no pedido. A pessoa monta uma lista com as quantidades e envia a cotação pelo WhatsApp
 // da loja (login antes, como nos outros botões de WhatsApp). A lista fica guardada no navegador.
-// Para atualizar o catálogo: enviar o novo arquivo do catálogo (HTML) — o script atacado_toybox/extract_atacado.py regera catalogo.json e as fotos.
+// Para atualizar o catálogo: enviar o novo arquivo do catálogo (HTML) — o script de extração (guardado fora do site) regera catalogo.json e as fotos.
 // Carrega depois de mk_store.js (a aba Atacado chama mkWhMount()).
 // ================================================================
 
