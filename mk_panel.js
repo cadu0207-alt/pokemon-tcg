@@ -534,6 +534,10 @@ function mkConfigTabHtml() {
     '<label class="mk-check"><input type="checkbox" id="mkc-pickup_enabled"' + (s.pickup_enabled ? ' checked' : '') + '> Aceito retirada em mãos</label>' +
     f('pickup_note', 'Onde / como retirar', s.pickup_note) +
     '<label class="mk-f"><span>Política de trocas e devoluções</span><textarea id="mkc-return_policy" rows="6" maxlength="8000">' + mkEsc(s.return_policy || '') + '</textarea></label>' +
+    '<h4 class="mk-sub">Aba “Atacado”</h4>' +
+    '<div class="mk-hint">Se preencher, a loja ganha uma aba <b>Atacado</b> com este texto (condições de estoque e importação, pedido mínimo, frete, prazo). Aceita <b>**negrito**</b>, títulos com # e listas com -. Em branco, a aba não aparece.</div>' +
+    '<label class="mk-f"><span>Texto da aba Atacado</span><textarea id="mkc-wholesale_info" rows="10" maxlength="8000">' + mkEsc(s.wholesale_info || '') + '</textarea></label>' +
+    f('wholesale_url', 'Link do catálogo de importação (opcional, começa com https://)', s.wholesale_url, 'maxlength="500" placeholder="https://…"') +
     (mk.isAdmin ? '<h4 class="mk-sub">Administração do MyDeck</h4><div class="mk-f-row">' +
         '<label class="mk-f"><span>Situação da loja</span><select id="mkc-status">' + ['pendente', 'ativa', 'pausada', 'suspensa'].map(function (x) { return '<option value="' + x + '"' + (s.status === x ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label>' +
         '<label class="mk-f"><span>Comissão do MyDeck (%)</span><input id="mkc-commission_pct" type="number" min="0" max="50" step="0.5" value="' + (s.commission_pct == null ? 5 : s.commission_pct) + '"></label></div>'
@@ -583,7 +587,8 @@ async function mkSaveConfig() {
   const days = parseInt(g('handling_days') || '3', 10);
   if (!Number.isFinite(days) || days < 0 || days > 60) { err('Prazo de postagem entre 0 e 60 dias.'); return; }
   const urlOrNull = function (v) { v = v.trim(); if (!v) return null; return mkSafeUrl(v) ? v : false; };
-  const ig = urlOrNull(g('instagram')), tt = urlOrNull(g('tiktok')), ws = urlOrNull(g('website'));
+  const ig = urlOrNull(g('instagram')), tt = urlOrNull(g('tiktok')), ws = urlOrNull(g('website')), wh = urlOrNull(g('wholesale_url'));
+  if (wh === false) { err('O link do catálogo de atacado precisa começar com https://'); return; }
   if (ig === false || tt === false || ws === false) { err('Os links de Instagram, TikTok e site precisam começar com https://'); return; }
   const uf = g('uf').toUpperCase();
   if (uf && uf.length !== 2) { err('UF com 2 letras (ex.: SP).'); return; }
@@ -594,6 +599,7 @@ async function mkSaveConfig() {
     handling_days: days, flat_shipping: flat, free_shipping_over: free,
     pickup_enabled: !!document.getElementById('mkc-pickup_enabled').checked, pickup_note: g('pickup_note') || null,
     return_policy: g('return_policy') || null,
+    wholesale_info: g('wholesale_info') || null, wholesale_url: wh,
     promo_title: g('promo_title') || null, promo_text: g('promo_text') || null,
   };
   if (mk.isAdmin) {

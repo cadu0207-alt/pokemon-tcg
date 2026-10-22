@@ -179,11 +179,36 @@ function mkRenderGridOnly() {
   if (g) g.innerHTML = mkGridHtml();
 }
 
+// 22/10/2026: aba "Atacado" na página da loja (condições de estoque/importação). O texto é do lojista (Markdown simples, painel →
+// Dados da loja → Atacado); sem texto, a aba não existe.
+function mkHasWholesale() { return !!(mk.seller && mk.seller.wholesale_info && String(mk.seller.wholesale_info).trim()); }
+function mkSetTab(t) { mk.tab = t === 'atacado' && mkHasWholesale() ? 'atacado' : 'produtos'; mkRenderStore(); window.scrollTo(0, 0); }
+window.mkSetTab = mkSetTab;
+function mkTabsHtml() {
+  if (!mkHasWholesale()) return '';
+  const on = mk.tab === 'atacado' ? 'atacado' : 'produtos';
+  return '<div class="mk-tabs" role="tablist">' +
+    '<button type="button" role="tab" class="mk-tab' + (on === 'produtos' ? ' on' : '') + '" aria-selected="' + (on === 'produtos') + '" onclick="mkSetTab(\'produtos\')">🛍️ Produtos</button>' +
+    '<button type="button" role="tab" class="mk-tab' + (on === 'atacado' ? ' on' : '') + '" aria-selected="' + (on === 'atacado') + '" onclick="mkSetTab(\'atacado\')">📦 Atacado</button></div>';
+}
+function mkWholesaleHtml() {
+  const s = mk.seller, wa = mkDigits(s.whatsapp), url = mkSafeUrl(s.wholesale_url);
+  const msg = 'Oi! Vi a aba de atacado da ' + s.name + ' no MyDeck e quero pedir uma cotação. https://mydecktcg.com.br/#mk';
+  return '<section class="mk-wh"><div class="mk-md">' + mkMd(s.wholesale_info) + '</div>' +
+    '<div class="mk-wh-actions">' +
+      (url ? '<a class="mk-buy-btn mk-buy-site" target="_blank" rel="noopener" href="' + mkEsc(url) + '">📄 Ver catálogo de importação</a>' : '') +
+      (wa ? '<a class="mk-buy-btn mk-buy-alt" target="_blank" rel="noopener" href="https://wa.me/' + wa + '?text=' + encodeURIComponent(msg) + '" onclick="return typeof mkWaGate === \'function\' ? mkWaGate() : true">💬 Pedir cotação pelo WhatsApp</a>' : '') +
+    '</div></section>';
+}
+
 function mkRenderStore() {
   const wrap = document.getElementById('mk-wrap');
   if (!wrap || !mk.seller) return;
-  wrap.innerHTML = '<div class="mk-page">' + mkStoreHeaderHtml() + mkStoreFiltersHtml() +
-    '<div id="mk-grid-holder">' + mkGridHtml() + '</div>' + (typeof mkCartBarHtml === 'function' ? mkCartBarHtml() : '') + '</div>';
+  const atacado = mk.tab === 'atacado' && mkHasWholesale();
+  wrap.innerHTML = '<div class="mk-page">' + mkStoreHeaderHtml() + mkTabsHtml() +
+    (atacado ? mkWholesaleHtml()
+             : mkStoreFiltersHtml() + '<div id="mk-grid-holder">' + mkGridHtml() + '</div>' + (typeof mkCartBarHtml === 'function' ? mkCartBarHtml() : '')) +
+    '</div>';
   if (typeof mkCartRefreshUI === 'function') mkCartRefreshUI();
 }
 
