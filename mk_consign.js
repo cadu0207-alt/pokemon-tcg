@@ -12,7 +12,7 @@ const mkc = {
   seller: null, term: null, isAdmin: false,
   mine: [], items: [], returns: [], ship: {},
   loadedFor: null, loading: null,
-  form: null,
+  form: null, idx: null, res: {},
   panel: { consignments: [], items: [], returns: [], priv: null, filter: 'andamento', loaded: false },
 };
 
@@ -264,7 +264,7 @@ function mkcAsk(title, intro, fields, okLabel, cb) {
 }
 
 // ── formulário de nova remessa ──────────────────────────────────────
-function mkcBlankRow() { return { name: '', set_label: '', card_n: '', language: 'pt-BR', condition: 'NM', qty: 1, price: '', live: false, livemin: '' }; }
+function mkcBlankRow() { return { name: '', set_id: '', set_label: '', card_n: '', language: 'pt-BR', condition: 'NM', qty: 1, price: '', live: false, livemin: '', ref: null }; }
 function mkcOpenForm() {
   if (!(typeof uid === 'function' && uid())) { if (typeof _showAuth === 'function') _showAuth(true); return; }
   if (!mkc.seller || !mkc.term) return;
@@ -286,11 +286,13 @@ function mkcRowHtml(r, i, n) {
   const opt = function (list, cur) { return list.map(function (o) { return '<option value="' + o[0] + '"' + (cur === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join(''); };
   const inp = function (f, ph, extra) { return '<input data-f="' + f + '" placeholder="' + ph + '" value="' + mkEsc(r[f]) + '" ' + (extra || '') + '>'; };
   return '<div class="mkc-row"><div class="mkc-row-h"><b>Carta ' + (i + 1) + '</b>' + (n > 1 ? '<button type="button" class="mkc-link" onclick="mkcRowDel(' + i + ')">remover</button>' : '') + '</div>' +
-    inp('name', 'Nome da carta *', 'maxlength="120"') +
+    '<input data-f="name" placeholder="Nome ou código da carta * (ex.: charizard ex, sv3 125, obf 125)" value="' + mkEsc(r.name) + '" maxlength="120" autocomplete="off" oninput="mkcSearch(' + i + ',this.value)">' +
+    '<div class="mkc-res" id="mkc-res-' + i + '"></div>' +
     '<div class="mkc-g2">' + inp('set_label', 'Coleção (ex.: Chamas Obsidianas)', 'maxlength="80"') + inp('card_n', 'Nº (ex.: 125/197)', 'maxlength="20"') + '</div>' +
     '<div class="mkc-g4"><select data-f="language">' + opt([['pt-BR', '🇧🇷 Português'], ['en', '🇺🇸 Inglês'], ['ja', '🇯🇵 Japonês'], ['zh', '🇨🇳 Chinês']], r.language) + '</select>' +
       '<select data-f="condition">' + opt([['M', 'Nova (M)'], ['NM', 'Quase nova (NM)'], ['MP', 'Usada (MP)'], ['HP', 'Muito usada (HP)'], ['D', 'Danificada (D)']], r.condition) + '</select>' +
       inp('qty', 'Qtd', 'type="number" min="1" max="99"') + inp('price', 'Preço un. R$ *', 'inputmode="decimal"') + '</div>' +
+    (r.ref ? '<div class="mk-hint">Preço de referência no MyDeck: ' + mkMoney(r.ref) + ' (você decide o seu preço)</div>' : '') +
     '<label class="mkc-live"><input type="checkbox" data-f="live"' + (r.live ? ' checked' : '') + ' onchange="mkcFormSync();mkcRenderForm()"> 🎥 Aceito leilão ao vivo na live da loja</label>' +
     (r.live ? inp('livemin', 'Lance mínimo R$ *', 'inputmode="decimal"') : '') + '</div>';
 }
@@ -325,7 +327,7 @@ function mkcImportListings() {
   const list = (typeof cardListings !== 'undefined' && Array.isArray(cardListings)) ? cardListings : [];
   if (!list.length) { mkToast('Você ainda não tem cartas na lista “À Venda”.', true); return; }
   const rows = list.slice(0, 100).map(function (l) {
-    return { name: l.card_name || '', set_label: typeof cvSetLbl === 'function' ? cvSetLbl(l.set_id) : '', card_n: l.card_n || '', language: l.language || 'pt-BR',
+    return { name: l.card_name || '', set_id: l.set_id || '', ref: null, set_label: typeof cvSetLbl === 'function' ? cvSetLbl(l.set_id) : '', card_n: l.card_n || '', language: l.language || 'pt-BR',
       condition: ['M', 'NM', 'MP', 'HP', 'D'].indexOf(l.condition) >= 0 ? l.condition : 'NM', qty: Math.min(99, Math.max(1, Number(l.qty) || 1)),
       price: l.price != null ? mkMoneyInput(l.price) : '', live: false, livemin: '' };
   });
@@ -348,7 +350,7 @@ async function mkcSubmit() {
     if (!(qty >= 1 && qty <= 99)) return fail(n + 'quantidade entre 1 e 99.');
     let min = null;
     if (r.live) { min = mkParseMoney(r.livemin); if (min == null || !(min > 0)) return fail(n + 'informe o lance mínimo do leilão.'); }
-    items.push({ name: r.name.trim(), set_label: r.set_label.trim(), card_n: r.card_n.trim(), language: r.language, condition: r.condition, qty: qty, asking_price: price, live_auction: !!r.live, live_min_price: min });
+    items.push({ name: r.name.trim(), set_id: r.set_id || '', set_label: r.set_label.trim(), card_n: r.card_n.trim(), language: r.language, condition: r.condition, qty: qty, asking_price: price, live_auction: !!r.live, live_min_price: min });
   }
   if (f.name.trim().length < 5) return fail('Informe seu nome completo.');
   if (String(f.doc).replace(/\D/g, '').length !== 11) return fail('Informe um CPF válido (11 números).');
@@ -364,6 +366,87 @@ async function mkcSubmit() {
   mkc.form = null; mkCloseModal();
   mkToast('Remessa registrada! Veja abaixo o endereço para enviar.');
   await mkcLoadUser(true); mkcRenderUser();
+}
+
+// ── busca de carta no catálogo do MyDeck (nome ou código) e preenchimento automático ──────────
+// Aceita nome ("charizard ex"), coleção + número ("sv3 125", "obf 125", "sv3-125") e número impresso ("125/230").
+function mkcNorm(t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+function mkcSetKey(t) { return mkcNorm(t).replace(/\./g, 'pt'); }   // "SV3.5" = "sv3pt5"
+function mkcBuildIndex() {
+  if (typeof getAllCatalogCards !== 'function' || typeof SET_CATALOG === 'undefined') return null;
+  const all = getAllCatalogCards();
+  if (mkc.idx && mkc.idx.n === all.length) return mkc.idx;
+  const meta = {}, keys = {};
+  SET_CATALOG.forEach(function (s, order) {
+    const m = /^([^—(]+?)\s*(?:\(([^)]+)\))?\s*—\s*(.+)$/.exec(s.label || '');
+    const short = m ? m[1].trim() : String(s.id).toUpperCase(), code = m && m[2] ? m[2] : '', name = m ? m[3].trim() : (s.label || s.id);
+    meta[s.id] = { id: s.id, short: short, code: code, name: name, series: s.series, order: order };
+    [s.id, short, code].forEach(function (k) { if (k) keys[mkcSetKey(k)] = keys[mkcSetKey(k)] || s.id; });
+  });
+  const rows = all.map(function (c) { const n = parseInt(c.n, 10); return { c: c, nm: mkcNorm(c.name), num: Number.isFinite(n) ? n : null, set: c._setId }; });
+  mkc.idx = { n: all.length, meta: meta, keys: keys, rows: rows };
+  return mkc.idx;
+}
+function mkcFindCards(q) {
+  q = String(q || '').trim();
+  if (q.length < 2) return { cards: [], msg: '' };
+  if (typeof _lazySetsLoaded !== 'undefined' && !_lazySetsLoaded && typeof loadLazySets === 'function') { loadLazySets(); return { cards: [], msg: 'Carregando o catálogo… digite de novo em instantes.' }; }
+  const ix = mkcBuildIndex();
+  if (!ix) return { cards: [], msg: '' };
+  const toks = mkcNorm(q).replace(/[\/\\_,]+/g, ' ').replace(/\s*-\s*/g, ' ').split(/\s+/).filter(Boolean);
+  let setId = null, num = null; const words = [];
+  toks.forEach(function (t) {
+    const k = t.replace(/\./g, 'pt');
+    if (/^\d{1,4}$/.test(t)) { if (num == null) num = parseInt(t, 10); }   // o 2º número ("125/230") é o total da coleção: ignora
+    else if (!setId && k.length >= 3 && !/^(vmax|vstar|gx|tag|team|ex)$/.test(k) && ix.keys[k]) setId = ix.keys[k];   // 'ex', 'vmax'... são nome de carta, não coleção
+    else words.push(t);
+  });
+  const hasWords = words.length > 0;
+  if (!hasWords && !(setId && num != null)) return { cards: [], msg: '' };
+  const out = [];
+  for (let i = 0; i < ix.rows.length; i++) {
+    const r = ix.rows[i];
+    if (setId && r.set !== setId) continue;
+    if (num != null && r.num !== num) continue;
+    let ok = true;
+    for (let w = 0; w < words.length; w++) if (r.nm.indexOf(words[w]) < 0) { ok = false; break; }
+    if (!ok) continue;
+    const exact = hasWords && r.nm === words.join(' ') ? 0 : (hasWords && r.nm.indexOf(words[0]) === 0 ? 1 : 2);
+    out.push({ r: r, score: exact * 1000 + (ix.meta[r.set] ? ix.meta[r.set].order : 500) });
+  }
+  out.sort(function (a, b) { return a.score - b.score; });
+  const cards = out.slice(0, 8).map(function (x) { return x.r.c; });
+  return { cards: cards, msg: cards.length ? '' : 'Nenhuma carta encontrada. Preencha à mão.' };
+}
+function mkcSearch(i, val) {
+  const box = document.getElementById('mkc-res-' + i);
+  if (!box) return;
+  const res = mkcFindCards(val), ix = mkc.idx;
+  mkc.res[i] = res.cards;
+  box.innerHTML = res.msg ? '<div class="mk-hint" style="padding:6px 8px">' + mkEsc(res.msg) + '</div>' : res.cards.map(function (c, k) {
+    const m = ix.meta[c._setId] || { name: c._setId, code: '', short: String(c._setId).toUpperCase() };
+    let img = '';
+    try { img = typeof imgThumb === 'function' && typeof getBinderImg === 'function' ? imgThumb(getBinderImg(c, c._setId)) : ''; } catch (e) { img = ''; }
+    return '<button type="button" class="mkc-res-i" onclick="mkcPick(' + i + ',' + k + ')">' +
+      (img ? '<img src="' + mkEsc(img) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '<span class="mkc-res-ph">🃏</span>') +
+      '<span class="mkc-res-t"><b>' + mkEsc(c.name) + '</b><small>' + mkEsc(m.name) + ' · ' + mkEsc(m.code || m.short) + ' #' + mkEsc(c.n) + (c.rare ? ' · ' + mkEsc(c.rare) : '') + '</small></span>' +
+      (c.price > 0 ? '<span class="mkc-res-p">' + mkMoney(c.price) + '</span>' : '') + '</button>';
+  }).join('');
+}
+function mkcSetLang(id, series) { return /jp$/.test(id) ? 'ja' : /cn$/.test(id) ? 'zh' : (series === 'SV' || series === 'ME') ? 'pt-BR' : 'en'; }
+function mkcPick(i, k) {
+  mkcFormSync();
+  const c = mkc.res[i] && mkc.res[i][k], r = mkc.form && mkc.form.rows[i];
+  if (!c || !r) return;
+  const m = (mkc.idx && mkc.idx.meta[c._setId]) || { name: c._setId, code: '', short: '', series: '' };
+  r.name = c.name; r.set_id = c._setId; r.set_label = (m.name + (m.code || m.short ? ' (' + (m.code || m.short) + ')' : '')).slice(0, 80);
+  r.card_n = String(c.n).slice(0, 20); r.language = mkcSetLang(c._setId, m.series);
+  r.ref = c.price > 0 ? c.price : null;
+  if (!String(r.price).trim() && r.ref) r.price = mkMoneyInput(r.ref);
+  mkc.res = {};
+  mkcRenderForm();
+  const row = document.querySelectorAll('.mkc-row')[i];
+  const pr = row && row.querySelector('[data-f=price]'); if (pr) { pr.focus(); pr.select(); }
 }
 
 // quando abrir a aba Compra/Venda, desenha a seção
@@ -570,7 +653,7 @@ function mkcShipAsk(rid) {
 }
 
 Object.assign(window, {
-  mkcOpenForm, mkcRowAdd, mkcRowDel, mkcFormSync, mkcRenderForm, mkcFormClose, mkcImportListings, mkcSubmit, mkcShowTerm, mkcSaveTracking, mkcCancel, mkcAnswer,
+  mkcOpenForm, mkcSearch, mkcPick, mkcRowAdd, mkcRowDel, mkcFormSync, mkcRenderForm, mkcFormClose, mkcImportListings, mkcSubmit, mkcShowTerm, mkcSaveTracking, mkcCancel, mkcAnswer,
   mkcEditLive, mkcOpenReturn, mkcSubmitReturn, mkcReturnCancel, mkcRenderPanel, mkcPanelFilter, mkcSaveAddr, mkcReceive, mkcReview, mkcReviewAsk, mkcPublish,
   mkcOpenProduct, mkcSoldAsk, mkcQuoteAsk, mkcReturnPaid, mkcShipAsk, mkcRenderUser, mkcStoreLinkHtml,
 });

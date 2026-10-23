@@ -635,3 +635,8 @@ grant execute on function public.mk_consign_has_address(uuid) to authenticated;
 
 -- e mk_consign_create ganhou, logo depois do teste de razão social/CNPJ:
 --   if not public.mk_consign_has_address(p_seller) then raise exception 'A loja ainda não cadastrou o endereço para receber as cartas.'; end if;
+
+-- ── 23/10/2026: busca de carta no formulário guarda a coleção do catálogo (set_id) ──────────────────────
+-- mk_consign_items.set_id (aplicado como migration mk_consignacao_set_id): mk_consign_create grava e mk_consign_publish
+-- passa pro produto (mk_products.set_id), assim a carta publicada já nasce ligada à coleção na vitrine.
+alter table public.mk_consign_items add column if not exists set_id text check (set_id is null or char_length(set_id) <= 30);
