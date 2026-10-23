@@ -25,7 +25,7 @@ let notifLotsEnabled=null;  // e-mails de novos leilões (notification_prefs.lot
 let notifLotsBusy=false;
 
 const NOTIF_LIMIT=30;
-const NOTIF_ICON={auction_outbid:'🔔',auction_closed:'🏁',auction_won:'🏆',auction_ending:'⏰',site_update:'🆕',news:'🗞️',new_auction:'🔨',new_raffle:'🎟️',mk_order_new:'🛒',mk_order_update:'📦',wild_event:'⚡',wild_event_info:'⚡'};
+const NOTIF_ICON={auction_outbid:'🔔',auction_closed:'🏁',auction_won:'🏆',auction_ending:'⏰',site_update:'🆕',news:'🗞️',new_auction:'🔨',new_raffle:'🎟️',mk_order_new:'🛒',mk_consign:'📦',mk_order_update:'📦',wild_event:'⚡',wild_event_info:'⚡'};
 
 // ── CARGA ──────────────────────────────────────────────────────────
 async function notifLoad(){
@@ -164,6 +164,13 @@ function notifRoute(n){
   }
   if(d.raffle_id){
     if(typeof goToTab==='function')goToTab('rifas');
+    return;
+  }
+  if(d.mk_consignment_id){   // consignação (23/10/2026): a equipe cai na aba Consignação do painel, o dono na Compra/Venda
+    if(d.panel==='consignacao'){
+      if(typeof goToTab==='function')goToTab('mk');
+      setTimeout(async()=>{try{if(typeof mkLoadAll==='function')await mkLoadAll(false);if(typeof mkGoPanel==='function'&&mk.isMember)mkGoPanel('consignacao');}catch(e){}},300);
+    }else if(typeof goToTab==='function')goToTab('cartas');
     return;
   }
   if(d.mk_order_id){   // pedidos da Loja Toybox: lojista cai na aba Pedidos, comprador em "Meus pedidos"

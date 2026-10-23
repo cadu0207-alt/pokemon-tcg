@@ -205,7 +205,7 @@ function mkRenderStore() {
   const wrap = document.getElementById('mk-wrap');
   if (!wrap || !mk.seller) return;
   const atacado = mk.tab === 'atacado' && mkHasWholesale();
-  wrap.innerHTML = '<div class="mk-page">' + mkStoreHeaderHtml() + mkTabsHtml() +
+  wrap.innerHTML = '<div class="mk-page">' + mkStoreHeaderHtml() + mkTabsHtml() + (typeof mkcStoreLinkHtml === 'function' ? mkcStoreLinkHtml() : '') +
     (atacado ? mkWholesaleHtml()
              : mkStoreFiltersHtml() + '<div id="mk-grid-holder">' + mkGridHtml() + '</div>' + (typeof mkCartBarHtml === 'function' ? mkCartBarHtml() : '')) +
     '</div>';

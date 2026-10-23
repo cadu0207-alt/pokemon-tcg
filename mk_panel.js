@@ -11,7 +11,7 @@ let mkCatCache = null;      // catálogo de cartas (carregado 1x, só pra vincul
 function mkRenderPanel() {
   const wrap = document.getElementById('mk-wrap');
   if (!wrap || !mk.seller) return;
-  const tabs = [['produtos', '📦 Produtos'], ['estoque', '🔢 Estoque'], ['pedidos', '🛒 Pedidos'], ['config', '⚙️ Dados da loja']];
+  const tabs = [['produtos', '📦 Produtos'], ['estoque', '🔢 Estoque'], ['pedidos', '🛒 Pedidos'], ['consignacao', '📥 Consignação'], ['config', '⚙️ Dados da loja']];
   if (mk.isOwner) { tabs.push(['pagamentos', '💳 Pagamentos']); tabs.push(['equipe', '👥 Equipe']); }
   if (!tabs.some(function (t) { return t[0] === mk.panelTab; })) mk.panelTab = 'produtos';
   wrap.innerHTML = '<div class="mk-page">' +
@@ -32,6 +32,7 @@ function mkRenderPanelBody() {
   if (mk.panelTab === 'produtos') body.innerHTML = mkProductsTabHtml();
   else if (mk.panelTab === 'estoque') body.innerHTML = mkStockTabHtml();
   else if (mk.panelTab === 'config') { body.innerHTML = mkConfigTabHtml(); }
+  else if (mk.panelTab === 'consignacao') { body.innerHTML = '<div class="mk-empty">Carregando consignação…</div>'; mkcRenderPanel(false); }
   else if (mk.panelTab === 'pedidos') { body.innerHTML = '<div class="mk-empty">Carregando pedidos…</div>'; mkLoadSellerOrders(); }
   else if (mk.panelTab === 'pagamentos') {
     body.innerHTML = '<div class="mk-empty">Carregando…</div>';
@@ -540,7 +541,9 @@ function mkConfigTabHtml() {
     f('wholesale_url', 'Link do catálogo de importação (opcional, começa com https://)', s.wholesale_url, 'maxlength="500" placeholder="https://…"') +
     (mk.isAdmin ? '<h4 class="mk-sub">Administração do MyDeck</h4><div class="mk-f-row">' +
         '<label class="mk-f"><span>Situação da loja</span><select id="mkc-status">' + ['pendente', 'ativa', 'pausada', 'suspensa'].map(function (x) { return '<option value="' + x + '"' + (s.status === x ? ' selected' : '') + '>' + x + '</option>'; }).join('') + '</select></label>' +
-        '<label class="mk-f"><span>Comissão do MyDeck (%)</span><input id="mkc-commission_pct" type="number" min="0" max="50" step="0.5" value="' + (s.commission_pct == null ? 5 : s.commission_pct) + '"></label></div>'
+        '<label class="mk-f"><span>Comissão do MyDeck (%)</span><input id="mkc-commission_pct" type="number" min="0" max="50" step="0.5" value="' + (s.commission_pct == null ? 5 : s.commission_pct) + '"></label></div>' +
+        '<div class="mk-f-row"><label class="mk-check"><input type="checkbox" id="mkc-consign_enabled"' + (s.consign_enabled ? ' checked' : '') + '> Consignação liberada ao público</label>' +
+        '<label class="mk-f"><span>Comissão da loja na consignação (%)</span><input id="mkc-consign_commission_pct" type="number" min="0" max="50" step="0.5" value="' + (s.consign_commission_pct == null ? 15 : s.consign_commission_pct) + '"></label></div>'
       : '<div class="mk-hint">Situação: <b>' + mkEsc(s.status) + '</b> · Comissão do MyDeck: <b>' + mkEsc(s.commission_pct) + '%</b> (definidas pelo MyDeck).</div>') +
     '<div id="mkc-err" class="mk-form-err"></div>' +
     '<div class="mk-form-actions"><button type="button" class="btn-mini mk-primary" onclick="mkSaveConfig()">💾 Salvar dados da loja</button></div>' +
@@ -606,6 +609,9 @@ async function mkSaveConfig() {
     row.status = g('status') || mk.seller.status;
     const c = parseFloat(g('commission_pct').replace(',', '.'));
     if (Number.isFinite(c) && c >= 0 && c <= 50) row.commission_pct = c;
+    row.consign_enabled = !!document.getElementById('mkc-consign_enabled').checked;
+    const cc = parseFloat(g('consign_commission_pct').replace(',', '.'));
+    if (Number.isFinite(cc) && cc >= 0 && cc <= 50) row.consign_commission_pct = cc;
   }
   err('');
   const { data, error } = await sbClient.from('mk_sellers').update(row).eq('id', mk.seller.id).select('*').single();
