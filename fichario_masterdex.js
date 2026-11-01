@@ -132,8 +132,10 @@ async function fmMdexCreate(){
   const existing=fmMdexAllBinders().find(b=>!b.filter_config.dexFrom&&!b.filter_config.dexTo);
   if(existing){ openCustomBinderView(existing); return; }
   if(typeof POKEDEX_NACIONAL==='undefined'){ alert('Pokédex Nacional ainda não carregou — tenta de novo em 1s.'); return; }
-  if(!confirm('Isso vai criar um fichário com 1025 vagas (1 por espécie), já preenchendo com a carta MAIS VALIOSA que você já tiver de cada espécie (ou a mais barata disponível, se não tiver nenhuma). Depois dá pra trocar/esvaziar cada vaga. Continuar?')) return;
-  const card_ids=fmMdexBuildDefaultCardIds(POKEDEX_NACIONAL);
+  // CORRIGIDO 01/11/2026 (pedido do Eduardo): NÃO puxa carta automática. O Master Set nasce com todas as vagas
+  // mostrando a arte neutra do Pokémon; a carta só aparece quando a pessoa escolhe (clica na vaga).
+  if(!confirm('Isso vai criar um fichário com 1025 vagas (1 por espécie). Cada vaga mostra a imagem padrão do Pokémon até você escolher a carta que quer nela. Continuar?')) return;
+  const card_ids=[];
   const payload={
     name:'🌐 Master Set Nacional (1025)', emoji:'🌐', layout:3,
     filter_config:{type:'masterdex'}, card_ids, cover_color:'#118ab2'
@@ -161,9 +163,9 @@ async function fmMdexCreateRegional(gen){
   if(!g) return;
   const existing=fmMdexAllBinders().find(b=>b.filter_config.dexFrom===g.from&&b.filter_config.dexTo===g.to);
   if(existing){ openCustomBinderView(existing); return; }
-  if(!confirm(`Isso vai criar um Master Set de ${g.label} (#${g.from}-#${g.to}, ${g.to-g.from+1} vagas), já preenchendo com a carta mais valiosa que você já tiver de cada espécie (ou a mais barata disponível). Depois dá pra trocar/esvaziar cada vaga. Continuar?`)) return;
-  const species=POKEDEX_NACIONAL.filter(sp=>sp.dex>=g.from&&sp.dex<=g.to);
-  const card_ids=fmMdexBuildDefaultCardIds(species);
+  // 01/11/2026: sem preenchimento automático (ver fmMdexCreate) — vagas começam na arte neutra do Pokémon.
+  if(!confirm(`Isso vai criar um Master Set de ${g.label} (#${g.from}-#${g.to}, ${g.to-g.from+1} vagas). Cada vaga mostra a imagem padrão do Pokémon até você escolher a carta que quer nela. Continuar?`)) return;
+  const card_ids=[];
   const meta=FM_MDEX_REGION_META[gen]||{emoji:'🗺️',color:'#118ab2'};
   const payload={
     name:`${meta.emoji} Master Set ${g.label} (#${g.from}-${g.to})`, emoji:meta.emoji, layout:3,
@@ -554,14 +556,11 @@ function fmMdexRender(binder,keepFilters){
       <button onclick="fmMdexPrint('${binder.id}')" title="Gera um PDF pra imprimir (páginas NxN, igual o fichário oficial)"
         style="padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
                color:var(--text);font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap">🖨️ Imprimir</button>
-      <button onclick="fmMdexAutoFillEmpty('${binder.id}')" title="Preenche as vagas ainda vazias com a carta mais valiosa que você já tem de cada espécie (ou a mais barata disponível, se não tiver nenhuma) — nunca mexe numa vaga que você já escolheu na mão"
-        style="padding:6px 10px;background:${color};border:none;border-radius:6px;color:#fff;
-               font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap">🔄 Preencher vagas vazias</button>
     </div>
     <div style="font-size:9px;color:var(--muted);margin-bottom:10px;line-height:1.5">
       Uma vaga por espécie, na faixa #${allSpecies[0]?.dex??1}–#${allSpecies[allSpecies.length-1]?.dex??totalSlots} da Pokédex. Clique em qualquer vaga —
       preenchida ou vazia — pra escolher qual carta ocupa ela, entre todas as coleções cadastradas no site.
-      Vagas preenchidas automaticamente mostram a carta mais valiosa que você já tem daquela espécie.
+      Vaga sem carta escolhida mostra a imagem padrão do Pokémon — a carta só aparece depois que você escolhe.
     </div>
     <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">${fmViewToggleBtns}</div>
     ${fmPageSizeBtns?`<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">${fmPageSizeBtns}</div>`:''}
