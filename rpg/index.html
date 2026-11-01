@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#14100c">
+  <title>RPG BD</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Alegreya+Sans:wght@400;700;800&display=swap">
+  <style>
+    html, body { margin: 0; height: 100%; background: #14100c; overflow: hidden; }
+    #game { position: fixed; inset: 0; }
+    #rotate {
+      display: none; position: fixed; inset: 0; z-index: 10; place-items: center; text-align: center;
+      background: #14100c; color: #e8d8b0; font: 700 20px 'Alegreya Sans', sans-serif; padding: 24px;
+    }
+    @media (orientation: portrait) and (max-width: 900px) { #rotate { display: grid; } }
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+  <div id="rotate">Gire o celular para a horizontal para jogar.</div>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
