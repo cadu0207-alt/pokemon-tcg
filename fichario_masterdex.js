@@ -278,7 +278,7 @@ function fmMdexBuildGridHtml(species,bySpecies,color,binderId){
     return pages.map((pg,idx)=>`
       <div style="margin-bottom:18px">
         <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px">Página ${idx+1}/${pages.length}</div>
-        <div style="display:grid;grid-template-columns:repeat(${dims.cols},1fr);gap:${n===5?4:8}px;border:1px solid var(--border);
+        <div style="display:grid;grid-template-columns:repeat(${dims.cols},1fr);gap:8px;border:1px solid var(--border);
                     border-radius:10px;padding:10px;background:var(--surface2)">
           ${pg.map(slotHtml).join('')}
         </div>
@@ -514,7 +514,7 @@ function fmMdexRender(binder,keepFilters){
     style="padding:5px 10px;border-radius:6px;border:1px solid ${n===fmPageSize?'var(--gold)':'var(--border)'};
            background:var(--surface2);color:${n===fmPageSize?'var(--gold)':'var(--muted)'};
            font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;
-           font-weight:${n===fmPageSize?700:400}">${n}×${n===5?4:n} por página</button>`).join(''):'';
+           font-weight:${n===fmPageSize?700:400}">${n===5?'4×5':n+'×'+n} por página</button>`).join(''):'';
 
   wrap.innerHTML=`
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;flex-wrap:wrap">

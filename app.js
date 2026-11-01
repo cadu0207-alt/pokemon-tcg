@@ -3942,7 +3942,7 @@ function openCustomBinderView(binder){
     style="padding:4px 12px;border-radius:5px;border:1px solid ${n===cbBinderSize?'var(--gold)':'var(--border)'};
            background:var(--surface2);color:${n===cbBinderSize?'var(--gold)':'var(--muted)'};
            font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;
-           font-weight:${n===cbBinderSize?700:400}">${n}×${n===5?4:n} por página</button>`).join('');
+           font-weight:${n===cbBinderSize?700:400}">${n===5?'4×5':n+'×'+n} por página</button>`).join('');
 
   document.getElementById('bwrap').innerHTML=`
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap">

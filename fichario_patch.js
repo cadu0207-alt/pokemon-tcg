@@ -146,11 +146,11 @@ function _badgeInk(hex) {
    ESTADO LOCAL (view mode e size)
 ───────────────────────────────────────────── */
 let ficViewMode   = 'grid'; // 'grid' | 'binder'
-let ficBinderSize = 3;      // 2, 3, 4 (quadrados NxN) ou 5 (= 5×4: 5 colunas × 4 linhas, 20 por página)
-// 01/11/2026 (pedido do Eduardo): fichário 5×4 em todas as coleções. O valor guardado continua sendo UM número (vai em
+let ficBinderSize = 3;      // 2, 3, 4 (quadrados NxN) ou 5 (= 4×5: 4 colunas × 5 linhas, 20 por página)
+// 01/11/2026 (pedido do Eduardo): fichário 4×5 em todas as coleções (o Eduardo chamou de "5x4"; confirmou: 4 colunas e 5 linhas). O valor guardado continua sendo UM número (vai em
 // binder_shares.layout etc.): 2/3/4 = NxN; 5 = 5 colunas × 4 linhas. Tudo que pagina (grade do fichário, impressão,
 // Master Set) lê as dimensões por aqui.
-function binderDims(n) { return n === 5 ? { cols: 5, rows: 4 } : { cols: n, rows: n }; }
+function binderDims(n) { return n === 5 ? { cols: 4, rows: 5 } : { cols: n, rows: n }; }
 window.binderDims = binderDims;
 // Idioma de exibição (30/09/2026, piloto cel30) — troca nome/arte/preço
 // exibidos por carta; NÃO afeta a coleção rastreada nem os totais em R$
@@ -780,8 +780,8 @@ function renderBinderView(cards, setIdOf) {
   }
 
   const isMob = window.innerWidth <= 600;
-  const cellSize = N === 2 ? (isMob ? 130 : 160) : N === 3 ? (isMob ? 96 : 130) : N === 5 ? (isMob ? 54 : 96) : (isMob ? 72 : 90);
-  const gap = N === 2 ? (isMob ? 12 : 14) : N === 3 ? (isMob ? 8 : 12) : N === 5 ? (isMob ? 4 : 8) : (isMob ? 6 : 8);
+  const cellSize = N === 2 ? (isMob ? 130 : 160) : N === 3 ? (isMob ? 96 : 130) : N === 5 ? (isMob ? 72 : 100) : (isMob ? 72 : 90);
+  const gap = N === 2 ? (isMob ? 12 : 14) : N === 3 ? (isMob ? 8 : 12) : N === 5 ? (isMob ? 6 : 8) : (isMob ? 6 : 8);
 
   function slotHtml(slot) {
     if (!slot) return `<div style="width:${cellSize}px;height:${Math.round(cellSize*1.4)}px;
