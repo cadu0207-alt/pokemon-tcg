@@ -1,4 +1,5 @@
-import { HERO_BASE } from './data.js';
+import { GARRAFADAS } from './data.js';
+import { combatStats, creatureAttributes } from './creatures.js';
 
 const KEY = 'rpgbd-save-v1';
 
@@ -11,6 +12,8 @@ const DEFAULT_SAVE = {
   upgrades: { strength: 0, vitality: 0, potions: 0, luck: 0 },
   bestWave: 0,
   wins: 0,
+  creatures: [], // Encantados do Santuário (ver rollCreature)
+  active: 0, // índice do Encantado que vai para a expedição
   savedAt: 0,
 };
 
@@ -65,29 +68,35 @@ export async function initCloud() {
   }
 }
 
-// Atributos do herói no início de uma fase, já com as melhorias do acampamento.
-export function heroStatsFromSave(save) {
+// Números de combate do Encantado ativo no início de uma fase, já com as melhorias do Santuário.
+export function creatureStatsFromSave(save, creature = save.creatures[save.active]) {
   const u = save.upgrades;
-  const maxHp = HERO_BASE.maxHp + 15 * u.vitality;
+  const c = combatStats(creatureAttributes(creature));
+  const maxHp = Math.round(c.maxHp * (1 + 0.06 * u.vitality));
+  const dmgMult = 1 + 0.06 * u.strength;
   return {
     maxHp,
     hp: maxHp,
-    dmgMin: HERO_BASE.dmgMin + 1.5 * u.strength,
-    dmgMax: HERO_BASE.dmgMax + 1.5 * u.strength,
+    dmgMin: c.dmgMin * dmgMult,
+    dmgMax: c.dmgMax * dmgMult,
     dmgMult: 1,
-    atkInterval: HERO_BASE.atkInterval,
-    crit: HERO_BASE.crit + 0.02 * u.luck,
-    critMult: HERO_BASE.critMult,
-    armor: HERO_BASE.armor,
-    potions: HERO_BASE.potions + u.potions,
+    atkInterval: c.atkInterval,
+    defense: c.defense,
+    crit: 0.08 + 0.02 * u.luck,
+    critMult: 2,
+    potions: GARRAFADAS + u.potions,
     luck: 0.05 * u.luck,
     lifesteal: 0,
     burn: 0,
-    doubleChance: 0,
     explode: 0,
     regen: 0,
     goldMult: 1,
     xpMult: 1,
     interest: 0,
+    energyMult: 1,
+    thorns: 0,
+    gun: 0,
+    typeBonus: 0,
+    specialTwice: false,
   };
 }

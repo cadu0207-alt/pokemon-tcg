@@ -1,195 +1,5 @@
 {
- "characters": {
-  "warrior": {
-   "frameWidth": 247,
-   "frameHeight": 206,
-   "anchorX": 0.3785,
-   "anims": {
-    "idle": {
-     "file": "sprites/warrior_idle.webp",
-     "frames": 5
-    },
-    "walk": {
-     "file": "sprites/warrior_walk.webp",
-     "frames": 5
-    },
-    "attack": {
-     "file": "sprites/warrior_attack.webp",
-     "frames": 5
-    },
-    "hurt": {
-     "file": "sprites/warrior_hurt.webp",
-     "frames": 5
-    },
-    "die": {
-     "file": "sprites/warrior_die.webp",
-     "frames": 5
-    }
-   }
-  },
-  "orc1": {
-   "frameWidth": 384,
-   "frameHeight": 297,
-   "anchorX": 0.3008,
-   "anims": {
-    "idle": {
-     "file": "sprites/orc1_idle.webp",
-     "frames": 7
-    },
-    "walk": {
-     "file": "sprites/orc1_walk.webp",
-     "frames": 7
-    },
-    "attack": {
-     "file": "sprites/orc1_attack.webp",
-     "frames": 7
-    },
-    "hurt": {
-     "file": "sprites/orc1_hurt.webp",
-     "frames": 7
-    },
-    "die": {
-     "file": "sprites/orc1_die.webp",
-     "frames": 7
-    }
-   }
-  },
-  "orc2": {
-   "frameWidth": 360,
-   "frameHeight": 297,
-   "anchorX": 0.2278,
-   "anims": {
-    "idle": {
-     "file": "sprites/orc2_idle.webp",
-     "frames": 7
-    },
-    "walk": {
-     "file": "sprites/orc2_walk.webp",
-     "frames": 7
-    },
-    "attack": {
-     "file": "sprites/orc2_attack.webp",
-     "frames": 7
-    },
-    "hurt": {
-     "file": "sprites/orc2_hurt.webp",
-     "frames": 7
-    },
-    "die": {
-     "file": "sprites/orc2_die.webp",
-     "frames": 7
-    }
-   }
-  },
-  "orc3": {
-   "frameWidth": 347,
-   "frameHeight": 290,
-   "anchorX": 0.2291,
-   "anims": {
-    "idle": {
-     "file": "sprites/orc3_idle.webp",
-     "frames": 7
-    },
-    "walk": {
-     "file": "sprites/orc3_walk.webp",
-     "frames": 7
-    },
-    "attack": {
-     "file": "sprites/orc3_attack.webp",
-     "frames": 7
-    },
-    "hurt": {
-     "file": "sprites/orc3_hurt.webp",
-     "frames": 7
-    },
-    "die": {
-     "file": "sprites/orc3_die.webp",
-     "frames": 7
-    }
-   }
-  },
-  "knight_black": {
-   "frameWidth": 253,
-   "frameHeight": 189,
-   "anchorX": 0.2767,
-   "anims": {
-    "idle": {
-     "file": "sprites/knight_black_idle.webp",
-     "frames": 4
-    },
-    "walk": {
-     "file": "sprites/knight_black_walk.webp",
-     "frames": 4
-    },
-    "attack": {
-     "file": "sprites/knight_black_attack.webp",
-     "frames": 4
-    },
-    "hurt": {
-     "file": "sprites/knight_black_hurt.webp",
-     "frames": 4
-    },
-    "die": {
-     "file": "sprites/knight_black_die.webp",
-     "frames": 6
-    }
-   }
-  },
-  "knight_bronze": {
-   "frameWidth": 257,
-   "frameHeight": 188,
-   "anchorX": 0.2529,
-   "anims": {
-    "idle": {
-     "file": "sprites/knight_bronze_idle.webp",
-     "frames": 4
-    },
-    "walk": {
-     "file": "sprites/knight_bronze_walk.webp",
-     "frames": 4
-    },
-    "attack": {
-     "file": "sprites/knight_bronze_attack.webp",
-     "frames": 4
-    },
-    "hurt": {
-     "file": "sprites/knight_bronze_hurt.webp",
-     "frames": 4
-    },
-    "die": {
-     "file": "sprites/knight_bronze_die.webp",
-     "frames": 6
-    }
-   }
-  },
-  "knight_silver": {
-   "frameWidth": 321,
-   "frameHeight": 224,
-   "anchorX": 0.3567,
-   "anims": {
-    "idle": {
-     "file": "sprites/knight_silver_idle.webp",
-     "frames": 4
-    },
-    "walk": {
-     "file": "sprites/knight_silver_walk.webp",
-     "frames": 4
-    },
-    "attack": {
-     "file": "sprites/knight_silver_attack.webp",
-     "frames": 4
-    },
-    "hurt": {
-     "file": "sprites/knight_silver_hurt.webp",
-     "frames": 4
-    },
-    "die": {
-     "file": "sprites/knight_silver_die.webp",
-     "frames": 6
-    }
-   }
-  }
- },
+ "characters": {},
  "backgrounds": {
   "whitewood": [
    {
@@ -238,6 +48,7 @@
  },
  "cardFrames": {
   "common": "cards/frame_common.webp",
+  "uncommon": "cards/frame_uncommon.webp",
   "rare": "cards/frame_rare.webp",
   "epic": "cards/frame_epic.webp",
   "legendary": "cards/frame_legendary.webp"
@@ -285,5 +96,16 @@
   "level_up": "audio/level_up.ogg",
   "music_battle": "audio/music_battle.mp3",
   "music_camp": "audio/music_camp.mp3"
+ },
+ "creatures": {
+  "botinho": "creatures/botinho.svg",
+  "brasinho": "creatures/brasinho.svg",
+  "capinho": "creatures/capinho.svg"
+ },
+ "parts": {
+  "espinhos": "parts/espinhos.svg",
+  "olho_rubro": "parts/olho_rubro.svg",
+  "pata_mecanica": "parts/pata_mecanica.svg",
+  "pata_metralhadora": "parts/pata_metralhadora.svg"
  }
 }

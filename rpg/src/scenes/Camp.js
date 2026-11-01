@@ -1,8 +1,9 @@
-import { PHASES, UPGRADES, upgradeCost } from '../data.js';
-import { heroStatsFromSave, loadSave, writeSave } from '../save.js';
+import { PHASES, SANCTUARY_SLOTS, UPGRADES, upgradeCost } from '../data.js';
+import { SPECIES, buildCreature, playIdle } from '../creatures.js';
+import { creatureStatsFromSave, loadSave, writeSave } from '../save.js';
 import { button, COLORS, formatNumber, label, title } from '../ui.js';
 
-// Acampamento: gasta o ouro em melhorias permanentes e parte para a fase.
+// Santuário: escolhe o Encantado ativo, gasta o ouro em melhorias permanentes e parte para a fase.
 export class Camp extends Phaser.Scene {
   constructor() { super('Camp'); }
 
@@ -11,17 +12,17 @@ export class Camp extends Phaser.Scene {
 
     this.add.tileSprite(0, 0, 1280, 720, 'ui_wood').setOrigin(0).setTint(0x8a6a50);
     this.add.rectangle(640, 360, 1280, 720, 0x140c06, 0.35);
-    title(this, 640, 58, 'Acampamento', 54);
+    title(this, 640, 58, 'Santuário', 54);
 
     this.add.image(1110, 58, 'icon_coin').setDisplaySize(56, 56);
     this.goldText = label(this, 1146, 58, '', { size: 34, color: COLORS.gold });
 
-    // herói
-    const meta = this.registry.get('manifest').characters.warrior;
-    this.add.ellipse(250, 470, 260, 46, 0x000000, 0.4);
-    this.add.sprite(250, 470, 'warrior_idle').setOrigin(meta.anchorX, 1).setScale(1.45).play('warrior-idle');
-    label(this, 250, 510, 'Guerreira', { size: 30, ox: 0.5, color: COLORS.gold });
-    this.statsText = label(this, 250, 590, '', { size: 20, ox: 0.5, align: 'center' });
+    // Encantado ativo e lista do Santuário
+    this.heroSlot = this.add.container(0, 0);
+    this.nameText = label(this, 250, 430, '', { size: 30, ox: 0.5, color: COLORS.gold });
+    this.statsText = label(this, 250, 500, '', { size: 19, ox: 0.5, align: 'center' });
+    label(this, 250, 572, `Santuário (${this.save.creatures.length}/${SANCTUARY_SLOTS}) · toque para escolher`, { size: 16, ox: 0.5, color: '#d9c7a0' });
+    this.roster = this.add.container(0, 0);
 
     // melhorias
     this.add.image(800, 365, 'ui_paper').setDisplaySize(740, 470).setAlpha(0.96);
@@ -34,13 +35,13 @@ export class Camp extends Phaser.Scene {
     credits.on('pointerup', () => this.scene.start('Credits'));
     const email = this.registry.get('cloudEmail');
     if (email) {
-      label(this, 250, 660, `Salvando na nuvem: ${email}`, { size: 16, ox: 0.5, color: '#9fd99f' });
+      label(this, 640, 700, `Salvando na nuvem: ${email}`, { size: 16, ox: 0.5, color: '#9fd99f' });
     } else {
-      const login = label(this, 250, 660, 'Entre no MyDeck para salvar na nuvem', { size: 16, ox: 0.5, color: '#ffcf7a' })
+      const login = label(this, 640, 700, 'Entre no MyDeck para salvar na nuvem', { size: 16, ox: 0.5, color: '#ffcf7a' })
         .setInteractive({ useHandCursor: true });
       login.on('pointerup', () => { window.location.href = '/'; });
     }
-    const fs = label(this, 30, 700, 'Tela cheia', { size: 18, color: '#d9c7a0' }).setInteractive({ useHandCursor: true });
+    const fs = label(this, 30, 40, 'Tela cheia', { size: 18, color: '#d9c7a0' }).setInteractive({ useHandCursor: true });
     fs.on('pointerup', () => (this.scale.isFullscreen ? this.scale.stopFullscreen() : this.scale.startFullscreen()));
 
     this.sound.stopAll();
@@ -79,11 +80,37 @@ export class Camp extends Phaser.Scene {
       btn.setText(maxed ? 'Máximo' : `Melhorar: ${formatNumber(cost)}`);
       btn.setEnabled(!maxed && this.save.gold >= cost);
     }
-    const s = heroStatsFromSave(this.save);
+    this.drawCreatures();
+  }
+
+  drawCreatures() {
+    const active = this.save.creatures[this.save.active];
+    const sp = SPECIES[active.species];
+    this.heroSlot.removeAll(true);
+    const cr = buildCreature(this, active.species, 250, 400, { scale: 0.95 });
+    playIdle(this, cr);
+    this.heroSlot.add(cr);
+    this.nameText.setText(`${sp.name}${active.variant ? ' ✦' : ''} · ${sp.type}`);
+
+    const s = creatureStatsFromSave(this.save);
     this.statsText.setText(
-      `Vida ${s.maxHp}   Dano ${Math.round(s.dmgMin)}–${Math.round(s.dmgMax)}\n` +
-      `Crítico ${Math.round(s.crit * 100)}%   Poções ${s.potions}\n` +
+      `Vida ${s.maxHp}   Dano ${Math.round(s.dmgMin)}–${Math.round(s.dmgMax)}   Defesa ${Math.round(s.defense * 100)}%\n` +
+      `Temperamento ${active.temperament}   Garrafadas ${s.potions}\n` +
       `Recorde: onda ${this.save.bestWave}   Vitórias ${this.save.wins}`,
     );
+
+    // miniaturas: até 12, em duas linhas de 6
+    this.roster.removeAll(true);
+    this.save.creatures.forEach((c, i) => {
+      const x = 70 + (i % 6) * 72;
+      const y = 625 + Math.floor(i / 6) * 62;
+      const selected = i === this.save.active;
+      const bg = this.add.circle(x, y - 18, 30, selected ? 0xffd34d : 0x000000, selected ? 0.55 : 0.35)
+        .setInteractive({ useHandCursor: true });
+      bg.on('pointerup', () => { this.save.active = i; writeSave(this.save); this.refresh(); });
+      const mini = buildCreature(this, c.species, x, y, { scale: 0.22 });
+      mini.list[0].setVisible(false); // sem sombra na miniatura
+      this.roster.add([bg, mini]);
+    });
   }
 }

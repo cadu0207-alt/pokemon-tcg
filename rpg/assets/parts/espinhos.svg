@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 70" width="120" height="70">
+  <!-- âncora: centro da base (60, 66) -->
+  <defs>
+    <linearGradient id="bone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffbe8"/><stop offset=".6" stop-color="#d8cba0"/><stop offset="1" stop-color="#8a7a58"/>
+    </linearGradient>
+  </defs>
+  <path d="M14 66 q4 -30 -2 -48 q20 18 22 48z" fill="url(#bone)" stroke="#5a4a30" stroke-width="2"/>
+  <path d="M44 66 q2 -40 14 -62 q12 26 10 62z" fill="url(#bone)" stroke="#5a4a30" stroke-width="2"/>
+  <path d="M78 66 q4 -30 22 -50 q-2 24 -6 50z" fill="url(#bone)" stroke="#5a4a30" stroke-width="2"/>
+  <path d="M52 50 q6 -24 8 -38" stroke="#fff" stroke-width="2" opacity=".6" fill="none" stroke-linecap="round"/>
+</svg>

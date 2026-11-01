@@ -1,90 +1,69 @@
 // Números do jogo. Ajuste aqui para balancear.
 
-export const HERO_BASE = {
-  maxHp: 120,
-  dmgMin: 7,
-  dmgMax: 11,
-  atkInterval: 0.85, // segundos entre ataques
-  crit: 0.08,
-  critMult: 2,
-  armor: 0,
-  potions: 2,
-};
-
+export const GARRAFADAS = 2; // garrafadas de cura por fase
 export const POTION_HEAL = 0.4; // fração da vida máxima
 export const WAVE_HEAL = 0.08; // cura entre ondas, fração da vida máxima
+export const ENERGY_PER_HIT = 14; // energia do especial ganha a cada golpe (100 enche)
+export const ENERGY_PER_SEC = 4;
 
 export function xpToLevel(level) {
   return Math.round(20 * Math.pow(1.28, level - 1));
 }
 
-// Inimigos. Vida e dano crescem a cada onda (ver scaleEnemy).
-export const ENEMIES = {
-  knight_bronze: { name: 'Escudeiro', hp: 28, dmg: 4, interval: 1.0, xp: 9, gold: 6 },
-  orc1: { name: 'Orc da Marreta', hp: 34, dmg: 5, interval: 1.3, xp: 10, gold: 7 },
-  knight_silver: { name: 'Cavaleiro de Prata', hp: 40, dmg: 6, interval: 1.1, xp: 12, gold: 8 },
-  orc2: { name: 'Orc Espadachim', hp: 46, dmg: 7, interval: 1.4, xp: 13, gold: 9 },
-  orc3: { name: 'Orc do Machado', hp: 60, dmg: 8, interval: 1.5, xp: 16, gold: 12 },
-  knight_black: { name: 'Cavaleiro Negro', hp: 480, dmg: 13, interval: 1.2, xp: 0, gold: 120, scale: 1.45, boss: true },
-};
-
-export function scaleEnemy(def, wave) {
-  return {
-    ...def,
-    hp: Math.round(def.hp * (1 + 0.12 * wave)),
-    dmg: Math.round(def.dmg * (1 + 0.05 * wave)),
-  };
-}
-
 export const PHASES = [
   {
-    name: 'Floresta de Whitewood',
+    name: 'Sudeste · Trilha da Serra',
     bg: 'whitewood',
     waves: 10,
-    pool: ['knight_bronze', 'orc1', 'knight_silver', 'orc2', 'orc3'],
-    boss: 'knight_black',
+    boss: { name: 'Espécime 07 do Consórcio', parts: ['pata_mecanica', 'pata_metralhadora', 'olho_rubro'] },
   },
 ];
 
-// Monta a lista de inimigos de uma onda (wave começa em 0).
-export function waveEnemies(phase, wave) {
-  if (wave >= phase.waves) return [phase.boss];
+// Monta a lista de espécies de uma onda (wave começa em 0). null = onda do chefe.
+export function waveEnemies(phase, wave, species) {
+  if (wave >= phase.waves) return null;
   const count = Math.min(3, 1 + Math.floor(wave / 3));
-  const maxTier = Math.min(phase.pool.length - 1, Math.floor(wave / 2));
-  return Array.from({ length: count }, () => phase.pool[Math.floor(Math.random() * (maxTier + 1))]);
+  return Array.from({ length: count }, () => species[Math.floor(Math.random() * species.length)]);
 }
 
 export const RARITY = {
-  common: { label: 'Comum', weight: 60, color: '#d9b48a' },
-  rare: { label: 'Raro', weight: 28, color: '#7fdc7f' },
-  epic: { label: 'Épico', weight: 10, color: '#c08cff' },
-  legendary: { label: 'Lendário', weight: 2, color: '#ffd34d' },
+  common: { label: 'Comum', weight: 55, color: '#c9ced3' },
+  uncommon: { label: 'Incomum', weight: 26, color: '#7fdc7f' },
+  rare: { label: 'Raro', weight: 13, color: '#6fb6ff' },
+  epic: { label: 'Épico', weight: 5, color: '#c08cff' },
+  legendary: { label: 'Lendário', weight: 1.2, color: '#ffd34d' },
 };
 
-// Cartas que aparecem ao subir de nível durante a fase.
+// Cartas que aparecem ao subir de nível. Valem só até o fim da fase.
+// part: peça que aparece no corpo do Encantado (mutação da terra ou enxerto do Consórcio).
+// unique: não volta a ser oferecida depois de escolhida.
 export const CARDS = [
-  { id: 'sharp_blade', name: 'Lâmina Afiada', rarity: 'common', desc: '+20% de dano', apply: s => { s.dmgMult += 0.2; } },
-  { id: 'iron_skin', name: 'Pele de Ferro', rarity: 'common', desc: '+25 de vida máxima e cura 25', apply: s => { s.maxHp += 25; s.hp += 25; } },
-  { id: 'greed', name: 'Ganância', rarity: 'common', desc: '+25% de ouro ganho', apply: s => { s.goldMult += 0.25; } },
-  { id: 'scholar', name: 'Estudioso', rarity: 'common', desc: '+25% de XP ganho', apply: s => { s.xpMult += 0.25; } },
-  { id: 'haste', name: 'Passos Ligeiros', rarity: 'common', desc: 'Ataca 12% mais rápido', apply: s => { s.atkInterval *= 0.88; } },
-  { id: 'potion', name: 'Frasco Extra', rarity: 'common', desc: '+1 poção de cura', apply: s => { s.potions += 1; } },
-  { id: 'keen_eye', name: 'Olho Afiado', rarity: 'rare', desc: '+8% de chance de crítico', apply: s => { s.crit += 0.08; } },
-  { id: 'brutal', name: 'Golpe Brutal', rarity: 'rare', desc: '+50% de dano crítico', apply: s => { s.critMult += 0.5; } },
-  { id: 'vampire', name: 'Sede de Sangue', rarity: 'rare', desc: 'Recupera 6% do dano que causa', apply: s => { s.lifesteal += 0.06; } },
-  { id: 'shield', name: 'Égide', rarity: 'rare', desc: 'Cada golpe recebido causa 2 a menos de dano', apply: s => { s.armor += 2; } },
-  { id: 'interest', name: 'Juros', rarity: 'rare', desc: 'Ao vencer uma onda, ganha 10% do ouro da fase', apply: s => { s.interest += 0.1; } },
-  { id: 'burn', name: 'Lâmina Flamejante', rarity: 'epic', desc: 'Golpes queimam: 4 de dano por segundo durante 3 s', apply: s => { s.burn += 4; } },
-  { id: 'double', name: 'Corte Duplo', rarity: 'epic', desc: '20% de chance de golpear duas vezes', apply: s => { s.doubleChance += 0.2; } },
-  { id: 'explode', name: 'Marca da Ruína', rarity: 'epic', desc: 'Inimigos derrotados explodem: 30% da vida deles no próximo', apply: s => { s.explode += 0.3; } },
-  { id: 'berserk', name: 'Fúria Berserker', rarity: 'legendary', desc: '+60% de dano, mas −20% de vida máxima', apply: s => { s.dmgMult += 0.6; s.maxHp = Math.round(s.maxHp * 0.8); s.hp = Math.min(s.hp, s.maxHp); } },
-  { id: 'blessing', name: 'Bênção da Floresta', rarity: 'legendary', desc: 'Regenera 3 de vida por segundo', apply: s => { s.regen += 3; } },
+  { id: 'garras', icon: 'sharp_blade', name: 'Garras Afiadas', rarity: 'common', desc: '+15% de dano', apply: s => { s.dmgMult += 0.15; } },
+  { id: 'couro', icon: 'iron_skin', name: 'Couro Grosso', rarity: 'common', desc: '+15% de vida máxima e cura o mesmo', apply: s => { const v = Math.round(s.maxHp * 0.15); s.maxHp += v; s.hp += v; } },
+  { id: 'faro', icon: 'greed', name: 'Faro de Ouro', rarity: 'common', desc: '+20% de ouro ganho', apply: s => { s.goldMult += 0.2; } },
+  { id: 'curiosidade', icon: 'scholar', name: 'Curiosidade', rarity: 'common', desc: '+20% de XP ganho', apply: s => { s.xpMult += 0.2; } },
+  { id: 'passo', icon: 'haste', name: 'Passo Ligeiro', rarity: 'common', desc: 'Ataca 12% mais rápido', apply: s => { s.atkInterval *= 0.88; } },
+  { id: 'garrafada', icon: 'potion', name: 'Garrafada', rarity: 'common', desc: '+1 garrafada de cura', apply: s => { s.potions += 1; } },
+  { id: 'olho_vivo', icon: 'keen_eye', name: 'Olho Vivo', rarity: 'uncommon', desc: '+6% de chance de crítico', apply: s => { s.crit += 0.06; } },
+  { id: 'energia', icon: 'blessing', name: 'Energia Rápida', rarity: 'uncommon', desc: 'O especial carrega 25% mais rápido', apply: s => { s.energyMult += 0.25; } },
+  { id: 'ninho', icon: 'interest', name: 'Ninho Cheio', rarity: 'uncommon', desc: 'Ao vencer uma onda, ganha 8% do ouro da fase', apply: s => { s.interest += 0.08; } },
+  { id: 'espinhos', part: 'espinhos', unique: true, kind: 'Mutação', name: 'Espinhos de Osso', rarity: 'uncommon', desc: 'Devolve 25% do dano recebido', apply: s => { s.thorns += 0.25; } },
+  { id: 'olho_rubro', part: 'olho_rubro', unique: true, kind: 'Enxerto', name: 'Olho Rubro', rarity: 'rare', desc: '+10% de crítico e +40% de dano crítico', apply: s => { s.crit += 0.1; s.critMult += 0.4; } },
+  { id: 'pata_mecanica', part: 'pata_mecanica', unique: true, kind: 'Enxerto', name: 'Pata Mecânica', rarity: 'rare', desc: 'Ataca 20% mais rápido e absorve +10% do dano', apply: s => { s.atkInterval *= 0.8; s.defense = Math.min(0.75, s.defense + 0.1); } },
+  { id: 'vampira', icon: 'vampire', name: 'Mordida Vampira', rarity: 'rare', desc: 'Recupera 8% do dano causado', apply: s => { s.lifesteal += 0.08; } },
+  { id: 'brasa', icon: 'burn', name: 'Brasa Viva', rarity: 'rare', desc: 'Golpes queimam: 4 de dano por segundo durante 3 s', apply: s => { s.burn += 4; } },
+  { id: 'pata_metralhadora', part: 'pata_metralhadora', unique: true, kind: 'Enxerto', name: 'Pata Metralhadora', rarity: 'epic', desc: 'Dispara uma rajada de 3 tiros a cada 2 s', apply: s => { s.gun += 1; } },
+  { id: 'sintonia', icon: 'brutal', name: 'Sintonia de Tipo', rarity: 'epic', desc: '+40% de dano quando há vantagem de tipo', apply: s => { s.typeBonus += 0.4; } },
+  { id: 'explosao', icon: 'explode', name: 'Explosão Final', rarity: 'epic', desc: 'Inimigos derrotados explodem: 30% da vida deles no próximo', apply: s => { s.explode += 0.3; } },
+  { id: 'bencao', icon: 'double', name: 'Bênção de Pindorama', rarity: 'legendary', desc: '+25% de dano, vida e velocidade', apply: s => { s.dmgMult += 0.25; const v = Math.round(s.maxHp * 0.25); s.maxHp += v; s.hp += v; s.atkInterval *= 0.8; } },
+  { id: 'despertar', icon: 'berserk', name: 'Despertar', rarity: 'legendary', unique: true, desc: 'O especial é usado duas vezes seguidas', apply: s => { s.specialTwice = true; } },
 ];
 
-// Sorteia n cartas diferentes. A sorte aumenta a chance das raras.
-export function rollCards(n, luck = 0) {
+// Sorteia n cartas diferentes. A sorte aumenta a chance das raras. exclude: ids que não podem sair.
+export function rollCards(n, luck = 0, exclude = []) {
   const weights = {
     common: RARITY.common.weight,
+    uncommon: RARITY.uncommon.weight * (1 + luck * 2),
     rare: RARITY.rare.weight * (1 + luck * 3),
     epic: RARITY.epic.weight * (1 + luck * 5),
     legendary: RARITY.legendary.weight * (1 + luck * 8),
@@ -92,22 +71,24 @@ export function rollCards(n, luck = 0) {
   const picked = [];
   while (picked.length < n) {
     const total = Object.values(weights).reduce((a, b) => a + b, 0);
+    if (total <= 0) break;
     let r = Math.random() * total;
     let rarity = 'common';
     for (const [k, w] of Object.entries(weights)) {
       if ((r -= w) <= 0) { rarity = k; break; }
     }
-    const options = CARDS.filter(c => c.rarity === rarity && !picked.includes(c));
-    if (options.length) picked.push(options[Math.floor(Math.random() * options.length)]);
+    const options = CARDS.filter(c => c.rarity === rarity && !picked.includes(c) && !exclude.includes(c.id));
+    if (!options.length) { weights[rarity] = 0; continue; }
+    picked.push(options[Math.floor(Math.random() * options.length)]);
   }
   return picked;
 }
 
-// Melhorias permanentes compradas com ouro no acampamento.
+// Melhorias permanentes compradas com ouro no Santuário. Valem para todos os Encantados.
 export const UPGRADES = [
-  { id: 'strength', name: 'Força', icon: 'upgrade_strength', max: 10, baseCost: 15, growth: 1.6, desc: l => `+${1.5 * l} de dano em cada golpe` },
-  { id: 'vitality', name: 'Vitalidade', icon: 'upgrade_vitality', max: 10, baseCost: 15, growth: 1.6, desc: l => `+${15 * l} de vida máxima` },
-  { id: 'potions', name: 'Alquimia', icon: 'upgrade_potions', max: 3, baseCost: 40, growth: 2, desc: l => `+${l} poção por fase` },
+  { id: 'strength', name: 'Treino de Força', icon: 'upgrade_strength', max: 10, baseCost: 15, growth: 1.6, desc: l => `+${6 * l}% de dano` },
+  { id: 'vitality', name: 'Treino de Fôlego', icon: 'upgrade_vitality', max: 10, baseCost: 15, growth: 1.6, desc: l => `+${6 * l}% de vida máxima` },
+  { id: 'potions', name: 'Benzedura', icon: 'upgrade_potions', max: 3, baseCost: 40, growth: 2, desc: l => `+${l} garrafada por fase` },
   { id: 'luck', name: 'Sorte', icon: 'upgrade_luck', max: 8, baseCost: 25, growth: 1.7, desc: l => `+${2 * l}% de crítico e cartas melhores` },
 ];
 
@@ -115,8 +96,11 @@ export function upgradeCost(upgrade, level) {
   return Math.round(upgrade.baseCost * Math.pow(upgrade.growth, level));
 }
 
+export const SANCTUARY_SLOTS = 12;
+export const CAPTURE_CHANCE = { C: 0.6, I: 0.45, R: 0.35, E: 0.15, L: 0.05 };
+
 export const CREDITS = [
-  ['Personagens (guerreira, orcs, cavaleiros)', 'CraftPix.net'],
+  ['Encantados e peças (Brasinho, Botinho, Capinho)', 'Arte original do projeto'],
   ['Cenário Whitewood Vale', 'Frostwindz'],
   ['Ícones de magia "Painterly Spell Icons"', 'J. W. Bjerk (eleazzaar), CC BY 3.0'],
   ['Ícones de habilidades', 'CraftPix.net, OGA-BY 3.0'],

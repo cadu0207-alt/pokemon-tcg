@@ -26,8 +26,9 @@ export class LevelUp extends Phaser.Scene {
     const glow = this.add.graphics();
     glow.fillStyle(Phaser.Display.Color.HexStringToColor(r.color).color, 0.25).fillRoundedRect(-162, -222, 324, 444, 22);
     const frame = this.add.image(0, 0, `frame_${card.rarity}`).setDisplaySize(300, 420);
-    const art = this.add.image(0, -88, `icon_${card.id}`).setDisplaySize(176, 176);
-    const rarity = label(this, 0, -181, r.label, { size: 17, ox: 0.5, color: r.color, strokeThickness: 3 });
+    const art = this.add.image(0, -88, card.part ? `part_${card.part}` : `icon_${card.icon}`);
+    art.setScale(Math.min(176 / art.width, 176 / art.height));
+    const rarity = label(this, 0, -181, card.kind ? `${r.label} · ${card.kind}` : r.label, { size: 17, ox: 0.5, color: r.color, strokeThickness: 3 });
     const name = label(this, 0, 33, card.name, { size: 21, ox: 0.5, color: COLORS.gold, strokeThickness: 4 });
     const desc = label(this, 0, 100, card.desc, {
       size: 20, ox: 0.5, align: 'center', wrap: 230, color: COLORS.ink, stroke: '#000', strokeThickness: 0,
