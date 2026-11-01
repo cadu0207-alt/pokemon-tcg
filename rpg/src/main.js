@@ -4,6 +4,7 @@ import { Battle } from './scenes/Battle.js';
 import { LevelUp } from './scenes/LevelUp.js';
 import { Result } from './scenes/Result.js';
 import { Credits } from './scenes/Credits.js';
+import { initCloud } from './save.js';
 
 async function start() {
   const manifest = await (await fetch('assets/manifest.json')).json();
@@ -12,6 +13,7 @@ async function start() {
     document.fonts.load('800 32px Cinzel'),
     document.fonts.load('700 20px "Alegreya Sans"'),
   ]).catch(() => {});
+  const cloudEmail = await initCloud();
 
   const game = new Phaser.Game({
     type: Phaser.AUTO,
@@ -21,7 +23,8 @@ async function start() {
     scene: [Boot, Camp, Battle, LevelUp, Result, Credits],
   });
   game.registry.set('manifest', manifest);
-  window.game = game; // acesso pelo console do navegador para testes
+  game.registry.set('cloudEmail', cloudEmail);
+  window.rpgGame = game; // acesso pelo console do navegador para testes
 }
 
 start();

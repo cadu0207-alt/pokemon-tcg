@@ -32,6 +32,14 @@ export class Camp extends Phaser.Scene {
     button(this, 800, 655, 470, 70, `Partir: ${phase.name}`, () => this.scene.start('Battle', { phase: 0 }), { size: 26, color: 0x7a2d1a });
     const credits = label(this, 1250, 700, 'Créditos', { size: 18, ox: 1, color: '#d9c7a0' }).setInteractive({ useHandCursor: true });
     credits.on('pointerup', () => this.scene.start('Credits'));
+    const email = this.registry.get('cloudEmail');
+    if (email) {
+      label(this, 250, 660, `Salvando na nuvem: ${email}`, { size: 16, ox: 0.5, color: '#9fd99f' });
+    } else {
+      const login = label(this, 250, 660, 'Entre no MyDeck para salvar na nuvem', { size: 16, ox: 0.5, color: '#ffcf7a' })
+        .setInteractive({ useHandCursor: true });
+      login.on('pointerup', () => { window.location.href = '/'; });
+    }
     const fs = label(this, 30, 700, 'Tela cheia', { size: 18, color: '#d9c7a0' }).setInteractive({ useHandCursor: true });
     fs.on('pointerup', () => (this.scale.isFullscreen ? this.scale.stopFullscreen() : this.scale.startFullscreen()));
 
