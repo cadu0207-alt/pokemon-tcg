@@ -146,7 +146,12 @@ function _badgeInk(hex) {
    ESTADO LOCAL (view mode e size)
 ───────────────────────────────────────────── */
 let ficViewMode   = 'grid'; // 'grid' | 'binder'
-let ficBinderSize = 3;      // 2, 3 ou 4
+let ficBinderSize = 3;      // 2, 3, 4 (quadrados NxN) ou 5 (= 5×4: 5 colunas × 4 linhas, 20 por página)
+// 01/11/2026 (pedido do Eduardo): fichário 5×4 em todas as coleções. O valor guardado continua sendo UM número (vai em
+// binder_shares.layout etc.): 2/3/4 = NxN; 5 = 5 colunas × 4 linhas. Tudo que pagina (grade do fichário, impressão,
+// Master Set) lê as dimensões por aqui.
+function binderDims(n) { return n === 5 ? { cols: 5, rows: 4 } : { cols: n, rows: n }; }
+window.binderDims = binderDims;
 // Idioma de exibição (30/09/2026, piloto cel30) — troca nome/arte/preço
 // exibidos por carta; NÃO afeta a coleção rastreada nem os totais em R$
 // (dashboard/gastos continuam em cima de c.price, igual sempre foi).
@@ -360,7 +365,7 @@ function setFicView(mode, onRefresh, ids) {
 function setBinderSize(n, onRefresh, ids) {
   ficBinderSize = n;
   const prefix = (ids && ids.sizePrefix) || 'fic-binder-';
-  [2, 3, 4].forEach(s => {
+  [2, 3, 4, 5].forEach(s => {
     const btn = document.getElementById(prefix + s);
     if (!btn) return;
     btn.style.borderColor = s === n ? 'var(--gold)' : 'var(--border)';
@@ -760,6 +765,7 @@ function renderGridView(cards, setIdOf) {
 // (comportamento idêntico a antes).
 function renderBinderView(cards, setIdOf) {
   const N = ficBinderSize;
+  const { cols: BC, rows: BR } = binderDims(N);
   const sIdOf = setIdOf || (() => currentSet);
   const slots = [];
   cards.forEach(c => {
@@ -767,15 +773,15 @@ function renderBinderView(cards, setIdOf) {
     getSlots(c, setId).forEach(s => slots.push({ card: c, ver: s.ver, setId }));
   });
 
-  const slotsPerPage = N * N;
+  const slotsPerPage = BC * BR;
   const pages = [];
   for (let i = 0; i < slots.length; i += slotsPerPage) {
     pages.push(slots.slice(i, i + slotsPerPage));
   }
 
   const isMob = window.innerWidth <= 600;
-  const cellSize = N === 2 ? (isMob ? 130 : 160) : N === 3 ? (isMob ? 96 : 130) : (isMob ? 72 : 90);
-  const gap = N === 2 ? (isMob ? 12 : 14) : N === 3 ? (isMob ? 8 : 12) : (isMob ? 6 : 8);
+  const cellSize = N === 2 ? (isMob ? 130 : 160) : N === 3 ? (isMob ? 96 : 130) : N === 5 ? (isMob ? 54 : 96) : (isMob ? 72 : 90);
+  const gap = N === 2 ? (isMob ? 12 : 14) : N === 3 ? (isMob ? 8 : 12) : N === 5 ? (isMob ? 4 : 8) : (isMob ? 6 : 8);
 
   function slotHtml(slot) {
     if (!slot) return `<div style="width:${cellSize}px;height:${Math.round(cellSize*1.4)}px;
@@ -844,7 +850,7 @@ function renderBinderView(cards, setIdOf) {
         <div style="flex:1;height:1px;background:var(--border)"></div>
       </div>
       <div style="display:flex;justify-content:center">
-        <div style="display:grid;grid-template-columns:repeat(${N},${cellSize}px);gap:${gap}px;
+        <div style="display:grid;grid-template-columns:repeat(${BC},${cellSize}px);gap:${gap}px;
              background:var(--surface);border:1px solid var(--border);border-radius:10px;
              padding:16px">
           ${page.map(slotHtml).join('')}
@@ -1071,6 +1077,7 @@ window._printOnlyState = _printOnlyState;
 
 async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
   const N     = ficBinderSize;
+  const { cols: BC, rows: BR } = binderDims(N);
   const cards = cardsOverride || getSetCards();
   const sIdOf = setIdOf || (() => currentSet);
   let slots = [];
@@ -1102,7 +1109,7 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
     if (!ok) return;
   }
 
-  const slotsPerPage = N * N;
+  const slotsPerPage = BC * BR;
   // CORRIGIDO 04/09/2026 (pedido do Eduardo: "colocar um espaço logo abaixo
   // da carta, pois as imagens ficam muito apagadas") — badge e número
   // viviam OVERLAY em cima da imagem (que já fica escurecida/dessaturada
@@ -1112,8 +1119,8 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
   // badge + número — a imagem em si fica intocada, sem nada sobreposto.
   const CARD_W_MM = 63, CARD_H_MM = 88, LABEL_H_MM = 6, GAP_MM = 3;
   const SLOT_H_MM = CARD_H_MM + LABEL_H_MM;
-  const PAGE_W = N * CARD_W_MM + (N - 1) * GAP_MM + 20;
-  const PAGE_H = N * SLOT_H_MM + (N - 1) * GAP_MM + 20;
+  const PAGE_W = BC * CARD_W_MM + (BC - 1) * GAP_MM + 20;
+  const PAGE_H = BR * SLOT_H_MM + (BR - 1) * GAP_MM + 20;
 
   const popup = window.open('', '_blank');
   if (!popup) { alert('Permita pop-ups para imprimir.'); return; }
@@ -1123,8 +1130,8 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
     * { margin:0; padding:0; box-sizing:border-box; }
     body { background:#fff; font-family:sans-serif; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
     .page { width:${PAGE_W}mm; height:${PAGE_H}mm; display:grid;
-      grid-template-columns:repeat(${N},${CARD_W_MM}mm);
-      grid-template-rows:repeat(${N},${SLOT_H_MM}mm);
+      grid-template-columns:repeat(${BC},${CARD_W_MM}mm);
+      grid-template-rows:repeat(${BR},${SLOT_H_MM}mm);
       gap:${GAP_MM}mm; padding:10mm; page-break-after:always; break-after:page; }
     .slot { width:${CARD_W_MM}mm; height:${SLOT_H_MM}mm; border:0.5px solid #ccc;
       border-radius:3mm; overflow:hidden; background:#f5f5f5; display:flex; flex-direction:column; }

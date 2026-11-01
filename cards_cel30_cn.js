@@ -190,10 +190,6 @@ const CARDS_CEL30CN = [
   {n:"163",dex:151,artist:"5ban Graphics",name:"Mew-VMAX",nameEn:"Mew VMAX",type:"Psiquico",color:"#9C27B0",rare:"Coleção Clássica",price:0,base:false,img:"https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/162.png"},
   {n:"164",dex:493,artist:"5ban Graphics",name:"Arceus VSTAR",type:"Incolor",color:"#9E9E9E",rare:"Coleção Clássica",price:0,base:false,img:"https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/163.png"},
   {n:"165",dex:129,artist:"Shinji Kanda",name:"Magikarp",type:"Agua",color:"#2196F3",rare:"Coleção Clássica",price:0,base:false,img:"https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/164.png"},
-  // ── CARTAS RGB — Mew (fora da contagem oficial) ──
-  {n:"B/RGB",dex:151,artist:"YOSHIROTTEN",name:"Mew",type:"Psiquico",color:"#9C27B0",rare:"Rara Secreta",price:0,base:false,img:"https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/165.png"},
-  {n:"G/RGB",dex:151,artist:"YOSHIROTTEN",name:"Mew",type:"Psiquico",color:"#9C27B0",rare:"Rara Secreta",price:0,base:false,img:"https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/169.png"},
-  {n:"R/RGB",dex:151,artist:"YOSHIROTTEN",name:"Mew",type:"Psiquico",color:"#9C27B0",rare:"Rara Secreta",price:0,base:false,img:"https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/174.png"},
   // ── ENERGIAS BÁSICAS ──
   {n:"DAR",artist:"YOSHIROTTEN",name:"Energia de Escuridão Básica",type:"Energia",color:"#212121",rare:"Comum",price:0,base:false,img:"https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/166.png"},
   {n:"FIG",artist:"YOSHIROTTEN",name:"Energia de Luta Básica",type:"Energia",color:"#FF6B35",rare:"Comum",price:0,base:false,img:"https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/167.png"},
@@ -203,4 +199,8 @@ const CARDS_CEL30CN = [
   {n:"MET",artist:"YOSHIROTTEN",name:"Energia de Metal Básica",type:"Energia",color:"#607D8B",rare:"Comum",price:0,base:false,img:"https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/172.png"},
   {n:"PSY",artist:"YOSHIROTTEN",name:"Energia Psíquica Básica",type:"Energia",color:"#9C27B0",rare:"Comum",price:0,base:false,img:"https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/173.png"},
   {n:"WAT",artist:"YOSHIROTTEN",name:"Energia de Água Básica",type:"Energia",color:"#2196F3",rare:"Comum",price:0,base:false,img:"https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/175.png"},
+  // ── CARTAS RGB — Mew: por ÚLTIMO no fichário (pedido do Eduardo, 01/11/2026, a partir de msg de usuário) ──
+  {n:"B/RGB",dex:151,artist:"YOSHIROTTEN",name:"Mew",type:"Psiquico",color:"#9C27B0",rare:"Rara Secreta",price:0,base:false,img:"https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/165.png"},
+  {n:"G/RGB",dex:151,artist:"YOSHIROTTEN",name:"Mew",type:"Psiquico",color:"#9C27B0",rare:"Rara Secreta",price:0,base:false,img:"https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/169.png"},
+  {n:"R/RGB",dex:151,artist:"YOSHIROTTEN",name:"Mew",type:"Psiquico",color:"#9C27B0",rare:"Rara Secreta",price:0,base:false,img:"https://cdn.jsdelivr.net/gh/duanxr/PTCG-CHS-Datasets@main/img/515/174.png"},
 ];

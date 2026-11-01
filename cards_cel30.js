@@ -194,10 +194,6 @@ const CARDS_CEL30 = [
   {n:'156',dex:373,artist:'Ryota Murayama',name:'Salamence ex',type:'Dragao',color:'#673AB7',rare:'Ilustr. Esp. Rara',price:71.75,priceUsd:23.92,base:false},
   {n:'157',dex:150,artist:'YOSHIROTTEN',name:'Mewtwo ex',type:'Psiquico',color:'#9C27B0',rare:'Rara Ultra',price:238.99,priceUsd:58.15,base:false},
   {n:'158',dex:151,artist:'YOSHIROTTEN',name:'Mew ex',type:'Psiquico',color:'#9C27B0',rare:'Rara Ultra',price:289.50,priceUsd:90.01,base:false},
-  // ── CARTAS RGB — Mew (fora da contagem oficial de 199, bonus ultra-raro) ──
-  {n:'R/RGB',dex:151,artist:'YOSHIROTTEN',name:'Mew',type:'Psiquico',color:'#9C27B0',rare:'Rara Secreta',price:16000,base:false},
-  {n:'G/RGB',dex:151,artist:'YOSHIROTTEN',name:'Mew',type:'Psiquico',color:'#9C27B0',rare:'Rara Secreta',price:0,priceUsd:3738.75,base:false},
-  {n:'B/RGB',dex:151,artist:'YOSHIROTTEN',name:'Mew',type:'Psiquico',color:'#9C27B0',rare:'Rara Secreta',price:20000,base:false},
   // ── COLEÇÃO CLÁSSICA (30 reimpressões — numeração do set de ORIGEM) ──
   {n:'4/102',dex:6,artist:'Mitsuhiro Arita',name:'Charizard',type:'Fogo',color:'#F44336',rare:'Coleção Clássica',price:1220,priceUsd:190.09,base:false},
   {n:'5/109',dex:301,artist:'Atsuko Nishida',name:'Delcatty',type:'Incolor',color:'#9E9E9E',rare:'Coleção Clássica',price:49.9,priceUsd:6.06,base:false},
@@ -245,4 +241,8 @@ const CARDS_CEL30 = [
   {n:'MEE 014',artist:'YOSHIROTTEN',name:'Energia de Luta Básica',type:'Energia',color:'#FF6B35',rare:'Comum',price:0,base:false},
   {n:'MEE 015',artist:'YOSHIROTTEN',name:'Energia de Escuridão Básica',type:'Energia',color:'#212121',rare:'Comum',price:0,base:false},
   {n:'MEE 016',artist:'YOSHIROTTEN',name:'Energia de Metal Básica',type:'Energia',color:'#607D8B',rare:'Comum',price:0,base:false},
+  // ── CARTAS RGB — Mew: por ÚLTIMO no fichário (pedido do Eduardo, 01/11/2026, a partir de msg de usuário) ──
+  {n:'R/RGB',dex:151,artist:'YOSHIROTTEN',name:'Mew',type:'Psiquico',color:'#9C27B0',rare:'Rara Secreta',price:16000,base:false},
+  {n:'G/RGB',dex:151,artist:'YOSHIROTTEN',name:'Mew',type:'Psiquico',color:'#9C27B0',rare:'Rara Secreta',price:0,priceUsd:3738.75,base:false},
+  {n:'B/RGB',dex:151,artist:'YOSHIROTTEN',name:'Mew',type:'Psiquico',color:'#9C27B0',rare:'Rara Secreta',price:20000,base:false},
 ];

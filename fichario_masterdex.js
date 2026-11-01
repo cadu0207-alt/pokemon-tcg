@@ -271,13 +271,14 @@ function fmMdexBuildGridHtml(species,bySpecies,color,binderId){
   const slotHtml=(sp)=>window._fmMdexSlotHtml(sp,bySpecies,color,binderId);
   if((window._fmMdexViewMode||'grid')==='binder'){
     const n=window._fmMdexPageSize||3;
-    const perPage=n*n;
+    const dims=(typeof binderDims==='function')?binderDims(n):{cols:n,rows:n};
+    const perPage=dims.cols*dims.rows;
     const pages=[];
     for(let i=0;i<species.length;i+=perPage) pages.push(species.slice(i,i+perPage));
     return pages.map((pg,idx)=>`
       <div style="margin-bottom:18px">
         <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px">Página ${idx+1}/${pages.length}</div>
-        <div style="display:grid;grid-template-columns:repeat(${n},1fr);gap:8px;border:1px solid var(--border);
+        <div style="display:grid;grid-template-columns:repeat(${dims.cols},1fr);gap:${n===5?4:8}px;border:1px solid var(--border);
                     border-radius:10px;padding:10px;background:var(--surface2)">
           ${pg.map(slotHtml).join('')}
         </div>
@@ -376,17 +377,34 @@ window.fmMdexRefreshGrid=fmMdexRefreshGrid;
 // Markup de UMA vaga (preenchida ou vazia) — função pura, sem closure, pra
 // poder ser chamada tanto do render completo (fmMdexRender) quanto do
 // refresh parcial (fmMdexRefreshGrid, que só troca #fm-mdex-grid).
+// NOVO 01/11/2026 (pedido do Eduardo): vaga SEM carta escolhida mostra a arte neutra do Pokémon (em vez do "+" vazio) —
+// quando ele quiser completar, é só clicar e escolher a carta. #1-151 saem de assets/wild (arquivos do próprio site,
+// o mesmo conjunto do minigame); o resto vem do artwork oficial da PokeAPI via jsDelivr (cai no raw.githubusercontent
+// e, por fim, no sprite pequeno, se algum provedor bloquear).
+function fmMdexNeutralImg(dex){
+  return dex<=151 ? `assets/wild/${dex}.webp` : `https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/other/official-artwork/${dex}.png`;
+}
+function fmMdexNeutralFallback(img,dex){
+  const st=img.dataset.fb||'0';
+  if(st==='0'){ img.dataset.fb='1'; img.src=`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${dex}.png`; }
+  else if(st==='1'){ img.dataset.fb='2'; img.src=`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${dex}.png`; }
+  else img.style.display='none';
+}
+window.fmMdexNeutralFallback=fmMdexNeutralFallback;
 function fmMdexSlotHtml(sp,bySpecies,color,binderId){
   const c=bySpecies[sp.dex];
   if(!c){
-    return `<div onclick="fmMdexOpenPicker(${sp.dex},'${binderId}')" title="#${sp.dex} ${sp.name} — vaga vazia, clique pra escolher uma carta"
-      style="aspect-ratio:2/3;border-radius:8px;border:2px dashed var(--border);cursor:pointer;
-             display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-             background:var(--surface2);padding:4px;text-align:center;transition:all .15s"
+    return `<div onclick="fmMdexOpenPicker(${sp.dex},'${binderId}')" title="#${sp.dex} ${sp.name} — sem carta escolhida (mostrando a arte neutra). Clique pra escolher uma carta"
+      style="aspect-ratio:2/3;border-radius:8px;border:1px dashed var(--border);cursor:pointer;position:relative;overflow:hidden;
+             background:var(--surface2);transition:all .15s"
       onmouseover="this.style.borderColor='${color}'" onmouseout="this.style.borderColor='var(--border)'">
-      <span style="font-size:16px;color:var(--muted)">+</span>
-      <span style="font-size:7px;color:var(--muted);font-family:'Space Mono',monospace">#${sp.dex}</span>
-      <span style="font-size:7px;color:var(--muted);line-height:1.2">${sp.name}</span>
+      <img src="${fmMdexNeutralImg(sp.dex)}" alt="${sp.name}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+        ${sp.dex>151?`onerror="fmMdexNeutralFallback(this,${sp.dex})"`:''}
+        style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:14% 8% 22%;opacity:.6;filter:grayscale(45%)">
+      <div style="position:absolute;top:3px;left:3px;background:rgba(0,0,0,.6);color:#fff;font-size:7px;
+        padding:1px 4px;border-radius:4px;font-family:'Space Mono',monospace">#${sp.dex}</div>
+      <div style="position:absolute;bottom:0;left:0;right:0;padding:8px 4px 3px;background:linear-gradient(transparent,rgba(0,0,0,.75));
+        font-size:7px;color:#fff;text-align:center;line-height:1.2">+ ${sp.name}</div>
     </div>`;
   }
   const owned=fmMdexIsOwned(c._setId,c);
@@ -492,11 +510,11 @@ function fmMdexRender(binder,keepFilters){
              background:${fmViewMode==='dash'?color:'var(--surface2)'};
              color:${fmViewMode==='dash'?'#fff':'var(--muted)'};font-family:'Space Mono',monospace;font-size:10px;
              cursor:pointer;font-weight:${fmViewMode==='dash'?700:400};white-space:nowrap">📊 Dashboard</button>`;
-  const fmPageSizeBtns=fmViewMode==='binder'?[2,3,4].map(n=>`<button onclick="fmMdexSetPageSize(${n},'${binder.id}')"
+  const fmPageSizeBtns=fmViewMode==='binder'?[2,3,4,5].map(n=>`<button onclick="fmMdexSetPageSize(${n},'${binder.id}')"
     style="padding:5px 10px;border-radius:6px;border:1px solid ${n===fmPageSize?'var(--gold)':'var(--border)'};
            background:var(--surface2);color:${n===fmPageSize?'var(--gold)':'var(--muted)'};
            font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;
-           font-weight:${n===fmPageSize?700:400}">${n}×${n} por página</button>`).join(''):'';
+           font-weight:${n===fmPageSize?700:400}">${n}×${n===5?4:n} por página</button>`).join(''):'';
 
   wrap.innerHTML=`
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;flex-wrap:wrap">

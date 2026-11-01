@@ -2844,9 +2844,9 @@ function getSetData(){
         {lbl:'📄 Base',                 filter:c=>c.base&&c.rare!=='Rara Ilustrada'},
         {lbl:'⚡ Pikachu Especial',      filter:c=>c.base&&c.rare==='Rara Ilustrada'},
         {lbl:'✨ Secretas — 129 a 158',  filter:c=>!c.base&&/^\d+$/.test(c.n)},
-        {lbl:'💎 Especial RGB (Mew)',    filter:c=>c.n==='R/RGB'||c.n==='G/RGB'||c.n==='B/RGB'},
         {lbl:'🕰️ Coleção Clássica',      filter:c=>c.rare==='Coleção Clássica'},
         {lbl:'🔋 Energias Básicas',      filter:c=>c.n.startsWith('MEE')},
+        {lbl:'💎 Especial RGB (Mew)',    filter:c=>c.n==='R/RGB'||c.n==='G/RGB'||c.n==='B/RGB'},   // por último (pedido 01/11/2026)
       ]},
     cel30jp:{cards:typeof CARDS_CEL30JP!=='undefined'?CARDS_CEL30JP:[],imgFn:imgCel30Jp,label:'CEL30(JP) — 30th Celebration',
       sections:[{lbl:'📄 Base — 001 a 103',filter:c=>c.base},{lbl:'✨ Coleção Clássica e Energias',filter:c=>!c.base}]},
@@ -3938,11 +3938,11 @@ function openCustomBinderView(binder){
              color:${cbViewMode==='binder'?'#fff':'var(--muted)'};font-family:'Space Mono',monospace;font-size:10px;
              cursor:pointer;font-weight:${cbViewMode==='binder'?700:400};white-space:nowrap">📖 Fichário físico</button>`;
   const cbBinderSize=(typeof ficBinderSize!=='undefined'&&ficBinderSize)||3;
-  const binderSizeBtns=[2,3,4].map(n=>`<button id="cb-binder-${n}" onclick="cbSetBinderSize(${n})"
+  const binderSizeBtns=[2,3,4,5].map(n=>`<button id="cb-binder-${n}" onclick="cbSetBinderSize(${n})"
     style="padding:4px 12px;border-radius:5px;border:1px solid ${n===cbBinderSize?'var(--gold)':'var(--border)'};
            background:var(--surface2);color:${n===cbBinderSize?'var(--gold)':'var(--muted)'};
            font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;
-           font-weight:${n===cbBinderSize?700:400}">${n}×${n} por página</button>`).join('');
+           font-weight:${n===cbBinderSize?700:400}">${n}×${n===5?4:n} por página</button>`).join('');
 
   document.getElementById('bwrap').innerHTML=`
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
