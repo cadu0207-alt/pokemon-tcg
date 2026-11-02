@@ -625,17 +625,23 @@ function fmMdexOpenPicker(dex,binderId){
 }
 window.fmMdexOpenPicker=fmMdexOpenPicker;
 
+// CORRIGIDO 02/11/2026: devolve true/false. Se o banco recusar a gravação (saveCustomBinder agora avisa e
+// devolve null), quem chamou desfaz a mudança na tela — antes a escolha ficava "salva" só na memória e sumia
+// ao voltar.
 async function fmMdexPersist(binder){
-  await saveCustomBinder(binder);
+  const saved=await saveCustomBinder(binder);
+  if(!saved) return false;
   const idx=(customBinders||[]).findIndex(b=>b.id===binder.id);
   if(idx>=0) customBinders[idx]=binder;
+  return true;
 }
 async function fmMdexChooseCard(dex,setId,n,binderId){
   const binder=fmMdexFindBinder(binderId);
   if(!binder) return;
-  binder.card_ids=(binder.card_ids||[]).filter(r=>r.dex!==dex);
+  const prev=binder.card_ids||[];
+  binder.card_ids=prev.filter(r=>r.dex!==dex);
   binder.card_ids.push({set:setId,n:String(n),dex});
-  await fmMdexPersist(binder);
+  if(!(await fmMdexPersist(binder))) binder.card_ids=prev;
   closeModal('mmdexpick');
   fmMdexRender(binder,true);
 }
@@ -643,8 +649,9 @@ window.fmMdexChooseCard=fmMdexChooseCard;
 async function fmMdexRemoveSlot(dex,binderId){
   const binder=fmMdexFindBinder(binderId);
   if(!binder) return;
-  binder.card_ids=(binder.card_ids||[]).filter(r=>r.dex!==dex);
-  await fmMdexPersist(binder);
+  const prev=binder.card_ids||[];
+  binder.card_ids=prev.filter(r=>r.dex!==dex);
+  if(!(await fmMdexPersist(binder))) binder.card_ids=prev;
   closeModal('mmdexpick');
   fmMdexRender(binder,true);
 }

@@ -3653,17 +3653,44 @@ async function loadCustomBinders(){
 async function saveCustomBinder(binder){
   if(!uid())return null;
   const payload={...binder,user_id:uid(),updated_at:new Date().toISOString()};
+  // CORRIGIDO 02/11/2026 (relato de usuário: "não salva o fichário, ao voltar apaga o que marquei"): o update
+  // antigo descartava o erro do Supabase — se a gravação fosse recusada (sessão/JWT vencido depois de ficar
+  // um tempo fora, RLS filtrando a linha => 0 linhas afetadas, queda de rede), a tela seguia mostrando a
+  // escolha como "salva" e, ao voltar, o servidor devolvia a versão antiga. Agora: confere erro E se alguma
+  // linha foi realmente atualizada, tenta de novo uma vez com a sessão renovada e, se ainda falhar, AVISA e
+  // devolve null (quem chama deve desfazer a mudança na tela).
+  const _run=async()=>{
+    if(payload.id){
+      const{data,error}=await sbClient.from('custom_binders').update(payload).eq('id',payload.id).eq('user_id',uid()).select('id');
+      if(error)return{error};
+      if(!data||!data.length)return{error:{message:'nenhuma linha atualizada (sessão vencida ou fichário não encontrado)'}};
+      return{ok:true};
+    }
+    const row={...payload};delete row.id;
+    const{data,error}=await sbClient.from('custom_binders').insert(row).select();
+    if(error||!data?.[0])return{error:error||{message:'insert sem retorno'}};
+    return{ok:true,row:data[0]};
+  };
+  let res;
+  try{res=await _run();}catch(e){res={error:e};}
+  if(res.error){
+    console.warn('[saveCustomBinder] falhou, renovando sessão e tentando de novo:',res.error);
+    try{await sbClient.auth.refreshSession();}catch(e){}
+    try{res=await _run();}catch(e){res={error:e};}
+  }
+  if(res.error){
+    console.error('[saveCustomBinder] erro ao salvar fichário',res.error);
+    if(typeof toast==='function')toast('Não foi possível salvar o fichário — confira a conexão e tente de novo','error');
+    else alert('Não foi possível salvar o fichário — confira a conexão e tente de novo.');
+    return null;
+  }
   if(payload.id){
-    await sbClient.from('custom_binders').update(payload).eq('id',payload.id).eq('user_id',uid());
     const idx=customBinders.findIndex(b=>b.id===payload.id);
     if(idx>=0)customBinders[idx]={...customBinders[idx],...payload};
     return payload;
-  }else{
-    delete payload.id;
-    const{data}=await sbClient.from('custom_binders').insert(payload).select();
-    if(data?.[0])customBinders.unshift(data[0]);
-    return data?.[0]||null;
   }
+  customBinders.unshift(res.row);
+  return res.row;
 }
 
 async function deleteCustomBinder(id){
@@ -4356,8 +4383,11 @@ async function cbConfirmSave(editId){
     cover_color:_cbDraft.cover_color||'#a855f7',
   };
   const wantsPin=!!(document.getElementById('cb-pin-inp')&&document.getElementById('cb-pin-inp').checked);
+  // 02/11/2026: só fecha o modal se gravou — se falhar, o modal fica aberto com a seleção intacta
+  // (saveCustomBinder já avisou o erro) em vez de sumir com o que a pessoa tinha marcado.
+  const savedBinder=await saveCustomBinder(payload);
+  if(!savedBinder) return;
   closeModal('mcustom');
-  await saveCustomBinder(payload);
   const binder=editId
     ?customBinders.find(b=>b.id===editId)
     :customBinders[0];
