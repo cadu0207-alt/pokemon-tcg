@@ -954,7 +954,12 @@ async function _loadAllImpl(){
   const queryFactories=[
     ()=>sbClient.from('purchases').select('*').eq('user_id',myUid).order('date',{ascending:false}),
     ()=>sbClient.from('pulled_cards').select('*').eq('user_id',myUid).order('id',{ascending:true}),
-    ()=>fetchAllRows(()=>sbClient.from('collection').select('slot_key,quantity,origins').eq('user_id',myUid)),
+    // CORRIGIDO 02/11/2026 (relato de usuário com 1425 cartas: "marco que tenho e ao voltar some"): fetchAllRows
+    // pagina em blocos de 1000 e esta consulta NÃO tinha ORDER BY — sem ordem fixa o Postgres pode devolver
+    // linhas repetidas/faltando entre as páginas (as linhas recém-gravadas mudam de posição no heap), então quem
+    // passa de 1000 cartas via parte da coleção "sumir" ao recarregar, mesmo com tudo salvo no banco.
+    // slot_key é único por usuário (collection_user_slot_unique), então ordena de forma estável.
+    ()=>fetchAllRows(()=>sbClient.from('collection').select('slot_key,quantity,origins').eq('user_id',myUid).order('slot_key',{ascending:true})),
     ()=>sbClient.from('value_history').select('date,total_value').eq('user_id',myUid).order('date',{ascending:true}),
     ()=>sbClient.from('card_listings').select('*').eq('user_id',myUid).order('created_at',{ascending:false}),
     ()=>sbClient.from('buy_orders').select('*').eq('buyer_id',myUid).order('created_at',{ascending:false})
