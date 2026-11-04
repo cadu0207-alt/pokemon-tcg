@@ -34,7 +34,7 @@ let _pk = null; // {id,name,layout,dex,speciesName,pages:[[...]],page:0,isNew}
 // sendo UM número, então fichários antigos não mudam.
 function pkDims(n){ return (typeof binderDims === 'function') ? binderDims(n) : { cols:n, rows:n }; }
 function pkSlots(n){ const d = pkDims(n); return d.cols * d.rows; }
-function pkLayoutLabel(n){ return n === 5 ? '4×5' : n + '×' + n; }
+function pkLayoutLabel(n){ return (typeof binderSizeLabel === 'function') ? binderSizeLabel(n) : n + '×' + n; }
 let _pkDrag = null; // {set,n,ver,card,el} durante um arrastar em andamento
 
 function pkOverlayEl(){ return document.getElementById('pkb-overlay'); }
@@ -78,7 +78,7 @@ function pkRenderCreateStep(){
              value="${esc(_pk.name)}" maxlength="60">
       <label class="pkb-lbl" style="margin-top:16px">Tamanho da grade</label>
       <div class="pkb-layout-pick" id="pkb-layout-pick">
-        ${[2,3,4,5].map(n=>`<button class="pkb-layout-btn${_pk.layout===n?' active':''}" data-n="${n}"
+        ${(window.BINDER_SIZES||[2,3,4,5,6]).map(n=>`<button class="pkb-layout-btn${_pk.layout===n?' active':''}" data-n="${n}"
             onclick="fmPkmnSetLayout(${n})">${pkLayoutLabel(n)}</button>`).join('')}
       </div>
       <button class="pkb-btn-primary" style="margin-top:20px;width:100%" onclick="fmPkmnConfirmCreate()">

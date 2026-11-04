@@ -150,8 +150,14 @@ let ficBinderSize = 3;      // 2, 3, 4 (quadrados NxN) ou 5 (= 4×5: 4 colunas �
 // 01/11/2026 (pedido do Eduardo): fichário 4×5 em todas as coleções (o Eduardo chamou de "5x4"; confirmou: 4 colunas e 5 linhas). O valor guardado continua sendo UM número (vai em
 // binder_shares.layout etc.): 2/3/4 = NxN; 5 = 5 colunas × 4 linhas. Tudo que pagina (grade do fichário, impressão,
 // Master Set) lê as dimensões por aqui.
-function binderDims(n) { return n === 5 ? { cols: 4, rows: 5 } : { cols: n, rows: n }; }
+// 04/11/2026: 6 = 5 colunas × 4 linhas (20 por página) — pedido "inclua a opção de 5 colunas e 4 linhas", ao lado do 4×5.
+function binderDims(n) { return n === 5 ? { cols: 4, rows: 5 } : n === 6 ? { cols: 5, rows: 4 } : { cols: n, rows: n }; }
 window.binderDims = binderDims;
+// Rótulo único dos tamanhos (colunas × linhas): 2→2×2, 3→3×3, 4→4×4, 5→4×5, 6→5×4. Todo botão de tamanho usa isto.
+function binderSizeLabel(n) { const d = binderDims(n); return d.cols + '×' + d.rows; }
+window.binderSizeLabel = binderSizeLabel;
+const BINDER_SIZES = [2, 3, 4, 5, 6];
+window.BINDER_SIZES = BINDER_SIZES;
 // Idioma de exibição (30/09/2026, piloto cel30) — troca nome/arte/preço
 // exibidos por carta; NÃO afeta a coleção rastreada nem os totais em R$
 // (dashboard/gastos continuam em cima de c.price, igual sempre foi).
@@ -365,7 +371,7 @@ function setFicView(mode, onRefresh, ids) {
 function setBinderSize(n, onRefresh, ids) {
   ficBinderSize = n;
   const prefix = (ids && ids.sizePrefix) || 'fic-binder-';
-  [2, 3, 4, 5].forEach(s => {
+  BINDER_SIZES.forEach(s => {
     const btn = document.getElementById(prefix + s);
     if (!btn) return;
     btn.style.borderColor = s === n ? 'var(--gold)' : 'var(--border)';
@@ -780,8 +786,8 @@ function renderBinderView(cards, setIdOf) {
   }
 
   const isMob = window.innerWidth <= 600;
-  const cellSize = N === 2 ? (isMob ? 130 : 160) : N === 3 ? (isMob ? 96 : 130) : N === 5 ? (isMob ? 72 : 100) : (isMob ? 72 : 90);
-  const gap = N === 2 ? (isMob ? 12 : 14) : N === 3 ? (isMob ? 8 : 12) : N === 5 ? (isMob ? 6 : 8) : (isMob ? 6 : 8);
+  const cellSize = N === 2 ? (isMob ? 130 : 160) : N === 3 ? (isMob ? 96 : 130) : N === 5 ? (isMob ? 72 : 100) : N === 6 ? (isMob ? 56 : 92) : (isMob ? 72 : 90);
+  const gap = N === 2 ? (isMob ? 12 : 14) : N === 3 ? (isMob ? 8 : 12) : N === 5 ? (isMob ? 6 : 8) : N === 6 ? (isMob ? 5 : 8) : (isMob ? 6 : 8);
 
   function slotHtml(slot) {
     if (!slot) return `<div style="width:${cellSize}px;height:${Math.round(cellSize*1.4)}px;

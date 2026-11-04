@@ -3970,11 +3970,11 @@ function openCustomBinderView(binder){
              color:${cbViewMode==='binder'?'#fff':'var(--muted)'};font-family:'Space Mono',monospace;font-size:10px;
              cursor:pointer;font-weight:${cbViewMode==='binder'?700:400};white-space:nowrap">📖 Fichário físico</button>`;
   const cbBinderSize=(typeof ficBinderSize!=='undefined'&&ficBinderSize)||3;
-  const binderSizeBtns=[2,3,4,5].map(n=>`<button id="cb-binder-${n}" onclick="cbSetBinderSize(${n})"
+  const binderSizeBtns=(window.BINDER_SIZES||[2,3,4,5,6]).map(n=>`<button id="cb-binder-${n}" onclick="cbSetBinderSize(${n})"
     style="padding:4px 12px;border-radius:5px;border:1px solid ${n===cbBinderSize?'var(--gold)':'var(--border)'};
            background:var(--surface2);color:${n===cbBinderSize?'var(--gold)':'var(--muted)'};
            font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;
-           font-weight:${n===cbBinderSize?700:400}">${n===5?'4×5':n+'×'+n} por página</button>`).join('');
+           font-weight:${n===cbBinderSize?700:400}">${(typeof binderSizeLabel==='function'?binderSizeLabel(n):n+'×'+n)} por página</button>`).join('');
 
   document.getElementById('bwrap').innerHTML=`
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap">

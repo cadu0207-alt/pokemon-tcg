@@ -602,11 +602,11 @@ function fmMdexRender(binder,keepFilters){
              background:${fmViewMode==='dash'?color:'var(--surface2)'};
              color:${fmViewMode==='dash'?'#fff':'var(--muted)'};font-family:'Space Mono',monospace;font-size:10px;
              cursor:pointer;font-weight:${fmViewMode==='dash'?700:400};white-space:nowrap">📊 Dashboard</button>`;
-  const fmPageSizeBtns=fmViewMode==='binder'?[2,3,4,5].map(n=>`<button onclick="fmMdexSetPageSize(${n},'${binder.id}')"
+  const fmPageSizeBtns=fmViewMode==='binder'?(window.BINDER_SIZES||[2,3,4,5,6]).map(n=>`<button onclick="fmMdexSetPageSize(${n},'${binder.id}')"
     style="padding:5px 10px;border-radius:6px;border:1px solid ${n===fmPageSize?'var(--gold)':'var(--border)'};
            background:var(--surface2);color:${n===fmPageSize?'var(--gold)':'var(--muted)'};
            font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;
-           font-weight:${n===fmPageSize?700:400}">${n===5?'4×5':n+'×'+n} por página</button>`).join(''):'';
+           font-weight:${n===fmPageSize?700:400}">${(typeof binderSizeLabel==='function'?binderSizeLabel(n):n+'×'+n)} por página</button>`).join(''):'';
 
   wrap.innerHTML=`
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
