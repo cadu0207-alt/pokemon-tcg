@@ -83,8 +83,8 @@ create policy "store_item_costs_viewer_select" on store_item_costs
 -- André como LEILOEIROS (podem cadastrar cartas/itens próprios). Os dois
 -- já logaram no site pelo menos 1x (são staff), então isso já funciona:
 -- ================================================================
-select add_auction_admin('caiofernandowork@gmail.com', 'Caio');
-select add_auction_admin('andresollecito@hotmail.com', 'André');
+select add_auction_admin('EMAIL_CAIO@exemplo.com', 'Caio');
+select add_auction_admin('EMAIL_ANDRE@exemplo.com', 'André');
 
 -- ================================================================
 -- Por último, no SITE (logado como Eduardo): aba Admin → bloco "Equipe"

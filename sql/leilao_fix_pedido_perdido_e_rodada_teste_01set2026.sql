@@ -52,9 +52,9 @@ declare
   v_round_id   bigint;
   v_auction_id bigint;
 begin
-  select id into v_user_id from auth.users where email = 'cadu0207@gmail.com';
+  select id into v_user_id from auth.users where email = 'EMAIL_EDUARDO@exemplo.com';
   if v_user_id is null then
-    raise exception 'E-mail cadu0207@gmail.com não encontrado em auth.users — ajuste o e-mail no script pro seu usuário leiloeiro.';
+    raise exception 'E-mail EMAIL_EDUARDO@exemplo.com não encontrado em auth.users — ajuste o e-mail no script pro seu usuário leiloeiro.';
   end if;
 
   insert into auction_rounds (created_by, title, start_at, end_at, payment_due_at, shipping_note, status)

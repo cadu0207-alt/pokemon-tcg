@@ -657,7 +657,7 @@ $$;
 grant execute on function flag_overdue_bidders() to authenticated;
 
 -- Pra conferir depois de rodar:
--- select add_auction_admin('juanvvictorr@gmail.com');   -- autoriza o Juan (ele precisa já ter logado 1x no site)
+-- select add_auction_admin('EMAIL_JUAN@exemplo.com');   -- autoriza o Juan (ele precisa já ter logado 1x no site)
 -- select * from auction_admins;
 -- select * from auction_rounds order by created_at desc;
 -- select * from auctions order by created_at desc;
@@ -718,7 +718,7 @@ grant execute on function delete_auction_round(bigint) to authenticated;
 -- supabase/functions/mp-webhook.
 --
 -- O dinheiro cai numa conta só (Mercado Pago do Eduardo,
--- cadu0207@gmail.com) — os leilões cadastrados pelo Juan (segundo
+-- EMAIL_EDUARDO@exemplo.com) — os leilões cadastrados pelo Juan (segundo
 -- leiloeiro) também são pagos nessa mesma conta; o repasse da comissão
 -- dele é combinado por fora, o site não faz split automático.
 --
@@ -785,12 +785,12 @@ alter table auction_admins add column if not exists display_name text;
 -- isAdmin()/checagem de uuid direto no client e nas funções admin;
 -- isso aqui é só o registro do nome de exibição dele.
 insert into auction_admins (user_id, email, display_name, added_by)
-values ('eb9da0ad-9877-4f17-ac5a-6f1da5eebc9b', 'cadu0207@gmail.com', 'Eduardo', null)
+values ('eb9da0ad-9877-4f17-ac5a-6f1da5eebc9b', 'EMAIL_EDUARDO@exemplo.com', 'Eduardo', null)
 on conflict (user_id) do update set display_name = excluded.display_name;
 
 -- Se o Juan já foi autorizado antes dessa coluna existir, dá pra
 -- definir o nome dele rodando (ajuste o nome se for diferente):
--- update auction_admins set display_name = 'Juan' where email = 'juanvvictorr@gmail.com';
+-- update auction_admins set display_name = 'Juan' where email = 'EMAIL_JUAN@exemplo.com';
 
 -- Leitura pública (qualquer usuário logado, não só o leiloeiro) de
 -- user_id → nome de exibição — usada pra mostrar "Leiloeiro: X" nas

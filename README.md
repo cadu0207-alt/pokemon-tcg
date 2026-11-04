@@ -48,6 +48,8 @@ Quase tudo fica na raiz, sem subpastas por módulo.
 
 Mudanças no banco entram como um arquivo `.sql` em `sql/`, com a data no nome, aplicado manualmente no Supabase. O site não cria nem altera tabelas sozinho.
 
+Nos `.sql` já aplicados, e-mails de pessoas e telefones foram trocados por placeholders (`EMAIL_NOME@exemplo.com`, `55XXXXXXXXXXX`). Esses scripts são só registro do que já está no banco: não rode de novo sem colocar os valores reais.
+
 ## Cuidados ao mexer no fichário
 
 Teste todos os modos: fichário oficial, fichários personalizados, Master Set e impressão (PDF).

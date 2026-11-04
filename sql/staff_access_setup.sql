@@ -1,7 +1,7 @@
 -- ================================================================
 -- MyDeck — ACESSO DA EQUIPE (staff_access_setup.sql)
 -- Pedido do Eduardo (21/08/2026): dar acesso de "visualização total" pro
--- Caio (caiofernandowork@gmail.com) e pro André (andresollecito@hotmail.com)
+-- Caio (EMAIL_CAIO@exemplo.com) e pro André (EMAIL_ANDRE@exemplo.com)
 -- na aba Admin, sem que eles consigam editar/excluir NADA por padrão — e
 -- deixar pronta uma telinha (dentro da própria aba Admin) onde o Eduardo
 -- marca, pessoa por pessoa, quais ações específicas cada um pode fazer:

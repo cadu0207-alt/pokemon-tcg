@@ -355,7 +355,7 @@ values (
   'toybox', 'TOYBOX Artes 3D',
   'Colecionáveis, artes em 3D e Pokémon TCG.',
   'José Bonifácio', 'SP',
-  '5517991620996',
+  '55XXXXXXXXXXX',
   'https://www.instagram.com/toybox_colecionaveis/',
   'https://www.tiktok.com/@toyboxtcg',
   'https://toyboxtcg.netlify.app/assets/logo.jpeg',
