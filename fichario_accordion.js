@@ -34,6 +34,11 @@
 // saía pela esquerda da tela (right:0 num botão que está no meio da barra). Agora o menu é position:fixed, calculado a
 // partir do botão e limitado à tela — fixed não é cortado pelo overflow da barra.
 const FM_TAB_MENUS=[['fic-tabs-pokedex-btn','fic-tabs-pokedex-menu'],['fic-tabs-binders-btn','fic-tabs-binders-menu']];
+// 04/11/2026 (2ª tentativa — no iPhone/Chrome o position:fixed DENTRO de #binder-tabs ainda é cortado: a barra tem
+// -webkit-overflow-scrolling:touch e o WebKit prende filhos fixed ao scroller): ao abrir, o menu é CLONADO pro <body>
+// (data-fm-portal) e posicionado a partir do botão — fora de qualquer contêiner com overflow/transform. O menu original
+// dentro da barra fica só como molde escondido. Fechar = remover o clone.
+function fmClosePortals(){ document.querySelectorAll('[data-fm-portal]').forEach(function(x){ x.remove(); }); }
 function fmPlaceTabMenu(menu,btn){
   const r=btn.getBoundingClientRect();
   const vw=document.documentElement.clientWidth;
@@ -49,11 +54,17 @@ function fmPlaceTabMenu(menu,btn){
 }
 function fmToggleTabMenu(menuId,btnId,e){
   if(e) e.stopPropagation();
-  const menu=document.getElementById(menuId), btn=document.getElementById(btnId);
-  if(!menu||!btn) return;
-  FM_TAB_MENUS.forEach(([,mid])=>{ if(mid!==menuId){ const o=document.getElementById(mid); if(o) o.classList.remove('open'); } });
-  menu.classList.toggle('open');
-  if(menu.classList.contains('open')) fmPlaceTabMenu(menu,btn);
+  const src=document.getElementById(menuId), btn=document.getElementById(btnId);
+  if(!src||!btn) return;
+  const wasOpen=!!document.querySelector('[data-fm-portal="'+menuId+'"]');
+  fmClosePortals();
+  if(wasOpen) return;
+  const menu=src.cloneNode(true);
+  menu.id=menuId+'-portal';
+  menu.setAttribute('data-fm-portal',menuId);
+  menu.className='fic-more-menu open';
+  document.body.appendChild(menu);
+  fmPlaceTabMenu(menu,btn);
 }
 function fmToggleBindersTabMenu(e){ fmToggleTabMenu('fic-tabs-binders-menu','fic-tabs-binders-btn',e); }
 window.fmToggleBindersTabMenu=fmToggleBindersTabMenu;
@@ -65,17 +76,20 @@ function fmTogglePokedexTabMenu(e){ fmToggleTabMenu('fic-tabs-pokedex-menu','fic
 window.fmTogglePokedexTabMenu=fmTogglePokedexTabMenu;
 // fecha ao tocar fora. pointerdown (não click): no iOS o click não dispara ao tocar em área "não clicável" da página.
 function fmCloseTabMenus(e){
-  FM_TAB_MENUS.forEach(([bid,mid])=>{
-    const menu=document.getElementById(mid), btn=document.getElementById(bid);
-    if(!menu||!menu.classList.contains('open')) return;
-    if(e&&e.target&&((btn&&btn.contains(e.target))||menu.contains(e.target))) return;
-    menu.classList.remove('open');
-  });
+  if(e&&e.target&&e.target.closest&&(e.target.closest('[data-fm-portal]')||e.target.closest('#fic-tabs-pokedex-btn,#fic-tabs-binders-btn'))) return;
+  fmClosePortals();
 }
 window.fmCloseTabMenus=fmCloseTabMenus;
 document.addEventListener('pointerdown',fmCloseTabMenus);
-window.addEventListener('scroll',function(){ fmCloseTabMenus(null); },{passive:true});   // menu é fixed: se a página rolar, fecha em vez de ficar solto
-window.addEventListener('resize',function(){ fmCloseTabMenus(null); });
+// scroll/resize só REPOSICIONAM (não fecham): no iOS a barra do navegador recolhendo dispara os dois sozinhos
+function fmRepositionTabMenus(){
+  FM_TAB_MENUS.forEach(function(pair){
+    const m=document.querySelector('[data-fm-portal="'+pair[1]+'"]'), b=document.getElementById(pair[0]);
+    if(m&&b) fmPlaceTabMenu(m,b);
+  });
+}
+window.addEventListener('scroll',fmRepositionTabMenus,{passive:true});
+window.addEventListener('resize',fmRepositionTabMenus);
 
 window.renderTabs=function(){
   const container=document.getElementById('binder-tabs');
