@@ -85,7 +85,9 @@ sandbox.window = sandbox; // legacy_*.js escreve em window.LEGACY_SETS
 vm.createContext(sandbox);
 
 for (const file of CARD_FILES) {
-  const filepath = path.join(REPO_ROOT, file);
+  // 04/11/2026: cards_*.js foram para cards/ (legacy_*.js continuam na raiz). ATENCAO: arquivo ausente e
+  // pulado em silencio (continue abaixo) -- um caminho errado aqui grava o valor da colecao incompleto.
+  const filepath = path.join(REPO_ROOT, file.startsWith('cards_') ? 'cards' : '', file);
   if (!fs.existsSync(filepath)) continue; // sets futuros ainda sem arquivo
   const src = fs.readFileSync(filepath, 'utf8').replace(/\x00/g, ''); // limpa artefato de bytes nulos conhecido
   vm.runInContext(src, sandbox, { filename: file });

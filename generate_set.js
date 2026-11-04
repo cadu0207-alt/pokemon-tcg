@@ -230,7 +230,7 @@ function formatEntry(e) {
   const release = setInfo?.releaseDate || '';
 
   const varName = `CARDS_${SET_ID.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}`;
-  const outFile = `cards_${SET_ID}.js`;
+  const outFile = `cards/cards_${SET_ID}.js`; // 04/11/2026: catalogos ficam em cards/
 
   const header = [
     `// ${SET_ID.toUpperCase()} — ${setName} (${total} cartas)`,
@@ -247,6 +247,7 @@ function formatEntry(e) {
   // Exporta como variável global (mesmo padrão dos outros arquivos)
   const globalExport = `\n\n// Exporta para uso global\nif(typeof window !== 'undefined') window.${varName} = ${varName};`;
 
+  fs.mkdirSync('cards', { recursive: true });
   fs.writeFileSync(outFile, header + '\n' + body + footer + globalExport, 'utf8');
 
   const withPrice = mapped.filter(c => c.price > 5).length;

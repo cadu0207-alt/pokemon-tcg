@@ -21,7 +21,6 @@ Quase tudo fica na raiz, sem subpastas por módulo.
 | `index.html` | Página principal; carrega todos os scripts. |
 | `app.js` | Núcleo: login, carga da coleção, abas, fichários personalizados, gravação das marcações. |
 | `fichario_*.js` | Fichário: patch principal, Master Set Nacional/regionais (`masterdex`), favoritos, menus mobile e desktop. |
-| `cards_*.js` | Catálogo de cartas, um arquivo por coleção. Variantes em japonês e chinês terminam em `_jp` e `_cn`. |
 | `leilao*.js` | Leilão. |
 | `mk_*.js`, `mk.css` | Marketplace e loja Toybox. |
 | `lojas*.js` | Lojas e ofertas rastreadas, cupons e alertas de preço. |
@@ -35,14 +34,19 @@ Quase tudo fica na raiz, sem subpastas por módulo.
 | Pasta | Conteúdo |
 |---|---|
 | `assets/`, `img/` | Imagens do site (`assets/wild/` tem os sprites do minigame). |
+| `cards/` | Catálogo de cartas, um arquivo por coleção (`cards_sv1.js`, `cards_me04.js`…). Variantes em japonês e chinês terminam em `_jp` e `_cn`. Os `legacy_*.js` (coleções antigas) continuam na raiz. |
 | `data/` | Catálogos antigos de cartas. |
 | `scripts/` | Scripts de apoio em Python e Node (importar coleções, sprites, histórico de preços). Não fazem parte do site. |
-| `sql/` | Migrações e configurações do banco, com a data no nome. São executadas manualmente no Supabase. Comentários antigos no código citam esses arquivos só pelo nome, sem a pasta. |
+| `sql/` | Migrações e configurações do banco, com a data no nome. São executadas manualmente no Supabase. |
 | `supabase/functions/` | Edge functions do Supabase (código que roda no servidor). |
 | `.github/workflows/` | Rotinas automáticas: atualizar preços, snapshots diários de preço e de valor da coleção, publicar o changelog e checar a sintaxe dos `.js`. |
 | `changelog/` | Uma nota por atualização do site. |
 | `atacado_toybox/` | Catálogo e imagens do atacado da loja Toybox. |
 | `rpg/`, `ancord/`, `meusinvestimentos/` | Aplicativos separados, publicados em `/rpg`, `/ancord` e `/meusinvestimentos`. |
+
+## Comentários com nomes antigos
+
+Vários comentários no código citam `cards_*.js` e `*.sql` só pelo nome, sem a pasta (`cards/`, `sql/`), porque os arquivos foram movidos depois. Os caminhos usados de verdade (tags `<script>`, lista `LAZY_SET_SCRIPTS` do `app.js`, scripts de snapshot e de preços, workflows) já estão atualizados.
 
 ## Banco de dados
 

@@ -32,6 +32,6 @@ node generate_set.js sv10 %USD%
 
 echo.
 echo === Concluido! ===
-echo Arquivos gerados: cards_sv*.js
+echo Arquivos gerados: cards\cards_sv*.js
 echo Adicione-os ao app.js e index.html
 pause

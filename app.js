@@ -4824,10 +4824,10 @@ function copyShareUrl(){
 // Enquanto isso o site funciona 100% com os sets ME (uso diário) — os
 // consumidores de SET_CARDS_MAP são todos guarded (typeof/?.()||[]).
 const LAZY_SET_SCRIPTS=[
-  'cards_sv1.js','cards_sv2.js','cards_sv3.js','cards_sv3pt5.js',
-  'cards_sv4.js','cards_sv4pt5.js','cards_sv5.js','cards_sv6.js',
-  'cards_sv6pt5.js','cards_sv7.js','cards_sv8.js','cards_sv8pt5.js',
-  'cards_sv9.js','cards_sv10.js','cards_zsv10pt5.js','cards_rsv10pt5.js','cards_svp.js','cards_pgo.js',
+  'cards/cards_sv1.js','cards/cards_sv2.js','cards/cards_sv3.js','cards/cards_sv3pt5.js',
+  'cards/cards_sv4.js','cards/cards_sv4pt5.js','cards/cards_sv5.js','cards/cards_sv6.js',
+  'cards/cards_sv6pt5.js','cards/cards_sv7.js','cards/cards_sv8.js','cards/cards_sv8pt5.js',
+  'cards/cards_sv9.js','cards/cards_sv10.js','cards/cards_zsv10pt5.js','cards/cards_rsv10pt5.js','cards/cards_svp.js','cards/cards_pgo.js',
   'legacy_swsh.js','legacy_sm.js','legacy_xy.js','legacy_bw.js',
   'legacy_hgss.js','legacy_dp.js','legacy_ex.js','legacy_classic.js',
 ];

@@ -90,8 +90,8 @@ RETROFIT_SET_MAP = {
     "sv9": "sv9", "sv10": "sv10", "svp": "svp",
 }
 # cards_<id>.js correspondente (padrão do repo)
-RETROFIT_FILES = {k: f"cards_{k}.js" for k in RETROFIT_SET_MAP if k != "svp"}
-RETROFIT_FILES["svp"] = "cards_svp.js"
+RETROFIT_FILES = {k: f"cards/cards_{k}.js" for k in RETROFIT_SET_MAP if k != "svp"}
+RETROFIT_FILES["svp"] = "cards/cards_svp.js"
 
 LEGACY_FILE = "legacy_swsh.js"  # já populado; ids de LEGACY_SETS batem com a API direto
 

@@ -53,11 +53,11 @@ jobs:
         run: |
           git config --global user.name  'Price Bot 🤖'
           git config --global user.email 'actions@github.com'
-          if git diff --quiet cards_*.js; then
+          if git diff --quiet cards/cards_*.js; then
             echo "Nenhuma mudança de preço detectada — nada a commitar."
           else
-            CHANGED=$(git diff --name-only cards_*.js | tr '\n' ' ')
-            git add cards_*.js
+            CHANGED=$(git diff --name-only cards/cards_*.js | tr '\n' ' ')
+            git add cards/cards_*.js
             git commit -m "chore: atualiza preços [$(date '+%Y-%m-%d')] | $CHANGED | fonte: ligapokemon.com.br (menor preço)"
             git push
             echo "✅ Push realizado com sucesso."
