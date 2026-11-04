@@ -238,21 +238,112 @@ if(typeof window.getBinderCards==='function'){
 // (#cb-view-q/#cb-view-oc/#cb-view-om) — reaproveita exportCustomBinderText()
 // sem mudar nada nela, já que ela já lê esses mesmos ids com `?.` (não quebra
 // se não existirem, então também funciona pra "copiar lista" sem filtro).
+// CORRIGIDO 04/11/2026 (relato: "erro de busca nas Pokédex nacional e regional" + "busca por código da carta"):
+// a busca antiga era um único includes() em "nome dex nome-da-carta set" — não achava "Flabébé" digitando "flabebe"
+// (acento), não aceitava código ("sv7 45", "obf 125", "125/230") e disparava a 1025 vagas a cada tecla (travava
+// no celular). Agora: sem acento, em palavras (todas precisam bater), com código de coleção + número, e a digitação
+// tem um pequeno atraso (fmMdexSearchInput). Mesma regra de leitura do código que a busca da Consignação (mk_consign.js).
+function fmNorm(t){ return String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase(); }
+let _fmSetIx=null;
+function fmSetIndex(){
+  if(_fmSetIx) return _fmSetIx;
+  const keys={}, meta={};
+  (typeof SET_CATALOG!=='undefined'?SET_CATALOG:[]).forEach((s,order)=>{
+    const m=/^([^—(]+?)\s*(?:\(([^)]+)\))?\s*—\s*(.+)$/.exec(s.label||'');
+    const short=m?m[1].trim():String(s.id).toUpperCase(), code=m&&m[2]?m[2]:'', name=m?m[3].trim():(s.label||s.id);
+    meta[s.id]={short,code,name,order};
+    [s.id,short,code].forEach(k=>{ if(!k) return; const kk=fmNorm(k).replace(/\./g,'pt'); keys[kk]=keys[kk]||s.id; });
+  });
+  _fmSetIx={keys,meta};
+  return _fmSetIx;
+}
+function fmSetText(setId){ const m=fmSetIndex().meta[setId]; return m?fmNorm(m.short+' '+m.code+' '+m.name):''; }
+// Lê a busca: 1º número = nº da carta/Pokédex (o 2º de "125/230" é o total da coleção, ignora); palavra que é código
+// de coleção (sv7, obf, sv3pt5...) vira filtro de coleção; o resto são palavras do nome.
+function fmParseQuery(q){
+  const toks=fmNorm(q).replace(/[#\/\\_,]+/g,' ').replace(/\s*-\s*/g,' ').split(/\s+/).filter(Boolean);
+  const ix=fmSetIndex(); let setId=null,setTok=null,num=null; const words=[];
+  toks.forEach(t=>{
+    const k=t.replace(/\./g,'pt');
+    if(/^\d{1,4}$/.test(t)){ if(num==null) num=parseInt(t,10); }
+    else if(!setId && k.length>=3 && !/^(vmax|vstar|gx|tag|team|ex)$/.test(k) && ix.keys[k]){ setId=ix.keys[k]; setTok=t; }
+    else words.push(t);
+  });
+  return {setId,setTok,num,words,empty:!toks.length};
+}
+// f = {hay (texto normalizado), set (id da coleção da carta ou null), num (nº da carta ou null), dex (nº da Pokédex ou null)}
+function fmQueryMatch(pq,f){
+  if(pq.empty) return true;
+  if(pq.num!=null && !(f.num===pq.num || (f.dex!=null && f.dex===pq.num))) return false;
+  // código de coleção é "mole": se a palavra também aparece no nome ("meg" em Meganium) ainda vale como nome
+  if(pq.setId && f.set!==pq.setId && f.hay.indexOf(pq.setTok)<0) return false;
+  for(let i=0;i<pq.words.length;i++) if(f.hay.indexOf(pq.words[i])<0) return false;
+  return true;
+}
+function fmCardNum(c){ const n=parseInt(c&&c.n,10); return Number.isFinite(n)?n:null; }
+let _fmQT=null;
+function fmMdexSearchInput(){ clearTimeout(_fmQT); _fmQT=setTimeout(()=>fmMdexRefreshGrid(),220); }
+window.fmMdexSearchInput=fmMdexSearchInput;
 function fmMdexFilteredSpecies(binder,species,bySpecies){
-  const q=(document.getElementById('cb-view-q')?.value||'').toLowerCase().trim();
+  const q=(document.getElementById('cb-view-q')?.value||'').trim();
   const oc=document.getElementById('cb-view-oc')?.checked||false;
   const om=document.getElementById('cb-view-om')?.checked||false;
+  const pq=q?fmParseQuery(q):null;
   return species.filter(sp=>{
     const c=bySpecies[sp.dex];
     const owned=c?fmMdexIsOwned(c._setId,c):false;
     if(oc && !owned) return false;
     if(om && owned) return false;
-    if(q){
-      const hay=(sp.name+' '+sp.dex+' '+(c?c.name+' '+c._setId:'')).toLowerCase();
-      if(!hay.includes(q)) return false;
+    if(pq){
+      const hay=fmNorm(sp.name+' '+sp.dex+' '+(c?c.name+' '+c._setId+' '+(c.rare||'')+' '+fmSetText(c._setId):''));
+      if(!fmQueryMatch(pq,{hay,set:c?c._setId:null,num:c?fmCardNum(c):null,dex:sp.dex})) return false;
     }
     return true;
   });
+}
+
+// CSS do Master Set (04/11/2026): efeito de "hover" nas vagas agora é CSS só em dispositivo com mouse. Antes era
+// onmouseover/onmouseout inline que mexia em transform/borda — no iPhone/Safari o 1º toque num elemento cujo hover
+// muda o visual é consumido como "hover" e o clique NÃO acontece (relato: "no celular ao clicar não abre").
+function fmMdexEnsureStyles(){
+  if(document.getElementById('fm-mdex-css')) return;
+  const st=document.createElement('style'); st.id='fm-mdex-css';
+  st.textContent=`
+.fm-slot{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .15s,border-color .15s}
+.fm-slot:active{transform:scale(.97)}
+@media (hover:hover){ .fm-slot:not(.fm-slot-empty):hover{transform:translateY(-2px) scale(1.03)} .fm-slot-empty:hover{border-color:var(--fmc,var(--accent))!important} }
+.fm-q{font-size:11px}
+#mmdexpick .modal{width:min(1100px,96vw);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;padding:22px}
+#mmdexpick-content{display:flex;flex-direction:column;min-height:0;flex:1}
+.fm-pick-h{margin:0 0 2px;padding-right:38px}
+.fm-pick-sub{font-size:11px;color:var(--muted);margin:0 0 10px;line-height:1.5}
+.fm-pick-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.fm-pick-bar input[type=search]{flex:1 1 220px;min-width:0;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:13px}
+.fm-pick-bar select{padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:12px}
+.fm-pick-bar label{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.fm-pick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:12px;overflow-y:auto;min-height:0;flex:1;padding:4px 2px 8px;-webkit-overflow-scrolling:touch}
+.fm-pick-card{display:flex;flex-direction:column;gap:5px;padding:6px;border:2px solid transparent;border-radius:10px;background:var(--surface2);cursor:pointer;text-align:left;color:var(--text);font:inherit;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .12s,border-color .12s}
+.fm-pick-card.cur{border-color:var(--accent);background:var(--surface3)}
+@media (hover:hover){ .fm-pick-card:hover{border-color:var(--border2);transform:translateY(-2px)} .fm-pick-card.cur:hover{border-color:var(--accent)} }
+.fm-pick-img{position:relative;aspect-ratio:2/3;border-radius:6px;overflow:hidden;background:var(--surface3)}
+.fm-pick-img img{width:100%;height:100%;object-fit:cover;display:block}
+.fm-pick-own{position:absolute;top:4px;right:4px;background:#06d6a0;color:#04201a;border-radius:10px;font-size:10px;font-weight:700;padding:1px 7px}
+.fm-pick-cur{position:absolute;top:4px;left:4px;background:var(--accent);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 7px}
+.fm-pick-name{font-size:12px;font-weight:700;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.fm-pick-meta{font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;line-height:1.4}
+.fm-pick-price{font-size:12px;font-weight:700;color:var(--teal)}
+.fm-pick-empty{grid-column:1/-1;padding:24px;text-align:center;color:var(--muted);font-size:12px}
+.fm-pick-rm{margin-top:10px;width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--accent);font-family:'Space Mono',monospace;font-size:11px;cursor:pointer;flex-shrink:0}
+@media (max-width:640px){
+  .fm-q,.fm-pick-bar input[type=search],.fm-pick-bar select{font-size:16px}
+  #mmdexpick{padding:8px}
+  #mmdexpick .modal{width:100%;max-width:100%;max-height:94vh;padding:16px 12px;border-radius:14px}
+  .fm-pick-grid{grid-template-columns:repeat(3,1fr);gap:8px}
+  .fm-pick-card{padding:4px;gap:4px}
+  .fm-pick-name{font-size:11px}
+  .fm-pick-meta{font-size:9px}
+}`;
+  document.head.appendChild(st);
 }
 // NOVO 30/07/2026 (pedido do Eduardo: "opção de visualização de grade e
 // fichário" também no Master Set) — extraído da lógica que antes vivia direto
@@ -396,10 +487,9 @@ window.fmMdexNeutralFallback=fmMdexNeutralFallback;
 function fmMdexSlotHtml(sp,bySpecies,color,binderId){
   const c=bySpecies[sp.dex];
   if(!c){
-    return `<div onclick="fmMdexOpenPicker(${sp.dex},'${binderId}')" title="#${sp.dex} ${sp.name} — sem carta escolhida (mostrando a arte neutra). Clique pra escolher uma carta"
-      style="aspect-ratio:2/3;border-radius:8px;border:1px dashed var(--border);cursor:pointer;position:relative;overflow:hidden;
-             background:var(--surface2);transition:all .15s"
-      onmouseover="this.style.borderColor='${color}'" onmouseout="this.style.borderColor='var(--border)'">
+    return `<div class="fm-slot fm-slot-empty" onclick="fmMdexOpenPicker(${sp.dex},'${binderId}')" title="#${sp.dex} ${sp.name} — sem carta escolhida (mostrando a arte neutra). Clique pra escolher uma carta"
+      style="--fmc:${color};aspect-ratio:2/3;border-radius:8px;border:1px dashed var(--border);position:relative;overflow:hidden;
+             background:var(--surface2)">
       <img src="${fmMdexNeutralImg(sp.dex)}" alt="${sp.name}" loading="lazy" decoding="async" referrerpolicy="no-referrer"
         ${sp.dex>151?`onerror="fmMdexNeutralFallback(this,${sp.dex})"`:''}
         style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:14% 8% 22%;opacity:.6;filter:grayscale(45%)">
@@ -427,10 +517,9 @@ function fmMdexSlotHtml(sp,bySpecies,color,binderId){
   // fallback cinza de rarityBadge(), mostrando o próprio nome.
   const rb  = (typeof rarityBadge === 'function') ? rarityBadge(c) : null;
   const rbInk = rb && typeof _badgeInk === 'function' ? _badgeInk(rb.color) : '#fff';
-  return `<div onclick="fmMdexMarkOwned(${sp.dex},'${binderId}')" title="#${sp.dex} ${sp.name} (${c._setId.toUpperCase()} #${c.n}${rb?' · '+rb.label:''}) — clique pra marcar se tem/versão"
-    style="aspect-ratio:2/3;border-radius:8px;overflow:hidden;cursor:pointer;position:relative;
-           border:1px solid ${owned?color:'var(--border)'};box-shadow:${owned?`0 0 10px ${color}55`:'none'};transition:all .15s"
-    onmouseover="this.style.transform='translateY(-2px) scale(1.03)'" onmouseout="this.style.transform=''">
+  return `<div class="fm-slot" onclick="fmMdexMarkOwned(${sp.dex},'${binderId}')" title="#${sp.dex} ${sp.name} (${c._setId.toUpperCase()} #${c.n}${rb?' · '+rb.label:''}) — clique pra marcar se tem/versão"
+    style="aspect-ratio:2/3;border-radius:8px;overflow:hidden;position:relative;
+           border:1px solid ${owned?color:'var(--border)'};box-shadow:${owned?`0 0 10px ${color}55`:'none'}">
     <img src="${imgSrc}" alt="${c.name}" loading="lazy" style="width:100%;height:100%;object-fit:cover;
       filter:${owned?'none':'grayscale(75%) brightness(.55)'}">
     ${owned?`<div style="position:absolute;top:3px;right:3px;width:15px;height:15px;background:${color};border-radius:50%;
@@ -438,7 +527,7 @@ function fmMdexSlotHtml(sp,bySpecies,color,binderId){
     <div style="position:absolute;top:3px;left:3px;background:rgba(0,0,0,.6);color:#fff;font-size:7px;
       padding:1px 4px;border-radius:4px;font-family:'Space Mono',monospace">#${sp.dex}</div>
     <button onclick="event.stopPropagation();fmMdexOpenPicker(${sp.dex},'${binderId}')" title="Trocar qual carta representa essa espécie"
-      style="position:absolute;bottom:3px;right:3px;width:16px;height:16px;border-radius:50%;border:none;z-index:1;
+      style="position:absolute;bottom:3px;right:3px;width:22px;height:22px;touch-action:manipulation;border-radius:50%;border:none;z-index:1;
              background:rgba(0,0,0,.65);color:#fff;font-size:9px;line-height:1;cursor:pointer;
              display:flex;align-items:center;justify-content:center;padding:0">⇄</button>
     <div style="position:absolute;bottom:0;left:0;right:0;padding:3px 20px 3px 4px;background:linear-gradient(transparent,rgba(0,0,0,.85));
@@ -468,6 +557,7 @@ window.fmMdexMarkOwned=fmMdexMarkOwned;
 function fmMdexRender(binder,keepFilters){
   const wrap=document.getElementById('bwrap');
   if(!wrap) return;
+  fmMdexEnsureStyles();
   ['fic-binder-controls','fic-set-info','binder-stats'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.style.display='none';
   });
@@ -536,9 +626,10 @@ function fmMdexRender(binder,keepFilters){
       </div>
     </div>
     <div class="bctl" style="gap:8px;flex-wrap:wrap;margin-bottom:10px;display:flex;align-items:center">
-      <input class="bsrch" id="cb-view-q" placeholder="Buscar espécie/carta..." oninput="fmMdexRefreshGrid()"
+      <input class="bsrch fm-q" id="cb-view-q" type="search" inputmode="search" enterkeyhint="search" autocomplete="off"
+        placeholder="Buscar: pikachu, 25, sv7 45, obf 125..." oninput="fmMdexSearchInput()"
         style="flex:1;min-width:140px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);
-               background:var(--surface2);color:var(--text);font-size:11px">
+               background:var(--surface2);color:var(--text)">
       <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);cursor:pointer;white-space:nowrap">
         <input type="checkbox" id="cb-view-oc" onchange="fmMdexRefreshGrid()">Só coletadas</label>
       <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);cursor:pointer;white-space:nowrap">
@@ -573,11 +664,12 @@ function fmMdexRender(binder,keepFilters){
 
 // ── Picker por vaga (trocar carta / esvaziar) ───────────────────────────────
 function fmMdexEnsurePickerModal(){
+  fmMdexEnsureStyles();
   if(document.getElementById('mmdexpick')) return;
   const ov=document.createElement('div');
   ov.className='ov'; ov.id='mmdexpick';
   ov.addEventListener('click', function(e){ if(e.target===ov) closeModal('mmdexpick'); });
-  ov.innerHTML=`<div class="modal modal-wide" style="max-height:85vh;overflow-y:auto">
+  ov.innerHTML=`<div class="modal modal-wide">
     <button class="mc-btn" onclick="closeModal('mmdexpick')">✕</button>
     <div id="mmdexpick-content"></div>
   </div>`;
@@ -586,44 +678,92 @@ function fmMdexEnsurePickerModal(){
 // CORRIGIDO 29/07/2026: agora recebe binderId — a mesma vaga (mesmo #dex)
 // pode existir em MAIS de um binder ao mesmo tempo (Nacional + regional que
 // cobre aquela espécie), então precisa saber em qual está mexendo.
+// REFEITO 04/11/2026 (relato: "tamanho das cartas pra selecionar está pequeno e desorganizado" + busca por código):
+// antes era uma lista de miniaturas 36×50 sem busca (Pikachu tem 266 cartas). Agora é uma grade de cartas grandes
+// (3 por linha no celular), com busca por nome/coleção/número (ex: "sv3 125", "obf 125", "125/230"), ordenação
+// e filtro "só as que tenho". O estado fica em window._fmPick; fmMdexPickerRefresh() só redesenha a grade.
 function fmMdexOpenPicker(dex,binderId){
   fmMdexEnsurePickerModal();
   const byDex=fmMdexCatalogByDex();
-  const cands=(byDex[dex]||[]).slice().sort((a,b)=>fmMdexPrice(a.card)-fmMdexPrice(b.card));
+  const cands=(byDex[dex]||[]).map(x=>({
+    setId:x.setId, card:x.card,
+    owned:fmMdexIsOwned(x.setId,x.card),
+    num:fmCardNum(x.card),
+    hay:fmNorm((x.card.name||'')+' '+(x.card.rare||'')+' '+x.setId+' '+fmSetText(x.setId)+' '+(x.card.n||'')),
+  }));
   const sp=(typeof POKEDEX_NACIONAL!=='undefined'?POKEDEX_NACIONAL:[]).find(s=>s.dex===dex);
   const binder=fmMdexFindBinder(binderId);
   const current=binder?(binder.card_ids||[]).find(r=>r.dex===dex):null;
-  const rows=cands.map(x=>{
-    const owned=fmMdexIsOwned(x.setId,x.card);
-    const isCurrent=current&&current.set===x.setId&&String(current.n)===String(x.card.n);
-    const price=x.card.price?('R$'+x.card.price.toFixed(2).replace('.',',')):'—';
-    return `<div onclick="fmMdexChooseCard(${dex},'${x.setId}','${x.card.n}','${binderId}')"
-      style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:6px;cursor:pointer;
-             background:${isCurrent?'var(--surface3)':'transparent'};border:1px solid ${isCurrent?'var(--accent)':'transparent'}">
-      <img loading="lazy" decoding="async" alt="${x.card.name||''}" src="${(typeof imgThumb==='function'?imgThumb((typeof getBinderImg==='function')?getBinderImg(x.card,x.setId):''):'')}" style="width:36px;height:50px;object-fit:cover;border-radius:4px;flex-shrink:0">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:700;color:var(--text)">${x.card.name} <span style="color:var(--muted);font-weight:400">#${x.card.n}</span></div>
-        <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${x.setId.toUpperCase()} · ${x.card.rare||''} · ${price}${owned?' · ✅ você tem':''}</div>
-      </div>
-      ${isCurrent?'<span style="font-size:10px;color:var(--accent);font-weight:700">atual</span>':''}
-    </div>`;
-  }).join('');
+  window._fmPick={dex,binderId,cands,current};
   const content=document.getElementById('mmdexpick-content');
   if(!content) return;
   content.innerHTML=`
-    <h3 style="margin:0 0 4px">#${dex} ${sp?sp.name:''}</h3>
-    <p style="font-size:11px;color:var(--muted);margin:0 0 12px">
-      ${cands.length} carta(s) encontrada(s) pra essa espécie em todas as coleções cadastradas. Clique pra escolher qual ocupa a vaga.
-    </p>
-    <div style="max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
-      ${rows||'<div style="padding:16px;text-align:center;color:var(--muted);font-size:11px">Nenhuma carta cadastrada pra essa espécie ainda em nenhuma coleção do site.</div>'}
+    <h3 class="fm-pick-h">#${dex} ${sp?sp.name:''}</h3>
+    <p class="fm-pick-sub" id="fm-pick-count"></p>
+    <div class="fm-pick-bar">
+      <input type="search" id="fm-pick-q" inputmode="search" enterkeyhint="search" autocomplete="off"
+        placeholder="Buscar: sv3 125, obf 125, ex..." oninput="fmMdexPickerSearchInput()">
+      <select id="fm-pick-sort" onchange="fmMdexPickerRefresh()" aria-label="Ordenar">
+        <option value="price-asc">Menor preço</option>
+        <option value="price-desc">Maior preço</option>
+        <option value="set">Coleção</option>
+        <option value="num">Número</option>
+      </select>
+      <label><input type="checkbox" id="fm-pick-own" onchange="fmMdexPickerRefresh()">Só as que tenho</label>
     </div>
-    ${current?`<button onclick="fmMdexRemoveSlot(${dex},'${binderId}')" style="margin-top:12px;width:100%;padding:8px;
-      background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--accent);
-      font-family:'Space Mono',monospace;font-size:10px;cursor:pointer">🗑️ deixar esta vaga vazia</button>`:''}`;
+    <div class="fm-pick-grid" id="fm-pick-grid"></div>
+    ${current?`<button class="fm-pick-rm" onclick="fmMdexRemoveSlot(${dex},'${binderId}')">🗑️ deixar esta vaga vazia (volta para a imagem padrão)</button>`:''}`;
+  fmMdexPickerRefresh();
   openModal('mmdexpick');
+  const grid=document.getElementById('fm-pick-grid'); if(grid) grid.scrollTop=0;
 }
 window.fmMdexOpenPicker=fmMdexOpenPicker;
+let _fmPQT=null;
+function fmMdexPickerSearchInput(){ clearTimeout(_fmPQT); _fmPQT=setTimeout(()=>fmMdexPickerRefresh(),150); }
+window.fmMdexPickerSearchInput=fmMdexPickerSearchInput;
+function fmMdexPickerRefresh(){
+  const st=window._fmPick; if(!st) return;
+  const grid=document.getElementById('fm-pick-grid'); if(!grid) return;
+  const q=(document.getElementById('fm-pick-q')?.value||'').trim();
+  const sort=document.getElementById('fm-pick-sort')?.value||'price-asc';
+  const onlyOwn=document.getElementById('fm-pick-own')?.checked||false;
+  const pq=q?fmParseQuery(q):null;
+  const meta=fmSetIndex().meta;
+  let list=st.cands.filter(x=>(!onlyOwn||x.owned)&&(!pq||fmQueryMatch(pq,{hay:x.hay,set:x.setId,num:x.num,dex:null})));
+  const price=x=>fmMdexPrice(x.card);
+  const setOrd=x=>meta[x.setId]?meta[x.setId].order:9999;
+  list.sort((a,b)=>{
+    if(sort==='price-desc'){ const pa=isFinite(price(a))?price(a):-1, pb=isFinite(price(b))?price(b):-1; return pb-pa; }
+    if(sort==='set') return setOrd(a)-setOrd(b) || (a.num??0)-(b.num??0);
+    if(sort==='num') return (a.num??1e9)-(b.num??1e9) || setOrd(a)-setOrd(b);
+    return price(a)-price(b) || setOrd(a)-setOrd(b);   // menor preço (sem preço vai pro fim)
+  });
+  const cnt=document.getElementById('fm-pick-count');
+  if(cnt) cnt.textContent=(list.length===st.cands.length
+    ? `${st.cands.length} carta(s) desta espécie em todas as coleções do site.`
+    : `${list.length} de ${st.cands.length} carta(s) com esse filtro.`)+' Toque na carta para escolher qual ocupa a vaga.';
+  if(!list.length){
+    grid.innerHTML=`<div class="fm-pick-empty">${st.cands.length?'Nenhuma carta com essa busca. Tente só o código da coleção (ex: <b>sv3</b>) ou só o número.':'Nenhuma carta cadastrada pra essa espécie ainda em nenhuma coleção do site.'}</div>`;
+    return;
+  }
+  const cur=st.current;
+  grid.innerHTML=list.map(x=>{
+    const isCur=cur&&cur.set===x.setId&&String(cur.n)===String(x.card.n);
+    const p=isFinite(price(x))?('R$'+price(x).toFixed(2).replace('.',',')):'sem preço';
+    const raw=(typeof getBinderImg==='function')?getBinderImg(x.card,x.setId):'';
+    const img=(typeof imgThumb==='function')?imgThumb(raw):raw;
+    const m=meta[x.setId];
+    return `<button type="button" class="fm-pick-card${isCur?' cur':''}" onclick="fmMdexChooseCard(${st.dex},'${x.setId}','${String(x.card.n).replace(/'/g,"\'")}','${st.binderId}')"
+      title="${(x.card.name||'').replace(/"/g,'&quot;')} — ${x.setId.toUpperCase()} #${x.card.n}">
+      <div class="fm-pick-img"><img loading="lazy" decoding="async" alt="${(x.card.name||'').replace(/"/g,'&quot;')}" src="${img}">
+        ${x.owned?'<span class="fm-pick-own">✓ tenho</span>':''}${isCur?'<span class="fm-pick-cur">atual</span>':''}</div>
+      <div class="fm-pick-name">${x.card.name||''}</div>
+      <div class="fm-pick-meta">${m?m.short:x.setId.toUpperCase()} · #${x.card.n}${x.card.rare?'<br>'+x.card.rare:''}</div>
+      <div class="fm-pick-price">${p}</div>
+    </button>`;
+  }).join('');
+}
+window.fmMdexPickerRefresh=fmMdexPickerRefresh;
 
 // CORRIGIDO 02/11/2026: devolve true/false. Se o banco recusar a gravação (saveCustomBinder agora avisa e
 // devolve null), quem chamou desfaz a mudança na tela — antes a escolha ficava "salva" só na memória e sumia
@@ -668,7 +808,12 @@ function fmMdexPrint(binderId){
   // NOVO 30/07/2026 (pedido do Eduardo: imprimir só o que a tela está
   // mostrando — respeita "Só coletadas"/"Só faltantes" também no Master Set)
   const onlyState=typeof _printOnlyState==='function'?_printOnlyState():undefined;
-  printBinder(cards, c=>c._setId, binder.name, onlyState);
+  // 04/11/2026: o PDF segue o tamanho de página escolhido AQUI no Master Set (2×2 … 4×5), não o do fichário oficial
+  // (ficBinderSize é global; printBinder lê o valor na 1ª linha, antes de qualquer await, então dá pra restaurar já).
+  let prevSize=null;
+  try{ prevSize=ficBinderSize; ficBinderSize=window._fmMdexPageSize||3; }catch(e){ prevSize=null; }
+  try{ printBinder(cards, c=>c._setId, binder.name, onlyState); }
+  finally{ if(prevSize!=null){ try{ ficBinderSize=prevSize; }catch(e){} } }
 }
 window.fmMdexPrint=fmMdexPrint;
 

@@ -29,6 +29,12 @@
 // ── Estado do builder (rascunho em memória — pages só grava no Supabase
 // quando o usuário clica em Salvar) ──────────────────────────────────────
 let _pk = null; // {id,name,layout,dex,speciesName,pages:[[...]],page:0,isNew}
+// 04/11/2026 (pedido: "incluir fichário 4x5"): layout 5 = 4 colunas × 5 linhas (20 por página), igual ao resto do
+// site (binderDims em fichario_patch.js); 2/3/4 continuam quadrados. O valor guardado em custom_binders.layout segue
+// sendo UM número, então fichários antigos não mudam.
+function pkDims(n){ return (typeof binderDims === 'function') ? binderDims(n) : { cols:n, rows:n }; }
+function pkSlots(n){ const d = pkDims(n); return d.cols * d.rows; }
+function pkLayoutLabel(n){ return n === 5 ? '4×5' : n + '×' + n; }
 let _pkDrag = null; // {set,n,ver,card,el} durante um arrastar em andamento
 
 function pkOverlayEl(){ return document.getElementById('pkb-overlay'); }
@@ -72,8 +78,8 @@ function pkRenderCreateStep(){
              value="${esc(_pk.name)}" maxlength="60">
       <label class="pkb-lbl" style="margin-top:16px">Tamanho da grade</label>
       <div class="pkb-layout-pick" id="pkb-layout-pick">
-        ${[2,3,4].map(n=>`<button class="pkb-layout-btn${_pk.layout===n?' active':''}" data-n="${n}"
-            onclick="fmPkmnSetLayout(${n})">${n}×${n}</button>`).join('')}
+        ${[2,3,4,5].map(n=>`<button class="pkb-layout-btn${_pk.layout===n?' active':''}" data-n="${n}"
+            onclick="fmPkmnSetLayout(${n})">${pkLayoutLabel(n)}</button>`).join('')}
       </div>
       <button class="pkb-btn-primary" style="margin-top:20px;width:100%" onclick="fmPkmnConfirmCreate()">
         Criar e escolher o Pokémon →</button>
@@ -94,7 +100,7 @@ window.fmPkmnConfirmCreate = async function(){
   if (!name) { alert('Dá um nome pro fichário primeiro (ex: o nome do Pokémon).'); return; }
   if (!uid()) { alert('Você precisa estar logado pra criar um fichário.'); return; }
   const layout = _pk.layout;
-  const emptyPage = Array(layout*layout).fill(null);
+  const emptyPage = Array(pkSlots(layout)).fill(null);
   const { data, error } = await sbClient.from('custom_binders').insert({
     user_id: uid(), name, emoji:'📍', layout,
     filter_config: { type:'pokemon', dex:null, name:null },
@@ -116,7 +122,7 @@ window.fmPkmnOpenBuilder = function(binderId){
   if (!b) return;
   const layout = b.layout || 3;
   const cfg = b.filter_config || {};
-  const pages = (b.pages && b.pages.length) ? JSON.parse(JSON.stringify(b.pages)) : [Array(layout*layout).fill(null)];
+  const pages = (b.pages && b.pages.length) ? JSON.parse(JSON.stringify(b.pages)) : [Array(pkSlots(layout)).fill(null)];
   _pk = { id:b.id, name:b.name, layout, dex:cfg.dex ?? null, speciesName:cfg.name || '', pages, page:0, isNew:false };
   pkRenderBuilder();
 };
@@ -256,9 +262,9 @@ function pkRenderCardList(){
 function pkRenderGridPanel(){
   const el = document.getElementById('pkb-col-right');
   if (!el) return;
-  const N = _pk.layout;
-  const page = _pk.pages[_pk.page] || Array(N*N).fill(null);
-  while (page.length < N*N) page.push(null);
+  const N = pkDims(_pk.layout).cols, SLOTS = pkSlots(_pk.layout);
+  const page = _pk.pages[_pk.page] || Array(SLOTS).fill(null);
+  while (page.length < SLOTS) page.push(null);
   _pk.pages[_pk.page] = page;
 
   const tabs = _pk.pages.map((_, i) => `
@@ -292,7 +298,7 @@ function pkSlotHtml(slot, idx){
 
 window.fmPkmnGoPage = function(i){ _pk.page = i; pkRenderGridPanel(); };
 window.fmPkmnAddPage = function(){
-  _pk.pages.push(Array(_pk.layout*_pk.layout).fill(null));
+  _pk.pages.push(Array(pkSlots(_pk.layout)).fill(null));
   _pk.page = _pk.pages.length - 1;
   pkRenderGridPanel();
 };
