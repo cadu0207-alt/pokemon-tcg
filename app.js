@@ -495,7 +495,7 @@ function imgMep(n) {
 
 function getPurchaseImg(product){
   const p=product.toLowerCase();
-  if(p.includes('me06')||p.includes('esmeralda')||p.includes('storm'))  return imgMe06(1);
+  if(p.includes('me06')||p.includes('reinado')||p.includes('delta reign')||p.includes('esmeralda')||p.includes('storm'))  return imgMe06(1);
   if(p.includes('me05')||p.includes('negrura')||p.includes('pitch'))    return imgMe05(61);
   if(p.includes('me04')||p.includes('caos')||p.includes('chaos'))       return p.includes('quádr')||p.includes('quadr')?imgMe04(15):imgMe04(22);
   if(p.includes('me03')||p.includes('ordem')||p.includes('perfect'))    return imgMe03(63);
@@ -509,7 +509,7 @@ function getCardImg(card){
   const num=(card.num||'').match(/(\d+)/);
   if(!num) return null;
   const n=num[1];const lote=(card.lote||'').toLowerCase();const ns=card.num||'';
-  if(lote.includes('me06')||lote.includes('esmeralda')||lote.includes('storm'))  return imgMe06(n);
+  if(lote.includes('me06')||lote.includes('reinado')||lote.includes('delta reign')||lote.includes('esmeralda')||lote.includes('storm'))  return imgMe06(n);
   if(lote.includes('me05')||lote.includes('negrura')||lote.includes('pitch'))    return imgMe05(n);
   if(lote.includes('me03')||lote.includes('ordem')||lote.includes('perfect'))    return imgMe03(n);
   if(lote.includes('me02')||lote.includes('phantasmal')||lote.includes('fogo'))  return imgMe02(n);
@@ -1457,7 +1457,7 @@ const GEN1=[
 // ── PROGRESS ────────────────────────────────────────────────────
 const SET_META={
   cel30:{label:'🎉 CEL30 — Celebração de 30 Anos',color:'#FFD700',chase:'Mew ex Ultra Rare — R$568,40',heroCard:'158',imgFn:imgCel30,releaseDate:'16/set/2026'},
-  me06:{label:'💎 ME06 — Esmeralda Tempestuosa',color:'#00c853',chase:'Mega Rayquaza ex Gold — R$1.500 (est.)',heroCard:1,imgFn:imgMe06,upcoming:true,releaseDate:'out/2026'},
+  me06:{label:'💎 ME06 — Reinado Delta',color:'#00c853',chase:'Mega Rayquaza ex Hiper Rara Mega — US$349',heroCard:141,imgFn:imgMe06,releaseDate:'06/nov/2026'},
   me2pt5:{label:'🦸 ME2.5(ASC) — Heróis Excelsos',color:'#5C6BC0',chase:'Mega Charizard Y ex Hiper Rara Mega — preço a confirmar',heroCard:294,imgFn:imgMe2pt5,releaseDate:'30/jan/2026'},
   me05:{label:'🌑 ME05(PBL) — Escuridão Absoluta',color:'#424242',chase:'Batalha Decisiva do Gladio SAR — US$1.090',heroCard:118,imgFn:imgMe05,releaseDate:'17/jul/2026'},
   me04:{label:'🔥 ME04(CRI) — Caos Ascendente',color:'var(--accent)',chase:'Mega Greninja ex Gold — R$1.482',heroCard:22,imgFn:imgMe04},
@@ -1512,7 +1512,7 @@ const SET_CATALOG=[
   // Padrão pensado pra repetir em futuras coleções multi-região, sem inchar
   // a lista principal com 1 entrada a mais por idioma a cada lançamento.
   {id:'cel30',label:'CEL30 — Celebração de 30 Anos',emoji:'🎉',cards:typeof CARDS_CEL30!=='undefined'?CARDS_CEL30.length:199,color:'#FFD700',series:'ME'},
-  {id:'me06',label:'ME06 — Esmeralda Tempestuosa',emoji:'💎',cards:0,  color:'#00c853',series:'ME',upcoming:true},
+  {id:'me06',label:'ME06 — Reinado Delta',emoji:'💎',cards:typeof CARDS_ME06!=='undefined'?CARDS_ME06.length:141,color:'#00c853',series:'ME'},
   {id:'me2pt5',label:'ME2.5(ASC) — Heróis Excelsos', emoji:'🦸',cards:typeof CARDS_ME2PT5!=='undefined'?CARDS_ME2PT5.length:295,color:'#5C6BC0',series:'ME'},
   {id:'me05',label:'ME05(PBL) — Escuridão Absoluta', emoji:'🌑',cards:typeof CARDS_ME05!=='undefined'?CARDS_ME05.length:120,color:'#757575',series:'ME'},
   {id:'me04',label:'ME04(CRI) — Caos Ascendente',  emoji:'🔥',cards:122,color:'#FF5722',series:'ME'},
@@ -2857,8 +2857,8 @@ function getSetData(){
       sections:[{lbl:'📄 Base — 001 a 103',filter:c=>c.base},{lbl:'✨ Coleção Clássica e Energias',filter:c=>!c.base}]},
     cel30cn:{cards:typeof CARDS_CEL30CN!=='undefined'?CARDS_CEL30CN:[],label:'CEL30(CN) — 30周年庆典',
       sections:[{lbl:'📄 Base — 001 a 103',filter:c=>c.base},{lbl:'✨ Secretas e Coleção Clássica',filter:c=>!c.base}]},
-    me06:{cards:me06c,imgFn:imgMe06,label:'ME06 — Esmeralda Tempestuosa',upcoming:true,
-      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Secretas',filter:c=>!c.base}]},
+    me06:{cards:me06c,imgFn:imgMe06,label:'ME06 — Reinado Delta', // lançou 06/nov/2026 (EN) — já ativo, consistente com SET_CATALOG
+      sections:[{lbl:'📄 Base — 001 a 103',filter:c=>c.base},{lbl:'✨ Secretas — 104 a 141',filter:c=>!c.base}]},
     me2pt5:{cards:me2pt5c,imgFn:imgMe2pt5,label:'ME2.5(ASC) — Heróis Excelsos', // lançou 30/jan/2026
       sections:[{lbl:'📄 Base — 001 a 217',filter:c=>c.base},{lbl:'✨ Secretas — 218 a 295',filter:c=>!c.base}]},
     me05:{cards:me05c,imgFn:imgMe05,label:'ME05(PBL) — Escuridão Absoluta', // lançou 17/jul/2026 — já ativo, consistente com SET_CATALOG
@@ -3567,7 +3567,7 @@ const CB_SET_LABELS={
   meg: '🌿 MEG(MEG) — Megaevolução',
   mep: '⭐ MEP(MEP) — Promos',
   me05:'🌑 ME05(PBL) — Escuridão Absoluta',
-  me06:'💎 ME06 — Esmeralda Tempestuosa',
+  me06:'💎 ME06 — Reinado Delta',
   me2pt5:'🦸 ME2.5(ASC) — Heróis Excelsos',
 };
 

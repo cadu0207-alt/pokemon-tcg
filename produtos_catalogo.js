@@ -27,6 +27,12 @@ var CATALOG = [
   { id:'me05-blister4', grupo:'ME05 — Escuridão Absoluta', nome:'Blister Quádruplo (4 boosters)',boosters:4,  varejo:59.99,  set:'me05', extras:[], estimado:true },
   { id:'me05-blister3', grupo:'ME05 — Escuridão Absoluta', nome:'Blister Triplo (3 boosters)',   boosters:3,  varejo:44.99,  set:'me05', extras:[], estimado:true },
   { id:'me05-booster',  grupo:'ME05 — Escuridão Absoluta', nome:'Booster Avulso',                boosters:1,  varejo:14.99,  set:'me05', extras:[], estimado:true },
+  // ME06 — Reinado Delta (lançou 06/nov/2026 nos EUA — varejo BR ainda NÃO confirmado: valores copiados do ME05, confirmar preço de tabela da Copag)
+  { id:'me06-display',  grupo:'ME06 — Reinado Delta', nome:'Box Display (36 boosters)',      boosters:36, varejo:539.99, set:'me06', extras:[], estimado:true },
+  { id:'me06-etb',      grupo:'ME06 — Reinado Delta', nome:'Elite Trainer Box (9 boosters)', boosters:9,  varejo:199.99, set:'me06', extras:[], estimado:true },
+  { id:'me06-blister4', grupo:'ME06 — Reinado Delta', nome:'Blister Quádruplo (4 boosters)',boosters:4,  varejo:59.99,  set:'me06', extras:[], estimado:true },
+  { id:'me06-blister3', grupo:'ME06 — Reinado Delta', nome:'Blister Triplo (3 boosters)',   boosters:3,  varejo:44.99,  set:'me06', extras:[], estimado:true },
+  { id:'me06-booster',  grupo:'ME06 — Reinado Delta', nome:'Booster Avulso',                boosters:1,  varejo:14.99,  set:'me06', extras:[], estimado:true },
   // ── ME03 Equilíbrio Perfeito ───────────────────────────────────
   { id:'me03-display',  grupo:'ME03 — Equilíbrio Perfeito', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me03', extras:[] },
   { id:'me03-etb',      grupo:'ME03 — Equilíbrio Perfeito', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me03', extras:[] },
