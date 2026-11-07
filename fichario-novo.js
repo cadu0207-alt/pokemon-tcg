@@ -28,11 +28,19 @@
     q: '', status: 'all', sort: 'num',
     view: LS.get('view', 'grid'),
     cols: LS.get('cols', defCols),
-    lang: LS.get('lang', 'pt'),
-    pocket: LS.get('pocket', 9),
+    lang: (function () { try { return localStorage.getItem('ficLang') || 'pt'; } catch (e) { return 'pt'; } })(), // mesma chave do fichário atual
+    pocket: String(LS.get('pocket', '9')),
+    imp: false,
     bpage: 0
   };
+  var POCKETS = [{ id: '4', cols: 2, per: 4, label: '2×2' }, { id: '9', cols: 3, per: 9, label: '3×3' }, { id: '12', cols: 3, per: 12, label: '3×4' },
+    { id: '16', cols: 4, per: 16, label: '4×4' }, { id: '20a', cols: 4, per: 20, label: '4×5' }, { id: '20b', cols: 5, per: 20, label: '5×4' }];
+  function pocketCfg() { return POCKETS.filter(function (p) { return p.id === String(st.pocket); })[0] || POCKETS[1]; }
+  var FAMILY = ['cel30', 'cel30jp', 'cel30cn'];
+  var REGION = { pt: 'cel30', en: 'cel30', jp: 'cel30jp', cn: 'cel30cn' };
+  function setKey(id) { return FAMILY.indexOf(id) >= 0 ? 'cel30' : id; }
   var demoSet = new Set();
+  var demoQty = new Map();
   (function seedDemo() {
     if (!DEMO) return;
     var seed = 7; var rnd = function () { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
@@ -61,20 +69,34 @@
     return { st: h === 0 ? 'miss' : h === sl.length ? 'have' : 'part', have: h, tot: sl.length, sl: sl };
   }
   function langsOf(id) { return (typeof FIC_LANG_SETS !== 'undefined' && FIC_LANG_SETS[id]) || null; }
+  // idioma efetivo da arte/nomes nesta coleção (cel30jp/cel30cn são coleções próprias; sem suporte = português)
+  function effLang(id) {
+    var l = langsOf(id); if (!l) return 'pt';
+    if (id === 'cel30jp') return 'jp'; if (id === 'cel30cn') return 'cn';
+    return l.indexOf(st.lang) >= 0 ? st.lang : 'pt';
+  }
+  function i18n(c, id) { try { return cardI18n(c, effLang(id)); } catch (e) { return { name: c.name, price: c.price, symbol: 'R$' }; } }
+  function priceFmt(c, id) {
+    var i = i18n(c, id); if (i.price == null || isNaN(i.price)) return '—';
+    return i.symbol === '$' ? '$ ' + Number(i.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : money0(i.price);
+  }
   function imgSrc(d, id, c, big) {
     var u = imgRaw(d, id, c);
     if (big) return u;
     try { return typeof imgThumb === 'function' ? imgThumb(u) : u; } catch (e) { return u; }
   }
   function imgRaw(d, id, c) {
-    var langs = langsOf(id);
     try {
-      if (langs && st.lang !== 'en' && langs.indexOf(st.lang) >= 0 && d.imgFn) {
-        var u = d.imgFn(c, st.lang); if (u) return u;
-      }
-      if (d.imgFn) { var u2 = d.imgFn(c.n); if (u2) return u2; }
+      if (typeof getBinderImg === 'function') { var u = getBinderImg(c, id, effLang(id)); if (u) return u; }
+      if (d && d.imgFn) { var u2 = d.imgFn(c.n); if (u2) return u2; }
     } catch (e) { }
     return c.img || '';
+  }
+  // quantidade e origens de uma versão (lê do motor; em demonstração, de um mapa local)
+  function entryOf(key) {
+    if (DEMO) return demoSet.has(key) ? (demoQty.get(key) || { qty: 1, origins: [] }) : { qty: 0, origins: [] };
+    if (typeof collectedQty !== 'undefined' && collectedQty.has(key)) { var e = collectedQty.get(key); return { qty: e.qty || 1, origins: (e.origins || []).slice() }; }
+    return { qty: has(key) ? 1 : 0, origins: [] };
   }
   function rareCls(r) {
     r = r || '';
@@ -89,10 +111,10 @@
   function rareLabel(r) {
     r = r || '';
     if (/Hiper|Hyper|Mega Attack/i.test(r)) return r;
-    if (/Ilustr.*Esp|Especial|SAR|SIR|Special Illustration/i.test(r)) return 'Ilustração Rara Especial';
-    if (/Ilustr|Illustration|IR/i.test(r)) return 'Ilustração Rara';
-    if (/Ultra|UR/i.test(r)) return 'Full Art';
-    if (/Dupla|Double|RR/i.test(r)) return 'Dupla Rara';
+    if (/Ilustr.*Esp|Especial|\bSAR\b|\bSIR\b|Special Illustration/i.test(r)) return 'Ilustração Rara Especial';
+    if (/Ilustr|Illustration|\bIR\b/i.test(r)) return 'Ilustração Rara';
+    if (/Ultra|\bUR\b/i.test(r)) return 'Full Art';
+    if (/Dupla|Double|\bRR\b/i.test(r)) return 'Dupla Rara';
     return r;
   }
   function rareRank(r) {
@@ -122,7 +144,8 @@
   function computeView() {
     var q = st.q.trim().toLowerCase(), id = st.set;
     var arr = cur.cards.filter(function (c) {
-      if (q && (c.name + ' ' + c.n + ' ' + (c.nameEn || '') + ' ' + (c.type || '') + ' ' + rareLabel(c.rare) + ' ' + (c.rare || '')).toLowerCase().indexOf(q) < 0) return false;
+      if (q && (c.name + ' ' + c.n + ' ' + (c.nameEn || '') + ' ' + (c.nameJp || '') + ' ' + (c.nameCn || '') + ' ' + (c.type || '') + ' ' + rareLabel(c.rare) + ' ' + (c.rare || '')).toLowerCase().indexOf(q) < 0) return false;
+      if (st.imp && !c.important) return false;
       if (st.status !== 'all') { var s = stateOf(id, c).st; if (st.status === 'miss' && s === 'have') return false; if (st.status === 'have' && s !== 'have') return false; }
       return true;
     });
@@ -148,24 +171,25 @@
   }
 
   // ── renderização ───────────────────────────────────────────
-  function verButtons(id, c, big) {
-    var sl = slotsOf(id, c);
+  function verButtons(id, c) {
+    var sl = slotsOf(id, c), nm0 = i18n(c, id).name;
     return '<div class="fn-vers">' + sl.map(function (s) {
-      var on = has(keyOf(id, c, s.ver));
+      var key = keyOf(id, c, s.ver), e = entryOf(key), on = e.qty > 0;
       var nm = VERSION_NAME[s.ver] || s.ver;
-      return '<button type="button" class="fn-ver' + (on ? ' is-on' : '') + '" data-mark="' + esc(c.n) + '" data-ver="' + esc(s.ver) + '" aria-pressed="' + on + '" aria-label="' + esc(c.name + ' — ' + nm + (on ? ' (coletada)' : ' (faltando)')) + '">' +
-        (big ? s.ver + '<small>' + (on ? 'Tenho ✓' : 'Marcar') + '</small>' : (on ? '✓ ' : '') + s.ver) + '</button>';
+      return '<button type="button" class="fn-ver' + (on ? ' is-on' : '') + '" data-mark="' + esc(c.n) + '" data-ver="' + esc(s.ver) + '" aria-pressed="' + on + '" aria-label="' + esc(nm0 + ' — ' + nm + (on ? ' (coletada' + (e.qty > 1 ? ', ' + e.qty + ' cópias' : '') + ')' : ' (faltando)')) + '">' +
+        (on ? '✓ ' : '') + s.ver + (e.qty > 1 ? ' <span class="fn-x2">×' + e.qty + '</span>' : '') + '</button>';
     }).join('') + '</div>';
   }
   function cardHtml(c) {
-    var id = st.set, s = stateOf(id, c), r = rareCls(c.rare);
+    var id = st.set, s = stateOf(id, c), r = rareCls(c.rare), nm = i18n(c, id).name;
     return '<article class="fn-card is-' + s.st + '" data-n="' + esc(c.n) + '">' +
-      '<button type="button" class="fn-img" data-open="' + esc(c.n) + '" aria-label="Ver ' + esc(c.name) + '">' +
-      '<img loading="lazy" decoding="async" alt="' + esc(c.name) + '" src="' + esc(imgSrc(cur.d, id, c)) + '">' +
+      '<button type="button" class="fn-img" data-open="' + esc(c.n) + '" aria-label="Ver ' + esc(nm) + '">' +
+      '<img loading="lazy" decoding="async" alt="' + esc(nm) + '" src="' + esc(imgSrc(cur.d, id, c)) + '">' +
+      (c.important ? '<span class="fn-star" title="Carta importante" aria-hidden="true">★</span>' : '') +
       '<span class="fn-tick" aria-hidden="true">' + (s.st === 'part' ? '½' : '✓') + '</span></button>' +
-      '<div class="fn-meta"><span class="fn-name" title="' + esc(c.name) + '">' + esc(c.name) + '</span><span class="fn-price">' + esc(money0(c.price || 0)) + '</span></div>' +
+      '<div class="fn-meta"><span class="fn-name" title="' + esc(nm) + '">' + esc(nm) + '</span><span class="fn-price">' + esc(priceFmt(c, id)) + '</span></div>' +
       '<div class="fn-sub"><span>#' + esc(c.n) + '</span><span class="fn-rare ' + r + '">' + esc(rareLabel(c.rare)) + '</span></div>' +
-      verButtons(id, c, false) + '</article>';
+      verButtons(id, c) + '</article>';
   }
   function sections() {
     var d = cur.d, secs = (d && d.sections) || [{ lbl: 'Todas', filter: function () { return true; } }];
@@ -192,12 +216,12 @@
       cur.view.map(function (c) {
         var s = stateOf(id, c);
         return '<tr data-n="' + esc(c.n) + '" class="' + (s.st === 'miss' ? 't-miss' : '') + '"><td class="t-thumb"><img loading="lazy" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '"></td><td>#' + esc(c.n) + '</td>' +
-          '<td><button type="button" style="all:unset;cursor:pointer;font-weight:700" data-open="' + esc(c.n) + '">' + esc(c.name) + '</button></td>' +
-          '<td class="' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</td><td>' + esc(money(c.price)) + '</td><td>' + verButtons(id, c, false) + '</td></tr>';
+          '<td><button type="button" style="all:unset;cursor:pointer;font-weight:700" data-open="' + esc(c.n) + '">' + (c.important ? '★ ' : '') + esc(i18n(c, id).name) + '</button></td>' +
+          '<td class="' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</td><td>' + esc(priceFmt(c, id)) + '</td><td>' + verButtons(id, c) + '</td></tr>';
       }).join('') + '</tbody></table></div>';
   }
   function renderBinder() {
-    var id = st.set, per = st.pocket, cols = per === 4 ? 2 : per === 16 ? 4 : 3;
+    var id = st.set, P = pocketCfg(), per = P.per, cols = P.cols;
     var items = cur.view; if (!items.length) return emptyMsg();
     var pages = Math.ceil(items.length / per), two = innerWidth >= 700, step = two ? 2 : 1;
     if (st.bpage >= pages) st.bpage = Math.max(0, pages - 1);
@@ -216,15 +240,24 @@
     var lbl = two ? 'Páginas ' + (p0 + 1) + (p0 + 2 <= pages ? '–' + (p0 + 2) : '') + ' de ' + pages : 'Página ' + (p0 + 1) + ' de ' + pages;
     return '<div class="fn-binder-nav"><button type="button" data-bnav="-1"' + (p0 <= 0 ? ' disabled' : '') + '>‹ Anterior</button>' +
       '<span class="fn-binder-pg">' + lbl + '</span><button type="button" data-bnav="1"' + (p0 + step >= pages ? ' disabled' : '') + '>Próxima ›</button>' +
-      '<div class="fn-seg" id="fn-pocket" role="group" aria-label="Bolsos por página">' + [4, 9, 12, 16].map(function (n) { return '<button type="button" data-pocket="' + n + '" class="' + (per === n ? 'is-on' : '') + '">' + n + '</button>'; }).join('') + '</div></div>' +
+      '<div class="fn-seg" id="fn-pocket" role="group" aria-label="Bolsos por página">' + POCKETS.map(function (p) { return '<button type="button" data-pocket="' + p.id + '" class="' + (p.id === P.id ? 'is-on' : '') + '">' + p.label + '</button>'; }).join('') + '</div></div>' +
       '<div class="fn-spread">' + page(p0) + (two ? page(p0 + 1) : '') + '</div>';
   }
   function emptyMsg() {
     if (!cur.d || !cur.cards.length) return '<div class="fn-empty">' + (loggedIn() || DEMO ? 'Carregando as cartas desta coleção…' : 'Esta coleção carrega depois do login.') + '</div>';
     return '<div class="fn-empty">Nenhuma carta com esse filtro.</div>';
   }
+  // quanto faltam em cartas, traduzido em boosters (usa o catálogo de produtos; sem produto cadastrado, não inventa número)
+  function bridgeHtml(t) {
+    if (!t.slots || t.miss <= 0 || typeof CATALOG === 'undefined') return '';
+    var ent = CATALOG.filter(function (p) { return p.set === setKey(st.set) && p.boosters > 0 && p.varejo > 0; });
+    if (!ent.length) return '';
+    var per = Math.min.apply(null, ent.map(function (p) { return p.varejo / p.boosters; }));
+    var n = Math.max(1, Math.round(t.miss / per));
+    return '<div class="fn-stats fn-bridge" style="margin-top:6px"><span>📦 Com esse valor dá para comprar <b>~' + n + ' booster' + (n > 1 ? 's' : '') + '</b> (' + esc(money(per)) + '/un.)</span></div>';
+  }
   function renderHero() {
-    var d = cur.d, meta = (typeof SET_META !== 'undefined' && SET_META[st.set]) || {}, cat = SET_CATALOG.filter(function (s) { return s.id === st.set; })[0] || {};
+    var d = cur.d, meta = (typeof SET_META !== 'undefined' && SET_META[setKey(st.set)]) || {}, cat = SET_CATALOG.filter(function (s) { return s.id === setKey(st.set); })[0] || {};
     var t = totals(), pct = t.slots ? Math.round(t.got / t.slots * 100) : 0;
     var label = (cat.label || (d && d.label) || st.set);
     var nameOnly = label.indexOf('—') >= 0 ? label.split('—')[1].trim() : label;
@@ -235,7 +268,7 @@
       '<div class="fn-stats"><span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' +
       (t.sT ? '<span>Base <b>' + t.bG + '</b>/' + t.bT + '</span><span>Secretas <b>' + t.sG + '</b>/' + t.sT + '</span>' : '') +
       (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : t.miss > 0 ? '<span class="fn-miss">Faltam <b>' + esc(money0(t.miss)) + '</b></span>' : '<span><b style="color:var(--teal)">Coleção completa 🎉</b></span>') + '</div>' +
-      '<div class="fn-hero-links"><a href="./#fichario/' + esc(st.set) + '">Abrir no fichário atual</a></div>';
+      bridgeHtml(t) + '<div class="fn-hero-links"><a href="./#lojas">Ver ofertas</a><a href="./#fichario/' + esc(st.set) + '">Abrir no fichário atual</a></div>';
     $('#fn-setbtn-emoji').textContent = cat.emoji || '🃏';
     $('#fn-setbtn-code').textContent = label.split('—')[0].trim();
     $('#fn-setbtn-name').textContent = nameOnly;
@@ -246,7 +279,11 @@
     $('#fn-body').innerHTML = html;
   }
   function renderControls() {
-    $$('.fn-chip').forEach(function (b) { b.classList.toggle('is-on', b.dataset.status === st.status); });
+    $$('.fn-chip[data-status]').forEach(function (b) { b.classList.toggle('is-on', b.dataset.status === st.status); });
+    var imp = $('#fn-imp'), hasImp = cur.cards.some(function (c) { return c.important; });
+    imp.hidden = !hasImp; imp.classList.add('is-star'); imp.classList.toggle('is-on', st.imp && hasImp);
+    var L = langsOf(st.set), lg = $('#fn-lang'); lg.hidden = !L;
+    if (L) $$('button', lg).forEach(function (b) { b.hidden = L.indexOf(b.dataset.lang) < 0; b.classList.toggle('is-on', b.dataset.lang === effLang(st.set)); });
     $$('#fn-view button').forEach(function (b) { b.classList.toggle('is-on', b.dataset.view === st.view); });
     $('#fn-sort').value = st.sort;
     $('#fn-cols-val').textContent = st.cols;
@@ -273,13 +310,52 @@
   var busy = {};
   function mark(n, ver) {
     var c = cur.cards.filter(function (x) { return String(x.n) === String(n); })[0]; if (!c) return;
-    var key = keyOf(st.set, c, ver);
-    if (DEMO) { if (demoSet.has(key)) demoSet.delete(key); else demoSet.add(key); patchOne(n); return; }
+    var key = keyOf(st.set, c, ver), cur1 = entryOf(key);
+    if (cur1.qty > 1) { toast('Você tem ' + cur1.qty + ' cópias. Ajuste a quantidade no detalhe da carta.'); openDetail(n); return; }
+    if (DEMO) { if (demoSet.has(key)) { demoSet.delete(key); demoQty.delete(key); } else demoSet.add(key); patchOne(n); return; }
     if (!loggedIn()) { toast('Entre no MyDeck para marcar suas cartas.'); return; }
     if (busy[key]) return; busy[key] = true;
     var p; try { p = toggleSlot(key); } catch (e) { busy[key] = false; toast('Não foi possível marcar. Tente de novo.'); return; }
     patchOne(n); // o motor já mexeu na coleção (otimista) antes do primeiro await
     Promise.resolve(p).then(function () { patchOne(n); }, function () { toast('Não foi possível salvar. Tente de novo.'); patchOne(n); }).then(function () { busy[key] = false; });
+  }
+
+  // idioma da arte e dos nomes (mesma chave do fichário atual). cel30 jp/cn são coleções próprias.
+  function setLang(l) {
+    var fam = FAMILY.indexOf(st.set) >= 0;
+    try { localStorage.setItem('ficLang', fam && (l === 'jp' || l === 'cn') ? 'pt' : l); } catch (e) { }
+    if (fam) {
+      st.lang = (l === 'pt' || l === 'en') ? l : 'pt';
+      var target = REGION[l] || 'cel30';
+      if (target !== st.set) { st.set = target; try { history.replaceState(null, '', '#' + target); } catch (e) { } }
+    } else st.lang = l;
+    renderAll();
+  }
+
+  // ── quantidade e origem (grava com a mesma função do fichário atual: saveSlot) ──
+  function setEntry(n, ver, qty, origins) {
+    var c = cur.cards.filter(function (x) { return String(x.n) === String(n); })[0]; if (!c) return;
+    var key = keyOf(st.set, c, ver);
+    if (DEMO) { if (qty <= 0) { demoSet.delete(key); demoQty.delete(key); } else { demoSet.add(key); demoQty.set(key, { qty: qty, origins: origins }); } patchOne(n); return; }
+    if (!loggedIn()) { toast('Entre no MyDeck para salvar suas cartas.'); return; }
+    if (typeof saveSlot !== 'function') { toast('Não foi possível salvar agora. Recarregue a página.'); return; }
+    if (busy[key]) return; busy[key] = true;
+    Promise.resolve(saveSlot(key, qty, origins)).then(function () { patchOne(n); }, function () { toast('Não foi possível salvar. Tente de novo.'); patchOne(n); }).then(function () { busy[key] = false; });
+  }
+  function originOptions() {
+    var o = [];
+    try { (purchases || []).forEach(function (p) { var d = ''; try { d = new Date(p.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); } catch (e) { } o.push('<option value="' + esc(p.product) + '">' + esc(d + ' — ' + String(p.product).substring(0, 40)) + '</option>'); }); } catch (e) { }
+    o.push('<option value="Troca">Troca</option><option value="Presente">Presente</option><option value="Avulso">Avulso (loja)</option>');
+    return o.join('');
+  }
+  function verBlocks(id, c) {
+    return '<div class="fn-vblocks">' + slotsOf(id, c).map(function (s) {
+      var e = entryOf(keyOf(id, c, s.ver)), on = e.qty > 0, at = ' data-n="' + esc(c.n) + '" data-ver="' + esc(s.ver) + '"';
+      return '<div class="fn-vb' + (on ? ' is-on' : '') + '"><div class="fn-vb-h"><span class="fn-vb-n"><b>' + esc(s.ver) + '</b>' + esc(VERSION_NAME[s.ver] || s.ver) + '</span>' +
+        '<span class="fn-q"><button type="button" data-qty="-1"' + at + ' aria-label="Menos uma cópia">−</button><output aria-live="polite">' + e.qty + '</output><button type="button" data-qty="1"' + at + ' aria-label="Mais uma cópia">+</button></span></div>' +
+        (on ? '<div class="fn-orig">' + (e.origins.length ? e.origins.map(function (o, i) { return '<span class="fn-ochip">' + esc(o) + '<button type="button" data-delorig="' + i + '"' + at + ' aria-label="Remover origem">×</button></span>'; }).join('') : '<small>Sem origem informada</small>') +
+          '<div class="fn-oadd"><select aria-label="Origem"><option value="">— de onde veio? —</option>' + originOptions() + '</select><button type="button" data-addorig="1"' + at + '>+ origem</button></div></div>' : '') + '</div>';
+    }).join('') + '</div>';
   }
 
   // ── folhas ─────────────────────────────────────────────────
@@ -292,13 +368,13 @@
   function closeSheet() { var ov = $('#fn-overlay'); ov.hidden = true; ov.innerHTML = ''; ov.dataset.detail = ''; ov.classList.remove('is-drawer'); document.body.style.overflow = ''; }
   function openDetail(n, keep) {
     var c = cur.cards.filter(function (x) { return String(x.n) === String(n); })[0]; if (!c) return;
-    var id = st.set, s = stateOf(id, c);
-    var qty = (!DEMO && typeof collectedQty !== 'undefined') ? slotsOf(id, c).map(function (x) { var e = collectedQty.get(keyOf(id, c, x.ver)); return e && e.qty > 1 ? x.ver + ' ×' + e.qty : ''; }).filter(Boolean).join(' · ') : '';
-    var html = '<div class="fn-detail"><div class="fn-detail-img"><img alt="' + esc(c.name) + '" src="' + esc(imgSrc(cur.d, id, c, true)) + '"></div>' +
-      '<div><h4>' + esc(c.name) + '</h4><p>#' + esc(c.n) + ' · <span class="' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</span> · ' + esc(money(c.price)) + (qty ? '<br>' + esc(qty) : '') + '</p></div>' +
-      verButtons(id, c, true) + '</div>';
-    if (keep) { var b = $('#fn-overlay .fn-sheet-b'); if (b) { b.innerHTML = html; return; } }
-    openSheet(html, s.st === 'have' ? 'Coletada ✓' : s.st === 'part' ? 'Parcial' : 'Faltando', function (ov) { ov.dataset.detail = String(n); });
+    var id = st.set, s = stateOf(id, c), nm = i18n(c, id).name;
+    var title = s.st === 'have' ? 'Coletada ✓' : s.st === 'part' ? 'Parcial' : 'Faltando';
+    var html = '<div class="fn-detail"><div class="fn-detail-top"><div class="fn-detail-img"><img alt="' + esc(nm) + '" src="' + esc(imgSrc(cur.d, id, c, true)) + '"></div>' +
+      '<div class="fn-detail-info"><h4>' + (c.important ? '★ ' : '') + esc(nm) + '</h4><p>#' + esc(c.n) + ' · ' + esc(c.type || '') + '<br><span class="' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</span> · ' + esc(priceFmt(c, id)) + '</p></div></div>' +
+      verBlocks(id, c) + '</div>';
+    if (keep) { var b = $('#fn-overlay .fn-sheet-b'); if (b) { b.innerHTML = html; var h3 = $('#fn-overlay .fn-sheet-h h3'); if (h3) h3.textContent = title; return; } }
+    openSheet(html, title, function (ov) { ov.dataset.detail = String(n); });
     $('#fn-overlay').dataset.detail = String(n);
   }
   // ── navegação por blocos (eras) e expansões ──────────────
@@ -328,7 +404,7 @@
       var rows = sets.map(function (s) {
         var p = progOf(s.id); if (p) { got += p.got; tot += p.tot; }
         var nm = (s.label || '').split('—').slice(1).join('—').trim() || s.label, code = (s.label || '').split('—')[0].trim();
-        return '<button type="button" class="fn-set' + (s.id === st.set ? ' is-cur' : '') + '" data-pick="' + esc(s.id) + '" data-find="' + esc((nm + ' ' + code).toLowerCase()) + '">' +
+        return '<button type="button" class="fn-set' + (s.id === setKey(st.set) ? ' is-cur' : '') + '" data-pick="' + esc(s.id) + '" data-find="' + esc((nm + ' ' + code).toLowerCase()) + '">' +
           '<span class="em">' + esc(s.emoji || '🃏') + '</span><span class="tx"><b>' + esc(nm) + '</b><small>' + esc(code) + (s.upcoming ? ' · em breve' : '') + '</small>' +
           (p ? '<div class="mini"><i style="width:' + p.pct + '%"></i></div>' : '') + '</span>' +
           '<span class="pc' + (p && p.pct ? '' : ' z') + '">' + (p ? p.pct + '%' : '—') + '</span></button>';
@@ -372,7 +448,7 @@
     st.set = id; st.q = ''; st.status = 'all'; st.bpage = 0; LS.set('set', id);
     try { history.replaceState(null, '', '#' + id); } catch (e) { }
     $('#fn-q').value = '';
-    var ser = (SET_CATALOG.filter(function (x) { return x.id === id; })[0] || {}).series; var ob = openBlocks(); if (ser && ob.indexOf(ser) < 0) { ob.push(ser); LS.set('open', ob); }
+    var ser = (SET_CATALOG.filter(function (x) { return x.id === setKey(id); })[0] || {}).series; var ob = openBlocks(); if (ser && ob.indexOf(ser) < 0) { ob.push(ser); LS.set('open', ob); }
     closeSheet(); renderAll(); window.scrollTo({ top: 0 });
     var langs = langsOf(id); if (langs && langs.indexOf(st.lang) < 0) st.lang = 'en';
   }
@@ -392,7 +468,9 @@
   var qT;
   function bind() {
     $('#fn-q').addEventListener('input', function (e) { clearTimeout(qT); var v = e.target.value; qT = setTimeout(function () { st.q = v; st.bpage = 0; renderBody(); }, 120); });
-    $$('.fn-chip').forEach(function (b) { b.addEventListener('click', function () { st.status = b.dataset.status; st.bpage = 0; renderControls(); renderBody(); }); });
+    $$('.fn-chip[data-status]').forEach(function (b) { b.addEventListener('click', function () { st.status = b.dataset.status; st.bpage = 0; renderControls(); renderBody(); }); });
+    $('#fn-imp').addEventListener('click', function () { st.imp = !st.imp; st.bpage = 0; renderControls(); renderBody(); });
+    $$('#fn-lang button').forEach(function (b) { b.addEventListener('click', function () { setLang(b.dataset.lang); }); });
     $('#fn-sort').addEventListener('change', function (e) { st.sort = e.target.value; renderBody(); });
     $$('#fn-view button').forEach(function (b) { b.addEventListener('click', function () { st.view = b.dataset.view; LS.set('view', st.view); renderControls(); renderBody(); }); });
     $('#fn-cols-minus').addEventListener('click', function () { st.cols = Math.max(2, st.cols - 1); LS.set('cols', st.cols); renderControls(); });
@@ -403,14 +481,25 @@
       document.documentElement.setAttribute('data-theme', n); try { localStorage.setItem('mydeck-theme', n); } catch (e) { }
     });
     document.addEventListener('click', function (e) {
-      var t = e.target.closest('[data-mark],[data-open],[data-pick],[data-close],[data-bnav],[data-pocket],[data-blk]'); if (!t) { if (e.target.id === 'fn-overlay') closeSheet(); return; }
+      var t = e.target.closest('[data-mark],[data-open],[data-pick],[data-close],[data-bnav],[data-pocket],[data-blk],[data-qty],[data-addorig],[data-delorig]'); if (!t) { if (e.target.id === 'fn-overlay') closeSheet(); return; }
       if (t.dataset.mark != null) { e.preventDefault(); mark(t.dataset.mark, t.dataset.ver); }
       else if (t.dataset.open != null) openDetail(t.dataset.open);
+      else if (t.dataset.qty != null) {
+        var cc = cur.cards.filter(function (x) { return String(x.n) === String(t.dataset.n); })[0]; if (cc) { var ee = entryOf(keyOf(st.set, cc, t.dataset.ver)), q = Math.max(0, ee.qty + Number(t.dataset.qty)); setEntry(t.dataset.n, t.dataset.ver, q, q > 0 ? ee.origins : []); }
+      }
+      else if (t.dataset.addorig != null) {
+        var sel = t.parentNode.querySelector('select'), cc2 = cur.cards.filter(function (x) { return String(x.n) === String(t.dataset.n); })[0];
+        if (sel && sel.value && cc2) { var e2 = entryOf(keyOf(st.set, cc2, t.dataset.ver)); if (e2.origins.indexOf(sel.value) < 0) e2.origins.push(sel.value); setEntry(t.dataset.n, t.dataset.ver, Math.max(1, e2.qty), e2.origins); }
+      }
+      else if (t.dataset.delorig != null) {
+        var cc3 = cur.cards.filter(function (x) { return String(x.n) === String(t.dataset.n); })[0];
+        if (cc3) { var e3 = entryOf(keyOf(st.set, cc3, t.dataset.ver)); e3.origins.splice(Number(t.dataset.delorig), 1); setEntry(t.dataset.n, t.dataset.ver, e3.qty, e3.origins); }
+      }
       else if (t.dataset.blk) toggleBlock(t.dataset.blk);
       else if (t.dataset.pick) pickSet(t.dataset.pick);
       else if (t.dataset.close != null) closeSheet();
       else if (t.dataset.bnav) { st.bpage = Math.max(0, st.bpage + Number(t.dataset.bnav) * (innerWidth >= 700 ? 2 : 1)); renderBody(); }
-      else if (t.dataset.pocket) { st.pocket = Number(t.dataset.pocket); LS.set('pocket', st.pocket); st.bpage = 0; renderBody(); }
+      else if (t.dataset.pocket) { st.pocket = String(t.dataset.pocket); LS.set('pocket', st.pocket); st.bpage = 0; renderBody(); }
     });
     document.addEventListener('input', function (e) { if (e.target.classList && e.target.classList.contains('fn-tsearch')) applyTreeFilter(e.target.closest('.fn-side,.fn-drawer')); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet(); });

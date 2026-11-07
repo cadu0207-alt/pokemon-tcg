@@ -276,3 +276,34 @@ button{cursor:pointer}
   .fn-top{justify-content:space-between}
 }
 .fn-drawer .fn-sheet-b{flex:1;min-height:0;position:relative}
+
+/* ── Fase A: importante, idioma, quantidade e origem ── */
+.fn-star{position:absolute;top:5px;left:6px;color:#f5b301;font-size:17px;line-height:1;text-shadow:0 1px 3px rgba(0,0,0,.65);pointer-events:none}
+.fn-chip.is-star.is-on{background:#f5b301;border-color:#f5b301;color:#1c1f2e}
+.fn-ver .fn-x2{font-size:10.5px;opacity:.9}
+.fn-vblocks{display:grid;gap:10px}
+.fn-vb{border:1.5px solid var(--border);border-radius:var(--r-md);padding:10px 12px;background:var(--surface2)}
+.fn-vb.is-on{border-color:var(--teal);background:var(--teal-soft)}
+.fn-vb-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.fn-vb-n{font-size:14px;color:var(--text2)}
+.fn-vb-n b{display:inline-block;min-width:30px;padding:2px 7px;margin-right:6px;border-radius:6px;background:var(--text);color:var(--bg);font-size:12px;text-align:center}
+.fn-q{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--border2);border-radius:99px;background:var(--surface);overflow:hidden}
+.fn-q button{width:40px;height:38px;border:0;background:transparent;font-size:20px;font-weight:700;line-height:1}
+.fn-q button:active{background:var(--teal-soft)}
+.fn-q output{min-width:28px;text-align:center;font-weight:800;font-size:16px}
+.fn-orig{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.fn-orig small{color:var(--muted);font-size:12px}
+.fn-ochip{display:inline-flex;align-items:center;gap:4px;padding:3px 4px 3px 10px;border-radius:99px;background:var(--surface);border:1px solid var(--border2);font-size:12px}
+.fn-ochip button{width:20px;height:20px;border:0;border-radius:50%;background:var(--surface2);font-size:13px;line-height:1;color:var(--muted)}
+.fn-oadd{display:flex;gap:6px;width:100%}
+.fn-oadd select{flex:1;min-width:0;height:36px;padding:0 8px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text);font-size:13px}
+.fn-oadd button{height:36px;padding:0 12px;border:1px solid var(--teal);background:transparent;color:var(--teal);border-radius:var(--r-sm);font-weight:700;font-size:12.5px;white-space:nowrap}
+.fn-bridge{color:var(--text2)}
+.fn-bridge b{color:var(--accent)}
+
+.fn-detail-top{display:flex;gap:14px;align-items:flex-start}
+.fn-detail-top .fn-detail-img{margin:0;width:min(40%,190px);flex:0 0 auto}
+.fn-detail-top .fn-detail-info{flex:1;min-width:0}
+.fn-detail-top h4,.fn-detail-top p{text-align:left}
+.fn-detail-top h4{font-size:19px;line-height:1.2}
+.fn-detail-top p{font-size:13.5px;line-height:1.6}

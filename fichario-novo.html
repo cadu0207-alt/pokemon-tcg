@@ -50,6 +50,7 @@
       <button class="fn-chip is-on" data-status="all" type="button">Todas</button>
       <button class="fn-chip" data-status="miss" type="button">Faltantes</button>
       <button class="fn-chip" data-status="have" type="button">Coletadas</button>
+      <button class="fn-chip" id="fn-imp" type="button" hidden>★ Importantes</button>
       <label class="fn-sel"><span>Ordenar</span>
         <select id="fn-sort" aria-label="Ordenar por">
           <option value="num">Número</option>
@@ -60,6 +61,12 @@
       </label>
     </div>
     <div class="fn-tools">
+      <div class="fn-seg" id="fn-lang" role="group" aria-label="Idioma da arte" hidden>
+        <button data-lang="pt" type="button">PT</button>
+        <button data-lang="en" type="button">EN</button>
+        <button data-lang="jp" type="button">JP</button>
+        <button data-lang="cn" type="button">CN</button>
+      </div>
       <div class="fn-seg" id="fn-view" role="group" aria-label="Modo de visualização">
         <button data-view="grid" type="button" class="is-on">Grade</button>
         <button data-view="binder" type="button">Fichário</button>
