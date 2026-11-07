@@ -85,6 +85,16 @@
     if (/Dupla|Double|\bRR\b/i.test(r)) return 'rr-dr';
     return '';
   }
+  // Nome como o colecionador brasileiro fala. Só para exibir: c.rare (original) segue definindo slots, cor e ordem.
+  function rareLabel(r) {
+    r = r || '';
+    if (/Hiper|Hyper|Mega Attack/i.test(r)) return r;
+    if (/Ilustr.*Esp|Especial|SAR|SIR|Special Illustration/i.test(r)) return 'Ilustração Rara Especial';
+    if (/Ilustr|Illustration|IR/i.test(r)) return 'Ilustração Rara';
+    if (/Ultra|UR/i.test(r)) return 'Full Art';
+    if (/Dupla|Double|RR/i.test(r)) return 'Dupla Rara';
+    return r;
+  }
   function rareRank(r) {
     r = r || '';
     if (/Hiper|Hyper|Attack/i.test(r)) return 9;
@@ -112,7 +122,7 @@
   function computeView() {
     var q = st.q.trim().toLowerCase(), id = st.set;
     var arr = cur.cards.filter(function (c) {
-      if (q && (c.name + ' ' + c.n + ' ' + (c.nameEn || '') + ' ' + (c.type || '')).toLowerCase().indexOf(q) < 0) return false;
+      if (q && (c.name + ' ' + c.n + ' ' + (c.nameEn || '') + ' ' + (c.type || '') + ' ' + rareLabel(c.rare) + ' ' + (c.rare || '')).toLowerCase().indexOf(q) < 0) return false;
       if (st.status !== 'all') { var s = stateOf(id, c).st; if (st.status === 'miss' && s === 'have') return false; if (st.status === 'have' && s !== 'have') return false; }
       return true;
     });
@@ -154,7 +164,7 @@
       '<img loading="lazy" decoding="async" alt="' + esc(c.name) + '" src="' + esc(imgSrc(cur.d, id, c)) + '">' +
       '<span class="fn-tick" aria-hidden="true">' + (s.st === 'part' ? '½' : '✓') + '</span></button>' +
       '<div class="fn-meta"><span class="fn-name" title="' + esc(c.name) + '">' + esc(c.name) + '</span><span class="fn-price">' + esc(money0(c.price || 0)) + '</span></div>' +
-      '<div class="fn-sub"><span>#' + esc(c.n) + '</span><span class="fn-rare ' + r + '">' + esc(c.rare || '') + '</span></div>' +
+      '<div class="fn-sub"><span>#' + esc(c.n) + '</span><span class="fn-rare ' + r + '">' + esc(rareLabel(c.rare)) + '</span></div>' +
       verButtons(id, c, false) + '</article>';
   }
   function sections() {
@@ -183,7 +193,7 @@
         var s = stateOf(id, c);
         return '<tr data-n="' + esc(c.n) + '" class="' + (s.st === 'miss' ? 't-miss' : '') + '"><td class="t-thumb"><img loading="lazy" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '"></td><td>#' + esc(c.n) + '</td>' +
           '<td><button type="button" style="all:unset;cursor:pointer;font-weight:700" data-open="' + esc(c.n) + '">' + esc(c.name) + '</button></td>' +
-          '<td class="' + rareCls(c.rare) + '">' + esc(c.rare || '') + '</td><td>' + esc(money(c.price)) + '</td><td>' + verButtons(id, c, false) + '</td></tr>';
+          '<td class="' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</td><td>' + esc(money(c.price)) + '</td><td>' + verButtons(id, c, false) + '</td></tr>';
       }).join('') + '</tbody></table></div>';
   }
   function renderBinder() {
@@ -285,7 +295,7 @@
     var id = st.set, s = stateOf(id, c);
     var qty = (!DEMO && typeof collectedQty !== 'undefined') ? slotsOf(id, c).map(function (x) { var e = collectedQty.get(keyOf(id, c, x.ver)); return e && e.qty > 1 ? x.ver + ' ×' + e.qty : ''; }).filter(Boolean).join(' · ') : '';
     var html = '<div class="fn-detail"><div class="fn-detail-img"><img alt="' + esc(c.name) + '" src="' + esc(imgSrc(cur.d, id, c, true)) + '"></div>' +
-      '<div><h4>' + esc(c.name) + '</h4><p>#' + esc(c.n) + ' · <span class="' + rareCls(c.rare) + '">' + esc(c.rare || '') + '</span> · ' + esc(money(c.price)) + (qty ? '<br>' + esc(qty) : '') + '</p></div>' +
+      '<div><h4>' + esc(c.name) + '</h4><p>#' + esc(c.n) + ' · <span class="' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</span> · ' + esc(money(c.price)) + (qty ? '<br>' + esc(qty) : '') + '</p></div>' +
       verButtons(id, c, true) + '</div>';
     if (keep) { var b = $('#fn-overlay .fn-sheet-b'); if (b) { b.innerHTML = html; return; } }
     openSheet(html, s.st === 'have' ? 'Coletada ✓' : s.st === 'part' ? 'Parcial' : 'Faltando', function (ov) { ov.dataset.detail = String(n); });
