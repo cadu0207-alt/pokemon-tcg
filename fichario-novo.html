@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fichário (beta) — MyDeck</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#f4f4f6">
+<link rel="icon" href="logo-mydeck.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="fichario-novo.css">
+<script>
+  // tema: usa o mesmo que o site principal gravou (mydeck-theme); sem isso, segue o aparelho
+  try {
+    var t = localStorage.getItem('mydeck-theme');
+    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) {}
+</script>
+</head>
+<body>
+
+<header class="fn-top">
+  <a class="fn-back" href="./" title="Voltar ao MyDeck" aria-label="Voltar ao MyDeck">‹ <span>MyDeck</span></a>
+  <button class="fn-setbtn" id="fn-setbtn" type="button" aria-haspopup="dialog">
+    <span class="fn-setbtn-emoji" id="fn-setbtn-emoji">💎</span>
+    <span class="fn-setbtn-txt"><small id="fn-setbtn-code">ME06</small><b id="fn-setbtn-name">Carregando…</b></span>
+    <span class="fn-caret">▾</span>
+  </button>
+  <div class="fn-top-right">
+    <span class="fn-user" id="fn-user"></span>
+    <button class="fn-ico" id="fn-theme" type="button" title="Tema claro/escuro" aria-label="Alternar tema">◐</button>
+  </div>
+</header>
+
+<div class="fn-banner" id="fn-banner" hidden></div>
+
+<main class="fn-main">
+  <section class="fn-hero" id="fn-hero" aria-live="polite"></section>
+
+  <section class="fn-bar" id="fn-bar">
+    <div class="fn-search">
+      <input id="fn-q" type="search" placeholder="Buscar por nome ou número…" autocomplete="off" aria-label="Buscar carta">
+    </div>
+    <div class="fn-chips" role="group" aria-label="Mostrar">
+      <button class="fn-chip is-on" data-status="all" type="button">Todas</button>
+      <button class="fn-chip" data-status="miss" type="button">Faltantes</button>
+      <button class="fn-chip" data-status="have" type="button">Coletadas</button>
+      <label class="fn-sel"><span>Ordenar</span>
+        <select id="fn-sort" aria-label="Ordenar por">
+          <option value="num">Número</option>
+          <option value="name">Nome</option>
+          <option value="rare">Raridade</option>
+          <option value="price">Preço (maior)</option>
+        </select>
+      </label>
+    </div>
+    <div class="fn-tools">
+      <div class="fn-seg" id="fn-view" role="group" aria-label="Modo de visualização">
+        <button data-view="grid" type="button" class="is-on">Grade</button>
+        <button data-view="binder" type="button">Fichário</button>
+        <button data-view="table" type="button">Tabela</button>
+      </div>
+      <div class="fn-step" id="fn-cols-wrap" title="Tamanho das cartas">
+        <button id="fn-cols-minus" type="button" aria-label="Cartas maiores">–</button>
+        <span id="fn-cols-val">4</span>
+        <button id="fn-cols-plus" type="button" aria-label="Cartas menores">+</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="fn-body" id="fn-body"></section>
+</main>
+
+<div class="fn-overlay" id="fn-overlay" hidden></div>
+<div class="fn-toast" id="fn-toast" role="status" hidden></div>
+
+<!-- Motor do site atual (login, leitura e gravação da coleção, catálogos). Mesma ordem do index.html. -->
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script defer src="cards/cards_cel30.js"></script>
+<script defer src="cards/cards_cel30_jp.js"></script>
+<script defer src="cards/cards_cel30_cn.js"></script>
+<script defer src="cards/cards_me06.js"></script>
+<script defer src="cards/cards_me2pt5.js"></script>
+<script defer src="cards/cards_me05.js"></script>
+<script defer src="cards/cards_me04.js"></script>
+<script defer src="cards/cards_me03.js"></script>
+<script defer src="cards/cards_me02.js"></script>
+<script defer src="cards/cards_meg.js"></script>
+<script defer src="cards/cards_mep.js"></script>
+<script defer src="pull_rates.js"></script>
+<script defer src="price_updated_at.js"></script>
+<script defer src="img_cel30.js"></script>
+<script defer src="produtos_catalogo.js"></script>
+<script defer src="app.js"></script>
+<script defer src="fichario_patch.js"></script>
+<script defer src="pokedex_nacional.js"></script>
+<!-- Interface nova (esta página) -->
+<script defer src="fichario-novo.js"></script>
+</body>
+</html>
