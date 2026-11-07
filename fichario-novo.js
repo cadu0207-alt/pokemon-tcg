@@ -234,7 +234,7 @@
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats"><span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' +
       (t.sT ? '<span>Base <b>' + t.bG + '</b>/' + t.bT + '</span><span>Secretas <b>' + t.sG + '</b>/' + t.sT + '</span>' : '') +
-      (t.miss > 0 ? '<span class="fn-miss">Faltam <b>' + esc(money0(t.miss)) + '</b></span>' : '<span><b style="color:var(--teal)">Coleção completa 🎉</b></span>') + '</div>' +
+      (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : t.miss > 0 ? '<span class="fn-miss">Faltam <b>' + esc(money0(t.miss)) + '</b></span>' : '<span><b style="color:var(--teal)">Coleção completa 🎉</b></span>') + '</div>' +
       '<div class="fn-hero-links"><a href="./#fichario/' + esc(st.set) + '">Abrir no fichário atual</a></div>';
     $('#fn-setbtn-emoji').textContent = cat.emoji || '🃏';
     $('#fn-setbtn-code').textContent = label.split('—')[0].trim();
@@ -253,19 +253,19 @@
     $('#fn-cols-wrap').style.display = st.view === 'grid' ? '' : 'none';
     document.documentElement.style.setProperty('--cols', st.cols);
   }
-  function renderAll() { loadCur(); renderHero(); renderControls(); renderBody(); }
+  function renderAll() { loadCur(); renderHero(); renderControls(); renderBody(); renderSide(); }
 
   // atualização pontual (marcou uma versão): troca só aquele cartão e o resumo
   function patchOne(n) {
     var c = cur.cards.filter(function (x) { return String(x.n) === String(n); })[0]; if (!c) return;
-    if (st.status !== 'all') { renderBody(); renderHero(); return; } // filtro ativo: a carta pode sair da lista
+    if (st.status !== 'all') { renderBody(); renderHero(); delete progCache[st.set]; renderSide(); return; } // filtro ativo: a carta pode sair da lista
     $$('[data-n="' + n + '"]', $('#fn-body')).forEach(function (el) {
       var tmp = document.createElement('div');
       if (el.matches('article.fn-card')) { tmp.innerHTML = cardHtml(c); el.replaceWith(tmp.firstChild); }
       else if (el.matches('tr')) { var holder = document.createElement('table'); holder.innerHTML = renderTable(); var nr = $('tr[data-n="' + n + '"]', holder); if (nr) el.replaceWith(nr); }
       else if (el.matches('.fn-pocket')) { var s = stateOf(st.set, c); el.className = 'fn-pocket is-' + s.st; $('.fn-tick', el).textContent = s.st === 'part' ? '½' : '✓'; }
     });
-    renderHero();
+    renderHero(); delete progCache[st.set]; renderSide();
     var ov = $('#fn-overlay'); if (!ov.hidden && ov.dataset.detail === String(n)) openDetail(n, true);
   }
 
@@ -284,12 +284,12 @@
 
   // ── folhas ─────────────────────────────────────────────────
   function openSheet(inner, title, extra) {
-    var ov = $('#fn-overlay'); ov.hidden = false; ov.dataset.detail = '';
+    var ov = $('#fn-overlay'); ov.hidden = false; ov.dataset.detail = ''; ov.classList.remove('is-drawer');
     ov.innerHTML = '<div class="fn-sheet" role="dialog" aria-modal="true" aria-label="' + esc(title) + '"><div class="fn-sheet-h"><h3>' + esc(title) + '</h3><button class="fn-x" type="button" data-close aria-label="Fechar">×</button></div><div class="fn-sheet-b">' + inner + '</div></div>';
     document.body.style.overflow = 'hidden';
     if (extra) extra(ov);
   }
-  function closeSheet() { var ov = $('#fn-overlay'); ov.hidden = true; ov.innerHTML = ''; ov.dataset.detail = ''; document.body.style.overflow = ''; }
+  function closeSheet() { var ov = $('#fn-overlay'); ov.hidden = true; ov.innerHTML = ''; ov.dataset.detail = ''; ov.classList.remove('is-drawer'); document.body.style.overflow = ''; }
   function openDetail(n, keep) {
     var c = cur.cards.filter(function (x) { return String(x.n) === String(n); })[0]; if (!c) return;
     var id = st.set, s = stateOf(id, c);
@@ -301,30 +301,78 @@
     openSheet(html, s.st === 'have' ? 'Coletada ✓' : s.st === 'part' ? 'Parcial' : 'Faltando', function (ov) { ov.dataset.detail = String(n); });
     $('#fn-overlay').dataset.detail = String(n);
   }
-  function openSetPicker() {
-    var groups = {}, order = [];
-    SET_CATALOG.forEach(function (s) { var g = s.series || 'Outros'; if (!groups[g]) { groups[g] = []; order.push(g); } groups[g].push(s); });
-    var cacheState = {};
-    function prog(s) {
-      var d = setData(s.id); if (!d || !d.cards || !d.cards.length) return null;
-      var prev = st.set, tot = 0, got = 0;
-      d.cards.forEach(function (c) { slotsOf(s.id, c).forEach(function (x) { tot++; if (has(keyOf(s.id, c, x.ver))) got++; }); });
-      return tot ? { got: got, tot: tot, pct: Math.round(got / tot * 100) } : null;
-    }
-    var html = order.map(function (g) {
-      return '<div class="fn-grp">' + esc(GROUP_NAME[g] || g) + '</div>' + groups[g].map(function (s) {
-        var p = cacheState[s.id] = prog(s), nm = (s.label || '').split('—').slice(1).join('—').trim() || s.label, code = (s.label || '').split('—')[0].trim();
-        return '<button type="button" class="fn-setrow' + (s.id === st.set ? ' is-cur' : '') + '" data-pick="' + esc(s.id) + '"><span class="em">' + esc(s.emoji || '🃏') + '</span>' +
-          '<span class="tx"><b>' + esc(nm) + '</b><small>' + esc(code) + (p ? ' · ' + p.got + '/' + p.tot + ' slots' : s.upcoming ? ' · em breve' : ' · abrir para carregar') + '</small>' +
-          (p ? '<div class="bar"><i style="width:' + p.pct + '%"></i></div>' : '') + '</span>' + (p ? '<span class="pc">' + p.pct + '%</span>' : '') + '</button>';
+  // ── navegação por blocos (eras) e expansões ──────────────
+  var progCache = {};
+  function progOf(id) {
+    if (progCache[id] !== undefined) return progCache[id];
+    var d = setData(id); if (!d || !d.cards || !d.cards.length) return null; // sem dados ainda: não guarda, tenta de novo depois
+    var tot = 0, got = 0;
+    d.cards.forEach(function (c) { slotsOf(id, c).forEach(function (x) { tot++; if (has(keyOf(id, c, x.ver))) got++; }); });
+    return (progCache[id] = tot ? { got: got, tot: tot, pct: Math.round(got / tot * 100) } : null);
+  }
+  function seriesOrder() {
+    var meta = (typeof SERIES_META !== 'undefined' && SERIES_META) || {}, keys = Object.keys(meta);
+    SET_CATALOG.forEach(function (s) { var k = s.series || 'Outros'; if (keys.indexOf(k) < 0) keys.push(k); });
+    return keys;
+  }
+  function blockTitle(k) {
+    var meta = (typeof SERIES_META !== 'undefined' && SERIES_META && SERIES_META[k]) || null;
+    return meta ? (meta.sub || meta.t) : (GROUP_NAME[k] || k);
+  }
+  function openBlocks() { var v = LS.get('open', null); return v || [(SET_CATALOG.filter(function (s) { return s.id === st.set; })[0] || {}).series]; }
+  function treeHtml() {
+    var open = openBlocks(), by = {};
+    SET_CATALOG.forEach(function (s) { (by[s.series || 'Outros'] = by[s.series || 'Outros'] || []).push(s); });
+    var html = seriesOrder().filter(function (k) { return by[k] && by[k].length; }).map(function (k) {
+      var sets = by[k], got = 0, tot = 0;
+      var rows = sets.map(function (s) {
+        var p = progOf(s.id); if (p) { got += p.got; tot += p.tot; }
+        var nm = (s.label || '').split('—').slice(1).join('—').trim() || s.label, code = (s.label || '').split('—')[0].trim();
+        return '<button type="button" class="fn-set' + (s.id === st.set ? ' is-cur' : '') + '" data-pick="' + esc(s.id) + '" data-find="' + esc((nm + ' ' + code).toLowerCase()) + '">' +
+          '<span class="em">' + esc(s.emoji || '🃏') + '</span><span class="tx"><b>' + esc(nm) + '</b><small>' + esc(code) + (s.upcoming ? ' · em breve' : '') + '</small>' +
+          (p ? '<div class="mini"><i style="width:' + p.pct + '%"></i></div>' : '') + '</span>' +
+          '<span class="pc' + (p && p.pct ? '' : ' z') + '">' + (p ? p.pct + '%' : '—') + '</span></button>';
       }).join('');
+      var isOpen = open.indexOf(k) >= 0, bp = tot ? Math.round(got / tot * 100) : null;
+      return '<section class="fn-blk' + (isOpen ? ' is-open' : '') + '" data-blk-id="' + esc(k) + '">' +
+        '<button type="button" class="fn-blk-h" data-blk="' + esc(k) + '" aria-expanded="' + isOpen + '"><span class="ch">▸</span><span class="t">' + esc(blockTitle(k)) + '</span>' +
+        '<span class="n">' + (bp != null ? '<b>' + bp + '%</b> · ' : '') + sets.length + '</span></button><div class="fn-blk-b">' + rows + '</div></section>';
     }).join('');
-    openSheet(html, 'Escolher coleção');
+    return html || '<div class="fn-tree-empty">Nenhuma coleção encontrada.</div>';
+  }
+  function sideHtml() { return '<input class="fn-tsearch" type="search" placeholder="Buscar coleção…" autocomplete="off" aria-label="Buscar coleção"><div class="fn-tree">' + treeHtml() + '</div>'; }
+  function renderSide() {
+    var side = $('#fn-side'); if (!side) return;
+    if (!$('.fn-tsearch', side)) side.innerHTML = sideHtml(); else $('.fn-tree', side).innerHTML = treeHtml();
+    applyTreeFilter(side);
+    var cur = $('.fn-set.is-cur', side);
+    // rola só a barra lateral (nunca a página): leva a coleção atual para uma posição visível
+    if (cur && innerWidth >= 1000) { var r = cur.getBoundingClientRect(), sr = side.getBoundingClientRect(); if (r.top < sr.top + 40 || r.bottom > sr.bottom - 40) side.scrollTop += (r.top - sr.top) - sr.height / 3; }
+  }
+  function applyTreeFilter(root) {
+    if (!root) return; var inp = $('.fn-tsearch', root); if (!inp) return; var q = inp.value.trim().toLowerCase();
+    $$('.fn-blk', root).forEach(function (b) {
+      var any = false;
+      $$('.fn-set', b).forEach(function (r) { var ok = !q || r.dataset.find.indexOf(q) >= 0; r.hidden = !ok; if (ok) any = true; });
+      b.hidden = !!q && !any; if (q && any) b.classList.add('is-open');
+    });
+  }
+  function toggleBlock(k) {
+    var open = openBlocks().slice(), i = open.indexOf(k); if (i >= 0) open.splice(i, 1); else open.push(k);
+    LS.set('open', open);
+    $$('.fn-blk[data-blk-id="' + k + '"]').forEach(function (b) { b.classList.toggle('is-open', i < 0); var h = $('.fn-blk-h', b); if (h) h.setAttribute('aria-expanded', String(i < 0)); });
+  }
+  function openDrawer() {
+    var ov = $('#fn-overlay'); ov.hidden = false; ov.dataset.detail = ''; ov.classList.add('is-drawer');
+    ov.innerHTML = '<div class="fn-drawer" role="dialog" aria-modal="true" aria-label="Escolher coleção"><div class="fn-sheet-h"><h3>Coleções</h3><button class="fn-x" type="button" data-close aria-label="Fechar">×</button></div><div class="fn-sheet-b">' + sideHtml() + '</div></div>';
+    document.body.style.overflow = 'hidden';
+    var cur = $('.fn-drawer .fn-set.is-cur'), body = $('.fn-drawer .fn-sheet-b'); if (cur && body) body.scrollTop = Math.max(0, cur.offsetTop - body.clientHeight / 3);
   }
   function pickSet(id) {
     st.set = id; st.q = ''; st.status = 'all'; st.bpage = 0; LS.set('set', id);
     try { history.replaceState(null, '', '#' + id); } catch (e) { }
     $('#fn-q').value = '';
+    var ser = (SET_CATALOG.filter(function (x) { return x.id === id; })[0] || {}).series; var ob = openBlocks(); if (ser && ob.indexOf(ser) < 0) { ob.push(ser); LS.set('open', ob); }
     closeSheet(); renderAll(); window.scrollTo({ top: 0 });
     var langs = langsOf(id); if (langs && langs.indexOf(st.lang) < 0) st.lang = 'en';
   }
@@ -349,20 +397,22 @@
     $$('#fn-view button').forEach(function (b) { b.addEventListener('click', function () { st.view = b.dataset.view; LS.set('view', st.view); renderControls(); renderBody(); }); });
     $('#fn-cols-minus').addEventListener('click', function () { st.cols = Math.max(2, st.cols - 1); LS.set('cols', st.cols); renderControls(); });
     $('#fn-cols-plus').addEventListener('click', function () { st.cols = Math.min(10, st.cols + 1); LS.set('cols', st.cols); renderControls(); });
-    $('#fn-setbtn').addEventListener('click', openSetPicker);
+    $('#fn-setbtn').addEventListener('click', openDrawer);
     $('#fn-theme').addEventListener('click', function () {
       var n = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', n); try { localStorage.setItem('mydeck-theme', n); } catch (e) { }
     });
     document.addEventListener('click', function (e) {
-      var t = e.target.closest('[data-mark],[data-open],[data-pick],[data-close],[data-bnav],[data-pocket]'); if (!t) { if (e.target.id === 'fn-overlay') closeSheet(); return; }
+      var t = e.target.closest('[data-mark],[data-open],[data-pick],[data-close],[data-bnav],[data-pocket],[data-blk]'); if (!t) { if (e.target.id === 'fn-overlay') closeSheet(); return; }
       if (t.dataset.mark != null) { e.preventDefault(); mark(t.dataset.mark, t.dataset.ver); }
       else if (t.dataset.open != null) openDetail(t.dataset.open);
+      else if (t.dataset.blk) toggleBlock(t.dataset.blk);
       else if (t.dataset.pick) pickSet(t.dataset.pick);
       else if (t.dataset.close != null) closeSheet();
       else if (t.dataset.bnav) { st.bpage = Math.max(0, st.bpage + Number(t.dataset.bnav) * (innerWidth >= 700 ? 2 : 1)); renderBody(); }
       else if (t.dataset.pocket) { st.pocket = Number(t.dataset.pocket); LS.set('pocket', st.pocket); st.bpage = 0; renderBody(); }
     });
+    document.addEventListener('input', function (e) { if (e.target.classList && e.target.classList.contains('fn-tsearch')) applyTreeFilter(e.target.closest('.fn-side,.fn-drawer')); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet(); });
     var bar = $('#fn-bar'), top = function () { return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--top-h')) || 52; };
     var lastY = scrollY;
@@ -391,7 +441,7 @@
     }
   }
   var dataT;
-  function onData() { clearTimeout(dataT); dataT = setTimeout(function () { banner(); if (engineReady()) { loadCur(); renderHero(); renderBody(); } }, 60); }
+  function onData() { clearTimeout(dataT); dataT = setTimeout(function () { banner(); if (engineReady()) { progCache = {}; loadCur(); renderHero(); renderBody(); renderSide(); } }, 60); }
 
   function boot() {
     if (!engineReady()) { return setTimeout(boot, 80); }

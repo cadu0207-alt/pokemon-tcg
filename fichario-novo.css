@@ -233,3 +233,46 @@ button{cursor:pointer}
   .fn-binder-pg{min-width:0}
   .fn-binder-nav .fn-seg{grid-column:1 / -1;justify-self:center}
 }
+
+/* ── navegação por blocos (barra lateral / gaveta) ── */
+.fn-layout{max-width:1640px;margin:0 auto}
+.fn-side{display:none}
+.fn-tsearch{width:100%;height:38px;padding:0 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);outline:none;font-size:14px}
+.fn-tsearch:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.fn-tree{margin-top:10px;display:grid;gap:6px}
+.fn-blk{border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);overflow:hidden}
+.fn-blk-h{display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;border:0;background:transparent;text-align:left;font-weight:700;font-size:14px}
+.fn-blk-h:hover{background:var(--surface2)}
+.fn-blk-h .ch{display:inline-block;width:14px;color:var(--muted);transition:transform .18s;font-size:12px}
+.fn-blk.is-open>.fn-blk-h .ch{transform:rotate(90deg)}
+.fn-blk-h .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fn-blk-h .n{font-size:12px;font-weight:700;color:var(--muted)}
+.fn-blk-h .n b{color:var(--teal)}
+.fn-blk-b{display:none;padding:2px 6px 8px}
+.fn-blk.is-open>.fn-blk-b{display:block}
+.fn-set{display:flex;align-items:center;gap:10px;width:100%;padding:8px 8px;border:0;background:transparent;border-radius:var(--r-sm);text-align:left}
+.fn-set:hover{background:var(--surface2)}
+.fn-set.is-cur{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.fn-set .em{width:22px;text-align:center;font-size:17px}
+.fn-set .tx{flex:1;min-width:0;line-height:1.2}
+.fn-set .tx b{display:block;font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fn-set .tx small{color:var(--muted);font-size:11.5px}
+.fn-set .pc{font-size:12.5px;font-weight:800;color:var(--teal);min-width:36px;text-align:right}
+.fn-set .pc.z{color:var(--muted);font-weight:600}
+.fn-set .mini{height:4px;border-radius:99px;background:var(--surface2);border:1px solid var(--border);overflow:hidden;margin-top:4px}
+.fn-set .mini i{display:block;height:100%;background:var(--teal)}
+.fn-tree-empty{padding:14px;color:var(--muted);font-size:13px;text-align:center}
+/* gaveta (celular/tablet) */
+.fn-overlay.is-drawer{align-items:stretch;justify-content:flex-start}
+.fn-drawer{width:min(88vw,380px);height:100%;background:var(--bg);display:flex;flex-direction:column;box-shadow:10px 0 40px rgba(0,0,0,.35);animation:fn-in .22s ease}
+@keyframes fn-in{from{transform:translateX(-30px);opacity:.6}to{transform:none;opacity:1}}
+.fn-drawer .fn-sheet-h{background:var(--surface);border-bottom:1px solid var(--border)}
+.fn-drawer .fn-sheet-b{padding:12px}
+@media (min-width:1000px){
+  .fn-layout{display:grid;grid-template-columns:310px minmax(0,1fr);align-items:start}
+  .fn-side{display:block;position:sticky;top:calc(var(--top-h) + 14px);max-height:calc(100vh - var(--top-h) - 28px);overflow:auto;margin:20px 0 0 22px;padding-right:4px;scrollbar-width:thin}
+  .fn-layout .fn-main{max-width:none;margin:0}
+  .fn-setbtn{display:none}
+  .fn-top{justify-content:space-between}
+}
+.fn-drawer .fn-sheet-b{flex:1;min-height:0;position:relative}
