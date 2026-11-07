@@ -166,12 +166,20 @@
       return true;
     });
     var by = {
-      num: function (a, b) { return String(a.n).localeCompare(String(b.n), undefined, { numeric: true }); },
+      num: function (a, b) { return secIdx(a) - secIdx(b) || String(a.n).localeCompare(String(b.n), undefined, { numeric: true }); },
       name: function (a, b) { return String(a.name).localeCompare(String(b.name), 'pt'); },
       rare: function (a, b) { return rareRank(b.rare) - rareRank(a.rare) || by.num(a, b); },
       price: function (a, b) { return (b.price || 0) - (a.price || 0); },
       dex: function (a, b) { var x = dexOf(a), y = dexOf(b); if (x == null && y == null) return by.num(a, b); if (x == null) return 1; if (y == null) return -1; return x - y || by.num(a, b); }
     };
+    // ordem por número respeita as seções da coleção (ex.: Base 001–103 primeiro, Coleção Clássica depois)
+    var secs = (cur.d && cur.d.sections) || [], idxCache = new Map();
+    function secIdx(c) {
+      if (!secs.length) return 0;
+      if (idxCache.has(c)) return idxCache.get(c);
+      var r = secs.length; for (var i = 0; i < secs.length; i++) { try { if (secs[i].filter(c)) { r = i; break; } } catch (e) { } }
+      idxCache.set(c, r); return r;
+    }
     arr.sort(by[st.sort] || by.num);
     cur.view = arr;
   }
