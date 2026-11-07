@@ -440,7 +440,7 @@
       '<button type="button" class="fn-act" data-act="share"><span class="em">🔗</span><span><b>Compartilhar coleção</b><small>Gera um link (e QR code) só para ver, sem precisar de login</small></span></button>' +
       '<button type="button" class="fn-act" data-act="copy"><span class="em">📋</span><span><b>Copiar lista (texto)</b><small>' + n + ' carta' + (n === 1 ? '' : 's') + ' como estão na tela, pronto para colar no WhatsApp</small></span></button>' +
       '<button type="button" class="fn-act" data-act="print"><span class="em">🖨️</span><span><b>Imprimir PDF</b><small>Fichário em páginas, no tamanho escolhido</small></span></button>' +
-      '<button type="button" class="fn-act" data-act="bulk"><span class="em">✅</span><span><b>Marcar todas de uma raridade</b><small>Marca como coletadas as cartas visíveis de uma raridade</small></span></button>' +
+      '<button type="button" class="fn-act" data-act="bulk"><span class="em">✅</span><span><b>Marcar várias de uma vez</b><small>Base set, secretas, tudo ou uma raridade: marca como coletadas as cartas visíveis</small></span></button>' +
       '</div>', 'Ferramentas');
   }
   var shareUrl = '';
@@ -499,24 +499,38 @@
     var only = st.status === 'miss' ? 'missing' : st.status === 'have' ? 'collected' : undefined;
     try { Promise.resolve(printBinder(cur.view.slice(), function () { return st.set; }, cat.label || st.set, only)); } catch (e) { toast('Não foi possível gerar o PDF.'); }
   }
+  function bulkMatch(v) {
+    return function (c) {
+      if (v === 'g:all') return true;
+      if (v === 'g:base') return c.base !== false;
+      if (v === 'g:sec') return c.base === false;
+      return c.rare === v.slice(2);
+    };
+  }
   function doBulk() {
     var rs = {}; cur.view.forEach(function (c) { if (c.rare) rs[c.rare] = (rs[c.rare] || 0) + 1; });
     var keys = Object.keys(rs).sort(function (a, b) { return rareRank(b) - rareRank(a); });
-    if (!keys.length) { toast('Nenhuma carta visível para marcar.'); return; }
-    var body = '<div class="fn-form"><label>Raridade<select id="fn-bulk-r">' + keys.map(function (k) { return '<option value="' + esc(k) + '">' + esc(rareLabel(k)) + ' (' + rs[k] + ' carta' + (rs[k] > 1 ? 's' : '') + ')</option>'; }).join('') + '</select></label>' +
+    if (!cur.view.length) { toast('Nenhuma carta visível para marcar.'); return; }
+    var nBase = cur.view.filter(bulkMatch('g:base')).length, nSec = cur.view.filter(bulkMatch('g:sec')).length;
+    var pl = function (n) { return ' (' + n + ' carta' + (n > 1 ? 's' : '') + ')'; };
+    var opts = '';
+    if (nBase && nSec) opts += '<option value="g:base">📄 Base set inteiro' + pl(nBase) + '</option><option value="g:sec">✨ Secretas' + pl(nSec) + '</option>';
+    opts += '<option value="g:all">📚 Tudo que está na tela' + pl(cur.view.length) + '</option>';
+    if (keys.length) opts += '<option disabled>— ou por raridade —</option>' + keys.map(function (k) { return '<option value="r:' + esc(k) + '">' + esc(rareLabel(k)) + pl(rs[k]) + '</option>'; }).join('');
+    var body = '<div class="fn-form"><label>O que marcar<select id="fn-bulk-r">' + opts + '</select></label>' +
       '<div class="fn-warn" id="fn-bulk-info"></div><button type="button" class="fn-btn" id="fn-bulk-go" data-act="bulkrun">Marcar como coletadas</button><button type="button" class="fn-btn is-alt" data-close>Cancelar</button></div>';
-    openSheet(body, 'Marcar por raridade');
+    openSheet(body, 'Marcar várias de uma vez');
     var upd = function () {
       var r = $('#fn-bulk-r').value, n = 0, cards = 0;
-      cur.view.filter(function (c) { return c.rare === r; }).forEach(function (c) { var t = 0; slotsOf(st.set, c).forEach(function (x) { if (!has(keyOf(st.set, c, x.ver))) t++; }); if (t) cards++; n += t; });
-      $('#fn-bulk-info').innerHTML = n ? 'Vai marcar <b>' + n + ' versão' + (n > 1 ? 'ões' : '') + '</b> em <b>' + cards + ' carta' + (cards > 1 ? 's' : '') + '</b> como coletadas (1 cópia cada). Só as cartas que estão visíveis agora, respeitando busca e filtros.' : 'Todas as cartas visíveis dessa raridade já estão marcadas.';
+      cur.view.filter(bulkMatch(r)).forEach(function (c) { var t = 0; slotsOf(st.set, c).forEach(function (x) { if (!has(keyOf(st.set, c, x.ver))) t++; }); if (t) cards++; n += t; });
+      $('#fn-bulk-info').innerHTML = n ? 'Vai marcar <b>' + n + (n > 1 ? ' versões' : ' versão') + '</b> em <b>' + cards + ' carta' + (cards > 1 ? 's' : '') + '</b> como coletadas (1 cópia cada). Só as cartas que estão visíveis agora, respeitando busca e filtros.' : 'Todas as cartas visíveis dessa opção já estão marcadas.';
       $('#fn-bulk-go').disabled = !n;
     };
     $('#fn-bulk-r').addEventListener('change', upd); upd();
   }
   async function runBulk() {
     var sel = $('#fn-bulk-r'); if (!sel) return; var rare = sel.value, id = st.set, keys = [];
-    cur.view.filter(function (c) { return c.rare === rare; }).forEach(function (c) { slotsOf(id, c).forEach(function (x) { var k = keyOf(id, c, x.ver); if (!has(k)) keys.push(k); }); });
+    cur.view.filter(bulkMatch(rare)).forEach(function (c) { slotsOf(id, c).forEach(function (x) { var k = keyOf(id, c, x.ver); if (!has(k)) keys.push(k); }); });
     if (!keys.length) { toast('Já estão todas marcadas.'); closeSheet(); return; }
     var go = $('#fn-bulk-go'); if (go) { go.disabled = true; go.textContent = 'Marcando…'; }
     if (DEMO) { keys.forEach(function (k) { demoSet.add(k); }); closeSheet(); renderAll(); toast(keys.length + ' versões marcadas (demonstração).'); return; }
