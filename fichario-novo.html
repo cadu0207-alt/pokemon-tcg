@@ -50,17 +50,22 @@
       <button class="fn-chip is-on" data-status="all" type="button">Todas</button>
       <button class="fn-chip" data-status="miss" type="button">Faltantes</button>
       <button class="fn-chip" data-status="have" type="button">Coletadas</button>
-      <button class="fn-chip" id="fn-imp" type="button" hidden>★ Importantes</button>
+      <button class="fn-chip fn-tool" id="fn-more" type="button" aria-haspopup="dialog">🛠 Ferramentas</button>
       <label class="fn-sel"><span>Ordenar</span>
         <select id="fn-sort" aria-label="Ordenar por">
           <option value="num">Número</option>
           <option value="name">Nome</option>
           <option value="rare">Raridade</option>
           <option value="price">Preço (maior)</option>
+          <option value="dex">Pokédex</option>
         </select>
       </label>
     </div>
     <div class="fn-tools">
+      <button class="fn-chip" id="fn-imp" type="button" hidden>★ Importantes</button>
+      <label class="fn-sel" id="fn-artist-wrap" hidden><span>Artista</span>
+        <select id="fn-artist" aria-label="Filtrar por artista"><option value="">Todos</option></select>
+      </label>
       <div class="fn-seg" id="fn-lang" role="group" aria-label="Idioma da arte" hidden>
         <button data-lang="pt" type="button">PT</button>
         <button data-lang="en" type="button">EN</button>
@@ -71,6 +76,7 @@
         <button data-view="grid" type="button" class="is-on">Grade</button>
         <button data-view="binder" type="button">Fichário</button>
         <button data-view="table" type="button">Tabela</button>
+        <button data-view="dash" type="button">Dashboard</button>
       </div>
       <div class="fn-step" id="fn-cols-wrap" title="Tamanho das cartas">
         <button id="fn-cols-minus" type="button" aria-label="Cartas maiores">–</button>
@@ -89,6 +95,7 @@
 
 <!-- Motor do site atual (login, leitura e gravação da coleção, catálogos). Mesma ordem do index.html. -->
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
 <script defer src="cards/cards_cel30.js"></script>
 <script defer src="cards/cards_cel30_jp.js"></script>
 <script defer src="cards/cards_cel30_cn.js"></script>

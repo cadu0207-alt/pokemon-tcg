@@ -307,3 +307,47 @@ button{cursor:pointer}
 .fn-detail-top h4,.fn-detail-top p{text-align:left}
 .fn-detail-top h4{font-size:19px;line-height:1.2}
 .fn-detail-top p{font-size:13.5px;line-height:1.6}
+
+/* ── Fase B: dashboard, mais ações, artista ── */
+.fn-more{height:36px;padding:0 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);font-weight:700;font-size:13px;color:var(--text2)}
+.fn-more:hover{border-color:var(--border2)}
+.fn-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.fn-kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:12px 14px;box-shadow:var(--shadow);min-width:0}
+.fn-kpi small{display:block;color:var(--muted);font-size:12px;font-weight:600}
+.fn-kpi b{display:block;font-family:var(--f-head);font-size:22px;line-height:1.2;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fn-kpi span{display:block;color:var(--text2);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fn-kpi.k-teal b{color:var(--teal)}.fn-kpi.k-red b{color:var(--accent)}.fn-kpi.k-gold b{color:var(--gold)}.fn-kpi.k-blue b{color:var(--blue)}
+.fn-dash h3{margin:22px 2px 10px;font-family:var(--f-head);font-size:17px}
+.fn-rrow{display:grid;grid-template-columns:minmax(110px,1.2fr) 3fr auto;gap:10px;align-items:center;padding:8px 2px;border-bottom:1px solid var(--border);font-size:13px}
+.fn-rrow .bar{height:8px;border-radius:99px;background:var(--surface2);border:1px solid var(--border);overflow:hidden}
+.fn-rrow .bar i{display:block;height:100%;background:var(--teal)}
+.fn-rrow .num{color:var(--text2);white-space:nowrap;font-size:12.5px;text-align:right}
+.fn-toplist{display:grid;gap:6px}
+.fn-topitem{display:flex;align-items:center;gap:10px;width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);text-align:left}
+.fn-topitem img{width:36px;border-radius:3px}
+.fn-topitem .tx{flex:1;min-width:0;line-height:1.25}
+.fn-topitem .tx b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fn-topitem .tx small{color:var(--muted);font-size:12px}
+.fn-topitem .pr{font-weight:800;color:var(--accent);font-size:13.5px}
+.fn-acts{display:grid;gap:8px}
+.fn-act{display:flex;align-items:center;gap:12px;width:100%;padding:12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);text-align:left;font-size:14px}
+.fn-act:hover{border-color:var(--border2)}
+.fn-act .em{font-size:20px}.fn-act b{display:block;font-size:14px}.fn-act small{color:var(--muted);font-size:12px}
+.fn-form{display:grid;gap:12px;padding:2px 4px 10px}
+.fn-form label{font-size:13px;color:var(--text2);display:grid;gap:6px}
+.fn-form select,.fn-form textarea{width:100%;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text);padding:10px;font-size:14px}
+.fn-form textarea{min-height:240px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5}
+.fn-btn{height:44px;border:0;border-radius:var(--r-md);background:var(--accent);color:#fff;font-weight:800;font-size:15px}
+.fn-btn.is-alt{background:var(--surface2);color:var(--text);border:1px solid var(--border2)}
+.fn-btn:disabled{opacity:.55}
+.fn-warn{background:var(--gold-soft);border:1px solid var(--gold);border-radius:var(--r-sm);padding:10px;font-size:13px}
+@media (min-width:700px){.fn-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:699px){.fn-more span{display:none}.fn-rrow{grid-template-columns:1fr 1fr auto}}
+
+/* Ferramentas (chip) e compartilhar */
+.fn-chip.fn-tool{border-color:var(--accent,var(--border2));font-weight:700}
+.fn-note{margin:0;font-size:13px;line-height:1.5;color:var(--text2)}
+#fn-share-out{display:grid;gap:10px;justify-items:center}
+#fn-share-out input{width:100%;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text);padding:10px;font-size:13px}
+#fn-share-out .fn-btn{width:100%}
+#fn-share-qr{border-radius:8px;background:#fff}
