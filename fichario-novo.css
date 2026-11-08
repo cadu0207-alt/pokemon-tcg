@@ -370,3 +370,8 @@ button{cursor:pointer}
     --cw:min(var(--cw-h),var(--cw-w));grid-template-columns:repeat(var(--pc),var(--cw));gap:var(--g);justify-content:center}
   .fn-focus .fn-pocket{width:var(--cw)}
 }
+
+.fn-op{display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 12px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--text);text-decoration:none;font-weight:700;font-size:13px;white-space:nowrap}
+.fn-op:hover{border-color:var(--border2)}
+@media (max-width:520px){.fn-op span{display:none}.fn-op{padding:0 10px}}
+.fn-focus .fn-op{display:none}
