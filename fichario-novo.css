@@ -351,3 +351,22 @@ button{cursor:pointer}
 #fn-share-out input{width:100%;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text);padding:10px;font-size:13px}
 #fn-share-out .fn-btn{width:100%}
 #fn-share-qr{border-radius:8px;background:#fff}
+
+/* ── Modo foco: fichário inteiro na tela (só ≥700px, só no modo Fichário) ── */
+@media (min-width:700px){
+  body.fn-focus{--top-h:46px}
+  .fn-focus .fn-banner,.fn-focus .fn-hero,.fn-focus .fn-side,.fn-focus .fn-search,.fn-focus .fn-chips,.fn-focus .fn-page-lbl,.fn-focus .fn-user,.fn-focus #fn-cols-wrap{display:none}
+  .fn-focus .fn-layout{display:block;max-width:none}
+  .fn-focus .fn-main{padding:6px 14px 10px;max-width:none}
+  .fn-focus .fn-bar{position:static;margin:0 -14px;padding:6px 14px;transform:none}
+  .fn-focus .fn-tools{grid-column:1 / -1;justify-content:center}
+  .fn-focus .fn-binder-nav{margin:2px 0 8px;gap:10px}
+  .fn-focus .fn-binder-nav button{height:32px}
+  .fn-focus .fn-spread{grid-template-columns:repeat(2,max-content);justify-content:center;gap:12px}
+  .fn-focus .fn-page{padding:9px}
+  .fn-focus .fn-pocket-grid{--g:6px;--avh:calc(100vh - 186px);
+    --cw-h:calc((var(--avh) - (var(--pr) - 1) * var(--g)) / var(--pr) * .716);
+    --cw-w:calc(((100vw - 28px - 12px - 36px) / 2 - (var(--pc) - 1) * var(--g)) / var(--pc));
+    --cw:min(var(--cw-h),var(--cw-w));grid-template-columns:repeat(var(--pc),var(--cw));gap:var(--g);justify-content:center}
+  .fn-focus .fn-pocket{width:var(--cw)}
+}

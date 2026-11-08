@@ -31,6 +31,7 @@
     lang: (function () { try { return localStorage.getItem('ficLang') || 'pt'; } catch (e) { return 'pt'; } })(), // mesma chave do fichário atual
     pocket: String(LS.get('pocket', '9')),
     imp: false,
+    focus: !!LS.get('focus', false),
     artist: '',
     bpage: 0
   };
@@ -266,7 +267,7 @@
     return '<div class="fn-binder-nav"><button type="button" data-bnav="-1"' + (p0 <= 0 ? ' disabled' : '') + '>‹ Anterior</button>' +
       '<span class="fn-binder-pg">' + lbl + '</span><button type="button" data-bnav="1"' + (p0 + step >= pages ? ' disabled' : '') + '>Próxima ›</button>' +
       '<div class="fn-seg" id="fn-pocket" role="group" aria-label="Bolsos por página">' + POCKETS.map(function (p) { return '<button type="button" data-pocket="' + p.id + '" class="' + (p.id === P.id ? 'is-on' : '') + '">' + p.label + '</button>'; }).join('') + '</div></div>' +
-      '<div class="fn-spread">' + page(p0) + (two ? page(p0 + 1) : '') + '</div>';
+      '<div class="fn-spread" style="--pr:' + Math.round(per / cols) + '">' + page(p0) + (two ? page(p0 + 1) : '') + '</div>';
   }
   function renderDashView() {
     var id = st.set, own = 0, miss = 0, ownN = 0, missN = 0, bestO = null, bestM = null, ver = {}, rar = {}, missing = [];
@@ -349,9 +350,17 @@
     var aw = $('#fn-artist-wrap'), as = $('#fn-artist'); aw.hidden = !arts.length;
     if (arts.length) { as.innerHTML = '<option value="">Todos</option>' + arts.map(function (a) { return '<option value="' + esc(a) + '">' + esc(a) + '</option>'; }).join(''); as.value = arts.indexOf(st.artist) >= 0 ? st.artist : ''; if (as.value !== st.artist) st.artist = as.value; }
     else st.artist = '';
+    applyFocus();
     $('#fn-cols-val').textContent = st.cols;
     $('#fn-cols-wrap').style.display = st.view === 'grid' ? '' : 'none';
     document.documentElement.style.setProperty('--cols', st.cols);
+  }
+  // Modo foco: só no fichário, em tela larga. Esconde cabeçalho/coleções e encaixa as páginas na altura da tela.
+  function applyFocus() {
+    var can = st.view === 'binder' && innerWidth >= 700, on = can && st.focus;
+    document.body.classList.toggle('fn-focus', on);
+    var b = $('#fn-focus'); if (!b) return;
+    b.hidden = !can; b.classList.toggle('is-on', on); b.textContent = on ? '✕ Sair do foco' : '⛶ Foco';
   }
   function renderAll() { loadCur(); renderHero(); renderControls(); renderBody(); renderSide(); }
 
@@ -674,6 +683,11 @@
     $('#fn-cols-plus').addEventListener('click', function () { st.cols = Math.min(10, st.cols + 1); LS.set('cols', st.cols); renderControls(); });
     $('#fn-setbtn').addEventListener('click', openDrawer);
     $('#fn-more').addEventListener('click', openActions);
+    $('#fn-focus').addEventListener('click', function () {
+      st.focus = !st.focus; LS.set('focus', st.focus); applyFocus(); window.scrollTo({ top: 0 });
+      if (st.focus) toast('Modo foco: use as setas ← → para trocar de página e Esc para sair.');
+    });
+    window.addEventListener('resize', applyFocus);
     $('#fn-artist').addEventListener('change', function (e) { st.artist = e.target.value; st.bpage = 0; renderBody(); });
     $('#fn-theme').addEventListener('click', function () {
       var n = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
@@ -702,7 +716,11 @@
       else if (t.dataset.pocket) { st.pocket = String(t.dataset.pocket); LS.set('pocket', st.pocket); st.bpage = 0; renderBody(); }
     });
     document.addEventListener('input', function (e) { if (e.target.classList && e.target.classList.contains('fn-tsearch')) applyTreeFilter(e.target.closest('.fn-side,.fn-drawer')); });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { var ov = $('#fn-overlay'); if (ov && !ov.hidden) closeSheet(); else if (document.body.classList.contains('fn-focus')) { st.focus = false; LS.set('focus', false); applyFocus(); } return; }
+      var tg = e.target && e.target.tagName; if (/INPUT|SELECT|TEXTAREA/.test(tg || '')) return;
+      if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && document.body.classList.contains('fn-focus') && $('#fn-overlay').hidden) { var nb = $('[data-bnav="' + (e.key === 'ArrowRight' ? 1 : -1) + '"]'); if (nb && !nb.disabled) nb.click(); }
+    });
     var bar = $('#fn-bar'), top = function () { return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--top-h')) || 52; };
     var lastY = scrollY;
     addEventListener('scroll', function () {
