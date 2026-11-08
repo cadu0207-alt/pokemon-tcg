@@ -151,7 +151,8 @@ let ficBinderSize = 3;      // 2, 3, 4 (quadrados NxN) ou 5 (= 4×5: 4 colunas �
 // binder_shares.layout etc.): 2/3/4 = NxN; 5 = 5 colunas × 4 linhas. Tudo que pagina (grade do fichário, impressão,
 // Master Set) lê as dimensões por aqui.
 // 04/11/2026: 6 = 5 colunas × 4 linhas (20 por página) — pedido "inclua a opção de 5 colunas e 4 linhas", ao lado do 4×5.
-function binderDims(n) { return n === 5 ? { cols: 4, rows: 5 } : n === 6 ? { cols: 5, rows: 4 } : { cols: n, rows: n }; }
+// 08/11/2026: 7 = 4 colunas × 3 linhas (12 por página) — usado só pelo fichário beta (fichario-novo.js); os botões do fichário atual (BINDER_SIZES) não mudam.
+function binderDims(n) { return n === 5 ? { cols: 4, rows: 5 } : n === 6 ? { cols: 5, rows: 4 } : n === 7 ? { cols: 4, rows: 3 } : { cols: n, rows: n }; }
 window.binderDims = binderDims;
 // Rótulo único dos tamanhos (colunas × linhas): 2→2×2, 3→3×3, 4→4×4, 5→4×5, 6→5×4. Todo botão de tamanho usa isto.
 function binderSizeLabel(n) { const d = binderDims(n); return d.cols + '×' + d.rows; }

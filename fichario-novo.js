@@ -29,14 +29,14 @@
     view: LS.get('view', 'grid'),
     cols: LS.get('cols', defCols),
     lang: (function () { try { return localStorage.getItem('ficLang') || 'pt'; } catch (e) { return 'pt'; } })(), // mesma chave do fichário atual
-    pocket: String(LS.get('pocket', '9')),
+    pocket: (function () { var p = String(LS.get('pocket', '9')); return p === '20a' ? '20b' : p; })(), // 4×5 foi removido: quem tinha escolhido passa ao 5×4
     imp: false,
     focus: !!LS.get('focus', false),
     artist: '',
     bpage: 0
   };
-  var POCKETS = [{ id: '4', cols: 2, per: 4, label: '2×2' }, { id: '9', cols: 3, per: 9, label: '3×3' }, { id: '12', cols: 3, per: 12, label: '3×4' },
-    { id: '16', cols: 4, per: 16, label: '4×4' }, { id: '20a', cols: 4, per: 20, label: '4×5' }, { id: '20b', cols: 5, per: 20, label: '5×4' }];
+  var POCKETS = [{ id: '4', cols: 2, per: 4, label: '2×2' }, { id: '9', cols: 3, per: 9, label: '3×3' }, { id: '12', cols: 4, per: 12, label: '4×3' },
+    { id: '16', cols: 4, per: 16, label: '4×4' }, { id: '20b', cols: 5, per: 20, label: '5×4' }];
   function pocketCfg() { return POCKETS.filter(function (p) { return p.id === String(st.pocket); })[0] || POCKETS[1]; }
   var FAMILY = ['cel30', 'cel30jp', 'cel30cn'];
   var REGION = { pt: 'cel30', en: 'cel30', jp: 'cel30jp', cn: 'cel30cn' };
@@ -475,7 +475,7 @@
   async function runShare() {
     var go = $('#fn-share-go'); if (!go) return; go.disabled = true; go.textContent = 'Gerando…';
     var mode = ($('#fn-share-mode') || {}).value === 'binder' ? 'binder' : 'grid';
-    var layout = { '4': 2, '9': 3, '12': 3, '16': 4, '20a': 5, '20b': 6 }[String(st.pocket)] || 3;
+    var layout = { '4': 2, '9': 3, '12': 7, '16': 4, '20b': 6 }[String(st.pocket)] || 3;
     try {
       var r = await sbClient.from('binder_shares').insert({ user_id: uid(), set_key: setKey(st.set), view_mode: mode, layout: layout }).select('token').single();
       if (r.error || !r.data) throw new Error('x');
@@ -509,7 +509,7 @@
   function doPrint() {
     if (DEMO) { toast('Imprimir não funciona no modo demonstração.'); return; }
     if (typeof printBinder !== 'function') { toast('Impressão indisponível agora. Recarregue a página.'); return; }
-    var code = { '4': 2, '9': 3, '12': 3, '16': 4, '20a': 5, '20b': 6 }[String(st.pocket)] || 3;
+    var code = { '4': 2, '9': 3, '12': 7, '16': 4, '20b': 6 }[String(st.pocket)] || 3;
     try { ficBinderSize = code; if (typeof loadCollection === 'function') loadCollection(); } catch (e) { }
     var cat = SET_CATALOG.filter(function (x) { return x.id === setKey(st.set); })[0] || {};
     closeSheet();
