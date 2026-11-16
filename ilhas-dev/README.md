@@ -14,7 +14,7 @@ npm run build    # gera ../ilhas (commitar junto para publicar)
 ```
 Parâmetros na URL: `?seed=123` muda o mundo, `?n=25` muda o número de participantes (padrão 100), `?bots=10` muda quantos bots jogam (padrão 99).
 
-Controles no PC: WASD ou setas para andar, Espaço ou E para coletar, C para criar, clique num item construível da mochila e depois no mapa para construir (Esc cancela), roda do mouse para zoom.
+Controles no PC: K abre habilidades, 1–5 lançam magias. WASD ou setas para andar, Espaço ou E para coletar, C para criar, clique num item construível da mochila e depois no mapa para construir (Esc cancela), roda do mouse para zoom.
 
 No celular: joystick à esquerda, botão AÇÃO à direita, toque no item construível, toque no mapa e em ✔.
 
@@ -37,4 +37,5 @@ Foi assim que achamos ilhas sem pedra, bots que se trancavam nas próprias const
 - [x] Fase 3 — criaturas (coelho, javali, slime, lobo) com IA, combate, armas, vida/XP/nível, comida, dia/noite (6 min) com fogueira que protege, desmaio sem perda de itens
 - [x] Fase 4 — bots com 4 perfis, utility AI, A*, planejamento de construção; ranking e modo espectador
 - [x] Fase 5 — 99 bots por padrão e 1000 participantes com `?n=1000&bots=999` (1,7 s para carregar, ~37 MB, 60 fps); mapa desenhado em pedaços de 32×32; geração do mundo 115× mais rápida; jangada para navegar entre ilhas
-- [ ] Fase 6 — níveis 5–10 da ilha, árvore de habilidades e magia
+- [x] Fase 6 — minério e cristal (ilhas neutras são ricas), ferro, forja/altar/torre/estátua, ilha nível 1→10, árvore de habilidades (4 ramos × 5), 5 magias com mana, bots planejando a cadeia completa e escolhendo habilidades pelo perfil
+- [ ] Fase 7 — arte e polimento (sprites finais, som, tutorial)

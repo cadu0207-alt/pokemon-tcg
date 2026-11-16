@@ -24,9 +24,11 @@ export const recursoAtivo = (e: EstadoRecursos, r: Recurso) => !e.renasce.has(r.
 /** Melhor ferramenta do inventário para aquele tipo de recurso (ou mão nua). */
 export function ferramentaPara(inv: Inventario, tipo: Recurso['tipo'] | 'criatura'): { id: ItemId | null; dano: number } {
   let melhor: { id: ItemId | null; dano: number } = { id: null, dano: 1 };
+  // minério e cristal se quebram com picareta
+  const alvo = tipo === 'minerio' || tipo === 'cristal' ? 'pedra' : tipo;
   for (const id of Object.keys(inv.itens) as ItemId[]) {
     const f = ITENS[id].ferramenta;
-    if (f && f.alvo === tipo && qtd(inv, id) > 0 && f.dano > melhor.dano) melhor = { id, dano: f.dano };
+    if (f && f.alvo === alvo && qtd(inv, id) > 0 && f.dano > melhor.dano) melhor = { id, dano: f.dano };
   }
   return melhor;
 }
@@ -40,19 +42,24 @@ export interface ResultadoGolpe {
 }
 
 /** Um golpe num recurso. Pura em relação ao tempo: recebe `agora` em ms. */
-export function golpear(e: EstadoRecursos, inv: Inventario, r: Recurso, agora: number): ResultadoGolpe | null {
+/** `bonus`: dano extra (habilidades); `extra`: itens a mais ao destruir; `poupar`: chance de não gastar durabilidade. */
+export function golpear(e: EstadoRecursos, inv: Inventario, r: Recurso, agora: number,
+  { bonus = 0, extra = 0, poupar = 0, rng = Math.random } = {}): ResultadoGolpe | null {
   if (!recursoAtivo(e, r)) return null;
   const f = ferramentaPara(inv, r.tipo);
-  const vida = (e.vida.get(r.id) ?? 0) - f.dano;
-  const ferramentaQuebrou = f.id ? desgastar(inv, f.id) : false;
+  const dano = f.dano + bonus;
+  const vida = (e.vida.get(r.id) ?? 0) - dano;
+  const ferramentaQuebrou = f.id && !(poupar > 0 && rng() < poupar) ? desgastar(inv, f.id) : false;
   if (vida > 0) {
     e.vida.set(r.id, vida);
-    return { dano: f.dano, destruido: false, ganhos: {}, ferramenta: f.id, ferramentaQuebrou };
+    return { dano, destruido: false, ganhos: {}, ferramenta: f.id, ferramentaQuebrou };
   }
   const def = DEF_RECURSO[r.tipo];
-  for (const [id, n] of Object.entries(def.solta)) adicionar(inv, id as ItemId, n ?? 0);
+  const ganhos: Partial<Record<ItemId, number>> = {};
+  Object.entries(def.solta).forEach(([id, n], i) => (ganhos[id as ItemId] = (n ?? 0) + (i === 0 ? extra : 0)));
+  for (const [id, n] of Object.entries(ganhos)) adicionar(inv, id as ItemId, n ?? 0);
   e.renasce.set(r.id, agora + def.renasceMs);
-  return { dano: f.dano, destruido: true, ganhos: { ...def.solta }, ferramenta: f.id, ferramentaQuebrou };
+  return { dano, destruido: true, ganhos, ferramenta: f.id, ferramentaQuebrou };
 }
 
 /** Faz voltar os recursos cujo tempo já passou. Retorna os que voltaram. */

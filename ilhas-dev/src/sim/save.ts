@@ -13,7 +13,9 @@ export interface Save {
   status?: Status;
   tempo?: number;
   /** Estado compacto dos bots (fase 4). */
-  bots?: { x: number; y: number; inv: Inventario; construcoes: Construcao[]; status: Status }[];
+  bots?: { x: number; y: number; inv: Inventario; construcoes: Construcao[]; status: Status; habilidades?: string[] }[];
+  habilidades?: string[];
+  mana?: number;
 }
 
 export function serializar(s: Omit<Save, 'versao'>): string {

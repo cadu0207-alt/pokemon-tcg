@@ -8,7 +8,7 @@ export const TILE_ANDAVEL: Record<Tile, boolean> = {
 };
 
 export interface Ilha { id: number; cx: number; cy: number; raio: number; dono: number | null; }
-export type TipoRecurso = 'arvore' | 'pedra' | 'arbusto';
+export type TipoRecurso = 'arvore' | 'pedra' | 'arbusto' | 'minerio' | 'cristal';
 export interface Recurso { id: number; tipo: TipoRecurso; x: number; y: number; }
 
 export interface Mundo {
@@ -98,7 +98,7 @@ export function gerarMundo({ seed, participantes, tamanhoCelula = 48 }: OpcoesMu
     if (tipo) recursos.push({ id: recursos.length, tipo, x, y });
   }
   // Garante o mínimo de cada recurso em toda ilha inicial (senão uma ilha sem pedra trava o progresso).
-  const MINIMO: Record<TipoRecurso, number> = { arvore: 8, pedra: 5, arbusto: 4 };
+  const MINIMO: Record<TipoRecurso, number> = { arvore: 8, pedra: 5, arbusto: 4, minerio: 2, cristal: 1 };
   const ocupado = new Set(recursos.map(r => r.y * largura + r.x));
   const porPosicao = new Map(recursos.map(r => [r.y * largura + r.x, r]));
   for (const ilha of ilhas) {
@@ -128,6 +128,25 @@ export function gerarMundo({ seed, participantes, tamanhoCelula = 48 }: OpcoesMu
   const livres = recursos.filter(r => !ilhas.some(i => i.dono !== null &&
     Math.abs(r.x - Math.round(i.cx)) <= 1 && Math.abs(r.y - Math.round(i.cy)) <= 1));
   livres.forEach((r, i) => (r.id = i));
+
+  // Ilhas neutras são ricas em minério e cristal: o motivo para navegar.
+  const ocupadoFinal = new Set(livres.map(r => r.y * largura + r.x));
+  const rngNeutra = criarRng(seed ^ 0x51ed);
+  for (const ilha of ilhas) {
+    if (ilha.dono !== null) continue;
+    const alvo = { minerio: 6 + Math.floor(rngNeutra() * 5), cristal: 3 + Math.floor(rngNeutra() * 3) };
+    for (const tipo of ['minerio', 'cristal'] as const) {
+      let falta = alvo[tipo];
+      for (let t = 0; falta > 0 && t < 200; t++) {
+        const a = rngNeutra() * Math.PI * 2, d = rngNeutra() * ilha.raio * 0.9;
+        const x = Math.floor(ilha.cx + Math.cos(a) * d), y = Math.floor(ilha.cy + Math.sin(a) * d);
+        if (x < 0 || y < 0 || x >= largura || y >= altura) continue;
+        const tt = tiles[y * largura + x] as Tile;
+        if ((tt !== Tile.Grama && tt !== Tile.Floresta && tt !== Tile.Areia) || ocupadoFinal.has(y * largura + x)) continue;
+        livres.push({ id: livres.length, tipo, x, y }); ocupadoFinal.add(y * largura + x); falta--;
+      }
+    }
+  }
 
   return { seed, largura, altura, tiles, ilhas, recursos: livres };
 }

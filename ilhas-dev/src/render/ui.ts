@@ -3,6 +3,7 @@ import { criar, podeCriar, qtd, type Inventario } from '../sim/inventario';
 import { contar, proximoNivel, type Construcao } from '../sim/construcao';
 import { icone } from './icones';
 import { xpParaProximo, type Status } from '../sim/criaturas';
+import { HABILIDADES, MAGIAS, podeAprender, pontosLivres, type Magia, type Ramo } from '../sim/habilidades';
 
 /** Estado dos controles de toque, lido pela cena a cada quadro. */
 export const toque = { x: 0, y: 0, acao: false, ativo: false };
@@ -18,6 +19,9 @@ export interface Ganchos {
   comer: (id: ItemId) => void;
   ranking: () => { nome: string; perfil: string; pontos: number }[];
   assistir: (nome: string | null) => void;
+  habilidades: () => { status: Status; aprendidas: string[] };
+  aprender: (id: string) => void;
+  lancar: (m: Magia) => void;
   mudou: () => void;
 }
 
@@ -36,6 +40,17 @@ export class Interface {
     $('zoom-mais').addEventListener('click', () => g.zoom(1.25));
     $('zoom-menos').addEventListener('click', () => g.zoom(0.8));
     $('btn-ranking').addEventListener('click', () => this.alternarRanking());
+    $('btn-hab').addEventListener('click', () => this.alternarHabilidades());
+    $('habilidades').addEventListener('click', e => {
+      const el = e.target as HTMLElement;
+      if (el.closest('.fechar')) return this.alternarHabilidades(false);
+      const no = el.closest<HTMLElement>('[data-h]');
+      if (no) { g.aprender(no.dataset.h!); this.atualizarHabilidades(); }
+    });
+    $('magias').addEventListener('pointerdown', e => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>('[data-m]');
+      if (b) { e.preventDefault(); g.lancar(b.dataset.m as Magia); }
+    });
     $('btn-voltar').addEventListener('click', () => g.assistir(null));
     $('ranking').addEventListener('click', e => {
       const li = (e.target as HTMLElement).closest<HTMLElement>('[data-nome]');
@@ -56,6 +71,42 @@ export class Interface {
     this.aberto = forcar ?? !this.aberto;
     this.craft.hidden = !this.aberto;
     this.atualizar();
+  }
+
+  habAberto = false;
+  alternarHabilidades(forcar?: boolean) {
+    this.habAberto = forcar ?? !this.habAberto;
+    $('habilidades').hidden = !this.habAberto;
+    if (this.habAberto) { this.alternarCraft(false); this.alternarRanking(false); this.atualizarHabilidades(); }
+  }
+
+  private static RAMOS: [Ramo, string][] = [['sobrevivencia', 'Sobrevivência'], ['combate', 'Combate'], ['arcano', 'Arcano'], ['engenharia', 'Engenharia']];
+  atualizarHabilidades() {
+    const { status, aprendidas } = this.g.habilidades();
+    const livres = pontosLivres(status, aprendidas);
+    $('btn-hab').innerHTML = `✦ Habilidades${livres > 0 ? ` <span class="badge">${livres}</span>` : ''}`;
+    if (!this.habAberto) return;
+    $('habilidades').innerHTML = `<h3>Habilidades <small>(K) · ${livres} ponto${livres === 1 ? '' : 's'}</small><button class="fechar">✕</button></h3>
+      <div class="ramos">${Interface.RAMOS.map(([ramo, nome]) => `<div class="ramo ${ramo}"><h4>${nome}</h4>${
+        HABILIDADES.filter(h => h.ramo === ramo).map(h => {
+          const motivo = podeAprender(status, aprendidas, h.id);
+          const cls = motivo === 'aprendida' ? 'ok' : motivo === null ? 'pode' : 'bloq';
+          const dica = motivo === 'nivel' ? `Nível ${h.nivelMin}` : motivo === 'requer_anterior' ? 'Aprenda o anterior' : motivo === 'sem_pontos' ? 'Sem pontos' : '';
+          return `<button class="no ${cls}" data-h="${h.id}" ${cls === 'pode' ? '' : 'tabindex="-1"'}><b>${h.nome}</b><small>${h.descricao}</small>${dica ? `<em>${dica}</em>` : ''}</button>`;
+        }).join('')}</div>`).join('')}</div>`;
+  }
+
+  /** Botões das magias aprendidas, com mana e recarga. */
+  atualizarMagias(magias: Magia[], mana: number, pronta: (m: Magia) => number) {
+    const el = $('magias');
+    if (el.childElementCount !== magias.length) {
+      el.innerHTML = magias.map((m, i) => `<button data-m="${m}" class="magia ${m}"><span>${i + 1}</span>${MAGIAS[m].nome}<i></i></button>`).join('');
+    }
+    el.querySelectorAll<HTMLElement>('[data-m]').forEach(b => {
+      const m = b.dataset.m as Magia, p = pronta(m);
+      b.classList.toggle('sem-mana', mana < MAGIAS[m].custo);
+      (b.querySelector('i') as HTMLElement).style.width = `${(1 - p) * 100}%`;
+    });
   }
 
   rankingAberto = false;
@@ -146,15 +197,17 @@ export class Interface {
 
   private ultimoStatus = '';
   /** Vida, experiência, nível do personagem e relógio do dia. */
-  atualizarStatus(s: Status, noite: boolean, fracDia: number) {
-    const chave = `${s.vida}|${s.vidaMax}|${s.xp}|${s.nivel}|${noite}|${Math.floor(fracDia * 24)}`;
+  atualizarStatus(s: Status, noite: boolean, fracDia: number, mana = 0, manaMax = 0) {
+    const chave = `${Math.ceil(s.vida)}|${s.vidaMax}|${s.xp}|${s.nivel}|${noite}|${Math.floor(fracDia * 24)}|${Math.floor(mana)}|${manaMax}`;
     if (chave === this.ultimoStatus) return;
     this.ultimoStatus = chave;
     const hora = Math.floor((fracDia * 24 + 6) % 24);
     $('status').innerHTML = `
       <div class="linha"><b>Nv ${s.nivel}</b><span class="relogio">${noite ? '☾' : '☀'} ${String(hora).padStart(2, '0')}h</span></div>
       <div class="bar vida"><i style="width:${(100 * Math.max(0, s.vida)) / s.vidaMax}%"></i><span>${Math.max(0, Math.ceil(s.vida))}/${s.vidaMax}</span></div>
+      ${manaMax ? `<div class="bar mana"><i style="width:${(100 * mana) / manaMax}%"></i><span>${Math.floor(mana)}/${manaMax}</span></div>` : ''}
       <div class="bar xp"><i style="width:${(100 * s.xp) / xpParaProximo(s.nivel)}%"></i><span>XP ${s.xp}/${xpParaProximo(s.nivel)}</span></div>`;
+    this.atualizarHabilidades();
   }
 
   /** Joystick virtual (lado esquerdo) e botão de ação. Aparecem no primeiro toque. */

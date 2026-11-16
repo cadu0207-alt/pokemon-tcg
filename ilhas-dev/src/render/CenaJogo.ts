@@ -6,18 +6,19 @@ import { novoInventario, remover, qtd, adicionar, desgastar, type Inventario } f
 import { nivelIlha, validarLocal, type Construcao } from '../sim/construcao';
 import { carregar, serializar } from '../sim/save';
 import { ITENS, type ItemId } from '../sim/itens';
-import { criarCriaturas, criarPersonagem, criarTileset, T, TILE_CONSTRUCAO } from './texturas';
+import { criarCriaturas, criarPersonagem, criarTileset, T, TILE_CONSTRUCAO, TILE_RECURSO as RECURSO_TILE } from './texturas';
 import { Fauna } from './Fauna';
 import { DiaNoite } from './DiaNoite';
 import { BotsVisuais } from './BotsVisuais';
 import { MapaEmPedacos } from './MapaEmPedacos';
+import { Magias } from './Magias';
+import { aprender, efeitos, MAGIAS, podeAprender, type Efeitos, type Magia } from '../sim/habilidades';
 import { Interface, toque } from './ui';
 
 const VELOCIDADE = 5;          // tiles por segundo
 const INTERVALO_GOLPE = 280;   // ms entre golpes em recursos
 const INTERVALO_ATAQUE = 380;  // ms entre golpes em criaturas
 const INVULNERAVEL = 600;      // ms sem levar dano depois de um golpe
-const RECURSO_TILE = { arvore: 6, pedra: 7, arbusto: 8 } as const;
 const DIRS = ['baixo', 'cima', 'esquerda', 'direita'] as const;
 type Dir = (typeof DIRS)[number];
 const VETOR: Record<Dir, [number, number]> = { baixo: [0, 1], cima: [0, -1], esquerda: [-1, 0], direita: [1, 0] };
@@ -50,6 +51,10 @@ export class CenaJogo extends Phaser.Scene {
   private eraNoite = false;
   private invulneravelAte = 0;
   private morto = false;
+  private habilidades: string[] = [];
+  private ef: Efeitos = efeitos([]);
+  private mana = 0;
+  private magias!: Magias;
   private barco!: Phaser.GameObjects.Image;
   private avisouJangada = false;
   private naAgua = false;
@@ -84,6 +89,8 @@ export class CenaJogo extends Phaser.Scene {
       Object.assign(this.inv.durabilidade, save.inventario.durabilidade);
       this.construcoes = save.construcoes;
       if (save.status) this.status = save.status;
+      if (save.habilidades) this.habilidades = save.habilidades;
+      if (save.mana !== undefined) this.mana = save.mana;
       if (save.tempo !== undefined) this.tempoMundo = save.tempo;
     }
     for (const c of this.construcoes) this.removerRecursoSob(c.x, c.y);
@@ -138,11 +145,20 @@ export class CenaJogo extends Phaser.Scene {
       comer: id => this.comer(id),
       ranking: () => this.bots.ranking({ construcoes: this.construcoes, status: this.status }),
       assistir: nome => this.assistir(nome),
+      habilidades: () => ({ status: this.status, aprendidas: this.habilidades }),
+      aprender: id => this.aprenderHabilidade(id),
+      lancar: m => this.lancar(m),
       mudou: () => this.mudou(),
     });
     kb.on('keydown-C', () => this.ui.alternarCraft());
     kb.on('keydown-ESC', () => { this.selecionarConstrucao(null); this.assistir(null); });
     kb.on('keydown-R', () => this.ui.alternarRanking());
+    kb.on('keydown-K', () => this.ui.alternarHabilidades());
+    ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE'].forEach((tecla, i) => kb.on(`keydown-${tecla}`, () => {
+      const m = this.ef.magias[i]; if (m) this.lancar(m);
+    }));
+    this.ef = efeitos(this.habilidades);
+    this.magias = new Magias(this, this.fauna, (b, dano) => this.ferirBicho(b, dano));
     this.time.addEvent({ delay: 1000, loop: true, callback: () => this.ui.atualizarRanking() });
     this.ui.atualizar();
 
@@ -197,7 +213,7 @@ export class CenaJogo extends Phaser.Scene {
       seed: this.mundo.seed, participantes: this.mundo.ilhas.filter(i => i.dono !== null).length,
       jogador: { x: Math.round(this.jogador.x), y: Math.round(this.jogador.y) },
       inventario: this.inv, construcoes: this.construcoes,
-      status: this.status, tempo: Math.round(this.tempoMundo),
+      status: this.status, tempo: Math.round(this.tempoMundo), habilidades: this.habilidades, mana: Math.floor(this.mana),
       bots: this.bots.salvar(),
     });
     try { localStorage.setItem(this.chaveSave, texto); this.sujo = false; } catch { /* sem armazenamento: segue sem salvar */ }
@@ -308,7 +324,7 @@ export class CenaJogo extends Phaser.Scene {
   }
 
   private golpe(r: Recurso) {
-    const res = golpear(this.recursos, this.inv, r, this.time.now);
+    const res = golpear(this.recursos, this.inv, r, this.time.now, { bonus: this.ef.coleta, extra: this.ef.extra, poupar: this.ef.poupar });
     if (!res) return;
     const cx = (r.x + 0.5) * T, cy = (r.y + 0.5) * T;
     // Personagem dá um "tranco" na direção do alvo.
@@ -319,7 +335,7 @@ export class CenaJogo extends Phaser.Scene {
       duration: 70, yoyo: true, onComplete: () => (this.golpeando = false),
     });
     // Lascas saindo do recurso.
-    const cor = r.tipo === 'pedra' ? 0xb9b4b0 : r.tipo === 'arvore' ? 0x8a5a3c : 0x6db35c;
+    const cor = r.tipo === 'pedra' || r.tipo === 'minerio' ? 0xb9b4b0 : r.tipo === 'cristal' ? 0xa98bff : r.tipo === 'arvore' ? 0x8a5a3c : 0x6db35c;
     for (let i = 0; i < 4; i++) {
       const p = this.add.rectangle(cx, cy, 2, 2, cor).setDepth(11);
       this.tweens.add({
@@ -346,8 +362,47 @@ export class CenaJogo extends Phaser.Scene {
     else cam.stopFollow();
   }
 
+  private aprenderHabilidade(id: string) {
+    const motivo = podeAprender(this.status, this.habilidades, id);
+    if (motivo) {
+      if (motivo !== 'aprendida') this.ui.aviso(motivo === 'nivel' ? 'Seu nível ainda é baixo' : motivo === 'sem_pontos' ? 'Sem pontos: suba de nível' : 'Aprenda a anterior primeiro');
+      return;
+    }
+    aprender(this.status, this.habilidades, id);
+    const antes = this.ef.manaMax;
+    this.ef = efeitos(this.habilidades);
+    if (this.ef.manaMax > antes) this.mana = this.ef.manaMax;
+    this.ui.aviso('Nova habilidade aprendida!');
+    this.mudou();
+  }
+
+  private lancar(m: Magia) {
+    const t = this.time.now;
+    if (this.morto || this.assistindo || !this.ef.magias.includes(m)) return;
+    if (!this.magias.pronta(m, t)) return;
+    const custo = MAGIAS[m].custo;
+    if (this.mana < custo) { this.ui.aviso('Mana insuficiente'); return; }
+    this.mana -= custo;
+    const cura = this.magias.lancar(m, t, this.jogador.x, this.jogador.y, VETOR[this.direcao]);
+    if (cura) {
+      this.status.vida = Math.min(this.status.vidaMax, this.status.vida + cura);
+      this.textoFlutuante(this.jogador.x, this.jogador.y - 14, `+${cura} vida`, '#9be38a');
+    }
+    if (m === 'pedra') this.ui.aviso('Pele de pedra: metade do dano por 8 s');
+    if (m === 'vento') this.ui.aviso('Rajada de vento!');
+    this.sujo = true;
+  }
+
   private comer(id: ItemId) {
-    const cura = ITENS[id].comida ?? 0;
+    if (ITENS[id].mana) {
+      if (!this.ef.manaMax) { this.ui.aviso('Aprenda magia (Arcano) para usar mana'); return; }
+      if (this.mana >= this.ef.manaMax) { this.ui.aviso('Mana cheia'); return; }
+      if (!remover(this.inv, id, 1)) return;
+      this.mana = Math.min(this.ef.manaMax, this.mana + ITENS[id].mana!);
+      this.textoFlutuante(this.jogador.x, this.jogador.y - 14, `+${ITENS[id].mana} mana`, '#9cc0ff');
+      this.mudou(); return;
+    }
+    const cura = Math.round((ITENS[id].comida ?? 0) * (1 + this.ef.comida));
     if (this.status.vida >= this.status.vidaMax) { this.ui.aviso('Você está de barriga cheia'); return; }
     if (!remover(this.inv, id, 1)) return;
     this.status.vida = Math.min(this.status.vidaMax, this.status.vida + cura);
@@ -359,13 +414,21 @@ export class CenaJogo extends Phaser.Scene {
     const arma = ferramentaPara(this.inv, 'criatura');
     // Sem arma, o machado ajuda um pouco.
     const base = arma.id ? arma.dano : qtd(this.inv, 'machado_pedra') ? 2 : 1;
-    const dano = base + bonusDano(this.status);
-    if (arma.id && desgastar(this.inv, arma.id)) this.ui.aviso(`${ITENS[arma.id].nome} quebrou!`);
+    const critico = Math.random() < this.ef.critico;
+    const dano = (base + bonusDano(this.status) + this.ef.dano) * (critico ? 2 : 1);
+    if (arma.id && !(Math.random() < this.ef.poupar) && desgastar(this.inv, arma.id)) this.ui.aviso(`${ITENS[arma.id].nome} quebrou!`);
     const j = this.jogador;
     this.golpeando = true;
     const [dx, dy] = [Math.sign(b.c.x * T - j.x), Math.sign(b.c.y * T - j.y)];
     this.tweens.add({ targets: j, x: j.x + dx * 3, y: j.y + dy * 3, duration: 70, yoyo: true, onComplete: () => (this.golpeando = false) });
-    this.textoFlutuante(b.c.x * T, b.c.y * T - 14, `${dano}`, '#ffd166');
+    this.ferirBicho(b, dano, critico);
+    this.mudou();
+  }
+
+  /** Dano em criatura por golpe ou magia: recompensa, XP e nível. */
+  private ferirBicho(b: import('./Fauna').Bicho, dano: number, critico = false) {
+    const j = this.jogador;
+    this.textoFlutuante(b.c.x * T, b.c.y * T - 14, critico ? `${dano}!` : `${dano}`, critico ? '#ff8a3c' : '#ffd166');
     const def = CRIATURAS[b.c.tipo];
     if (this.fauna.ferir(b, dano, j.x / T, j.y / T)) {
       let i = 0;
@@ -383,6 +446,7 @@ export class CenaJogo extends Phaser.Scene {
   private levarDano(dano: number, agora: number) {
     if (dano <= 0 || this.morto || agora < this.invulneravelAte) return;
     this.invulneravelAte = agora + INVULNERAVEL;
+    if (this.time.now < this.magias.escudoAte) dano = Math.ceil(dano / 2);
     this.status.vida -= dano;
     this.textoFlutuante(this.jogador.x, this.jogador.y - 14, `-${dano}`, '#ff8080');
     this.jogador.setTint(0xff8080);
@@ -431,7 +495,13 @@ export class CenaJogo extends Phaser.Scene {
     }
     this.diaNoite.atualizar(this.tempoMundo, this.construcoes.filter(c => c.tipo === 'fogueira'), t);
     this.levarDano(this.fauna.atualizar(dt, j.x / T, j.y / T, !this.morto, noite), t);
-    this.ui.atualizarStatus(this.status, noite, (this.tempoMundo % DURACAO_DIA) / DURACAO_DIA);
+    if (!this.morto) {
+      this.mana = Math.min(this.ef.manaMax, this.mana + dt / 1000);
+      if (this.ef.regen) this.status.vida = Math.min(this.status.vidaMax, this.status.vida + (this.ef.regen * dt) / 1000);
+    }
+    this.magias.atualizar(dt, (px, py) => !TILE_ANDAVEL[tileEm(this.mundo, Math.floor(px / T), Math.floor(py / T))] && !ehAgua(tileEm(this.mundo, Math.floor(px / T), Math.floor(py / T))) || this.bloqueio.has(this.idx(Math.floor(px / T), Math.floor(py / T))));
+    this.ui.atualizarMagias(this.ef.magias, this.mana, m => this.magias.progressoRecarga(m, t));
+    this.ui.atualizarStatus(this.status, noite, (this.tempoMundo % DURACAO_DIA) / DURACAO_DIA, this.mana, this.ef.manaMax);
     this.bots.atualizar({
       mundo: this.mundo, recursos: this.recursos, agora: t, noite,
       bloqueado: (x, y) => this.bloqueio.has(this.idx(x, y)),
@@ -455,7 +525,8 @@ export class CenaJogo extends Phaser.Scene {
     if (k.S.isDown || k.DOWN.isDown) vy += 1;
     if (toque.x || toque.y) { vx = toque.x; vy = toque.y; }
     if ((vx || vy) && !this.golpeando) {
-      const passo = (VELOCIDADE * (this.naAgua ? 0.85 : 1) * T * dt) / 1000 / Math.max(1, Math.hypot(vx, vy));
+      const vel = VELOCIDADE * (this.naAgua ? 0.85 : 1) * (1 + this.ef.velocidade) * (t < this.magias.ventoAte ? 1.8 : 1);
+      const passo = (vel * T * dt) / 1000 / Math.max(1, Math.hypot(vx, vy));
       const nx = j.x + vx * passo, ny = j.y + vy * passo;
       if (this.livre(nx, j.y)) j.x = nx;
       if (this.livre(j.x, ny)) j.y = ny;
@@ -477,7 +548,7 @@ export class CenaJogo extends Phaser.Scene {
     const bicho = this.fauna.alvo(j.x / T, j.y / T, VETOR[this.direcao]);
     if (bicho) {
       this.alvo.setVisible(false);
-      if (apertou && t - this.ultimoGolpe >= INTERVALO_ATAQUE) { this.ultimoGolpe = t; this.atacar(bicho); }
+      if (apertou && t - this.ultimoGolpe >= INTERVALO_ATAQUE / (1 + this.ef.velocidadeAtaque)) { this.ultimoGolpe = t; this.atacar(bicho); }
       return;
     }
     const alvo = this.recursoAlvo();

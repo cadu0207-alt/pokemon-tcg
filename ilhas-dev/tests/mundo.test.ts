@@ -31,13 +31,15 @@ describe('escala', () => {
     const L = m.largura;
     const porTile = new Map(m.recursos.map(r => [r.y * L + r.x, r]));
     for (const ilha of m.ilhas.filter(i => i.dono !== null).slice(0, 200)) {
-      const cont = { arvore: 0, pedra: 0, arbusto: 0 };
+      const cont = { arvore: 0, pedra: 0, arbusto: 0, minerio: 0, cristal: 0 };
       const R = Math.ceil(ilha.raio * 1.3);
       for (let y = Math.floor(ilha.cy) - R; y <= ilha.cy + R; y++) for (let x = Math.floor(ilha.cx) - R; x <= ilha.cx + R; x++) {
         const r = porTile.get(y * L + x);
         if (r && Math.hypot(r.x + 0.5 - ilha.cx, r.y + 0.5 - ilha.cy) < ilha.raio * 1.3) cont[r.tipo]++;
       }
       expect(cont.pedra, `ilha ${ilha.id}`).toBeGreaterThanOrEqual(5);
+      expect(cont.minerio, `ilha ${ilha.id}`).toBeGreaterThanOrEqual(2);
+      expect(cont.cristal, `ilha ${ilha.id}`).toBeGreaterThanOrEqual(1);
     }
   }, 30_000);
 });

@@ -9,7 +9,7 @@ const ROUPAS = ['#7aa7ff', '#ff9a8a', '#8fd27a', '#c39bff', '#ffd166', '#7fd6d6'
 const CABELOS = ['#ff8fb1', '#6b4a3a', '#f5d06f', '#3a3a5a', '#d9668e', '#e8e8f0', '#7aa7ff', '#a0522d'];
 const DIRS = ['baixo', 'cima', 'esquerda', 'direita'] as const;
 
-export interface SaveBot { x: number; y: number; inv: Bot['inv']; construcoes: Construcao[]; status: Status; }
+export interface SaveBot { x: number; y: number; inv: Bot['inv']; construcoes: Construcao[]; status: Status; habilidades?: string[]; }
 
 /** Liga a simulação dos bots ao mundo desenhado: sprites, nomes e efeitos no mapa. */
 export class BotsVisuais {
@@ -26,7 +26,7 @@ export class BotsVisuais {
     this.bots = criarBots(mundo, quantidade, seed);
     this.bots.forEach((b, i) => {
       const s = save?.[i];
-      if (s) { b.x = s.x; b.y = s.y; b.inv = s.inv; b.construcoes = s.construcoes; b.status = s.status; }
+      if (s) { b.x = s.x; b.y = s.y; b.inv = s.inv; b.construcoes = s.construcoes; b.status = s.status; b.habilidades = s.habilidades ?? []; }
       this.sprites.push(scene.add.sprite(b.x * T, b.y * T, `bot${b.cor}`, 0).setOrigin(0.5, 0.75));
       this.nomes.push(scene.add.text(b.x * T, b.y * T - 16, b.nome, {
         fontFamily: 'system-ui, sans-serif', fontSize: '28px', color: '#ffffff', stroke: '#3a2f45', strokeThickness: 6,
@@ -69,6 +69,6 @@ export class BotsVisuais {
   }
 
   salvar(): SaveBot[] {
-    return this.bots.map(b => ({ x: +b.x.toFixed(2), y: +b.y.toFixed(2), inv: b.inv, construcoes: b.construcoes, status: b.status }));
+    return this.bots.map(b => ({ x: +b.x.toFixed(2), y: +b.y.toFixed(2), inv: b.inv, construcoes: b.construcoes, status: b.status, habilidades: b.habilidades }));
   }
 }

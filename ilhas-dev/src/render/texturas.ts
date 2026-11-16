@@ -5,8 +5,9 @@ import { criarRng } from '../sim/rng';
 export const T = 16;
 
 /** Tileset: 0..5 terrenos (ordem do enum Tile), 6..8 árvore/pedra/arbusto, 9..13 construções. */
-export const N_TILES = 14;
-export const TILE_CONSTRUCAO = { fogueira: 9, bancada: 10, bau: 11, casa: 12, cerca: 13 } as const;
+export const N_TILES = 20;
+export const TILE_RECURSO = { arvore: 6, pedra: 7, arbusto: 8, minerio: 14, cristal: 15 } as const;
+export const TILE_CONSTRUCAO = { fogueira: 9, bancada: 10, bau: 11, casa: 12, cerca: 13, forja: 16, altar: 17, torre: 18, estatua: 19 } as const;
 export function criarTileset(scene: Phaser.Scene) {
   const c = document.createElement('canvas');
   c.width = T * N_TILES; c.height = T;
@@ -75,6 +76,38 @@ export function criarTileset(scene: Phaser.Scene) {
     '..kt.......tk...', 'kkktkkkkkkkktkkk', 'wwwtwwwwwwwwtwww', 'kkktkkkkkkkktkkk', '..kt.......tk...',
     'kkktkkkkkkkktkkk', 'wwwtwwwwwwwwtwww', 'kkktkkkkkkkktkkk', '..kt.......tk...', '..kk.......kk...', '................',
   ], madeira, 13 * T, 0);
+
+  const ped = { k: COR.contorno, p: COR.pedra, d: COR.pedraEsc, w: '#fff' };
+  desenhar(ctx, [
+    '................', '................', '................', '................', '................', '.....kkkkk......',
+    '....kpopppk.....', '...kppppoppk....', '..kpoppppppdk...', '..kppppoppddk...', '.kppopppppdodk..',
+    '.kpppppopdddk...', '..kkkkkkkkkkk...', '................', '................', '................',
+  ], { ...ped, o: '#d9844a' }, 14 * T, 0);
+  desenhar(ctx, [
+    '................', '................', '.......k........', '......kck.......', '.....kcwck......', '..k..kcccck.....',
+    '.kck.kccccck....', '.kcwkkccccck..k.', '.kccckcccck..kck', '..kcckccck..kcck', '...kkcccck..kck.',
+    '..kpppppppppkk..', '.kpdppppppdppk..', '..kkkkkkkkkkk...', '................', '................',
+  ], { ...ped, c: '#a98bff' }, 15 * T, 0);
+  desenhar(ctx, [
+    '................', '..........kk....', '..........kpk...', '...kkkkkkkkpk...', '..kppppppppppk..', '..kpdpppppppdk..',
+    '..kppkkkkkkppk..', '..kpkoyyyyokpk..', '..kpkoyrryokpk..', '..kpkkkkkkkkpk..', '..kpppppppppdk..',
+    '..kpdppppdpppk..', '..kkkkkkkkkkkk..', '................', '................', '................',
+  ], { ...ped, o: '#ff9a3c', y: '#ffe07a', r: '#e0503c' }, 16 * T, 0);
+  desenhar(ctx, [
+    '................', '.......kk.......', '......kcck......', '.....kcwcck.....', '......kcck......', '.......kk.......',
+    '....kkkkkkkk....', '...kppppppppk...', '...kpcppppcpk...', '...kppppppppk...', '..kkkkkkkkkkkk..',
+    '..kpppppppppdk..', '.kppdpppppppdpk.', '.kkkkkkkkkkkkkk.', '................', '................',
+  ], { ...ped, c: '#a98bff' }, 17 * T, 0);
+  desenhar(ctx, [
+    '...k.k.k.k.k....', '...kkkkkkkkk....', '...kpppppppk....', '....kppbppk.....', '....kpppppk.....', '....kpdpppk.....',
+    '....kpppppk.....', '....kppbppk.....', '....kpppdpk.....', '....kpppppk.....', '...kppdppppk....',
+    '...kpppppppk....', '..kpppkkkpppk...', '..kpppkdkpdpk...', '..kkkkkkkkkkk...', '................',
+  ], { ...ped, b: '#3a2f45' }, 18 * T, 0);
+  desenhar(ctx, [
+    '......kkk.......', '.....kcwck......', '.....kccck......', '......kck.......', '....kkpppkk.....', '...kpppppppk....',
+    '...kpkpppkpk....', '...kp.kpk.pk....', '.....kpppk......', '.....kp.pk......', '.....kp.pk......',
+    '...kkkkkkkkk....', '..kpdpppppdpk...', '..kpppppppppk...', '..kkkkkkkkkkk...', '................',
+  ], { ...ped, c: '#a98bff' }, 19 * T, 0);
   // Extrusão: cada tile ganha 1px de borda copiada, evitando linhas entre tiles com zoom fracionário.
   const e = document.createElement('canvas');
   e.width = N_TILES * (T + 2); e.height = T + 2;

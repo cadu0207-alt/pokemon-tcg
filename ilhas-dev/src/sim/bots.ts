@@ -6,6 +6,7 @@ import { adicionar, criar, novoInventario, podeCriar, qtd, type Inventario } fro
 import { ITENS, RECEITAS, type ItemId, type Receita } from './itens';
 import { TILE_ANDAVEL, tileEm, type Ilha, type Mundo, type Recurso } from './mundo';
 import { criarRng } from './rng';
+import { aprender, efeitos, escolherHabilidade } from './habilidades';
 
 // ---------- Perfis de personalidade ----------
 
@@ -40,6 +41,7 @@ export interface Bot {
   ilha: Ilha;
   x: number; y: number;              // em tiles (contínuo, centro do tile = .5)
   inv: Inventario; construcoes: Construcao[]; status: Status;
+  habilidades: string[];
   objetivo: Objetivo | null;
   caminho: [number, number][];
   proximaDecisao: number;            // instante (ms) da próxima reavaliação
@@ -62,7 +64,7 @@ export function criarBots(m: Mundo, quantidade: number, seed: number): Bot[] {
       id: i, nome: `${NOMES[i % NOMES.length]}${i >= NOMES.length ? ` ${Math.floor(i / NOMES.length) + 1}` : ''}`,
       perfil: perfis[Math.floor(rng() * perfis.length)], cor: Math.floor(rng() * 8),
       ilha, x: Math.round(ilha.cx) + 0.5, y: Math.round(ilha.cy) + 0.5,
-      inv: novoInventario(), construcoes: [], status: novoStatus(),
+      inv: novoInventario(), construcoes: [], status: novoStatus(), habilidades: [],
       objetivo: null, caminho: [], proximaDecisao: rng() * 2000, proximoGolpe: 0,
       dir: [0, 1], andando: false, rng: criarRng(seed + i * 7919), ignorar: new Map(),
     });
@@ -101,24 +103,36 @@ export function metas(bot: Bot): ItemId[] {
     }
   }
   for (const f of META_FERRAMENTAS) if (!qtd(bot.inv, f)) quer.push(f);
+  if (nivelIlha(bot.construcoes) >= 5) for (const f of ['machado_ferro', 'picareta_ferro'] as ItemId[]) if (!qtd(bot.inv, f)) quer.push(f);
   if (bot.perfil === 'cacador' && !qtd(bot.inv, 'lanca_madeira') && !qtd(bot.inv, 'espada_pedra')) quer.push('lanca_madeira');
   return quer;
 }
 
 const receitaDe = (id: ItemId): Receita | undefined => RECEITAS.find(r => r.id === id);
 
-/** Matérias-primas que faltam para cumprir as metas (corda vira fibra). */
-export function necessidades(bot: Bot): { madeira: number; pedra: number; fibra: number } {
-  const total: Partial<Record<ItemId, number>> = {};
-  const somar = (id: ItemId, n: number) => (total[id] = (total[id] ?? 0) + n);
-  for (const meta of metas(bot)) {
-    const r = receitaDe(meta);
-    if (r) for (const [id, n] of Object.entries(r.custo)) somar(id as ItemId, n ?? 0);
-  }
-  const cordaFalta = Math.max(0, (total.corda ?? 0) - qtd(bot.inv, 'corda'));
-  somar('fibra', cordaFalta * 3);
-  const falta = (id: ItemId) => Math.max(0, (total[id] ?? 0) - qtd(bot.inv, id));
-  return { madeira: falta('madeira'), pedra: falta('pedra'), fibra: falta('fibra') };
+export const MATERIAS = ['madeira', 'pedra', 'fibra', 'minerio', 'cristal'] as const;
+export type Materia = (typeof MATERIAS)[number];
+
+/**
+ * Matérias-primas que faltam para cumprir as metas. Expande receitas recursivamente
+ * (estátua → lingote → minério), descontando o que já está na mochila.
+ */
+export function necessidades(bot: Bot): Record<Materia, number> {
+  const estoque: Partial<Record<ItemId, number>> = { ...bot.inv.itens };
+  const falta: Record<Materia, number> = { madeira: 0, pedra: 0, fibra: 0, minerio: 0, cristal: 0 };
+  const precisar = (id: ItemId, n: number, prof = 0) => {
+    const tem = Math.min(estoque[id] ?? 0, n);
+    estoque[id] = (estoque[id] ?? 0) - tem;
+    const resto = n - tem;
+    if (resto <= 0) return;
+    if ((MATERIAS as readonly string[]).includes(id)) { falta[id as Materia] += resto; return; }
+    const r = receitaDe(id);
+    if (!r || prof > 4) return;
+    const vezes = Math.ceil(resto / r.qtd);
+    for (const [sub, q] of Object.entries(r.custo)) precisar(sub as ItemId, (q ?? 0) * vezes, prof + 1);
+  };
+  for (const meta of metas(bot)) { const r = receitaDe(meta); if (r) for (const [id, q] of Object.entries(r.custo)) precisar(id as ItemId, q ?? 0); }
+  return falta;
 }
 
 /** Cria tudo o que já dá para criar e que ajuda nas metas. Retorna o que criou. */
@@ -128,8 +142,9 @@ export function criarOQueDer(bot: Bot): ItemId[] {
   for (let tentativas = 0; tentativas < 10; tentativas++) {
     const ms = metas(bot);
     // corda primeiro se alguma meta pede corda
-    const precisaCorda = ms.some(m => (receitaDe(m)?.custo.corda ?? 0) > qtd(bot.inv, 'corda'));
-    const ordem: ItemId[] = precisaCorda ? ['corda', ...ms] : ms;
+    // intermediários primeiro, se alguma meta pede mais do que há na mochila
+    const intermediarios = (['corda', 'lingote'] as ItemId[]).filter(i => ms.some(m => (receitaDe(m)?.custo[i] ?? 0) > qtd(bot.inv, i)));
+    const ordem: ItemId[] = [...intermediarios, ...ms];
     const r = ordem.map(receitaDe).find(r => r && podeCriar(bot.inv, r, nivel));
     if (!r || !criar(bot.inv, r, nivel)) break;
     criados.push(r.id);
@@ -143,7 +158,7 @@ export function criarOQueDer(bot: Bot): ItemId[] {
 
 // ---------- Utility AI: escolher o próximo objetivo ----------
 
-const TIPO_DE: Record<'madeira' | 'pedra' | 'fibra', Recurso['tipo']> = { madeira: 'arvore', pedra: 'pedra', fibra: 'arbusto' };
+const TIPO_DE: Record<Materia, Recurso['tipo']> = { madeira: 'arvore', pedra: 'pedra', fibra: 'arbusto', minerio: 'minerio', cristal: 'cristal' };
 
 function recursoMaisProximo(bot: Bot, ctx: MundoBots, tipo: Recurso['tipo']): Recurso | null {
   const ignorado = (r: Recurso) => (bot.ignorar.get(r.id) ?? 0) > ctx.agora;
@@ -159,21 +174,42 @@ function recursoMaisProximo(bot: Bot, ctx: MundoBots, tipo: Recurso['tipo']): Re
   return melhor;
 }
 
-/** Lugar livre na ilha do bot, em espiral a partir do centro. */
+/** Quantos tiles andáveis da ilha são alcançáveis a partir do centro, tratando `sem` como bloqueado. */
+function alcancaveis(bot: Bot, ctx: MundoBots, sem: number | null): number {
+  const L = ctx.mundo.largura;
+  const ini = Math.round(bot.ilha.cy) * L + Math.round(bot.ilha.cx);
+  const pode = (i: number) => i !== sem && naIlha(bot.ilha, i % L, Math.floor(i / L)) && andavelPara(ctx, i % L, Math.floor(i / L));
+  if (!pode(ini)) return 0;
+  const visto = new Set([ini]); const fila = [ini];
+  while (fila.length) {
+    const i = fila.pop()!;
+    for (const v of [i + 1, i - 1, i + L, i - L]) if (!visto.has(v) && pode(v)) { visto.add(v); fila.push(v); }
+  }
+  return visto.size;
+}
+
+/**
+ * Lugar livre na ilha do bot, em espiral a partir do centro.
+ * Só aceita tiles que não separam a ilha em partes (senão o bot pode se trancar).
+ */
 export function lugarParaConstruir(bot: Bot, ctx: MundoBots): { x: number; y: number } | null {
   const cx = Math.round(bot.ilha.cx), cy = Math.round(bot.ilha.cy);
-  const ocupado = (x: number, y: number) => ctx.bloqueado(x, y) || !!ctx.recursos.porTile.get(y * ctx.mundo.largura + x);
+  const L = ctx.mundo.largura;
+  const ocupado = (x: number, y: number) => ctx.bloqueado(x, y) || !!ctx.recursos.porTile.get(y * L + x);
   const bx = Math.floor(bot.x), by = Math.floor(bot.y);
-  for (let r = 2; r < bot.ilha.raio * 1.3; r++) {
+  let base = -1;
+  // 1ª passada: grade de passo 2 (corredores regulares, ilha bonita); 2ª: qualquer tile que não separe a ilha.
+  for (const soGrade of [true, false]) for (let r = 2; r < bot.ilha.raio * 1.3; r++) {
     for (let i = -r; i <= r; i++) for (const [x, y] of [[cx + i, cy - r], [cx + i, cy + r], [cx - r, cy + i], [cx + r, cy + i]]) {
-      // Só em pontos de uma grade de passo 2: linhas e colunas ímpares ficam sempre livres,
-      // então as construções nunca fecham um corredor (nem prendem o próprio bot).
-      if ((x - cx) % 2 !== 0 || (y - cy) % 2 !== 0) continue;
+      if (soGrade && ((x - cx) % 2 !== 0 || (y - cy) % 2 !== 0)) continue;
+      if (!soGrade && (x - cx) % 2 === 0 && (y - cy) % 2 === 0) continue; // já vistos
       if (x === bx && y === by) continue;
-      if (bot.ignorar.has(-(y * ctx.mundo.largura + x) - 1)) continue; // lugar já tentado sem caminho
+      if (bot.ignorar.has(-(y * L + x) - 1)) continue; // lugar já tentado sem caminho
       if (validarLocal(ctx.mundo, bot.ilha, bot.construcoes, ocupado, x, y)) continue;
-      // precisa ter um vizinho andável para o bot chegar
-      if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([vx, vy]) => andavelPara(ctx, x + vx, y + vy) && naIlha(bot.ilha, x + vx, y + vy))) return { x, y };
+      if (![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([vx, vy]) => andavelPara(ctx, x + vx, y + vy) && naIlha(bot.ilha, x + vx, y + vy))) continue;
+      if (base < 0) base = alcancaveis(bot, ctx, null);
+      if (alcancaveis(bot, ctx, y * L + x) !== base - 1) continue; // separaria a ilha (pode mudar quando árvores caírem)
+      return { x, y };
     }
   }
   return null;
@@ -199,7 +235,7 @@ export function avaliar(bot: Bot, ctx: MundoBots): Opcao[] {
   }
   // Coletar o que falta
   const nec = necessidades(bot);
-  for (const mat of ['madeira', 'pedra', 'fibra'] as const) {
+  for (const mat of MATERIAS) {
     const n = nec[mat];
     if (n <= 0) continue;
     const r = recursoMaisProximo(bot, ctx, TIPO_DE[mat]);
@@ -210,7 +246,7 @@ export function avaliar(bot: Bot, ctx: MundoBots): Opcao[] {
   // Caçar (abstrato: anda pela ilha e volta com carne/couro/XP)
   const fome = bot.status.vida < bot.status.vidaMax * 0.5 && !qtd(bot.inv, 'carne') ? 0.4 : 0;
   // Com construção pendente, caçar perde prioridade (senão o caçador nunca termina a ilha).
-  const pendente = nec.madeira + nec.pedra + nec.fibra > 0 ? 0.5 : 1;
+  const pendente = MATERIAS.some(m => nec[m] > 0) ? 0.5 : 1;
   ops.push({ objetivo: { tipo: 'cacar', ate: ctx.agora + 6000 + bot.rng() * 5000 }, nota: (0.25 * pendente + fome) * p.cacar * (ctx.noite ? 0.3 : 1) * ruido() });
   // À noite, quem tem fogueira descansa perto dela
   if (ctx.noite && temFogueira) ops.push({ objetivo: { tipo: 'descansar', ate: ctx.agora + 8000 }, nota: 0.75 * ruido() });
@@ -226,6 +262,20 @@ function irPara(bot: Bot, ctx: MundoBots, x: number, y: number, adjacente: boole
     naIlha(bot.ilha, tx, ty), { alvoAdjacente: adjacente, maxNos: 1500 });
   bot.caminho = c ?? [];
   return c !== null;
+}
+
+/** Primeira árvore no caminho até (x, y), considerando árvores como atravessáveis. */
+function arvoreNoCaminho(bot: Bot, ctx: MundoBots, x: number, y: number): Recurso | null {
+  const L = ctx.mundo.largura;
+  const arvoreEm = (tx: number, ty: number) => {
+    const r = ctx.recursos.porTile.get(ty * L + tx);
+    return r && r.tipo === 'arvore' && recursoAtivo(ctx.recursos, r) ? r : null;
+  };
+  const c = acharCaminho(Math.floor(bot.x), Math.floor(bot.y), x, y, (tx, ty) => naIlha(bot.ilha, tx, ty) &&
+    TILE_ANDAVEL[tileEm(ctx.mundo, tx, ty)] && (!ctx.bloqueado(tx, ty) || !!arvoreEm(tx, ty)), { alvoAdjacente: true, maxNos: 2000 });
+  if (!c) return null;
+  for (const [tx, ty] of c) { const a = arvoreEm(tx, ty); if (a) return a; }
+  return null;
 }
 
 function passo(bot: Bot, dt: number): boolean {
@@ -253,6 +303,7 @@ export function atualizarBot(bot: Bot, ctx: MundoBots, dt: number) {
   const reavaliar = bot.objetivo && (bot.objetivo.tipo === 'coletar' || bot.objetivo.tipo === 'construir') && ctx.agora >= bot.proximaDecisao;
   if (!bot.objetivo || reavaliar) {
     criarOQueDer(bot);
+    for (let h = escolherHabilidade(bot.status, bot.habilidades, bot.perfil); h; h = escolherHabilidade(bot.status, bot.habilidades, bot.perfil)) aprender(bot.status, bot.habilidades, h);
     // come se estiver machucado
     for (const c of ['carne_assada', 'baga', 'carne'] as ItemId[]) {
       if (bot.status.vida < bot.status.vidaMax - 4 && qtd(bot.inv, c)) {
@@ -265,8 +316,10 @@ export function atualizarBot(bot: Bot, ctx: MundoBots, dt: number) {
     bot.proximaDecisao = ctx.agora + 4000;
     bot.caminho = [];
     if (escolha.tipo === 'coletar' && !irPara(bot, ctx, escolha.recurso.x, escolha.recurso.y, true)) {
-      bot.ignorar.set(escolha.recurso.id, ctx.agora + 60_000); // sem caminho: tenta outro
-      bot.objetivo = null;
+      // Sem caminho: se árvores estão no meio, abre caminho cortando a primeira delas.
+      const arvore = arvoreNoCaminho(bot, ctx, escolha.recurso.x, escolha.recurso.y);
+      if (arvore && irPara(bot, ctx, arvore.x, arvore.y, true)) bot.objetivo = { tipo: 'coletar', recurso: arvore };
+      else { bot.ignorar.set(escolha.recurso.id, ctx.agora + 60_000); bot.objetivo = null; }
     }
     else if (escolha.tipo === 'construir' && !irPara(bot, ctx, escolha.x, escolha.y, true)) {
       bot.ignorar.set(-(escolha.y * ctx.mundo.largura + escolha.x) - 1, Infinity); // chave negativa = lugar
@@ -289,7 +342,8 @@ export function atualizarBot(bot: Bot, ctx: MundoBots, dt: number) {
       bot.dir = [o.recurso.x + 0.5 - bot.x, o.recurso.y + 0.5 - bot.y];
       if (ctx.agora < bot.proximoGolpe) return;
       bot.proximoGolpe = ctx.agora + PERFIS[bot.perfil].ritmo;
-      const res = golpear(ctx.recursos, bot.inv, o.recurso, ctx.agora);
+      const ef = efeitos(bot.habilidades);
+      const res = golpear(ctx.recursos, bot.inv, o.recurso, ctx.agora, { bonus: ef.coleta, extra: ef.extra, poupar: ef.poupar, rng: bot.rng });
       if (res?.destruido) { ctx.aoDestruir?.(o.recurso); bot.objetivo = null; }
       return;
     }
@@ -310,7 +364,7 @@ export function atualizarBot(bot: Bot, ctx: MundoBots, dt: number) {
       if (ctx.agora < o.ate) return;
       // resultado abstrato da caçada: depende da arma
       const arma = ferramentaPara(bot.inv, 'criatura');
-      const sorte = bot.rng() + (arma.id ? 0.35 : 0);
+      const sorte = bot.rng() + (arma.id ? 0.35 : 0) + efeitos(bot.habilidades).dano * 0.03;
       if (sorte > 0.45) {
         adicionar(bot.inv, 'carne', 1 + (sorte > 0.9 ? 1 : 0));
         if (sorte > 0.75) adicionar(bot.inv, 'couro', 1);

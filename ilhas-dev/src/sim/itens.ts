@@ -2,12 +2,16 @@ export type ItemId =
   | 'madeira' | 'pedra' | 'fibra' | 'baga' | 'corda'
   | 'machado_pedra' | 'picareta_pedra' | 'foice_pedra'
   | 'fogueira' | 'bancada' | 'bau' | 'casa' | 'cerca'
-  | 'carne' | 'couro' | 'gosma' | 'carne_assada' | 'espada_pedra' | 'lanca_madeira' | 'jangada';
+  | 'carne' | 'couro' | 'gosma' | 'carne_assada' | 'espada_pedra' | 'lanca_madeira' | 'jangada'
+  | 'minerio' | 'cristal' | 'lingote' | 'machado_ferro' | 'picareta_ferro' | 'espada_ferro' | 'pocao_mana'
+  | 'forja' | 'altar' | 'torre' | 'estatua';
 
 export interface DefItem {
   nome: string;
   /** Ferramentas: tipo de recurso em que dão mais dano, dano e durabilidade. */
   ferramenta?: { alvo: 'arvore' | 'pedra' | 'arbusto' | 'criatura'; dano: number; durabilidade: number };
+  /** Poção: restaura mana. */
+  mana?: number;
   /** Itens que serão posicionados na ilha (fase 2). */
   construivel?: boolean;
   comida?: number;
@@ -35,6 +39,17 @@ export const ITENS: Record<ItemId, DefItem> = {
   espada_pedra: { nome: 'Espada de pedra', ferramenta: { alvo: 'criatura', dano: 5, durabilidade: 50 } },
   /** Com a jangada na mochila dá para navegar pela água. */
   jangada: { nome: 'Jangada' },
+  minerio: { nome: 'Minério de ferro' },
+  cristal: { nome: 'Cristal de mana' },
+  lingote: { nome: 'Lingote de ferro' },
+  machado_ferro: { nome: 'Machado de ferro', ferramenta: { alvo: 'arvore', dano: 6, durabilidade: 120 } },
+  picareta_ferro: { nome: 'Picareta de ferro', ferramenta: { alvo: 'pedra', dano: 6, durabilidade: 120 } },
+  espada_ferro: { nome: 'Espada de ferro', ferramenta: { alvo: 'criatura', dano: 9, durabilidade: 150 } },
+  pocao_mana: { nome: 'Poção de mana', mana: 15 },
+  forja: { nome: 'Forja', construivel: true },
+  altar: { nome: 'Altar arcano', construivel: true },
+  torre: { nome: 'Torre', construivel: true },
+  estatua: { nome: 'Estátua do guardião', construivel: true },
 };
 
 /** `nivel`: nível mínimo da ilha para liberar a receita. */
@@ -51,6 +66,15 @@ export const RECEITAS: Receita[] = [
   { id: 'espada_pedra', qtd: 1, custo: { madeira: 2, pedra: 4, corda: 1, couro: 1 }, nivel: 2 },
   { id: 'carne_assada', qtd: 1, custo: { carne: 1, madeira: 1 }, nivel: 2 },
   { id: 'jangada', qtd: 1, custo: { madeira: 12, corda: 4 }, nivel: 2 },
+  { id: 'pocao_mana', qtd: 1, custo: { gosma: 2, baga: 2 }, nivel: 2 },
+  { id: 'forja', qtd: 1, custo: { pedra: 15, madeira: 6, minerio: 2 }, nivel: 4 },
+  { id: 'lingote', qtd: 1, custo: { minerio: 2, madeira: 1 }, nivel: 5 },
+  { id: 'machado_ferro', qtd: 1, custo: { lingote: 2, madeira: 2 }, nivel: 5 },
+  { id: 'picareta_ferro', qtd: 1, custo: { lingote: 2, madeira: 2 }, nivel: 5 },
+  { id: 'espada_ferro', qtd: 1, custo: { lingote: 3, couro: 1 }, nivel: 5 },
+  { id: 'altar', qtd: 1, custo: { pedra: 10, cristal: 3, lingote: 1 }, nivel: 6 },
+  { id: 'torre', qtd: 1, custo: { pedra: 20, madeira: 10, lingote: 4 }, nivel: 7 },
+  { id: 'estatua', qtd: 1, custo: { pedra: 12, cristal: 6, lingote: 6 }, nivel: 9 },
   { id: 'cerca', qtd: 2, custo: { madeira: 2 }, nivel: 2 },
   { id: 'bau', qtd: 1, custo: { madeira: 10, corda: 1 }, nivel: 2 },
   { id: 'casa', qtd: 1, custo: { madeira: 20, pedra: 10, corda: 4 }, nivel: 2 },
@@ -61,4 +85,6 @@ export const DEF_RECURSO = {
   arvore: { vida: 6, solta: { madeira: 3 } as Partial<Record<ItemId, number>>, renasceMs: 120_000 },
   pedra: { vida: 6, solta: { pedra: 2 } as Partial<Record<ItemId, number>>, renasceMs: 180_000 },
   arbusto: { vida: 2, solta: { fibra: 2, baga: 1 } as Partial<Record<ItemId, number>>, renasceMs: 60_000 },
+  minerio: { vida: 10, solta: { minerio: 2 } as Partial<Record<ItemId, number>>, renasceMs: 300_000 },
+  cristal: { vida: 12, solta: { cristal: 1 } as Partial<Record<ItemId, number>>, renasceMs: 420_000 },
 };
