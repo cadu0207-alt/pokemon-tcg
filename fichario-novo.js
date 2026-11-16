@@ -248,7 +248,11 @@
   }
   function renderBinder() {
     var id = st.set, P = pocketCfg(), per = P.per, cols = P.cols;
-    var items = cur.view; if (!items.length) return emptyMsg();
+    if (!cur.view.length) return emptyMsg();
+    // 1 bolso por VERSÃO (Normal, Reverse…), como no fichário físico e no fichário atual — cada um com a sua marcação
+    var items = [];
+    cur.view.forEach(function (c) { slotsOf(id, c).forEach(function (s) { items.push({ c: c, ver: s.ver }); }); });
+    if (!items.length) return emptyMsg();
     var pages = Math.ceil(items.length / per), two = innerWidth >= 700, step = two ? 2 : 1;
     if (st.bpage >= pages) st.bpage = Math.max(0, pages - 1);
     st.bpage = st.bpage - (st.bpage % step);
@@ -257,10 +261,10 @@
       if (i >= pages) return '<div></div>';
       var chunk = items.slice(i * per, i * per + per);
       return '<div class="fn-page"><div class="fn-page-lbl">Página ' + (i + 1) + '</div><div class="fn-pocket-grid" style="--pc:' + cols + '">' +
-        chunk.map(function (c) {
-          var s = stateOf(id, c);
-          return '<button type="button" class="fn-pocket is-' + s.st + '" data-n="' + esc(c.n) + '" data-open="' + esc(c.n) + '" aria-label="' + esc(c.name) + '">' +
-            '<img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '"><span class="fn-slotn">#' + esc(c.n) + '</span><span class="fn-tick">' + (s.st === 'part' ? '½' : '✓') + '</span></button>';
+        chunk.map(function (it) {
+          var c = it.c, on = has(keyOf(id, c, it.ver));
+          return '<button type="button" class="fn-pocket is-' + (on ? 'have' : 'miss') + '" data-n="' + esc(c.n) + '" data-ver="' + esc(it.ver) + '" data-open="' + esc(c.n) + '" aria-label="' + esc(i18n(c, id).name + ' — ' + (VERSION_NAME[it.ver] || it.ver) + (on ? ' (coletada)' : ' (faltando)')) + '">' +
+            '<img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '"><span class="fn-slotn">#' + esc(c.n) + '</span><span class="fn-slotv v-' + esc(it.ver) + '">' + esc(it.ver) + '</span><span class="fn-tick">✓</span></button>';
         }).join('') + '</div></div>';
     }
     var lbl = two ? 'Páginas ' + (p0 + 1) + (p0 + 2 <= pages ? '–' + (p0 + 2) : '') + ' de ' + pages : 'Página ' + (p0 + 1) + ' de ' + pages;
@@ -372,7 +376,7 @@
       var tmp = document.createElement('div');
       if (el.matches('article.fn-card')) { tmp.innerHTML = cardHtml(c); el.replaceWith(tmp.firstChild); }
       else if (el.matches('tr')) { var holder = document.createElement('table'); holder.innerHTML = renderTable(); var nr = $('tr[data-n="' + n + '"]', holder); if (nr) el.replaceWith(nr); }
-      else if (el.matches('.fn-pocket')) { var s = stateOf(st.set, c); el.className = 'fn-pocket is-' + s.st; $('.fn-tick', el).textContent = s.st === 'part' ? '½' : '✓'; }
+      else if (el.matches('.fn-pocket')) { el.className = 'fn-pocket is-' + (has(keyOf(st.set, c, el.dataset.ver)) ? 'have' : 'miss'); }
     });
     renderHero(); delete progCache[st.set]; renderSide();
     var ov = $('#fn-overlay'); if (!ov.hidden && ov.dataset.detail === String(n)) openDetail(n, true);
