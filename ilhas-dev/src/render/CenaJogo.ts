@@ -6,7 +6,8 @@ import { novoInventario, remover, qtd, adicionar, desgastar, type Inventario } f
 import { nivelIlha, validarLocal, type Construcao } from '../sim/construcao';
 import { carregar, serializar } from '../sim/save';
 import { ITENS, type ItemId } from '../sim/itens';
-import { criarCriaturas, criarPersonagem, criarTileset, T, TILE_CONSTRUCAO, TILE_RECURSO as RECURSO_TILE } from './texturas';
+import { criarChibi, quadroParado } from './chibi';
+import { criarCriaturas, criarTileset, T, TILE_CONSTRUCAO, TILE_RECURSO as RECURSO_TILE } from './texturas';
 import { Fauna } from './Fauna';
 import { DiaNoite } from './DiaNoite';
 import { BotsVisuais } from './BotsVisuais';
@@ -87,7 +88,7 @@ export class CenaJogo extends Phaser.Scene {
     } catch { /* armazenamento bloqueado */ }
     const save = carregar(lido, seed, participantes);
     criarTileset(this);
-    criarPersonagem(this, 'heroi');
+    criarChibi(this, 'heroi', { pele: '#ffe0c8', cabelo: '#ff8fb1', roupa: '#7aa7ff', calca: '#4a5a8a', penteado: 'rabo' });
     criarCriaturas(this);
 
     const m = this.mundo;
@@ -128,7 +129,7 @@ export class CenaJogo extends Phaser.Scene {
     const casa = m.ilhas[0];
     const ini = save?.jogador ?? { x: (Math.round(casa.cx) + 0.5) * T, y: (Math.round(casa.cy) + 0.5) * T };
     this.jogador = this.add.sprite(ini.x, ini.y, 'heroi', 0);
-    this.jogador.setOrigin(0.5, 0.75).setDepth(this.jogador.y);
+    this.jogador.setOrigin(0.5, 0.92).setDepth(this.jogador.y);
     this.sombra = this.add.image(0, 0, 'sombra').setAlpha(0.28);
     const destravar = () => this.som.destravar();
     window.addEventListener('pointerdown', destravar); window.addEventListener('keydown', destravar);
@@ -160,7 +161,7 @@ export class CenaJogo extends Phaser.Scene {
       construcoes: () => this.construcoes,
       selecionarConstrucao: id => this.selecionarConstrucao(id),
       confirmarConstrucao: () => this.construir(),
-      zoom: f => cam.setZoom(Phaser.Math.Clamp(cam.zoom * f, 0.5, 6)),
+      zoom: f => cam.setZoom(Phaser.Math.Clamp(cam.zoom * f, 0.5, 5)),
       comer: id => this.comer(id),
       ranking: () => this.bots.ranking({ construcoes: this.construcoes, status: this.status }),
       assistir: nome => this.assistir(nome),
@@ -394,7 +395,12 @@ export class CenaJogo extends Phaser.Scene {
     else cam.stopFollow();
   }
 
-  private tocar(e: Efeito) { this.som.tocar(e); }
+  private tocar(e: Efeito) {
+    this.som.tocar(e);
+    // vibração curta no celular (Android; o iPhone ignora)
+    const ms = { madeira: 8, pedra: 8, golpe: 15, cai: 25, dano: 45, nivel: 30 }[e as string];
+    if (ms && toque.ativo && navigator.vibrate) try { navigator.vibrate(ms); } catch { /* sem vibração */ }
+  }
 
   /** Avança o tutorial e mostra a missão atual. */
   private atualizarTutorial() {
@@ -593,13 +599,14 @@ export class CenaJogo extends Phaser.Scene {
       j.anims.play(`heroi-${this.direcao}`, true);
     } else if (!this.golpeando) {
       j.anims.stop();
-      j.setFrame(DIRS.indexOf(this.direcao) * 3);
+      j.setFrame(quadroParado(this.direcao));
     }
 
     if (this.ui.construindo) {
       const { x, y } = this.localConstrucao();
       this.fantasma.setPosition(x * T, y * T).setTint(this.motivoInvalido(x, y) ? 0xff6666 : 0xffffff);
       this.alvo.setVisible(false);
+      this.ui.rotuloAcao('Construir');
       if (Phaser.Input.Keyboard.JustDown(k.SPACE) || Phaser.Input.Keyboard.JustDown(k.E)) this.construir();
       return;
     }
@@ -607,11 +614,16 @@ export class CenaJogo extends Phaser.Scene {
     const bicho = this.fauna.alvo(j.x / T, j.y / T, VETOR[this.direcao]);
     if (bicho) {
       this.alvo.setVisible(false);
+      this.ui.rotuloAcao('Atacar');
+      // vira para o alvo da mira automática
+      const dx = bicho.c.x - j.x / T, dy = bicho.c.y - j.y / T;
+      if (apertou) this.direcao = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'esquerda' : 'direita') : (dy < 0 ? 'cima' : 'baixo');
       if (apertou && t - this.ultimoGolpe >= INTERVALO_ATAQUE / (1 + this.ef.velocidadeAtaque)) { this.ultimoGolpe = t; this.atacar(bicho); }
       return;
     }
     const alvo = this.recursoAlvo();
     this.alvo.setVisible(!!alvo);
+    this.ui.rotuloAcao(alvo ? ({ arvore: 'Cortar', pedra: 'Quebrar', arbusto: 'Colher', minerio: 'Minerar', cristal: 'Minerar' } as const)[alvo.tipo] : 'AÇÃO');
     if (alvo) this.alvo.setPosition(alvo.x * T, alvo.y * T);
     if (alvo && apertou && t - this.ultimoGolpe >= INTERVALO_GOLPE) {
       this.ultimoGolpe = t;

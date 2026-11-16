@@ -109,8 +109,10 @@ export class Fauna {
     for (const b of this.lista) {
       const dx = b.c.x - jx, dy = b.c.y - (jy - 0.2), d = Math.hypot(dx, dy);
       if (d > 1.35) continue;
+      // mira automática: a mais próxima ao alcance; a que está à frente leva vantagem
       const frente = d < 0.5 || (dx * dir[0] + dy * dir[1]) / d > 0.1;
-      if (frente && d < menor) { menor = d; melhor = b; }
+      const nota = d - (frente ? 0.5 : 0);
+      if (nota < menor) { menor = nota; melhor = b; }
     }
     return melhor;
   }

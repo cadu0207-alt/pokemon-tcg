@@ -18,7 +18,7 @@ Sem parâmetros, abre a tela inicial. Parâmetros na URL pulam o menu (modo de d
 
 Controles no PC: K abre habilidades, 1–5 lançam magias. WASD ou setas para andar, Espaço ou E para coletar, C para criar, clique num item construível da mochila e depois no mapa para construir (Esc cancela), roda do mouse para zoom.
 
-No celular: joystick à esquerda, botão AÇÃO à direita, toque no item construível, toque no mapa e em ✔.
+No celular: toque em qualquer ponto da metade esquerda para o joystick aparecer ali, pinça com dois dedos para zoom, botão AÇÃO à direita, toque no item construível, toque no mapa e em ✔.
 
 O progresso fica salvo no navegador (localStorage, chave `ilhas-save-<seed>-<n>`).
 
@@ -41,4 +41,6 @@ Foi assim que achamos ilhas sem pedra, bots que se trancavam nas próprias const
 - [x] Fase 5 — 99 bots por padrão e 1000 participantes com `?n=1000&bots=999` (1,7 s para carregar, ~37 MB, 60 fps); mapa desenhado em pedaços de 32×32; geração do mundo 115× mais rápida; jangada para navegar entre ilhas
 - [x] Fase 6 — minério e cristal (ilhas neutras são ricas), ferro, forja/altar/torre/estátua, ilha nível 1→10, árvore de habilidades (4 ramos × 5), 5 magias com mana, bots planejando a cadeia completa e escolhendo habilidades pelo perfil
 - [x] Fase 7 — tela inicial (mundo Vila/Arquipélago/Gigante, dificuldade, continuar/novo jogo), dificuldade dos bots, tutorial em 9 missões, sons e música gerados com Web Audio, sombras
-- [ ] Próximos — sprites desenhados à mão, bots que navegam, salvamento na nuvem/multiplayer
+- [x] Visual — terreno com costas orgânicas (pintado pixel a pixel, ~13 ms por pedaço), personagens chibi 24×24 gerados com 3 penteados, 4 tons de pele e 4 quadros de caminhada
+- [x] Celular — joystick flutuante, pinça para zoom, mira automática, botão de ação com rótulo (Cortar/Minerar/Atacar/Construir), vibração, botões compactos
+- [ ] Próximos — bots que navegam, salvamento na nuvem/multiplayer

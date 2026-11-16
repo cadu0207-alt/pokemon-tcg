@@ -58,7 +58,7 @@
     #btn-voltar { padding: 6px 10px; font-weight: 700; background: #8fd27a; border: 2px solid #3a2f45; border-radius: 8px; }
     body.espectador #joy, body.espectador #btn-acao, body.espectador #barra { opacity: .35; pointer-events: none; }
     body.espectador #btn-craft, body.espectador #craft { display: none; }
-    body.toque #espectador { top: calc(max(12px, env(safe-area-inset-top)) + 160px); }
+    body.toque #espectador { top: calc(max(12px, env(safe-area-inset-top)) + 270px); }
     .bar.mana i { background: #7aa7ff; }
     #btn-hab { position: fixed; right: 12px; top: calc(max(12px, env(safe-area-inset-top)) + 150px); padding: 8px 12px; font-weight: 700;
       background: #c39bff; border: 2px solid #3a2f45; border-radius: 10px; }
@@ -77,7 +77,6 @@
     .magia span { position: absolute; left: 7px; top: 6px; color: #8a7f95; } .magia i { position: absolute; left: 0; bottom: 0; height: 3px; background: #3a2f45; }
     .magia.faisca { background: #ffd8b8; } .magia.agua { background: #cfeeff; } .magia.pedra { background: #e2ded9; } .magia.vento { background: #effcff; } .magia.chuva { background: #ffb8a0; }
     .magia.sem-mana { opacity: .45; }
-    body.toque #btn-hab { right: 12px; top: calc(max(12px, env(safe-area-inset-top)) + 154px); }
     body.toque #magias { right: max(24px, env(safe-area-inset-right)); bottom: calc(max(8px, env(safe-area-inset-bottom)) + 184px); }
     body.toque .magia { padding: 8px 10px 8px 26px; }
     body.espectador #magias { display: none; }
@@ -100,7 +99,7 @@
     #missao { position: fixed; left: 12px; top: calc(max(12px, env(safe-area-inset-top)) + 96px); width: 200px; padding: 8px 10px; font-size: 12px; cursor: pointer; }
     #missao b { display: block; font-size: 13px; color: #ffd166; } #missao small { opacity: .7; }
     #missao.fechada p { display: none; }
-    body.toque #missao { top: calc(max(12px, env(safe-area-inset-top)) + 160px); width: 150px; font-size: 11px; }
+    body.toque #missao { top: calc(max(12px, env(safe-area-inset-top)) + 96px); width: 46vw; max-width: 220px; font-size: 11px; box-sizing: border-box; }
     #missao.feita { animation: feita .6s; } @keyframes feita { 50% { transform: scale(1.06); background: #6db35ccc; } }
     #status .icones { display: flex; gap: 4px; } #status .icones button { background: none; border: 0; padding: 0 2px; font-size: 13px; color: #f6efe0; opacity: .85; }
     #nivel { position: fixed; top: max(12px, env(safe-area-inset-top)); right: 12px; padding: 8px 10px; font-size: 13px; max-width: 220px; }
@@ -117,6 +116,7 @@
     body.toque #ajuda { display: none; }
     body.toque #joy { display: block; position: fixed; left: max(20px, env(safe-area-inset-left)); bottom: 90px; width: 120px; height: 120px;
       border-radius: 50%; background: #ffffff22; border: 2px solid #ffffff55; touch-action: none; }
+    body.toque #joy.ativo { opacity: 1; } body.toque #joy { opacity: .55; transition: opacity .15s; }
     #joy-pino { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: #ffffffaa; border: 2px solid #3a2f45; }
     body.toque #btn-acao { display: grid; place-items: center; position: fixed; right: max(24px, env(safe-area-inset-right)); bottom: 100px;
       width: 84px; height: 84px; border-radius: 50%; background: #8fd27a; border: 3px solid #3a2f45; font-weight: 800; font-size: 14px; touch-action: none; }
@@ -125,14 +125,23 @@
       border: 2px solid #3a2f45; border-radius: 10px; }
     body.construindo #btn-ok { right: 12px; background: #8fd27a; } body.construindo #btn-cancelar { left: 12px; background: #f6efe0; }
     body.toque #zoom { display: flex; gap: 6px; position: fixed; right: 12px; top: calc(max(12px, env(safe-area-inset-top)) + 104px); }
-    body.toque #btn-ranking { right: 112px; top: calc(max(12px, env(safe-area-inset-top)) + 104px); }
+    body.toque #btn-ranking, body.toque #btn-hab, body.toque #btn-craft { left: auto; right: 12px; bottom: auto; width: 48px; height: 48px; padding: 0;
+      font-size: 0; border-radius: 50%; display: grid; place-items: center; }
+    body.toque #btn-craft::before { content: '🛠'; font-size: 22px; } body.toque #btn-ranking::before { content: '🏆'; font-size: 22px; }
+    body.toque #btn-hab::before { content: '✦'; font-size: 22px; } body.toque #btn-hab .badge { position: absolute; top: -4px; right: -4px; font-size: 11px; }
+    body.toque #btn-craft { top: calc(max(12px, env(safe-area-inset-top)) + 96px); }
+    body.toque #btn-hab { top: calc(max(12px, env(safe-area-inset-top)) + 152px); }
+    body.toque #btn-ranking { top: calc(max(12px, env(safe-area-inset-top)) + 208px); }
+    body.toque #zoom { display: none !important; }
+    body.toque #nivel { font-size: 11px; max-width: 46vw; padding: 6px 8px; }
+    body.toque #nivel small { display: none; }
+    body.toque #btn-acao { font-size: 13px; text-align: center; line-height: 1.1; padding: 4px; }
     body.toque.construindo #zoom { display: none; }
     #zoom button { width: 40px; height: 40px; border-radius: 8px; border: 2px solid #3a2f45; background: #f6efe0cc; font-size: 20px; font-weight: 800; }
     body.toque #barra { bottom: max(8px, env(safe-area-inset-bottom)); max-width: calc(100vw - 24px); }
     body.toque #dica-construcao { bottom: auto; top: 110px; }
     body.toque #joy { bottom: calc(max(8px, env(safe-area-inset-bottom)) + 76px); }
     body.toque #btn-acao { bottom: calc(max(8px, env(safe-area-inset-bottom)) + 90px); }
-    body.toque #btn-craft { top: calc(max(12px, env(safe-area-inset-top)) + 84px); left: 12px; right: auto; bottom: auto; padding: 8px 12px; }
     body.toque #status { width: 140px; }
     body.toque #craft { left: 8px; right: 8px; top: 60px; bottom: auto; width: auto; max-height: calc(100vh - 140px); }
     @media (max-width: 600px) {

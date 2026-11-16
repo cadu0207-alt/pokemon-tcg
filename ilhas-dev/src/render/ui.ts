@@ -223,6 +223,14 @@ export class Interface {
     this.atualizarHabilidades();
   }
 
+  private rotuloAtual = '';
+  /** Texto do botão de ação conforme o alvo (Cortar, Minerar, Atacar…). */
+  rotuloAcao(texto: string) {
+    if (texto === this.rotuloAtual) return;
+    this.rotuloAtual = texto;
+    $('btn-acao').textContent = texto;
+  }
+
   /** Joystick virtual (lado esquerdo) e botão de ação. Aparecem no primeiro toque. */
   private iniciarToque() {
     const ativar = () => {
@@ -234,6 +242,7 @@ export class Interface {
     window.addEventListener('touchstart', ativar, { passive: true });
     if (matchMedia('(pointer: coarse)').matches) ativar();
 
+    // Joystick flutuante: nasce onde o polegar tocar na metade esquerda da tela.
     const base = $('joy'), pino = $('joy-pino');
     let id: number | null = null, cx = 0, cy = 0;
     const R = 44;
@@ -242,23 +251,49 @@ export class Interface {
       const d = Math.hypot(dx, dy);
       if (d > R) { dx = (dx / d) * R; dy = (dy / d) * R; }
       pino.style.transform = `translate(${dx}px, ${dy}px)`;
-      const zona = 0.25;
-      toque.x = Math.abs(dx / R) > zona ? dx / R : 0;
-      toque.y = Math.abs(dy / R) > zona ? dy / R : 0;
+      // zona morta pequena e resposta analógica (empurrar pouco = andar devagar)
+      const m = Math.hypot(dx, dy) / R;
+      const f = m < 0.18 ? 0 : (m - 0.18) / 0.82 / (m || 1);
+      toque.x = (dx / R) * f; toque.y = (dy / R) * f;
     };
-    base.addEventListener('pointerdown', e => {
+    const comecar = (e: PointerEvent, flutuante: boolean) => {
       id = e.pointerId;
+      if (flutuante) {
+        base.style.left = `${e.clientX - 60}px`; base.style.top = `${e.clientY - 60}px`; base.style.bottom = 'auto';
+        base.classList.add('ativo');
+      }
       const r = base.getBoundingClientRect(); cx = r.left + r.width / 2; cy = r.top + r.height / 2;
-      try { base.setPointerCapture(id); } catch { /* alguns navegadores recusam; o joystick funciona sem */ }
       mover(e);
+    };
+    base.addEventListener('pointerdown', e => { e.preventDefault(); comecar(e, false); });
+    const jogo = $('jogo');
+    // Pinça para zoom: dois dedos no mapa (fora do joystick).
+    const dedos = new Map<number, { x: number; y: number }>();
+    let distAnt = 0;
+    jogo.addEventListener('pointerdown', e => {
+      if (!toque.ativo || e.pointerType !== 'touch') return;
+      if (id === null && !this.construindo && e.clientX < window.innerWidth * 0.5 && dedos.size === 0) { comecar(e, true); return; }
+      dedos.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (dedos.size === 2) { const [a, b] = [...dedos.values()]; distAnt = Math.hypot(a.x - b.x, a.y - b.y); }
     });
-    base.addEventListener('pointermove', e => { if (e.pointerId === id) mover(e); });
+    window.addEventListener('pointermove', e => {
+      if (e.pointerId === id) { mover(e); return; }
+      if (!dedos.has(e.pointerId)) return;
+      dedos.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (dedos.size === 2) {
+        const [a, b] = [...dedos.values()]; const dist = Math.hypot(a.x - b.x, a.y - b.y);
+        if (distAnt > 0 && Math.abs(dist / distAnt - 1) > 0.02) { this.g.zoom(dist / distAnt); distAnt = dist; }
+      }
+    });
     const soltar = (e: PointerEvent) => {
+      dedos.delete(e.pointerId);
       if (e.pointerId !== id) return;
       id = null; toque.x = toque.y = 0; pino.style.transform = '';
+      base.classList.remove('ativo'); base.style.left = ''; base.style.top = ''; base.style.bottom = '';
     };
-    base.addEventListener('pointerup', soltar);
-    base.addEventListener('pointercancel', soltar);
+    window.addEventListener('pointerup', soltar);
+    window.addEventListener('pointercancel', soltar);
+    window.addEventListener('contextmenu', e => e.preventDefault());
 
     const acao = $('btn-acao');
     acao.addEventListener('pointerdown', e => {
