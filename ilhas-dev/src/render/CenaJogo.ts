@@ -93,7 +93,7 @@ export class CenaJogo extends Phaser.Scene {
     } catch { /* armazenamento bloqueado */ }
     const save = carregar(lido, seed, participantes);
     preparar(this);
-    registrarRecorte(id => (ITENS[id].construivel ? recorteComoUrl(this, id) : null));
+    registrarRecorte(id => (ITENS[id].construivel || id === 'minerio' ? recorteComoUrl(this, id) : null));
     this.personagem = this.cfg.personagem && PERSONAGENS.includes(this.cfg.personagem) ? this.cfg.personagem : 'Boy';
     criarCriaturas(this);
 
@@ -152,8 +152,8 @@ export class CenaJogo extends Phaser.Scene {
 
     const cam = this.cameras.main;
     cam.setBounds(0, 0, m.largura * T, m.altura * T);
-    // Mostra ~13 tiles no lado menor da tela (bom no celular e no PC).
-    cam.setZoom(Phaser.Math.Clamp(Math.min(this.scale.width, this.scale.height) / (T * 13), 2, 4)).startFollow(this.jogador, true, 0.15, 0.15).setRoundPixels(true);
+    // Mostra ~11 tiles no lado menor da tela (os personagens do pacote têm 16 px).
+    cam.setZoom(Phaser.Math.Clamp(Math.min(this.scale.width, this.scale.height) / (T * 11), 2.2, 4.5)).startFollow(this.jogador, true, 0.15, 0.15).setRoundPixels(true);
     this.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => {
       cam.setZoom(Phaser.Math.Clamp(cam.zoom * (dy > 0 ? 0.9 : 1.1), 0.25, 6));
     });

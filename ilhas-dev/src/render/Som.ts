@@ -12,6 +12,10 @@ export class Som {
   private musicaGanho!: GainNode;
   private proximaNota = 0;
   private passo = 0;
+  /** Sons do Ninja Adventure já decodificados (efeito → áudio). Enquanto não chegam, usa o sintetizador. */
+  private buffers = new Map<Efeito, AudioBuffer>();
+  private faixas: { dia?: HTMLAudioElement; noite?: HTMLAudioElement } = {};
+  private faixaAtual: 'dia' | 'noite' | null = null;
   ligado: boolean;
   musica: boolean;
 
@@ -34,10 +38,34 @@ export class Som {
     this.mestre = this.ctx.createGain(); this.mestre.gain.value = this.ligado ? 0.5 : 0; this.mestre.connect(this.ctx.destination);
     this.musicaGanho = this.ctx.createGain(); this.musicaGanho.gain.value = this.musica ? 0.18 : 0; this.musicaGanho.connect(this.mestre);
     this.proximaNota = this.ctx.currentTime + 0.3;
+    void this.carregarArquivos();
   }
 
-  alternarSom() { this.ligado = !this.ligado; if (this.ctx) this.mestre.gain.value = this.ligado ? 0.5 : 0; this.salvarCfg(); }
-  alternarMusica() { this.musica = !this.musica; if (this.ctx) this.musicaGanho.gain.value = this.musica ? 0.18 : 0; this.salvarCfg(); }
+  /** Baixa os efeitos (pequenos) e prepara as músicas (tocadas por streaming). Falhas caem no sintetizador. */
+  private async carregarArquivos() {
+    const efeitos: Efeito[] = ['madeira', 'pedra', 'arbusto', 'cai', 'criar', 'construir', 'nivel', 'dano', 'golpe', 'magia', 'cura', 'noite', 'clique'];
+    await Promise.all(efeitos.map(async e => {
+      try {
+        const r = await fetch(`ninja/som/${e}.mp3`);
+        if (!r.ok) return;
+        this.buffers.set(e, await this.ctx!.decodeAudioData(await r.arrayBuffer()));
+      } catch { /* mantém o som sintetizado */ }
+    }));
+    for (const f of ['dia', 'noite'] as const) {
+      const a = new Audio(`ninja/som/musica-${f}.mp3`);
+      a.loop = true; a.volume = 0; a.preload = 'auto';
+      this.faixas[f] = a;
+    }
+  }
+
+  alternarSom() {
+    this.ligado = !this.ligado; if (this.ctx) this.mestre.gain.value = this.ligado ? 0.5 : 0; this.salvarCfg();
+    if (!this.ligado) for (const a of Object.values(this.faixas)) if (a) a.volume = 0;
+  }
+  alternarMusica() {
+    this.musica = !this.musica; if (this.ctx) this.musicaGanho.gain.value = this.musica ? 0.18 : 0; this.salvarCfg();
+    if (!this.musica) { this.faixas.dia?.pause(); this.faixas.noite?.pause(); this.faixaAtual = null; }
+  }
 
   private tom(freq: number, dur: number, tipo: OscillatorType, vol: number, inicio = 0, deslize = 0, destino?: AudioNode) {
     const c = this.ctx!; const t = c.currentTime + inicio;
@@ -60,6 +88,14 @@ export class Som {
 
   tocar(e: Efeito) {
     if (!this.ctx || !this.ligado) return;
+    const buf = this.buffers.get(e);
+    if (buf) {
+      const s = this.ctx.createBufferSource(); s.buffer = buf;
+      s.playbackRate.value = 0.94 + Math.random() * 0.12; // pequena variação para não cansar
+      const g = this.ctx.createGain(); g.gain.value = e === 'nivel' || e === 'noite' ? 0.9 : 0.6;
+      s.connect(g); g.connect(this.mestre); s.start();
+      return;
+    }
     const v = 0.9 + Math.random() * 0.2; // pequena variação para não cansar
     switch (e) {
       case 'madeira': this.tom(180 * v, 0.09, 'triangle', 0.35, 0, 0.6); this.ruido(0.06, 0.25, 900); break;
@@ -81,6 +117,17 @@ export class Som {
   /** Música generativa calma: pentatônica, mais grave e lenta à noite. Chamar a cada quadro. */
   atualizarMusica(noite: boolean) {
     if (!this.ctx || !this.musica) return;
+    // Com as músicas do pacote prontas: troca suave entre a faixa do dia e a da noite.
+    if (this.faixas.dia && this.faixas.noite) {
+      const quer = noite ? 'noite' : 'dia', outra = noite ? 'dia' : 'noite';
+      const alvo = this.faixas[quer]!, velha = this.faixas[outra]!;
+      const vol = this.ligado ? 0.35 : 0;
+      if (this.faixaAtual !== quer) { this.faixaAtual = quer; alvo.play().catch(() => { this.faixaAtual = null; }); }
+      alvo.volume = Math.min(vol, alvo.volume + 0.004);
+      velha.volume = Math.max(0, velha.volume - 0.006);
+      if (velha.volume === 0 && !velha.paused) velha.pause();
+      return;
+    }
     const c = this.ctx;
     const bpm = noite ? 60 : 76, colcheia = 60 / bpm / 2;
     const raiz = noite ? 196 : 262; // sol / dó

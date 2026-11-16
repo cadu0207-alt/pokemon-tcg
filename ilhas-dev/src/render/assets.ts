@@ -40,7 +40,7 @@ export const varianteArvore = (x: number, y: number) => `arvore${((x * 73856093)
 /** Ícones de itens que existem no pacote (os demais continuam desenhados no código). */
 export const ICONES_PNG: Partial<Record<ItemId, string>> = Object.fromEntries(
   (['madeira', 'pedra', 'fibra', 'baga', 'machado_pedra', 'picareta_pedra', 'foice_pedra', 'carne', 'carne_assada', 'espada_pedra',
-    'lanca_madeira', 'cristal', 'lingote', 'machado_ferro', 'picareta_ferro', 'espada_ferro', 'pocao_mana'] as ItemId[])
+    'lanca_madeira', 'cristal', 'lingote', 'couro', 'machado_ferro', 'picareta_ferro', 'espada_ferro', 'pocao_mana'] as ItemId[])
     .map(id => [id, `${BASE}itens/${id}.png`]),
 );
 
