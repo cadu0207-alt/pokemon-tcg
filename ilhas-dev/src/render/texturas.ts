@@ -141,3 +141,47 @@ export function criarPersonagem(scene: Phaser.Scene, chave: string, roupa = COR.
     });
   });
 }
+
+/** Criaturas: cada uma com 2 quadros (parado / passo). Origem nos pés. */
+export function criarCriaturas(scene: Phaser.Scene) {
+  const K = COR.contorno;
+  const defs: Record<string, [string[], Record<string, string>]> = {
+    coelho: [[
+      '................', '................', '................', '....kk..kk......', '...kwpk.kwpk....', '...kwpk.kwpk....',
+      '....kwkkkwk.....', '...kwwwwwwwk....', '..kwwowwwowk....', '..kwwwwbwwwk....', '..kwwwwwwwwkk...',
+      '..kwwwwwwwwwwk..', '...kwwwwwwwwk...', '....kwkkkkwk....', '.....k....k.....', '................'],
+      { k: K, w: '#fbf6ee', p: '#ffb3c6', o: COR.olho, b: '#ff8fb1' }],
+    javali: [[
+      '................', '................', '................', '................', '.....kkkkkkk....', '...kkbbbbbbbkk..',
+      '..kbbbbbbbbbbbk.', '.kbbobbbbbbbbbk.', 'knnbbbbbbbbbbbk.', 'knnbwbbbbbbbbbk.', '.kkwkbbbbbbbbk..',
+      '...kbbbbbbbbbk..', '...kbk.kbk.kbk..', '...kk..kk..kk...', '................', '................'],
+      { k: K, b: '#9b6b4f', n: '#e8a3a0', o: COR.olho, w: '#fff' }],
+    slime: [[
+      '................', '................', '................', '................', '................', '.....kkkkkk.....',
+      '....kgggggwk....', '...kgggggwwgk...', '..kgggggggggk...', '..kggoggggoggk..', '..kggggggggggk..',
+      '.kgggggmmggggk..', '.kggggggggggggk.', '.kkkkkkkkkkkkkk.', '................', '................'],
+      { k: K, g: '#8fd6e8', w: '#e8fbff', o: COR.olho, m: '#ff8fb1' }],
+    lobo: [[
+      '................', '................', '................', '..k.k...........', '.kgkgk..........', '.kgggk..........',
+      'kggoggkkkkkkk...', 'kwggggggggggggk.', '.kkgggggggggggk.', '...kggggggggggkk', '...kgggggggggk.g',
+      '...kgk.kgk.kgk..', '...kgk.kgk.kgk..', '...kk..kk..kk...', '................', '................'],
+      { k: K, g: '#7d7f9e', o: '#ffd166', w: '#fff' }],
+  };
+  for (const [nome, [linhas, pal]] of Object.entries(defs)) {
+    const c = document.createElement('canvas');
+    c.width = T * 2; c.height = T;
+    const ctx = c.getContext('2d')!;
+    desenhar(ctx, linhas, pal, 0, 0);
+    desenhar(ctx, ['................', ...linhas.slice(0, 15)], pal, T, 0); // quadro 2: um pixel mais baixo
+    const tex = scene.textures.addCanvas(`cri-${nome}`, c)!;
+    tex.add(0, 0, 0, 0, T, T); tex.add(1, 0, T, 0, T, T);
+    scene.anims.create({ key: `cri-${nome}`, frameRate: 5, repeat: -1, frames: [0, 1].map(f => ({ key: `cri-${nome}`, frame: f })) });
+  }
+  // Brilho da fogueira (gradiente radial) para a noite.
+  const g = document.createElement('canvas'); g.width = g.height = 128;
+  const gx = g.getContext('2d')!;
+  const grad = gx.createRadialGradient(64, 64, 4, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(255,200,120,0.9)'); grad.addColorStop(0.5, 'rgba(255,150,80,0.35)'); grad.addColorStop(1, 'rgba(255,120,60,0)');
+  gx.fillStyle = grad; gx.fillRect(0, 0, 128, 128);
+  scene.textures.addCanvas('brilho', g);
+}

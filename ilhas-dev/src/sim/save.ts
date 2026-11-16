@@ -1,5 +1,6 @@
 import type { Construcao } from './construcao';
 import type { Inventario } from './inventario';
+import type { Status } from './criaturas';
 
 export const VERSAO_SAVE = 1;
 
@@ -8,6 +9,9 @@ export interface Save {
   jogador: { x: number; y: number };
   inventario: Inventario;
   construcoes: Construcao[];
+  /** Opcionais: saves da fase 2 não têm. */
+  status?: Status;
+  tempo?: number;
 }
 
 export function serializar(s: Omit<Save, 'versao'>): string {

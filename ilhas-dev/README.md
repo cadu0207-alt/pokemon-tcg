@@ -30,4 +30,5 @@ O progresso fica salvo no navegador (localStorage, chave `ilhas-save-<seed>-<n>`
 - [x] Fase 1 — coleta (árvore, pedra, arbusto) com renascimento, inventário, 6 receitas, ferramentas com durabilidade
 - [x] Fase 2 — construção na ilha (fogueira, bancada, cerca, baú, casa), nível da ilha 1→4, salvamento automático
 - [x] Celular — joystick virtual, botão de ação, construção por toque, zoom +/−
-- [ ] Fase 3 — combate, criaturas e dia/noite
+- [x] Fase 3 — criaturas (coelho, javali, slime, lobo) com IA, combate, armas, vida/XP/nível, comida, dia/noite (6 min) com fogueira que protege, desmaio sem perda de itens
+- [ ] Fase 4 — bots com perfis e utility AI

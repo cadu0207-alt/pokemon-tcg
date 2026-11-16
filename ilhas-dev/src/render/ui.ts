@@ -2,6 +2,7 @@ import { ITENS, RECEITAS, type ItemId } from '../sim/itens';
 import { criar, podeCriar, qtd, type Inventario } from '../sim/inventario';
 import { contar, proximoNivel, type Construcao } from '../sim/construcao';
 import { icone } from './icones';
+import { xpParaProximo, type Status } from '../sim/criaturas';
 
 /** Estado dos controles de toque, lido pela cena a cada quadro. */
 export const toque = { x: 0, y: 0, acao: false, ativo: false };
@@ -14,6 +15,7 @@ export interface Ganchos {
   selecionarConstrucao: (id: ItemId | null) => void;
   confirmarConstrucao: () => void;
   zoom: (fator: number) => void;
+  comer: (id: ItemId) => void;
   mudou: () => void;
 }
 
@@ -36,6 +38,7 @@ export class Interface {
       if (!slot) return;
       const id = slot.dataset.id as ItemId;
       if (ITENS[id].construivel) g.selecionarConstrucao(this.construindo === id ? null : id);
+      else if (ITENS[id].comida) g.comer(id);
       else this.aviso(ITENS[id].nome);
     });
     this.iniciarToque();
@@ -72,7 +75,7 @@ export class Interface {
       ? ids.map(id => {
           const def = ITENS[id], f = def.ferramenta;
           const dur = f ? `<i style="width:${(100 * (inv.durabilidade[id] ?? 0)) / f.durabilidade}%"></i>` : '';
-          const cls = ['slot', def.construivel ? 'construivel' : '', this.construindo === id ? 'sel' : ''].join(' ');
+          const cls = ['slot', def.construivel ? 'construivel' : '', def.comida ? 'comida' : '', this.construindo === id ? 'sel' : ''].join(' ');
           return `<button class="${cls}" data-id="${id}" title="${def.nome}"><img src="${icone(id)}"><b>${qtd(inv, id)}</b>${dur}</button>`;
         }).join('')
       : '<span class="vazio">Mochila vazia: chegue perto de uma árvore e colete</span>';
@@ -105,6 +108,19 @@ export class Interface {
         this.g.mudou();
       }
     }));
+  }
+
+  private ultimoStatus = '';
+  /** Vida, experiência, nível do personagem e relógio do dia. */
+  atualizarStatus(s: Status, noite: boolean, fracDia: number) {
+    const chave = `${s.vida}|${s.vidaMax}|${s.xp}|${s.nivel}|${noite}|${Math.floor(fracDia * 24)}`;
+    if (chave === this.ultimoStatus) return;
+    this.ultimoStatus = chave;
+    const hora = Math.floor((fracDia * 24 + 6) % 24);
+    $('status').innerHTML = `
+      <div class="linha"><b>Nv ${s.nivel}</b><span class="relogio">${noite ? '☾' : '☀'} ${String(hora).padStart(2, '0')}h</span></div>
+      <div class="bar vida"><i style="width:${(100 * Math.max(0, s.vida)) / s.vidaMax}%"></i><span>${Math.max(0, Math.ceil(s.vida))}/${s.vidaMax}</span></div>
+      <div class="bar xp"><i style="width:${(100 * s.xp) / xpParaProximo(s.nivel)}%"></i><span>XP ${s.xp}/${xpParaProximo(s.nivel)}</span></div>`;
   }
 
   /** Joystick virtual (lado esquerdo) e botão de ação. Aparecem no primeiro toque. */

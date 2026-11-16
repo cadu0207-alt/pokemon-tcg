@@ -1,15 +1,20 @@
 import Phaser from 'phaser';
 import { gerarMundo, tileEm, TILE_ANDAVEL, type Mundo, type Recurso } from '../sim/mundo';
-import { iniciarRecursos, golpear, atualizarRecursos, recursoAtivo, type EstadoRecursos } from '../sim/coleta';
-import { novoInventario, remover, qtd, type Inventario } from '../sim/inventario';
+import { iniciarRecursos, golpear, atualizarRecursos, recursoAtivo, ferramentaPara, type EstadoRecursos } from '../sim/coleta';
+import { CRIATURAS, DURACAO_DIA, bonusDano, ehNoite, ganharXp, novoStatus, type Status } from '../sim/criaturas';
+import { novoInventario, remover, qtd, adicionar, desgastar, type Inventario } from '../sim/inventario';
 import { nivelIlha, validarLocal, type Construcao } from '../sim/construcao';
 import { carregar, serializar } from '../sim/save';
 import { ITENS, type ItemId } from '../sim/itens';
-import { criarPersonagem, criarTileset, T, TILE_CONSTRUCAO } from './texturas';
+import { criarCriaturas, criarPersonagem, criarTileset, T, TILE_CONSTRUCAO } from './texturas';
+import { Fauna } from './Fauna';
+import { DiaNoite } from './DiaNoite';
 import { Interface, toque } from './ui';
 
 const VELOCIDADE = 5;          // tiles por segundo
-const INTERVALO_GOLPE = 280;   // ms entre golpes
+const INTERVALO_GOLPE = 280;   // ms entre golpes em recursos
+const INTERVALO_ATAQUE = 380;  // ms entre golpes em criaturas
+const INVULNERAVEL = 600;      // ms sem levar dano depois de um golpe
 const RECURSO_TILE = { arvore: 6, pedra: 7, arbusto: 8 } as const;
 const DIRS = ['baixo', 'cima', 'esquerda', 'direita'] as const;
 type Dir = (typeof DIRS)[number];
@@ -34,6 +39,13 @@ export class CenaJogo extends Phaser.Scene {
   private localEscolhido: { x: number; y: number } | null = null;
   private chaveSave = '';
   private sujo = false;
+  private status: Status = novoStatus();
+  private fauna!: Fauna;
+  private diaNoite!: DiaNoite;
+  private tempoMundo = DURACAO_DIA * 0.15; // começa de manhã
+  private eraNoite = false;
+  private invulneravelAte = 0;
+  private morto = false;
 
   constructor() { super('jogo'); }
 
@@ -48,6 +60,7 @@ export class CenaJogo extends Phaser.Scene {
     const save = carregar(lido, seed, participantes);
     criarTileset(this);
     criarPersonagem(this, 'heroi');
+    criarCriaturas(this);
 
     const m = this.mundo;
     const mapa = this.make.tilemap({ tileWidth: T, tileHeight: T, width: m.largura, height: m.altura });
@@ -61,6 +74,8 @@ export class CenaJogo extends Phaser.Scene {
       Object.assign(this.inv.itens, save.inventario.itens);
       Object.assign(this.inv.durabilidade, save.inventario.durabilidade);
       this.construcoes = save.construcoes;
+      if (save.status) this.status = save.status;
+      if (save.tempo !== undefined) this.tempoMundo = save.tempo;
     }
     for (const c of this.construcoes) this.removerRecursoSob(c.x, c.y);
     for (const r of m.recursos) if (this.recursos.porTile.get(this.idx(r.x, r.y)) === r) this.mostrarRecurso(r);
@@ -70,7 +85,14 @@ export class CenaJogo extends Phaser.Scene {
     const casa = m.ilhas[0];
     const ini = save?.jogador ?? { x: (Math.round(casa.cx) + 0.5) * T, y: (Math.round(casa.cy) + 0.5) * T };
     this.jogador = this.add.sprite(ini.x, ini.y, 'heroi', 0);
-    this.jogador.setOrigin(0.5, 0.75).setDepth(10);
+    this.jogador.setOrigin(0.5, 0.75).setDepth(this.jogador.y);
+    const andavel = (tx: number, ty: number) => TILE_ANDAVEL[tileEm(m, tx, ty)] && !this.bloqueio.has(this.idx(tx, ty));
+    this.fauna = new Fauna(this, andavel, m.ilhas[0], () => this.construcoes.filter(c => c.tipo === 'fogueira'), seed);
+    this.diaNoite = new DiaNoite(this);
+    this.eraNoite = ehNoite(this.tempoMundo);
+    this.time.addEvent({ delay: 700, loop: true, callback: () => {
+      if (!this.morto) this.fauna.tentarNascer(this.jogador.x / T, this.jogador.y / T, ehNoite(this.tempoMundo));
+    } });
     const tex = this.textures.get('tileset');
     for (const [, i] of Object.entries(TILE_CONSTRUCAO)) tex.add(`t${i}`, 0, 1 + i * (T + 2), 1, T, T);
     this.fantasma = this.add.image(0, 0, 'tileset', `t${TILE_CONSTRUCAO.fogueira}`).setOrigin(0).setDepth(6).setAlpha(0.75).setVisible(false);
@@ -92,6 +114,7 @@ export class CenaJogo extends Phaser.Scene {
       selecionarConstrucao: id => this.selecionarConstrucao(id),
       confirmarConstrucao: () => this.construir(),
       zoom: f => cam.setZoom(Phaser.Math.Clamp(cam.zoom * f, 0.5, 6)),
+      comer: id => this.comer(id),
       mudou: () => this.mudou(),
     });
     kb.on('keydown-C', () => this.ui.alternarCraft());
@@ -148,6 +171,7 @@ export class CenaJogo extends Phaser.Scene {
       seed: this.mundo.seed, participantes: this.mundo.ilhas.filter(i => i.dono !== null).length,
       jogador: { x: Math.round(this.jogador.x), y: Math.round(this.jogador.y) },
       inventario: this.inv, construcoes: this.construcoes,
+      status: this.status, tempo: Math.round(this.tempoMundo),
     });
     try { localStorage.setItem(this.chaveSave, texto); this.sujo = false; } catch { /* sem armazenamento: segue sem salvar */ }
   }
@@ -283,16 +307,93 @@ export class CenaJogo extends Phaser.Scene {
     this.mudou();
   }
 
-  private textoFlutuante(x: number, y: number, txt: string) {
+  private comer(id: ItemId) {
+    const cura = ITENS[id].comida ?? 0;
+    if (this.status.vida >= this.status.vidaMax) { this.ui.aviso('Você está de barriga cheia'); return; }
+    if (!remover(this.inv, id, 1)) return;
+    this.status.vida = Math.min(this.status.vidaMax, this.status.vida + cura);
+    this.textoFlutuante(this.jogador.x, this.jogador.y - 14, `+${cura} vida`, '#9be38a');
+    this.mudou();
+  }
+
+  private atacar(b: import('./Fauna').Bicho) {
+    const arma = ferramentaPara(this.inv, 'criatura');
+    // Sem arma, o machado ajuda um pouco.
+    const base = arma.id ? arma.dano : qtd(this.inv, 'machado_pedra') ? 2 : 1;
+    const dano = base + bonusDano(this.status);
+    if (arma.id && desgastar(this.inv, arma.id)) this.ui.aviso(`${ITENS[arma.id].nome} quebrou!`);
+    const j = this.jogador;
+    this.golpeando = true;
+    const [dx, dy] = [Math.sign(b.c.x * T - j.x), Math.sign(b.c.y * T - j.y)];
+    this.tweens.add({ targets: j, x: j.x + dx * 3, y: j.y + dy * 3, duration: 70, yoyo: true, onComplete: () => (this.golpeando = false) });
+    this.textoFlutuante(b.c.x * T, b.c.y * T - 14, `${dano}`, '#ffd166');
+    const def = CRIATURAS[b.c.tipo];
+    if (this.fauna.ferir(b, dano, j.x / T, j.y / T)) {
+      let i = 0;
+      for (const [id, n] of Object.entries(def.solta)) {
+        adicionar(this.inv, id as ItemId, n ?? 0);
+        this.textoFlutuante(b.c.x * T, b.c.y * T - 20 - i++ * 7, `+${n} ${ITENS[id as ItemId].nome}`);
+      }
+      const subiu = ganharXp(this.status, def.xp);
+      this.textoFlutuante(j.x, j.y - 26, `+${def.xp} XP`, '#ffd166');
+      if (subiu) { this.ui.aviso(`Você subiu para o nível ${this.status.nivel}!`); this.cameras.main.flash(250, 255, 230, 150); }
+    }
+    this.mudou();
+  }
+
+  private levarDano(dano: number, agora: number) {
+    if (dano <= 0 || this.morto || agora < this.invulneravelAte) return;
+    this.invulneravelAte = agora + INVULNERAVEL;
+    this.status.vida -= dano;
+    this.textoFlutuante(this.jogador.x, this.jogador.y - 14, `-${dano}`, '#ff8080');
+    this.jogador.setTint(0xff8080);
+    this.time.delayedCall(150, () => this.jogador.clearTint());
+    this.cameras.main.shake(120, 0.004);
+    document.body.classList.remove('dano'); void document.body.offsetWidth; document.body.classList.add('dano');
+    if (this.status.vida <= 0) this.desmaiar();
+    this.sujo = true;
+  }
+
+  /** Sem punição pesada: acorda em casa com a vida cheia e mantém a mochila. */
+  private desmaiar() {
+    this.morto = true;
+    this.status.vida = 0;
+    this.cameras.main.fadeOut(700, 20, 16, 40);
+    this.time.delayedCall(900, () => {
+      const casa = this.mundo.ilhas[0];
+      this.jogador.setPosition((Math.round(casa.cx) + 0.5) * T, (Math.round(casa.cy) + 0.5) * T);
+      for (const b of [...this.fauna.lista]) this.fauna.remover(b);
+      this.status.vida = this.status.vidaMax;
+      this.morto = false;
+      this.invulneravelAte = this.time.now + 3000;
+      this.cameras.main.fadeIn(700, 20, 16, 40);
+      this.ui.aviso('Você desmaiou e acordou em casa');
+      this.mudou();
+    });
+  }
+
+  private textoFlutuante(x: number, y: number, txt: string, cor = '#fff') {
     const t = this.add.text(x, y, txt, {
-      fontFamily: 'monospace', fontSize: '24px', color: '#fff', stroke: '#3a2f45', strokeThickness: 5,
-    }).setOrigin(0.5).setScale(0.25).setDepth(20);
+      fontFamily: 'monospace', fontSize: '24px', color: cor, stroke: '#3a2f45', strokeThickness: 5,
+    }).setOrigin(0.5).setScale(0.25).setDepth(30000);
     this.tweens.add({ targets: t, y: y - 10, alpha: 0, duration: 1100, ease: 'Sine.easeOut', onComplete: () => t.destroy() });
   }
 
   update(t: number, dt: number) {
     const k = this.teclas;
     const j = this.jogador;
+    // Relógio do mundo, noite e criaturas.
+    this.tempoMundo += dt;
+    const noite = ehNoite(this.tempoMundo);
+    if (noite !== this.eraNoite) {
+      this.eraNoite = noite;
+      this.ui.aviso(noite ? 'A noite chegou — fique perto de uma fogueira' : 'Amanheceu');
+    }
+    this.diaNoite.atualizar(this.tempoMundo, this.construcoes.filter(c => c.tipo === 'fogueira'), t);
+    this.levarDano(this.fauna.atualizar(dt, j.x / T, j.y / T, !this.morto, noite), t);
+    this.ui.atualizarStatus(this.status, noite, (this.tempoMundo % DURACAO_DIA) / DURACAO_DIA);
+    j.setDepth(j.y);
+    if (this.morto) return;
     let vx = 0, vy = 0;
     if (k.A.isDown || k.LEFT.isDown) vx -= 1;
     if (k.D.isDown || k.RIGHT.isDown) vx += 1;
@@ -318,10 +419,17 @@ export class CenaJogo extends Phaser.Scene {
       if (Phaser.Input.Keyboard.JustDown(k.SPACE) || Phaser.Input.Keyboard.JustDown(k.E)) this.construir();
       return;
     }
+    const apertou = k.SPACE.isDown || k.E.isDown || toque.acao;
+    const bicho = this.fauna.alvo(j.x / T, j.y / T, VETOR[this.direcao]);
+    if (bicho) {
+      this.alvo.setVisible(false);
+      if (apertou && t - this.ultimoGolpe >= INTERVALO_ATAQUE) { this.ultimoGolpe = t; this.atacar(bicho); }
+      return;
+    }
     const alvo = this.recursoAlvo();
     this.alvo.setVisible(!!alvo);
     if (alvo) this.alvo.setPosition(alvo.x * T, alvo.y * T);
-    if (alvo && (k.SPACE.isDown || k.E.isDown || toque.acao) && t - this.ultimoGolpe >= INTERVALO_GOLPE) {
+    if (alvo && apertou && t - this.ultimoGolpe >= INTERVALO_GOLPE) {
       this.ultimoGolpe = t;
       this.golpe(alvo);
     }

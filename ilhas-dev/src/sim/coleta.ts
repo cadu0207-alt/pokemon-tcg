@@ -22,7 +22,7 @@ export function iniciarRecursos(m: Mundo): EstadoRecursos {
 export const recursoAtivo = (e: EstadoRecursos, r: Recurso) => !e.renasce.has(r.id);
 
 /** Melhor ferramenta do inventário para aquele tipo de recurso (ou mão nua). */
-export function ferramentaPara(inv: Inventario, tipo: Recurso['tipo']): { id: ItemId | null; dano: number } {
+export function ferramentaPara(inv: Inventario, tipo: Recurso['tipo'] | 'criatura'): { id: ItemId | null; dano: number } {
   let melhor: { id: ItemId | null; dano: number } = { id: null, dano: 1 };
   for (const id of Object.keys(inv.itens) as ItemId[]) {
     const f = ITENS[id].ferramenta;

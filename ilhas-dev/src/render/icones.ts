@@ -30,6 +30,18 @@ const MAPAS: Record<ItemId, [string[], Record<string, string>]> = {
     { k: K, r: '#e07a8a', R: '#f2a3ae', w: '#f6efe0', b: COR.agua, d: COR.tronco }],
   cerca: [['..........', '.kk....kk.', '.kt....tk.', 'kktkkkktkk', 'wwtwwwwtww', 'kktkkkktkk', '.kt....tk.', '.kk....kk.', '..........', '..........'],
     { k: K, w: '#c08a62', t: COR.tronco }],
+  carne: [['..........', '...kkkk...', '..krrrrk..', '.krrwrrrk.', '.krrrrrrk.', '..krrrrkw.', '...kkkkww.', '.......ww.', '..........', '..........'],
+    { k: K, r: '#e8838f', w: '#fbf6ee' }],
+  carne_assada: [['..........', '...kkkk...', '..kbbbbk..', '.kbbybbbk.', '.kbbbbbbk.', '..kbbbbkw.', '...kkkkww.', '.......ww.', '..........', '..........'],
+    { k: K, b: '#a8603f', y: '#e0a060', w: '#fbf6ee' }],
+  couro: [['..........', '.kkkkkkk..', 'kbbbbbbbk.', 'kbbcbbbbk.', '.kbbbbcbk.', 'kbbbbbbbk.', 'kbcbbbbk..', '.kkkkkkk..', '..........', '..........'],
+    { k: K, b: '#9b6b4f', c: '#7a5038' }],
+  gosma: [['..........', '..........', '...kkkk...', '..kgggwk..', '.kggggggk.', '.kgggggggk', '.kkkkkkkk.', '..........', '..........', '..........'],
+    { k: K, g: '#8fd6e8', w: '#e8fbff' }],
+  lanca_madeira: [['........kk', '.......kpk', '......kpk.', '.....ktk..', '....ktk...', '...ktk....', '..ktk.....', '.ktk......', 'kk........', '..........'],
+    { k: K, p: '#d9c9a0', t: COR.tronco }],
+  espada_pedra: [['........kk', '.......kwk', '......kpk.', '.....kpk..', '....kpk...', '.k.kpk....', '..kyk.....', '.kykk.....', 'kk..k.....', '..........'],
+    { k: K, p: COR.pedra, w: '#fff', y: COR.tronco }],
 };
 
 const cache = new Map<ItemId, string>();
