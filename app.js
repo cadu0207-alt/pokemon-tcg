@@ -717,6 +717,10 @@ const VER_SHORT={N:'N',F:'F',RH:'RH',RH2:'RH2',SP:'★'};
 function getSlots(c,setId){
   const r=c.rare||'';
   if(!c.base) return [{ver:'SP',price:c.price}];
+  // 12/11/2026 (André): os 3 Estádios de ME06 (Legendary Pyroduct/Summit/Trench,
+  // lados Left e Right = 094–099) só existem na versão NORMAL — sem reverse nem foil.
+  // Conferido no banco: só havia marcas :N nessas 6 cartas (nada é orfanado).
+  if(setId==='me06'&&/^09[4-9]$/.test(String(c.n))) return [{ver:'N',price:c.price}];
   // ME2.5(ASC) — Heróis Excelsos (01/10/2026, confirmado via tcgdex
   // variants_detailed + cruzado contra ninthpocket.com/sets/ascended-heroes
   // e binderforge.com, que batem no mesmo número: 140 cartas): diferente de
@@ -4716,13 +4720,25 @@ function renderSharedCustomBinder(cardIds, binderName){
   const bctl=document.querySelector('.bctl'); if(bctl) bctl.style.display='none';
 
   const items=(cardIds||[]).map(ref=>{
+    if(ref&&ref.empty) return {_empty:true,dex:ref.dex,name:ref.name||''}; // vaga da Pokédex sem carta escolhida
     const cards=SET_CARDS_MAP[ref.set]?.()??[];
     const card=cards.find(c=>c.n===ref.n);
     return card?{...card,_setId:ref.set}:null;
   }).filter(Boolean);
 
-  let total=0,got=0;
+  let total=0,got=0,emptyN=0;
   const cellsHtml=items.map(c=>{
+    if(c._empty){
+      total++; emptyN++;
+      const art=c.dex<=151?`assets/wild/${c.dex}.webp`:`https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/other/official-artwork/${c.dex}.png`;
+      return `<div class="bc2 bc2-empty" title="#${c.dex} ${esc(c.name)} — falta">
+      <div class="bc2-in" style="position:relative;height:var(--ch);border-style:dashed;background:var(--surface2)">
+        <img src="${art}" alt="${esc(c.name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" ${c.dex>151?`onerror="fmMdexNeutralFallback&&fmMdexNeutralFallback(this,${c.dex})"`:''}
+          style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:14% 8% 22%;opacity:.6;filter:grayscale(45%);border-radius:0">
+        <div style="position:absolute;top:3px;left:3px;background:rgba(0,0,0,.6);color:#fff;font-size:8px;padding:1px 4px;border-radius:4px;font-family:'Space Mono',monospace">#${c.dex}</div>
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:8px 4px 3px;background:linear-gradient(transparent,rgba(0,0,0,.78));font-size:9px;color:#fff;text-align:center;line-height:1.2">${esc(c.name)}</div>
+      </div></div>`;
+    }
     const slots=getSlots(c,c._setId);
     const imgUrl=imgThumb(getBinderImg(c,c._setId)||'');
     let anyCollected=false;
@@ -4739,7 +4755,8 @@ function renderSharedCustomBinder(cardIds, binderName){
     bstats.style.display='flex';
     bstats.innerHTML=`<div><div class="bsv" style="color:var(--purple)">${esc(binderName)}</div><div class="bsl">Fichário compartilhado</div></div>
       <div><div class="bsv">${pct}%</div><div class="bsl">Coletado</div></div>
-      <div><div class="bsv">${got}/${total}</div><div class="bsl">Slots</div></div>`;
+      <div><div class="bsv">${got}/${total}</div><div class="bsl">Slots</div></div>`
+      +(emptyN?`<div><div class="bsv">${emptyN}</div><div class="bsl">Vagas sem carta</div></div>`:'');
   }
 
   const wrap=document.getElementById('bwrap');
@@ -4769,7 +4786,23 @@ function shareCustomBinderPrompt(binder){
   if(!uid()){ alert('Faça login para gerar um link de compartilhamento.'); return; }
   const cards=getBinderCards(binder);
   if(!cards.length){ alert('Este fichário ainda não tem cartas — adicione cartas antes de compartilhar.'); return; }
-  _shareCustomBinder={ id:binder.id, name:binder.name, card_ids: cards.map(c=>({set:c._setId,n:c.n})) };
+  let refs=cards.map(c=>({set:c._setId,n:c.n}));
+  // 16/11/2026 (André: "o link da pokedex só mostra as cartas que eu tenho, não vem com os placeholders"):
+  // Master Set/Pokédex tem vagas SEM carta escolhida (arte neutra do Pokémon) — antes só as vagas preenchidas
+  // entravam no snapshot. Agora todas as espécies da faixa entram, na ordem da Pokédex; a vaga vazia vira
+  // {dex,name,empty:true} e é desenhada como placeholder na página compartilhada. Links já gerados não mudam.
+  const _cfg=binder.filter_config||{};
+  if(_cfg.type==='masterdex'&&typeof POKEDEX_NACIONAL!=='undefined'){
+    const from=_cfg.dexFrom||1, to=_cfg.dexTo||POKEDEX_NACIONAL.length, byDex={};
+    cards.forEach(c=>{ byDex[c._dex]=c; });
+    refs=[];
+    POKEDEX_NACIONAL.forEach(sp=>{
+      if(sp.dex<from||sp.dex>to) return;
+      const c=byDex[sp.dex];
+      refs.push(c?{set:c._setId,n:c.n,dex:sp.dex}:{dex:sp.dex,name:sp.name,empty:true});
+    });
+  }
+  _shareCustomBinder={ id:binder.id, name:binder.name, card_ids: refs };
   const modeRow=document.getElementById('share-mode-row'); if(modeRow) modeRow.style.display='none';
   const lbl=document.getElementById('share-set-label'); if(lbl) lbl.textContent=binder.name;
   const urlInp=document.getElementById('share-url'); if(urlInp) urlInp.value='';
