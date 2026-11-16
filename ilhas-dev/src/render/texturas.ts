@@ -217,6 +217,11 @@ export function criarCriaturas(scene: Phaser.Scene) {
     '.e..............e.', 'e.e............e.e', '..................', '..................',
   ], { k: COR.contorno, t: COR.tronco, w: '#a8734f', e: '#d6f0ff' });
   scene.textures.addCanvas('jangada', j);
+  // Sombra oval sob personagens e criaturas.
+  const sb = document.createElement('canvas'); sb.width = 12; sb.height = 4;
+  const sx = sb.getContext('2d')!; sx.fillStyle = '#1a1830';
+  sx.beginPath(); sx.ellipse(6, 2, 6, 2, 0, 0, Math.PI * 2); sx.fill();
+  scene.textures.addCanvas('sombra', sb);
   // Brilho da fogueira (gradiente radial) para a noite.
   const g = document.createElement('canvas'); g.width = g.height = 128;
   const gx = g.getContext('2d')!;

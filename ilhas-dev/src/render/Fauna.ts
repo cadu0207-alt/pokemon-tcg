@@ -7,7 +7,7 @@ import type { Ilha } from '../sim/mundo';
 import { criarRng } from '../sim/rng';
 import { T } from './texturas';
 
-export interface Bicho { c: Criatura; s: Phaser.GameObjects.Sprite; barra: Phaser.GameObjects.Graphics; }
+export interface Bicho { c: Criatura; s: Phaser.GameObjects.Sprite; barra: Phaser.GameObjects.Graphics; sombra: Phaser.GameObjects.Image; }
 
 const SORTEIO_DIA: [TipoCriatura, number][] = [['coelho', 0.45], ['javali', 0.25], ['slime', 0.3]];
 const SORTEIO_NOITE: [TipoCriatura, number][] = [['slime', 0.45], ['lobo', 0.4], ['coelho', 0.15]];
@@ -66,13 +66,14 @@ export class Fauna {
     s.setAlpha(0);
     this.scene.tweens.add({ targets: s, alpha: 1, duration: 400 });
     const barra = this.scene.add.graphics().setDepth(5000);
-    const b = { c, s, barra };
+    const sombra = this.scene.add.image(x * T, y * T, 'sombra').setAlpha(0.25);
+    const b = { c, s, barra, sombra };
     this.lista.push(b);
     return b;
   }
 
   remover(b: Bicho) {
-    b.s.destroy(); b.barra.destroy();
+    b.s.destroy(); b.barra.destroy(); b.sombra.destroy();
     this.lista.splice(this.lista.indexOf(b), 1);
   }
 
@@ -89,6 +90,7 @@ export class Fauna {
       const protegido = def.comportamento === 'hostil' && this.pertoDoFogo(jx, jy, 4);
       dano += atualizarCriatura(c, protegido ? { ...ctx, jogador: { ...ctx.jogador, vivo: false } } : ctx, dt);
       s.setPosition(c.x * T, c.y * T).setDepth(s.y);
+      b.sombra.setPosition(s.x, s.y + 1).setDepth(s.y - 1);
       if (Math.abs(c.dir[0]) > 0.1) s.setFlipX(c.dir[0] > 0);
       s.anims.timeScale = c.estado === 'parado' ? 0.3 : 1.4;
       b.barra.clear();
@@ -122,7 +124,7 @@ export class Fauna {
     const nx = b.c.x + (dx / d) * 0.35, ny = b.c.y + (dy / d) * 0.35;
     if (this.andavel(Math.floor(nx), Math.floor(ny))) { b.c.x = nx; b.c.y = ny; }
     if (morreu) {
-      b.barra.destroy();
+      b.barra.destroy(); b.sombra.destroy();
       this.lista.splice(this.lista.indexOf(b), 1);
       this.scene.tweens.add({ targets: b.s, alpha: 0, scaleY: 0.2, duration: 250, onComplete: () => b.s.destroy() });
     }

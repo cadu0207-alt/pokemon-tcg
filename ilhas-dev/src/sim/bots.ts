@@ -81,6 +81,11 @@ export interface MundoBots {
   bloqueado: (x: number, y: number) => boolean;
   agora: number;
   noite: boolean;
+  /** Dificuldade: multiplica o tempo entre golpes e a velocidade dos bots. */
+  ritmo?: number;
+  velocidade?: number;
+  /** Peso extra de "passear em vez de trabalhar". */
+  preguica?: number;
   /** avisos para quem desenha */
   aoDestruir?: (r: Recurso) => void;
   aoConstruir?: (bot: Bot, c: Construcao) => void;
@@ -251,7 +256,7 @@ export function avaliar(bot: Bot, ctx: MundoBots): Opcao[] {
   // À noite, quem tem fogueira descansa perto dela
   if (ctx.noite && temFogueira) ops.push({ objetivo: { tipo: 'descansar', ate: ctx.agora + 8000 }, nota: 0.75 * ruido() });
   // Vagar: sempre possível, nota baixa
-  ops.push({ objetivo: { tipo: 'vagar', ate: ctx.agora + 2000 + bot.rng() * 3000 }, nota: 0.08 * p.explorar * ruido() });
+  ops.push({ objetivo: { tipo: 'vagar', ate: ctx.agora + 2000 + bot.rng() * 3000 }, nota: (0.08 * p.explorar + (ctx.preguica ?? 0) * bot.rng()) * ruido() });
   return ops.sort((a, b) => b.nota - a.nota);
 }
 
@@ -278,11 +283,11 @@ function arvoreNoCaminho(bot: Bot, ctx: MundoBots, x: number, y: number): Recurs
   return null;
 }
 
-function passo(bot: Bot, dt: number): boolean {
+function passo(bot: Bot, dt: number, fatorVel = 1): boolean {
   if (!bot.caminho.length) { bot.andando = false; return true; }
   const [tx, ty] = bot.caminho[0];
   const dx = tx + 0.5 - bot.x, dy = ty + 0.5 - bot.y, d = Math.hypot(dx, dy);
-  const p = (PERFIS[bot.perfil].velocidade * dt) / 1000;
+  const p = (PERFIS[bot.perfil].velocidade * fatorVel * dt) / 1000;
   bot.andando = true;
   if (d <= p) { bot.x = tx + 0.5; bot.y = ty + 0.5; bot.caminho.shift(); }
   else { bot.x += (dx / d) * p; bot.y += (dy / d) * p; bot.dir = [dx / d, dy / d]; }
@@ -332,7 +337,7 @@ export function atualizarBot(bot: Bot, ctx: MundoBots, dt: number) {
   }
   const o = bot.objetivo;
   if (!o) return;
-  const chegou = passo(bot, dt);
+  const chegou = passo(bot, dt, ctx.velocidade ?? 1);
 
   switch (o.tipo) {
     case 'coletar': {
@@ -341,7 +346,7 @@ export function atualizarBot(bot: Bot, ctx: MundoBots, dt: number) {
       bot.proximaDecisao = Math.max(bot.proximaDecisao, ctx.agora + 1000); // não abandona no meio
       bot.dir = [o.recurso.x + 0.5 - bot.x, o.recurso.y + 0.5 - bot.y];
       if (ctx.agora < bot.proximoGolpe) return;
-      bot.proximoGolpe = ctx.agora + PERFIS[bot.perfil].ritmo;
+      bot.proximoGolpe = ctx.agora + PERFIS[bot.perfil].ritmo * (ctx.ritmo ?? 1);
       const ef = efeitos(bot.habilidades);
       const res = golpear(ctx.recursos, bot.inv, o.recurso, ctx.agora, { bonus: ef.coleta, extra: ef.extra, poupar: ef.poupar, rng: bot.rng });
       if (res?.destruido) { ctx.aoDestruir?.(o.recurso); bot.objetivo = null; }
@@ -384,5 +389,13 @@ export function atualizarBot(bot: Bot, ctx: MundoBots, dt: number) {
 }
 
 /** Pontuação do ranking. */
+export type Dificuldade = 'facil' | 'normal' | 'dificil';
+/** Fácil: bots lentos e com pausas; difícil: bots um pouco mais rápidos que no normal. */
+export const DIFICULDADE: Record<Dificuldade, { ritmo: number; velocidade: number; preguica: number; nome: string }> = {
+  facil: { ritmo: 2.6, velocidade: 0.7, preguica: 1.2, nome: 'Fácil' },
+  normal: { ritmo: 1.6, velocidade: 0.85, preguica: 0.35, nome: 'Normal' },
+  dificil: { ritmo: 1.0, velocidade: 1.0, preguica: 0, nome: 'Difícil' },
+};
+
 export const pontuacao = (construcoes: Construcao[], status: Status) =>
   nivelIlha(construcoes) * 100 + construcoes.length * 5 + status.nivel * 10;

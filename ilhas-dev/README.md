@@ -12,7 +12,9 @@ npm run dev      # abre em http://localhost:5173
 npm test         # testes da simulação
 npm run build    # gera ../ilhas (commitar junto para publicar)
 ```
-Parâmetros na URL: `?seed=123` muda o mundo, `?n=25` muda o número de participantes (padrão 100), `?bots=10` muda quantos bots jogam (padrão 99).
+Sem parâmetros, abre a tela inicial. Parâmetros na URL pulam o menu (modo de desenvolvimento): `?seed=123` muda o mundo, `?n=25` muda o número de participantes (padrão 100), `?bots=10` muda quantos bots jogam (padrão 99), `?dificuldade=facil|normal|dificil`.
+
+`npm run simular -- 240 30 facil` compara dificuldades sem tela.
 
 Controles no PC: K abre habilidades, 1–5 lançam magias. WASD ou setas para andar, Espaço ou E para coletar, C para criar, clique num item construível da mochila e depois no mapa para construir (Esc cancela), roda do mouse para zoom.
 
@@ -38,4 +40,5 @@ Foi assim que achamos ilhas sem pedra, bots que se trancavam nas próprias const
 - [x] Fase 4 — bots com 4 perfis, utility AI, A*, planejamento de construção; ranking e modo espectador
 - [x] Fase 5 — 99 bots por padrão e 1000 participantes com `?n=1000&bots=999` (1,7 s para carregar, ~37 MB, 60 fps); mapa desenhado em pedaços de 32×32; geração do mundo 115× mais rápida; jangada para navegar entre ilhas
 - [x] Fase 6 — minério e cristal (ilhas neutras são ricas), ferro, forja/altar/torre/estátua, ilha nível 1→10, árvore de habilidades (4 ramos × 5), 5 magias com mana, bots planejando a cadeia completa e escolhendo habilidades pelo perfil
-- [ ] Fase 7 — arte e polimento (sprites finais, som, tutorial)
+- [x] Fase 7 — tela inicial (mundo Vila/Arquipélago/Gigante, dificuldade, continuar/novo jogo), dificuldade dos bots, tutorial em 9 missões, sons e música gerados com Web Audio, sombras
+- [ ] Próximos — sprites desenhados à mão, bots que navegam, salvamento na nuvem/multiplayer

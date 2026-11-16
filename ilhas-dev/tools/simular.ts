@@ -1,7 +1,9 @@
 // Uso: npx vite-node tools/simular.ts [minutos] [bots]  (ou via vitest: tests/bots.test.ts)
 import { SimulacaoHeadless } from '../src/sim/simulacao';
 const minutos = Number(process.argv[2] ?? 30), n = Number(process.argv[3] ?? 20);
-const sim = new SimulacaoHeadless(2026, 100, n);
+const dif = (process.argv[4] ?? 'normal') as 'facil' | 'normal' | 'dificil';
+const sim = new SimulacaoHeadless(2026, 100, n, dif);
+console.log('dificuldade', dif);
 const t0 = performance.now();
 for (let m = 1; m <= minutos; m++) {
   sim.rodar(60_000);

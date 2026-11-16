@@ -22,6 +22,10 @@ export interface Ganchos {
   habilidades: () => { status: Status; aprendidas: string[] };
   aprender: (id: string) => void;
   lancar: (m: Magia) => void;
+  criou: (id: ItemId) => void;
+  alternarSom: () => void;
+  alternarMusica: () => void;
+  tocar: (e: import('./Som').Efeito) => void;
   mudou: () => void;
 }
 
@@ -41,6 +45,12 @@ export class Interface {
     $('zoom-menos').addEventListener('click', () => g.zoom(0.8));
     $('btn-ranking').addEventListener('click', () => this.alternarRanking());
     $('btn-hab').addEventListener('click', () => this.alternarHabilidades());
+    $('status').addEventListener('click', e => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>('[data-cfg]');
+      if (!b) return;
+      if (b.dataset.cfg === 'som') g.alternarSom(); else g.alternarMusica();
+      this.ultimoStatus = '';
+    });
     $('habilidades').addEventListener('click', e => {
       const el = e.target as HTMLElement;
       if (el.closest('.fechar')) return this.alternarHabilidades(false);
@@ -189,6 +199,7 @@ export class Interface {
     this.craft.querySelectorAll<HTMLButtonElement>('button[data-r]').forEach(b => b.addEventListener('click', () => {
       const r = RECEITAS[Number(b.dataset.r)];
       if (criar(inv, r, this.g.nivel())) {
+        this.g.criou(r.id);
         this.aviso(`Criou: ${ITENS[r.id].nome}${ITENS[r.id].construivel ? ' — toque nele na mochila para construir' : ''}`);
         this.g.mudou();
       }
@@ -196,6 +207,8 @@ export class Interface {
   }
 
   private ultimoStatus = '';
+  somLigado = () => true;
+  musicaLigada = () => true;
   /** Vida, experiência, nível do personagem e relógio do dia. */
   atualizarStatus(s: Status, noite: boolean, fracDia: number, mana = 0, manaMax = 0) {
     const chave = `${Math.ceil(s.vida)}|${s.vidaMax}|${s.xp}|${s.nivel}|${noite}|${Math.floor(fracDia * 24)}|${Math.floor(mana)}|${manaMax}`;
@@ -203,7 +216,7 @@ export class Interface {
     this.ultimoStatus = chave;
     const hora = Math.floor((fracDia * 24 + 6) % 24);
     $('status').innerHTML = `
-      <div class="linha"><b>Nv ${s.nivel}</b><span class="relogio">${noite ? '☾' : '☀'} ${String(hora).padStart(2, '0')}h</span></div>
+      <div class="linha"><b>Nv ${s.nivel}</b><span class="icones"><button data-cfg="som" title="Som">${this.somLigado() ? '🔊' : '🔇'}</button><button data-cfg="musica" title="Música">${this.musicaLigada() ? '♫' : '♪̸'}</button></span><span class="relogio">${noite ? '☾' : '☀'} ${String(hora).padStart(2, '0')}h</span></div>
       <div class="bar vida"><i style="width:${(100 * Math.max(0, s.vida)) / s.vidaMax}%"></i><span>${Math.max(0, Math.ceil(s.vida))}/${s.vidaMax}</span></div>
       ${manaMax ? `<div class="bar mana"><i style="width:${(100 * mana) / manaMax}%"></i><span>${Math.floor(mana)}/${manaMax}</span></div>` : ''}
       <div class="bar xp"><i style="width:${(100 * s.xp) / xpParaProximo(s.nivel)}%"></i><span>XP ${s.xp}/${xpParaProximo(s.nivel)}</span></div>`;

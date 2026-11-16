@@ -1,4 +1,4 @@
-import { atualizarBot, criarBots, pontuacao, type Bot, type MundoBots } from './bots';
+import { atualizarBot, criarBots, pontuacao, DIFICULDADE, type Bot, type Dificuldade, type MundoBots } from './bots';
 import { iniciarRecursos, atualizarRecursos, type EstadoRecursos } from './coleta';
 import { nivelIlha } from './construcao';
 import { DURACAO_DIA, ehNoite } from './criaturas';
@@ -10,7 +10,7 @@ export class SimulacaoHeadless {
   bloqueio = new Set<number>();
   agora = 0;
 
-  constructor(seed: number, participantes: number, nBots: number) {
+  constructor(seed: number, participantes: number, nBots: number, public dificuldade: Dificuldade = 'dificil') {
     this.mundo = gerarMundo({ seed, participantes });
     this.recursos = iniciarRecursos(this.mundo);
     for (const r of this.mundo.recursos) if (r.tipo !== 'arbusto') this.bloqueio.add(r.y * this.mundo.largura + r.x);
@@ -21,6 +21,7 @@ export class SimulacaoHeadless {
     const L = this.mundo.largura;
     return {
       mundo: this.mundo, recursos: this.recursos, agora: this.agora,
+      ritmo: DIFICULDADE[this.dificuldade].ritmo, velocidade: DIFICULDADE[this.dificuldade].velocidade, preguica: DIFICULDADE[this.dificuldade].preguica,
       noite: ehNoite(this.agora + DURACAO_DIA * 0.15),
       bloqueado: (x, y) => this.bloqueio.has(y * L + x),
       aoDestruir: r => this.bloqueio.delete(r.y * L + r.x),

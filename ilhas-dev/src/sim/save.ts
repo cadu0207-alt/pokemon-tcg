@@ -16,6 +16,7 @@ export interface Save {
   bots?: { x: number; y: number; inv: Inventario; construcoes: Construcao[]; status: Status; habilidades?: string[] }[];
   habilidades?: string[];
   mana?: number;
+  tutorial?: { missao: number; criados: Partial<Record<import('./itens').ItemId, number>>; mortos: number };
 }
 
 export function serializar(s: Omit<Save, 'versao'>): string {

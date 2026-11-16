@@ -16,6 +16,7 @@ export class BotsVisuais {
   bots: Bot[];
   private sprites: Phaser.GameObjects.Sprite[] = [];
   private nomes: Phaser.GameObjects.Text[] = [];
+  private sombras: Phaser.GameObjects.Image[] = [];
 
   constructor(
     private scene: Phaser.Scene, mundo: Mundo, quantidade: number, seed: number,
@@ -28,6 +29,7 @@ export class BotsVisuais {
       const s = save?.[i];
       if (s) { b.x = s.x; b.y = s.y; b.inv = s.inv; b.construcoes = s.construcoes; b.status = s.status; b.habilidades = s.habilidades ?? []; }
       this.sprites.push(scene.add.sprite(b.x * T, b.y * T, `bot${b.cor}`, 0).setOrigin(0.5, 0.75));
+      this.sombras.push(scene.add.image(b.x * T, b.y * T, 'sombra').setAlpha(0.28));
       this.nomes.push(scene.add.text(b.x * T, b.y * T - 16, b.nome, {
         fontFamily: 'system-ui, sans-serif', fontSize: '28px', color: '#ffffff', stroke: '#3a2f45', strokeThickness: 6,
       }).setOrigin(0.5, 1).setScale(0.18).setDepth(29000));
@@ -51,9 +53,10 @@ export class BotsVisuais {
       const s = this.sprites[i], n = this.nomes[i];
       const px = b.x * T, py = b.y * T;
       const visivel = px > v.x - margem && px < v.right + margem && py > v.y - margem && py < v.bottom + margem;
-      s.setVisible(visivel); n.setVisible(visivel);
+      s.setVisible(visivel); n.setVisible(visivel); this.sombras[i].setVisible(visivel);
       if (!visivel) continue;
       s.setPosition(px, py).setDepth(py);
+      this.sombras[i].setPosition(px, py + 2).setDepth(py - 1);
       n.setPosition(px, py - 13);
       const [dx, dy] = b.dir;
       const dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'esquerda' : 'direita') : (dy < 0 ? 'cima' : 'baixo');
