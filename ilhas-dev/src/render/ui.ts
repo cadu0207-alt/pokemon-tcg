@@ -16,6 +16,8 @@ export interface Ganchos {
   confirmarConstrucao: () => void;
   zoom: (fator: number) => void;
   comer: (id: ItemId) => void;
+  ranking: () => { nome: string; perfil: string; pontos: number }[];
+  assistir: (nome: string | null) => void;
   mudou: () => void;
 }
 
@@ -33,6 +35,12 @@ export class Interface {
     $('btn-cancelar').addEventListener('click', () => g.selecionarConstrucao(null));
     $('zoom-mais').addEventListener('click', () => g.zoom(1.25));
     $('zoom-menos').addEventListener('click', () => g.zoom(0.8));
+    $('btn-ranking').addEventListener('click', () => this.alternarRanking());
+    $('btn-voltar').addEventListener('click', () => g.assistir(null));
+    $('ranking').addEventListener('click', e => {
+      const li = (e.target as HTMLElement).closest<HTMLElement>('[data-nome]');
+      if (li && li.dataset.nome !== 'Você') { g.assistir(li.dataset.nome!); this.alternarRanking(false); }
+    });
     this.barra.addEventListener('click', e => {
       const slot = (e.target as HTMLElement).closest<HTMLElement>('[data-id]');
       if (!slot) return;
@@ -48,6 +56,32 @@ export class Interface {
     this.aberto = forcar ?? !this.aberto;
     this.craft.hidden = !this.aberto;
     this.atualizar();
+  }
+
+  rankingAberto = false;
+  alternarRanking(forcar?: boolean) {
+    this.rankingAberto = forcar ?? !this.rankingAberto;
+    $('ranking').hidden = !this.rankingAberto;
+    if (this.rankingAberto) { this.alternarCraft(false); this.atualizarRanking(); }
+  }
+
+  private static ROTULO: Record<string, string> = { coletor: 'coletor', construtor: 'construtor', cacador: 'caçador', explorador: 'explorador', jogador: 'você' };
+  atualizarRanking() {
+    if (!this.rankingAberto) return;
+    const r = this.g.ranking();
+    const minha = r.findIndex(l => l.perfil === 'jogador');
+    const mostrar = r.slice(0, 8);
+    const linha = (l: (typeof r)[number], i: number) =>
+      `<li data-nome="${l.nome}" class="${l.perfil === 'jogador' ? 'eu' : ''}"><span>${i + 1}º</span><b>${l.nome}</b><small>${Interface.ROTULO[l.perfil]}</small><em>${l.pontos}</em></li>`;
+    $('ranking').innerHTML = `<h3>Ranking <button class="fechar">✕</button></h3>
+      <p class="sua">Sua posição: <b>${minha + 1}º de ${r.length}</b><small>Toque num nome para assistir</small></p><ol>${
+      mostrar.map(linha).join('')}${minha >= 8 ? linha(r[minha], minha) : ''}</ol>`;
+    $('ranking').querySelector('.fechar')!.addEventListener('click', () => this.alternarRanking(false));
+  }
+
+  assistindo(nome: string | null, perfil = '') {
+    document.body.classList.toggle('espectador', !!nome);
+    $('espectador-nome').textContent = nome ? `Assistindo ${nome} (${Interface.ROTULO[perfil] ?? perfil})` : '';
   }
 
   aviso(texto: string) {

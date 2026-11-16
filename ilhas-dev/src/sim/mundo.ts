@@ -87,6 +87,26 @@ export function gerarMundo({ seed, participantes, tamanhoCelula = 48 }: OpcoesMu
     else if (t === Tile.Grama && r < 0.065) tipo = 'pedra';
     if (tipo) recursos.push({ id: recursos.length, tipo, x, y });
   }
+  // Garante o mínimo de cada recurso em toda ilha inicial (senão uma ilha sem pedra trava o progresso).
+  const MINIMO: Record<TipoRecurso, number> = { arvore: 8, pedra: 5, arbusto: 4 };
+  const ocupado = new Set(recursos.map(r => r.y * largura + r.x));
+  for (const ilha of ilhas) {
+    if (ilha.dono === null) continue;
+    const perto = recursos.filter(r => Math.hypot(r.x + 0.5 - ilha.cx, r.y + 0.5 - ilha.cy) < ilha.raio * 1.3);
+    for (const tipo of Object.keys(MINIMO) as TipoRecurso[]) {
+      let falta = MINIMO[tipo] - perto.filter(r => r.tipo === tipo).length;
+      for (let tentativa = 0; falta > 0 && tentativa < 300; tentativa++) {
+        const a = rng() * Math.PI * 2, d = 3 + rng() * (ilha.raio * 0.9 - 3);
+        const x = Math.floor(ilha.cx + Math.cos(a) * d), y = Math.floor(ilha.cy + Math.sin(a) * d);
+        const t = tiles[y * largura + x] as Tile;
+        if ((t !== Tile.Grama && t !== Tile.Floresta && t !== Tile.Areia) || ocupado.has(y * largura + x)) continue;
+        recursos.push({ id: recursos.length, tipo, x, y });
+        ocupado.add(y * largura + x);
+        falta--;
+      }
+    }
+  }
+
   // Recursos não ficam em cima do ponto de nascimento.
   const livres = recursos.filter(r => !ilhas.some(i => i.dono !== null &&
     Math.abs(r.x - Math.round(i.cx)) <= 1 && Math.abs(r.y - Math.round(i.cy)) <= 1));

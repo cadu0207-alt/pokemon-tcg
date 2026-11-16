@@ -9,6 +9,7 @@ import { ITENS, type ItemId } from '../sim/itens';
 import { criarCriaturas, criarPersonagem, criarTileset, T, TILE_CONSTRUCAO } from './texturas';
 import { Fauna } from './Fauna';
 import { DiaNoite } from './DiaNoite';
+import { BotsVisuais } from './BotsVisuais';
 import { Interface, toque } from './ui';
 
 const VELOCIDADE = 5;          // tiles por segundo
@@ -46,6 +47,8 @@ export class CenaJogo extends Phaser.Scene {
   private eraNoite = false;
   private invulneravelAte = 0;
   private morto = false;
+  private bots!: BotsVisuais;
+  private assistindo: import('../sim/bots').Bot | null = null;
 
   constructor() { super('jogo'); }
 
@@ -82,6 +85,17 @@ export class CenaJogo extends Phaser.Scene {
     for (const c of this.construcoes) this.mostrarConstrucao(c);
     this.nivel = nivelIlha(this.construcoes);
 
+    // Bots: cada um na sua ilha, decidindo sozinho o que fazer.
+    const nBots = Math.max(0, Math.min(participantes - 1, Number(q.get('bots') ?? 30)));
+    this.bots = new BotsVisuais(this, m, nBots, seed,
+      r => { this.objetos.removeTileAt(r.x, r.y); this.bloqueio.delete(this.idx(r.x, r.y)); },
+      c => { this.removerRecursoSob(c.x, c.y); this.mostrarConstrucao(c); },
+      save?.bots);
+    for (const c of this.bots.todasConstrucoes()) {
+      if (this.recursos.porTile.get(this.idx(c.x, c.y))) { this.objetos.removeTileAt(c.x, c.y); this.removerRecursoSob(c.x, c.y); }
+      this.mostrarConstrucao(c);
+    }
+
     const casa = m.ilhas[0];
     const ini = save?.jogador ?? { x: (Math.round(casa.cx) + 0.5) * T, y: (Math.round(casa.cy) + 0.5) * T };
     this.jogador = this.add.sprite(ini.x, ini.y, 'heroi', 0);
@@ -115,10 +129,14 @@ export class CenaJogo extends Phaser.Scene {
       confirmarConstrucao: () => this.construir(),
       zoom: f => cam.setZoom(Phaser.Math.Clamp(cam.zoom * f, 0.5, 6)),
       comer: id => this.comer(id),
+      ranking: () => this.bots.ranking({ construcoes: this.construcoes, status: this.status }),
+      assistir: nome => this.assistir(nome),
       mudou: () => this.mudou(),
     });
     kb.on('keydown-C', () => this.ui.alternarCraft());
-    kb.on('keydown-ESC', () => this.selecionarConstrucao(null));
+    kb.on('keydown-ESC', () => { this.selecionarConstrucao(null); this.assistir(null); });
+    kb.on('keydown-R', () => this.ui.alternarRanking());
+    this.time.addEvent({ delay: 1000, loop: true, callback: () => this.ui.atualizarRanking() });
     this.ui.atualizar();
 
     // No modo de construção: mouse escolhe e clica para construir; no toque, o toque escolhe e o ✔ confirma.
@@ -172,6 +190,7 @@ export class CenaJogo extends Phaser.Scene {
       jogador: { x: Math.round(this.jogador.x), y: Math.round(this.jogador.y) },
       inventario: this.inv, construcoes: this.construcoes,
       status: this.status, tempo: Math.round(this.tempoMundo),
+      bots: this.bots.salvar(),
     });
     try { localStorage.setItem(this.chaveSave, texto); this.sujo = false; } catch { /* sem armazenamento: segue sem salvar */ }
   }
@@ -307,6 +326,15 @@ export class CenaJogo extends Phaser.Scene {
     this.mudou();
   }
 
+  private assistir(nome: string | null) {
+    const cam = this.cameras.main;
+    const bot = nome ? this.bots.bots.find(b => b.nome === nome) ?? null : null;
+    this.assistindo = bot;
+    this.ui.assistindo(bot?.nome ?? null, bot?.perfil);
+    if (!bot) cam.startFollow(this.jogador, true, 0.15, 0.15);
+    else cam.stopFollow();
+  }
+
   private comer(id: ItemId) {
     const cura = ITENS[id].comida ?? 0;
     if (this.status.vida >= this.status.vidaMax) { this.ui.aviso('Você está de barriga cheia'); return; }
@@ -392,6 +420,14 @@ export class CenaJogo extends Phaser.Scene {
     this.diaNoite.atualizar(this.tempoMundo, this.construcoes.filter(c => c.tipo === 'fogueira'), t);
     this.levarDano(this.fauna.atualizar(dt, j.x / T, j.y / T, !this.morto, noite), t);
     this.ui.atualizarStatus(this.status, noite, (this.tempoMundo % DURACAO_DIA) / DURACAO_DIA);
+    this.bots.atualizar({
+      mundo: this.mundo, recursos: this.recursos, agora: t, noite,
+      bloqueado: (x, y) => this.bloqueio.has(this.idx(x, y)),
+    }, Math.min(dt, 100));
+    if (this.assistindo) {
+      const cam = this.cameras.main;
+      cam.centerOn(Phaser.Math.Linear(cam.midPoint.x, this.assistindo.x * T, 0.15), Phaser.Math.Linear(cam.midPoint.y, this.assistindo.y * T, 0.15));
+    }
     j.setDepth(j.y);
     if (this.morto) return;
     let vx = 0, vy = 0;

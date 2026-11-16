@@ -12,6 +12,8 @@ export interface Save {
   /** Opcionais: saves da fase 2 não têm. */
   status?: Status;
   tempo?: number;
+  /** Estado compacto dos bots (fase 4). */
+  bots?: { x: number; y: number; inv: Inventario; construcoes: Construcao[]; status: Status }[];
 }
 
 export function serializar(s: Omit<Save, 'versao'>): string {
