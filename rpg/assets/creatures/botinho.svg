@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 250" width="300" height="250">
+  <defs>
+    <radialGradient id="skin" cx="45%" cy="30%" r="80%">
+      <stop offset="0" stop-color="#ffd3e0"/><stop offset=".55" stop-color="#f08aab"/><stop offset="1" stop-color="#b8527a"/>
+    </radialGradient>
+    <linearGradient id="belly" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff2f5"/><stop offset="1" stop-color="#f7c3d3"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#bfeaff" stop-opacity=".9"/><stop offset="1" stop-color="#2f8fd8" stop-opacity=".75"/>
+    </linearGradient>
+    <radialGradient id="glow" r=".5"><stop offset="0" stop-color="#58b8ff" stop-opacity=".4"/><stop offset="1" stop-color="#58b8ff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <circle cx="150" cy="150" r="115" fill="url(#glow)"/>
+  <!-- anel de água em volta do corpo (parte de trás) -->
+  <path d="M40 190 q20 -120 150 -110 q90 10 90 70" stroke="url(#water)" stroke-width="10" fill="none" stroke-linecap="round" opacity=".7"/>
+  <!-- cauda -->
+  <path d="M70 165 q-30 -10 -42 -40 q18 6 30 2 q-10 -14 -6 -34 q22 26 34 52z" fill="url(#skin)"/>
+  <!-- nadadeira-pata de trás -->
+  <path d="M100 200 q-6 22 4 32 h26 q4 -18 -6 -34z" fill="#c9628a"/>
+  <!-- corpo -->
+  <path d="M60 170 q0 -70 90 -72 q70 -2 96 40 q12 22 -6 44 q-30 30 -90 28 q-70 -2 -90 -40z" fill="url(#skin)"/>
+  <path d="M90 196 q60 22 140 -6 q-20 26 -80 26 q-40 0 -60 -20z" fill="url(#belly)"/>
+  <!-- barbatana -->
+  <path d="M118 104 q14 -30 44 -36 q-10 18 -4 36z" fill="#d9729a"/>
+  <!-- focinho comprido -->
+  <path d="M236 140 q30 0 50 18 q4 8 -6 10 q-26 2 -48 -4z" fill="url(#skin)"/>
+  <path d="M244 162 q20 4 36 4" stroke="#a84870" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- olho -->
+  <ellipse cx="215" cy="146" rx="10" ry="12" fill="#1c1020"/>
+  <circle cx="219" cy="141" r="4" fill="#fff"/>
+  <circle cx="212" cy="151" r="2" fill="#7ac8ff"/>
+  <path d="M203 130 q12 -6 22 2" stroke="#b8527a" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <ellipse cx="226" cy="168" rx="9" ry="5" fill="#ff7aa0" opacity=".5"/>
+  <!-- respiradouro -->
+  <ellipse cx="186" cy="104" rx="5" ry="2.5" fill="#9a3e66"/>
+  <!-- nadadeira-pata da frente -->
+  <path d="M168 202 q-4 22 6 30 h28 q2 -18 -10 -32z" fill="#d06f96"/>
+  <path d="M176 230 h22" stroke="#fff0f4" stroke-width="2.5" stroke-linecap="round" opacity=".6"/>
+  <!-- anel de água (parte da frente) e gotas -->
+  <path d="M280 150 q6 70 -110 76" stroke="url(#water)" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <circle cx="262" cy="96" r="7" fill="url(#water)"/>
+  <circle cx="276" cy="78" r="4" fill="url(#water)"/>
+  <circle cx="38" cy="208" r="5" fill="url(#water)"/>
+</svg>

@@ -180,6 +180,9 @@ async function renderLeilaoTab(){
   switchLeilaoSubtab(allowed.includes(aucActiveSubtab)?aucActiveSubtab:'leiloes');
 
   await loadRoundsAndAuctions();
+  await aucSyncServerTime();     // hora do servidor (contador e "já acabou?" usam isto)
+  aucStartTicker();              // contador anda a cada segundo
+  aucSubscribeRealtime();        // lances e prazos chegam sem recarregar
   await loadLeiloeiroNames();
   await loadMyBidAuctionIds();
   await loadMyAuctionOrders();
@@ -316,10 +319,54 @@ function renderLeilaoAnalises(){
     kpi('PAGAMENTOS PENDENTES',`${pendentes.length} · R$ ${fmtR(totalPendente)}`,'var(--gold)')+
     kpi('PAGAMENTOS VENCIDOS',vencidos.length,vencidos.length?'var(--accent)':'var(--text)');
   renderLeilaoComissao();
+  renderLeilaoAnalisesPorRodada(myAuctions);
   renderLeilaoAnalisesCountdown();
   renderLeilaoAnalisesPorLeiloeiro();
   renderLeilaoAnalisesChart();
   renderLeilaoAnalisesUltimosLances();
+}
+
+// Desempenho por rodada (17/10/2026): mostra o que o leiloeiro precisava adivinhar — quantos lotes ficaram sem lance,
+// quanto cada lote rendeu sobre o preço inicial, se os arremates se concentram em poucas pessoas e quantos pedidos foram
+// pagos. Tudo calculado no navegador com os dados que a tela já carrega (escopo: só os lotes do leiloeiro, ou todos
+// pro admin principal).
+function renderLeilaoAnalisesPorRodada(myAuctions){
+  const box=document.getElementById('leilao-analises-rodadas');
+  if(!box)return;
+  const rounds=aucRounds.filter(r=>r.status!=='cancelado'&&myAuctions.some(a=>a.round_id===r.id&&a.status!=='cancelado'))
+    .sort((x,y)=>new Date(y.start_at)-new Date(x.start_at));
+  if(!rounds.length){box.innerHTML='<div class="cv-item-empty">Sem rodadas ainda.</div>';return;}
+  const pct=(n,d)=>d>0?Math.round(n/d*100)+'%':'—';
+  const rows=rounds.map(r=>{
+    const lots=myAuctions.filter(a=>a.round_id===r.id&&a.status!=='cancelado');
+    const closed=lots.filter(a=>a.status==='encerrado');
+    const sold=closed.filter(a=>a.winner_id&&+a.winning_bid>0);
+    const semLance=closed.filter(a=>!(a.bid_count>0)).length;
+    const lances=lots.reduce((t,a)=>t+(a.bid_count||0),0);
+    const gmv=sold.reduce((t,a)=>t+(+a.winning_bid||0),0);
+    const ratios=sold.filter(a=>+a.starting_price>0).map(a=>+a.winning_bid/+a.starting_price);
+    const ratio=ratios.length?ratios.reduce((t,x)=>t+x,0)/ratios.length:null;
+    const byWinner={};sold.forEach(a=>{byWinner[a.winner_id]=(byWinner[a.winner_id]||0)+(+a.winning_bid||0);});
+    const vals=Object.values(byWinner).sort((x,y)=>y-x);
+    const top3=vals.slice(0,3).reduce((t,x)=>t+x,0);
+    const ords=aucAdminOrders.filter(o=>o.round_id===r.id&&o.status!=='cancelado');
+    const pagos=ords.filter(o=>['pago','enviado','concluido'].includes(o.status)).length;
+    const bad=closed.length&&semLance/closed.length>=0.2?'var(--accent)':'var(--text)';
+    return`<tr style="border-top:1px solid var(--border)">
+      <td style="padding:8px 10px;font-size:12px"><b>${esc(r.title)}</b><div style="font-size:9.5px;color:var(--muted)">${new Date(r.start_at).toLocaleDateString('pt-BR')} → ${new Date(r.end_at).toLocaleDateString('pt-BR')}</div></td>
+      <td style="padding:8px 10px;text-align:right">${lots.length}</td>
+      <td style="padding:8px 10px;text-align:right;color:${bad}">${closed.length?pct(semLance,closed.length):'—'}</td>
+      <td style="padding:8px 10px;text-align:right">${lots.length?(lances/lots.length).toFixed(1).replace('.',','):'—'}</td>
+      <td style="padding:8px 10px;text-align:right">${ratio!==null?ratio.toFixed(2).replace('.',',')+'×':'—'}</td>
+      <td style="padding:8px 10px;text-align:right;color:var(--teal)">R$ ${fmtR(gmv)}</td>
+      <td style="padding:8px 10px;text-align:right">${vals.length?`${vals.length} · ${pct(top3,gmv)}`:'—'}</td>
+      <td style="padding:8px 10px;text-align:right">${ords.length?`${pagos}/${ords.length}`:'—'}</td></tr>`;
+  }).join('');
+  const th=t=>`<th style="padding:8px 10px;font-size:9px;letter-spacing:1px;color:var(--muted);text-align:${t[1]||'right'};font-weight:400">${t[0]}</th>`;
+  box.innerHTML=`<div class="panel" style="padding:0;overflow:hidden"><table style="width:100%;border-collapse:collapse;min-width:640px">
+    <thead><tr style="background:var(--surface2)">${[['RODADA','left'],['LOTES'],['SEM LANCE'],['LANCES/LOTE'],['ARREMATE ÷ INICIAL'],['ARRECADADO'],['GANHADORES · TOP 3'],['PEDIDOS PAGOS']].map(th).join('')}</tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.6">Sem lance = % dos lotes encerrados sem nenhum lance (vermelho acima de 20%). Arremate ÷ inicial = quanto o lote rendeu sobre o preço inicial, em média. Top 3 = parte do arrecadado concentrada nas 3 pessoas que mais arremataram.</div>`;
 }
 
 // Rodada "atual" pra fins de contador/gráfico — entre as rodadas ainda
@@ -982,7 +1029,7 @@ async function loadMyBidAuctionIds(){
 function aucRoundById(id){return aucRounds.find(r=>r.id===id);}
 
 function aucStatusLabel(a){
-  const now=new Date();
+  const now=aucNow();
   if(a.status==='cancelado')return{txt:'Cancelado',color:'var(--muted)'};
   if(a.status==='agendado')return{txt:'Agendado',color:'var(--gold)'};
   if(a.status==='encerrado')return a.winner_id?{txt:'Arrematado',color:'var(--teal)'}:{txt:'Encerrado sem vencedor',color:'var(--muted)'};
@@ -993,14 +1040,125 @@ function aucStatusLabel(a){
   return{txt:a.status,color:'var(--muted)'};
 }
 
-function aucCountdown(endAt){
-  const diff=new Date(endAt)-new Date();
-  if(diff<=0)return'encerrando…';
-  const mins=Math.floor(diff/60000);
-  const d=Math.floor(mins/1440),h=Math.floor((mins%1440)/60),m=mins%60;
+// ── TEMPO REAL (17/10/2026) ─────────────────────────────────────────────────────────────────────────────
+// Antes o prazo era calculado UMA vez ao desenhar o cartão (ficava congelado: "2min restantes" para sempre), com o relógio
+// do aparelho, e o lance de outra pessoa só aparecia ao recarregar. Agora: (1) o contador anda a cada segundo, usando a
+// hora do SERVIDOR (RPC server_now — relógio errado no celular não engana mais o prazo; quem decide o fim do leilão
+// continua sendo o banco); (2) a tabela auctions está no Realtime: lance novo, extensão do prazo (anti-sniping) e
+// encerramento aparecem na hora, sem apagar o valor que a pessoa está digitando; (3) rede de segurança: uma consulta leve
+// dos leilões ativos a cada 20 s, caso o Realtime esteja fora do ar.
+let aucServerOffset=0;   // servidor − aparelho, em ms
+function aucNow(){return new Date(Date.now()+aucServerOffset);}
+async function aucSyncServerTime(){
+  try{
+    const t0=Date.now();
+    const{data,error}=await sbClient.rpc('server_now');
+    const t1=Date.now();
+    if(!error&&data)aucServerOffset=new Date(data).getTime()-(t0+t1)/2;
+  }catch(e){/* sem RPC/rede: segue com o relógio do aparelho */}
+}
+function aucFmtLeft(ms){
+  if(ms<=0)return'encerrando…';
+  const s=Math.floor(ms/1000),d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60),sec=s%60;
   if(d>0)return`${d}d ${h}h restantes`;
   if(h>0)return`${h}h ${m}min restantes`;
-  return`${m}min restantes`;
+  return`${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')} restantes`;
+}
+function aucCountdown(endAt){return aucFmtLeft(new Date(endAt)-aucNow());}
+const AUC_HOT_MS=5*60*1000;   // últimos 5 min: contador em vermelho
+function aucCountdownSpan(endAt){
+  const end=new Date(endAt).getTime(),left=end-aucNow().getTime();
+  return`<span class="auc-cd" data-end="${end}" style="color:${left<AUC_HOT_MS?'var(--accent)':'var(--gold)'}">${aucFmtLeft(left)}</span>`;
+}
+let aucTickTimer=null,aucTickRefreshAt=0;
+function aucTick(){
+  if(document.hidden)return;
+  const spans=document.querySelectorAll('.auc-cd');
+  if(!spans.length)return;
+  const now=aucNow().getTime();
+  let expired=false;
+  spans.forEach(el=>{
+    const left=+el.dataset.end-now;
+    el.textContent=aucFmtLeft(left);
+    el.style.color=left<AUC_HOT_MS?'var(--accent)':'var(--gold)';
+    if(left<=0)expired=true;
+  });
+  // prazo acabou na tela: dá 2,5 s pro banco fechar/estender e recarrega
+  if(expired&&Date.now()-aucTickRefreshAt>5000){aucTickRefreshAt=Date.now();setTimeout(aucReloadLive,2500);}
+}
+function aucStartTicker(){if(!aucTickTimer)aucTickTimer=setInterval(aucTick,1000);}
+function aucTabActive(){const pn=document.getElementById('leilao');return!!pn&&pn.classList.contains('active');}
+
+// re-desenha a lista sem perder o que a pessoa estava digitando num campo de lance
+function aucRenderSafe(){
+  const vals={};
+  document.querySelectorAll('input[id^="auc-bid-"]').forEach(i=>{if(i.value)vals[i.id]=i.value;});
+  const focusId=document.activeElement&&document.activeElement.id;
+  renderAuctionsList();
+  Object.keys(vals).forEach(id=>{const el=document.getElementById(id);if(el)el.value=vals[id];});
+  if(focusId&&String(focusId).startsWith('auc-bid-')){const el=document.getElementById(focusId);if(el)el.focus();}
+}
+async function aucReloadLive(){
+  if(!uid())return;
+  await loadRoundsAndAuctions();
+  if(aucTabActive())aucRenderSafe();
+}
+
+// atualiza só o bloco de informações do leilão que mudou (valor atual, lances, prazo, botões de lance mínimo)
+function aucPatchAuction(id){
+  const a=aucAuctions.find(x=>x.id===id);
+  if(!a)return;
+  document.querySelectorAll(`.auc-info[data-auc="${id}"]`).forEach(box=>{
+    const suffix=box.dataset.suffix||'';
+    const inp=box.querySelector('input[id^="auc-bid-"]');
+    const val=inp?inp.value:'',hadFocus=!!inp&&document.activeElement===inp;
+    box.innerHTML=aucInfoBlockInner(a,suffix);
+    const ni=box.querySelector('input[id^="auc-bid-"]');
+    if(ni&&val){ni.value=val;if(hadFocus)ni.focus();}
+    const bid=box.querySelector('[data-bid]');
+    if(bid){bid.classList.add('auc-flash');setTimeout(()=>bid.classList.remove('auc-flash'),1300);}
+  });
+}
+function aucOnAuctionChange(payload){
+  const row=payload.new,old=payload.old;
+  if(payload.eventType==='DELETE'){
+    aucAuctions=aucAuctions.filter(a=>a.id!==(old&&old.id));
+    if(aucTabActive())aucRenderSafe();
+    return;
+  }
+  if(!row)return;
+  const i=aucAuctions.findIndex(a=>a.id===row.id);
+  const prev=i>=0?aucAuctions[i]:null;
+  if(i>=0)aucAuctions[i]={...prev,...row};else aucAuctions.push(row);
+  if(!aucTabActive())return;
+  // leilão novo ou mudança de status (abriu / encerrou / cancelou): reorganiza a lista; senão só atualiza o bloco
+  if(!prev||prev.status!==row.status)aucRenderSafe();
+  else aucPatchAuction(row.id);
+}
+let aucChannel=null,aucRtOk=false,aucPollTimer=null;
+// Consulta leve dos leilões ATIVOS (poucas linhas): rede de segurança que roda sempre, em paralelo ao Realtime — se o
+// canal estiver fora do ar (ou não entregar) a tela ainda atualiza em até 20 s. Só roda com a aba visível e leilão ativo.
+async function aucPollActive(){
+  if(!uid()||document.hidden||!aucTabActive())return;
+  if(!aucAuctions.some(a=>a.status==='ativo'))return;
+  const{data,error}=await sbClient.from('auctions').select('*').eq('status','ativo');
+  if(error||!data)return;
+  data.forEach(row=>{
+    const cur=aucAuctions.find(a=>a.id===row.id);
+    if(!cur||cur.updated_at!==row.updated_at||cur.end_at!==row.end_at||cur.bid_count!==row.bid_count)aucOnAuctionChange({eventType:'UPDATE',new:row,old:{}});
+  });
+  const ids=new Set(data.map(r=>r.id));
+  if(aucAuctions.some(a=>a.status==='ativo'&&!ids.has(a.id)))aucReloadLive();   // sumiu dos ativos = encerrou
+}
+function aucSubscribeRealtime(){
+  if(aucChannel||!sbClient||!uid())return;
+  aucChannel=sbClient.channel('auctions-live')
+    .on('postgres_changes',{event:'*',schema:'public',table:'auctions'},aucOnAuctionChange)
+    .subscribe(status=>{
+      aucRtOk=(status==='SUBSCRIBED');
+      if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')console.warn('[leilao] realtime',status);
+    });
+  if(!aucPollTimer)aucPollTimer=setInterval(aucPollActive,20000);
 }
 
 // Incremento mínimo por faixa (regra do leiloeiro, 12/08/2026): até R$10 →
@@ -1150,6 +1308,90 @@ function aucComputeCheapCards(allCards,n){
     .slice(0,n||10);
 }
 
+// 17/10/2026: com 0 leilões ativos a página mostrava só o resumo da última rodada encerrada — sem dizer quando vem o
+// próximo nem oferecer aviso (e é o que a maioria das visitas vê). Este bloco aparece no topo SÓ quando não há leilão
+// aberto: próximo leilão marcado (se houver), resultado da última rodada e os botões de aviso (sino + push).
+// 17/10/2026: quem dá lance em vários lotes da mesma rodada não via o conjunto. Este resumo mostra, por rodada, em
+// quantos lotes você está NA FRENTE (e quanto somam hoje), em quantos foi COBERTO, e lembra que tudo que você arrematar
+// na rodada vira 1 pedido/PIX e 1 envio só — o frete é um só, então juntar lotes da mesma rodada compensa.
+function aucMyLeadingSummaryHtml(allCards){
+  const me=uid();
+  if(!me)return'';
+  const now=aucNow();
+  const live=(allCards||[]).filter(a=>a.status==='ativo'&&new Date(a.end_at)>now&&aucMyBidAuctionIds.has(a.id));
+  if(!live.length)return'';
+  const byRound={};
+  live.forEach(a=>{(byRound[a.round_id]=byRound[a.round_id]||[]).push(a);});
+  const blocks=Object.keys(byRound).map(rid=>{
+    const round=aucRoundById(+rid),lots=byRound[rid];
+    const lead=lots.filter(a=>a.current_bidder===me),out=lots.filter(a=>a.current_bidder!==me);
+    const sum=lead.reduce((t,a)=>t+(+a.current_bid||0),0);
+    const end=round?round.end_at:lots[0].end_at;
+    return`<div style="padding:10px 0;border-top:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:700;margin-bottom:4px">🗓️ ${esc(round?round.title:('Rodada #'+rid))} <span style="font-weight:400;color:var(--muted)">· fecha em ${aucCountdownSpan(end)}</span></div>
+      <div style="font-size:12px;line-height:1.7">
+        ${lead.length?`<span style="color:var(--teal)">✓ Na frente em <b>${lead.length}</b> lote${lead.length===1?'':'s'}: R$ ${fmtR(sum)}</span>`:`<span style="color:var(--muted)">Você não está na frente em nenhum lote agora.</span>`}
+        ${out.length?` · <span style="color:var(--accent)">⚠ coberto em <b>${out.length}</b>: ${out.slice(0,3).map(a=>esc(a.card_name)).join(', ')}${out.length>3?'…':''}</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  return`<div class="panel" style="margin-bottom:18px">
+    <div style="font-size:14px;font-weight:700;margin-bottom:2px">🎯 Seus lances em andamento</div>
+    <div style="font-size:10.5px;color:var(--muted);margin-bottom:6px">O que você arrematar numa mesma rodada vira <b>1 pedido/PIX e 1 envio</b> — frete único. Juntar lotes da mesma rodada sai mais barato que vários pedidos.</div>
+    ${blocks}
+  </div>`;
+}
+
+function aucNoActiveHtml(visibleRounds,allCards){
+  const now=new Date();
+  if((allCards||[]).some(a=>a.status==='ativo'&&new Date(a.end_at)>now))return'';
+
+  // próxima rodada marcada (ainda não começou)
+  const upcoming=aucRounds.filter(r=>r.status!=='cancelado'&&!r.archived&&r.start_at&&new Date(r.start_at)>now)
+    .sort((x,y)=>new Date(x.start_at)-new Date(y.start_at))[0];
+  const nextHtml=upcoming
+    ?`<div style="font-size:13px;margin-bottom:4px">⏳ Próximo: <b>${esc(upcoming.title)}</b> — começa em <b>${new Date(upcoming.start_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</b>, lances até ${new Date(upcoming.end_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}.</div>`
+    :`<div style="font-size:13px;margin-bottom:4px">O próximo leilão ainda não foi marcado — ative o aviso abaixo e você fica sabendo assim que abrir.</div>`;
+
+  // resultado da última rodada encerrada
+  let lastHtml='';
+  const last=(visibleRounds||[]).slice().sort((x,y)=>new Date(y.end_at)-new Date(x.end_at))[0];
+  if(last){
+    const cards=aucAuctions.filter(a=>a.round_id===last.id&&a.status!=='cancelado');
+    const sold=cards.filter(a=>a.winner_id&&+a.winning_bid>0);
+    const total=sold.reduce((t,a)=>t+(+a.winning_bid||0),0);
+    const lances=cards.reduce((t,a)=>t+(a.bid_count||0),0);
+    const semLance=cards.filter(a=>!(a.bid_count>0)).length;
+    const top=sold.slice().sort((x,y)=>(+y.winning_bid)-(+x.winning_bid))[0];
+    if(cards.length){
+      lastHtml=`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.7">
+        🏁 <b style="color:var(--text)">${esc(last.title)}</b> (encerrada): ${cards.length} lote${cards.length===1?'':'s'}, ${sold.length} arrematado${sold.length===1?'':'s'}${semLance?`, ${semLance} sem lance`:''} · ${lances} lances · R$ ${fmtR(total)} em arremates${top?` · maior arremate: ${esc(top.card_name)} (R$ ${fmtR(top.winning_bid)})`:''}
+      </div>`;
+    }
+  }
+
+  // avisos: sino (novos leilões e rifas) + push neste aparelho
+  let avisoHtml='';
+  if(typeof notifDropsEnabled!=='undefined'&&notifDropsEnabled!==null){
+    avisoHtml+=notifDropsEnabled
+      ?`<span style="font-size:12px;color:var(--teal)">✓ Você será avisado no sino quando abrir um novo leilão</span>`
+      :`<button type="button" class="btn-add" onclick="aucNotifDrops(true)">🔔 Avisar quando abrir um novo leilão</button>`;
+  }
+  const ps=typeof notifPushState!=='undefined'?notifPushState:'unknown';
+  if(ps==='off')avisoHtml+=`<button type="button" class="cv-item-remove" style="color:var(--teal);border-color:var(--teal)" onclick="aucNotifPush()">📲 Receber também no celular/PC, com o app fechado</button>`;
+  else if(ps==='on')avisoHtml+=`<span style="font-size:11px;color:var(--muted)">📲 Avisos com o app fechado: ligados neste aparelho</span>`;
+  else if(ps==='ios-install')avisoHtml+=`<span style="font-size:11px;color:var(--muted)">📲 No iPhone: adicione o MyDeck à Tela de Início pra receber avisos com o app fechado.</span>`;
+
+  return`<div class="panel" style="margin-bottom:18px;border:1px dashed var(--border)">
+    <div style="font-size:15px;font-weight:700;margin-bottom:8px">🔨 Nenhum leilão aberto agora</div>
+    ${nextHtml}
+    ${avisoHtml?`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px">${avisoHtml}</div>`:''}
+    ${lastHtml}
+  </div>`;
+}
+async function aucNotifDrops(on){ if(typeof notifDropsSet==='function')await notifDropsSet(on); renderAuctionsList(); }
+async function aucNotifPush(){ if(typeof notifPushEnable==='function')await notifPushEnable(); renderAuctionsList(); }
+
 function renderAuctionsList(){
   const wrap=document.getElementById('leilao-list');
   const hotWrap=document.getElementById('leilao-hot-list');
@@ -1159,7 +1401,7 @@ function renderAuctionsList(){
     if(hotWrap)hotWrap.innerHTML='';
     const bar=document.getElementById('leilao-filter-bar');
     if(bar)bar.innerHTML='';
-    wrap.innerHTML=`<div class="cv-item-empty">Nenhum leilão no momento.</div>`;
+    wrap.innerHTML=aucNoActiveHtml([],[])+`<div class="cv-item-empty">Nenhum leilão no momento.</div>`;
     return;
   }
 
@@ -1215,7 +1457,7 @@ function renderAuctionsList(){
     mainHtml=resumoHtml+mineHtml+hotHtml+cheapHtml;
   }
 
-  wrap.innerHTML=blockedNote+mainHtml;
+  wrap.innerHTML=blockedNote+(noFiltro?aucNoActiveHtml(visibleRounds,allCards)+aucMyLeadingSummaryHtml(allCards):'')+mainHtml;
   refreshOpenAuctionZoom();
 }
 
@@ -1371,8 +1613,12 @@ function aucToggleRoundLeiloeiroTile(tileKey){
 // isso os dois formulários de lance colidiriam no mesmo id.
 function aucInfoBlockHtml(a,idSuffix){
   idSuffix=idSuffix||'';
+  return`<div class="auc-info" data-auc="${a.id}" data-suffix="${idSuffix}">${aucInfoBlockInner(a,idSuffix)}</div>`;
+}
+function aucInfoBlockInner(a,idSuffix){
+  idSuffix=idSuffix||'';
   const st=aucStatusLabel(a);
-  const isActive=a.status==='ativo'&&new Date(a.end_at)>new Date();
+  const isActive=a.status==='ativo'&&new Date(a.end_at)>aucNow();
   const isOwnAuction=a.created_by===uid();
   const iAmWinning=a.current_bidder===uid();
   return`<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1388,14 +1634,15 @@ function aucInfoBlockHtml(a,idSuffix){
     ${a.description?`<div style="font-size:11px;color:var(--text);margin-bottom:6px">${esc(a.description)}</div>`:''}
     <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:8px">
       <div><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">LANCE ATUAL</div>
-        <div style="font-size:17px;font-weight:700;color:var(--teal)">R$ ${fmtR(a.current_bid||a.starting_price)}</div></div>
+        <div data-bid="1" style="font-size:17px;font-weight:700;color:var(--teal)">R$ ${fmtR(a.current_bid||a.starting_price)}</div></div>
       <div><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">LANCES</div>
         <div style="font-size:17px;font-weight:700">${a.bid_count||0}</div></div>
       ${a.buy_now_price&&isActive?`<div><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">ARREMATE</div>
         <div style="font-size:17px;font-weight:700;color:var(--gold)">R$ ${fmtR(a.buy_now_price)}</div></div>`:''}
       ${isActive?`<div><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">PRAZO</div>
-        <div style="font-size:13px;font-weight:600;color:var(--gold)">${aucCountdown(a.end_at)}</div></div>`:''}
+        <div style="font-size:13px;font-weight:600">${aucCountdownSpan(a.end_at)}</div></div>`:''}
     </div>
+    ${isActive&&a.anti_snipe_minutes>0?`<div style="font-size:9.5px;color:var(--muted);margin-top:4px">⏱️ Anti-sniping: um lance nos últimos ${a.anti_snipe_minutes} min reinicia o prazo por mais ${a.anti_snipe_minutes} min — o leilão só fecha quando passa esse tempo sem lance.</div>`:''}
     ${iAmWinning&&isActive?`<div style="font-size:10.5px;color:var(--teal);margin-top:6px">✓ Você está na frente</div>`:''}
     ${isActive&&!isOwnAuction&&!aucBlocked?`
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
@@ -2097,10 +2344,32 @@ function aucOrderPackageType(items){
   return best;
 }
 
+// resumo do histórico de arremates: quantas cartas, quanto gastou, o que falta pagar (17/10/2026)
+function aucRenderMySummary(){
+  const box=document.getElementById('leilao-my-summary');
+  if(!box)return;
+  const orders=aucMyOrders.filter(o=>o.status!=='cancelado');
+  if(!orders.length){box.innerHTML='';return;}
+  const cartas=aucMyOrderItems.filter(it=>orders.some(o=>o.id===it.order_id)).length;
+  const total=orders.reduce((t,o)=>t+(+o.amount||0),0);
+  const pagos=orders.filter(o=>['pago','enviado','concluido'].includes(o.status));
+  const pend=orders.filter(o=>o.status==='aguardando_pagamento');
+  const pendVal=pend.reduce((t,o)=>t+(+o.amount||0),0);
+  const venc=pend.filter(o=>aucIsOverdue(o));
+  const kpi=(l,v,c)=>`<div class="panel" style="padding:12px 14px;flex:1 1 120px"><div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace">${l}</div><div style="font-size:18px;font-weight:700;color:${c||'var(--text)'}">${v}</div></div>`;
+  box.innerHTML=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+    ${kpi('CARTAS ARREMATADAS',cartas)}
+    ${kpi('RODADAS',new Set(orders.map(o=>o.round_id)).size)}
+    ${kpi('TOTAL ARREMATADO','R$ '+fmtR(total),'var(--teal)')}
+    ${pend.length?kpi('A PAGAR',`R$ ${fmtR(pendVal)} <span style="font-size:11px;font-weight:400">(${pend.length} pedido${pend.length===1?'':'s'})</span>`,venc.length?'var(--accent)':'var(--gold)'):kpi('PEDIDOS PAGOS',pagos.length,'var(--teal)')}
+  </div>${venc.length?`<div class="mkt-note" style="border-color:var(--accent);color:var(--accent);margin-bottom:12px">⚠️ ${venc.length===1?'Você tem 1 pedido com pagamento vencido':`Você tem ${venc.length} pedidos com pagamento vencido`} — pedido vencido pode bloquear novos lances. Fale com o leiloeiro.</div>`:''}`;
+}
+
 function renderMyBidsAndOrders(){
   fillLeilaoAddressForm();
   const wrap=document.getElementById('leilao-my-orders');
   if(!wrap)return;
+  aucRenderMySummary();
   if(!aucMyOrders.length){
     wrap.innerHTML=`<div class="cv-item-empty">Você ainda não arrematou nenhum leilão.</div>`;
     return;

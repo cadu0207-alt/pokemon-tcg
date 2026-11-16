@@ -39,15 +39,18 @@ function normalizeRare(r) {
   if (s === 'Dupla Rara' || s === 'Rara Dupla' || s === 'Double Rare') return 'Dupla Rara';
   // Illustration Rare (IR) — ME: "Ilustr. Rara" · SV: "Rara Ilustrada" · Promo: "Ilustração Rara (IR)" · ME05 (provisório): "Art Rare"
   if (s === 'Ilustr. Rara' || s === 'Illustration Rare' || s === 'Rara Ilustrada' ||
-      s === 'Ilustração Rara (IR)' || s === 'Art Rare') return 'Ilustr. Rara';
+      s === 'Ilustração Rara (IR)' || s === 'Ilustração Rara' || s === 'Art Rare') return 'Ilustr. Rara';
   // Ultra Rare (UR) — ME: "Rara Ultra" · SV: "Ultra Rara" (ordem invertida) · ME05 (provisório): "Super Rare"
   if (s === 'Rara Ultra' || s === 'Ultra Rare' || s === 'Ultra Rara' || s === 'Super Rare') return 'Rara Ultra';
   // Special Illustration Rare (SAR/SIR) — ME: "Ilustr. Esp. Rara" · SV: "Rara Ilustrada Especial" · ME05 (provisório): "Special Art Rare"
   if (s === 'Ilustr. Esp. Rara' || s === 'Special Illustration Rare' || s === 'Rara Ilustrada Especial' ||
-      s === 'Special Art Rare') return 'Ilustr. Esp. Rara';
+      s === 'Ilustração Rara Especial' || s === 'Special Art Rare') return 'Ilustr. Esp. Rara';
   // Hyper Rare (topo da raridade) — ME: "Mega Hyper Rare"/"Mega Attack Rare" · SV: "Hiper Rara" · ME05 (provisório): "Mega Ultra Rare"
   if (s === 'Mega Hyper Rare' || s === 'Hyper Rare' || s === 'Mega Attack Rare' ||
-      s === 'Hiper Rara' || s === 'Mega Ultra Rare') return 'Mega Hyper Rare';
+      s === 'Hiper Rara' || s === 'Mega Ultra Rare' ||
+      // 17/10/2026: ME05 grava "Hiper Rara Mega" e ME2.5 "Mega Hiper Raro" — sem isso a carta caía em "Rara" (76%
+      // de chance por booster) e inflava o EV da ME05 ~5x (Mega Darkrai Gold, R$ 400, virava "rara base").
+      s === 'Hiper Rara Mega' || s === 'Mega Hiper Raro') return 'Mega Hyper Rare';
   // Holo Rare (slot bônus, sem valor de mercado relevante — fica fora do EV, prob 0)
   if (s === 'Rara (Holo)' || s === 'Holo Rare' || s === 'Rara Holo') return 'Rara (Holo)';
   // ACE SPEC e Shiny Vault (Rara Brilhante / Ultra Rara Brilhante) — mecânica exclusiva
@@ -82,4 +85,39 @@ var RARE_TO_BUCKET = {
 };
 function normalizeRareBucket(r) {
   return RARE_TO_BUCKET[normalizeRare(r)] || 'BASE';
+}
+
+
+// ── Celebração de 30 Anos: modelo de pacote próprio (17/10/2026) ─────────────────────────────
+// Este set NÃO segue o PULL_RATES da era ME (1 slot raro por pacote): cada booster tem 5 cartas + 1 energia, com
+// 1 Pikachu ilustrada garantida (30 artes), um slot "Ilustração Rara ou melhor" e um slot "Rara Holo ou melhor".
+// A Pokémon Company não publica pull rates; as taxas abaixo são a MÉDIA de contagens da comunidade (por pacote):
+//   • Ilustr. Rara (IR, fora as Pikachu)  ≈ 1 em 5     (TCGplayer, +3.000 pacotes; DigitalTQ, 420 pacotes: 20%; Japão: 18,5%)
+//   • Rara Dupla (ex)                      ≈ 1 em 4     (Wargamer, 4.063 pacotes; DigitalTQ: 27,6%; Japão: 22,6%)
+//   • Ilustr. Especial (SAR/SIR)           ≈ 1 em 20    (TCGplayer: 1 em 21; DigitalTQ: 5,2%; Japão, 57 caixas: 5,0%)
+//   • Rara Futurista (Mew ex / Mewtwo ex)  ≈ 1 em 110   (TCGplayer: 1 em 120; Wargamer: 1 em 99; DigitalTQ: 0,95%)
+//   • Coleção Clássica (reimpressão)       ≈ 1 em 10    (TCGplayer: 1 em 10; DigitalTQ: 10,5%; Japão: 10,3%)
+//   • Rara Holo                            ≈ 76%        (DigitalTQ)
+// Os 3 Mews RGB (Rara Secreta) ficam FORA: foram vistos só em pacotes de varejo, sem taxa confiável, e valem R$ 16–20 mil
+// cada — qualquer chute dominaria o resultado. Comuns/incomuns/energias = bulk (fora, como nos outros sets).
+var CEL30_RATES = [
+  { key:'pik',     nome:'Pikachu ilustrada (1 por pacote)',          freq:1 },
+  { key:'ir',      nome:'Ilustr. Rara (IR) 1/5',                      freq:0.20 },
+  { key:'rara',    nome:'Rara Holo (76%)',                            freq:0.76 },
+  { key:'dr',      nome:'Rara Dupla (ex) 1/4',                        freq:0.25 },
+  { key:'sir',     nome:'Ilustr. Especial (SAR) 1/20',                freq:0.05 },
+  { key:'fur',     nome:'Rara Futurista (Mew ex/Mewtwo ex) 1/110',    freq:1/110 },
+  { key:'classic', nome:'Coleção Clássica (reimpressão) 1/10',        freq:0.10 }
+];
+
+// Qual grupo de taxa uma carta da CEL30 pertence (null = bulk: comum/incomum/energia/Mew RGB, fora do cálculo)
+function cel30Classify(c) {
+  var rare = c.rare || '';
+  if (rare === 'Rara Ilustrada') return (/^Pikachu/.test(c.name || '') && /^0(2[3-9]|3\d|4\d|5[0-2])$/.test(String(c.n))) ? 'pik' : 'ir';
+  if (rare === 'Rara') return 'rara';
+  if (rare === 'Rara Dupla') return 'dr';
+  if (rare === 'Ilustr. Esp. Rara') return 'sir';
+  if (rare === 'Rara Ultra') return 'fur';
+  if (rare === 'Coleção Clássica') return 'classic';
+  return null;
 }

@@ -80,26 +80,8 @@ async function fetchCatalogPreview(catalogIdOrLink) {
 
 // ── CONFIG: lojas parceiras ─────────────────────────────────────
 const STORES = [
-  {
-    name: 'iWorld TCG',
-    city: 'Pereira Barreto · SP',
-    logo: 'https://ugc.production.linktr.ee/929ba8e6-3ff8-4f67-8973-e6f071b900cf_8567fd8ded86adcb458e6ac291267689-tplv-tiktokx-cropcenter-1080-1080.jpeg',
-    tiktok: 'https://www.tiktok.com/@iworldtcg',
-    instagram: '',
-    whatsapp: '',
-    color: '#22c55e',
-    tag: '🤝 Parceria oficial'
-  },
-  {
-    name: 'CoffeeCat - Pokémon TCG',
-    city: '',
-    logo: '',
-    tiktok: '',
-    instagram: '',
-    whatsapp: '',
-    color: '#c8960a',
-    tag: '⭐ Loja recomendada'
-  },
+  // 15/10/2026: só a TOYBOX fica na lista (as demais lojas indicadas foram retiradas a pedido do Eduardo).
+  // shop:true = a loja tem vitrine própria dentro do MyDeck (aba "Loja Toybox", mk_store.js).
   {
     name: 'TOYBOX Artes 3D',
     city: 'José Bonifácio · SP',
@@ -108,7 +90,8 @@ const STORES = [
     instagram: 'https://www.instagram.com/toybox_colecionaveis/',
     whatsapp: 'https://wa.me/5517991620996',
     color: '#0e7898',
-    tag: '⭐ Loja recomendada'
+    tag: '⭐ Loja parceira',
+    shop: true
   }
 ];
 
@@ -180,11 +163,43 @@ async function removeSearchTerm(id) {
   renderLojas();
 }
 
+// 21/10/2026: avisos de promoção — escopo (todas as promoções ou só os produtos marcados) e marcação por produto.
+// Regra do aviso (banco, ml_check_deals): preço parado por mais de 24 h não é promoção; só volta a ser se o preço baixar.
+async function loadDealScope() {
+  try { const { data, error } = await sbClient.rpc('ml_get_deal_scope'); return error ? 'all' : (data || 'all'); } catch (e) { return 'all'; }
+}
+async function saveDealScope(scope) {
+  if (!isAdminEditor()) return;
+  const { error } = await sbClient.rpc('ml_set_deal_scope', { p_scope: scope });
+  if (error) { alert('Não consegui salvar: ' + error.message); return; }
+  renderAdminPanel();
+}
+async function toggleDealWatch(id, current) {
+  if (!isAdminEditor()) return;
+  const { error } = await sbClient.from('ml_search_terms').update({ deal_watch: !current }).eq('id', id);
+  if (error) { alert('Erro ao salvar: ' + error.message); return; }
+  renderAdminPanel();
+}
+window.saveDealScope = saveDealScope; window.toggleDealWatch = toggleDealWatch;
+
 async function toggleFeatured(id, current) {
   if (!hasPerm('lojas')) return;
   await sbClient.from('ml_search_terms').update({ featured: !current }).eq('id', id);
   renderLojas();
 }
+
+// Nº de boosters do produto (só preencha quando tiver certeza): a tela mostra o valor por booster.
+async function saveBoosters(id) {
+  if (!isAdminEditor()) return;
+  const input = document.getElementById('boost-' + id);
+  if (!input) return;
+  const n = parseInt(input.value, 10);
+  if (input.value.trim() && !(n >= 1 && n <= 100)) { alert('Informe um número de 1 a 100 (ou deixe em branco).'); return; }
+  const { error } = await sbClient.from('ml_search_terms').update({ boosters: input.value.trim() ? n : null, boosters_estimado: false, boosters_nota: input.value.trim() ? 'Informado pelo admin' : null }).eq('id', id);
+  if (error) { alert('Erro ao salvar boosters: ' + error.message); return; }
+  renderLojas();
+}
+window.saveBoosters = saveBoosters;
 
 async function saveAffiliateUrl(id) {
   if (!isAdminEditor()) return;
@@ -367,20 +382,93 @@ window.mydeckGetRealPrice = async function(productKey) {
   if (!sbClient || !productKey) return null;
   const { data: term, error: e1 } = await sbClient
     .from('ml_search_terms')
-    .select('id')
+    .select('id, affiliate_url, catalog_product_id')
     .eq('product_key', productKey)
     .eq('active', true)
     .limit(1)
     .maybeSingle();
   if (e1 || !term) return null;
+  // 17/10/2026: antes devolvia o MENOR preço de TODO o histórico — um anúncio errado antigo (ME05 Display a R$ 19,90,
+  // com mediana de R$ 360) virava o "preço real" e a calculadora dava "compra imediata". Agora: só os últimos 7 dias e
+  // sem outliers (abaixo de 50% da mediana da janela). Sem dado recente = null (a calculadora volta ao preço de tabela).
+  const since = new Date(Date.now() - 7 * 86400000).toISOString();
   const { data: rows, error: e2 } = await sbClient
     .from('ml_price_history')
     .select('price, found_at')
     .eq('term_id', term.id)
+    .gte('found_at', since)
     .order('price', { ascending: true })
-    .limit(1);
+    .limit(500);
   if (e2 || !rows || !rows.length) return null;
-  return { price: +rows[0].price, updatedAt: rows[0].found_at };
+  const pick = mydeckPickRealPrice(rows);
+  if (pick) Object.assign(pick, mydeckRealPriceLink(term));
+  return pick;
+};
+
+// Link pra ver o produto no ML: o de afiliado do cadastro, se houver; senão a página de catálogo do ML.
+// Só https (nada de javascript:/data:). `affiliate` avisa a tela pra mostrar o aviso de link de afiliado.
+function mydeckRealPriceLink(term) {
+  const aff = term && typeof term.affiliate_url === 'string' && /^https:\/\//i.test(term.affiliate_url) ? term.affiliate_url : null;
+  if (aff) return { url: aff, affiliate: true };
+  const id = term && typeof term.catalog_product_id === 'string' && /^MLB\d+$/.test(term.catalog_product_id) ? term.catalog_product_id : null;
+  return id ? { url: 'https://www.mercadolivre.com.br/p/' + id, affiliate: false } : { url: null, affiliate: false };
+}
+
+// rows ordenadas por preço crescente → o menor preço que não seja outlier (< 50% da mediana)
+function mydeckPickRealPrice(rows) {
+  if (!rows || !rows.length) return null;
+  const mid = Math.floor(rows.length / 2);
+  const median = rows.length % 2 ? +rows[mid].price : (+rows[mid - 1].price + +rows[mid].price) / 2;
+  const best = rows.find(r => +r.price >= median * 0.5);
+  return best ? { price: +best.price, updatedAt: best.found_at } : null;
+}
+
+// 17/10/2026 (Preço Justo): preço real (menor dos últimos 7 dias, sem outliers) de VÁRIOS termos de uma vez.
+// Recebe linhas de ml_search_terms (precisa de id; affiliate_url/catalog_product_id viram o link) e devolve
+// { term_id: {price, updatedAt, url, affiliate} }. Duas consultas no total, em vez de duas por produto.
+async function mydeckPricesByTerm(terms) {
+  const out = {};
+  if (!sbClient || !terms || !terms.length) return out;
+  const since = new Date(Date.now() - 7 * 86400000).toISOString();
+  // O PostgREST devolve no máximo 1000 linhas por chamada (e 14 produtos × ~78 leituras em 7 dias já passam disso):
+  // sem paginar, as linhas de maior preço eram cortadas e produtos inteiros (ex.: ETB ME02) sumiam do resultado.
+  const rows = [];
+  for (let from = 0; from < 20000; from += 1000) {
+    const { data, error } = await sbClient.from('ml_price_history').select('id, term_id, price, found_at')
+      .in('term_id', terms.map(t => t.id)).gte('found_at', since)
+      .order('price', { ascending: true }).order('id', { ascending: true }).range(from, from + 999);
+    if (error) return out;
+    rows.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  terms.forEach(t => {
+    const p = mydeckPickRealPrice(rows.filter(r => r.term_id === t.id));
+    if (p) out[t.id] = Object.assign(p, mydeckRealPriceLink(t));
+  });
+  return out;
+}
+
+// todos os produtos ligados ao catálogo do Preço Justo — { product_key: {price, updatedAt, url, affiliate} }
+window.mydeckGetAllRealPrices = async function() {
+  if (!sbClient) return {};
+  const { data: terms, error } = await sbClient.from('ml_search_terms').select('id, product_key, affiliate_url, catalog_product_id').eq('active', true).not('product_key', 'is', null);
+  if (error || !terms || !terms.length) return {};
+  const byTerm = await mydeckPricesByTerm(terms);
+  const out = {};
+  terms.forEach(t => { if (byTerm[t.id]) out[t.product_key] = byTerm[t.id]; });
+  return out;
+};
+
+// Celebração 30 Anos & cia: termos com preço sugerido do fabricante (msrp) — usado pelo Preço Justo pra mostrar
+// o ágio do ML sobre o preço oficial. Devolve [{ term, price: {…} | null }].
+window.mydeckGetMsrpProducts = async function() {
+  if (!sbClient) return [];
+  const { data: terms, error } = await sbClient.from('ml_search_terms')
+    .select('id, term, label, collection, msrp, release_date, affiliate_url, catalog_product_id')
+    .eq('active', true).not('msrp', 'is', null).order('msrp', { ascending: true });
+  if (error || !terms || !terms.length) return [];
+  const byTerm = await mydeckPricesByTerm(terms);
+  return terms.map(t => ({ term: t, price: byTerm[t.id] || null }));
 };
 
 function applyCouponDiscount(price, coupon) {
@@ -511,6 +599,7 @@ function renderStoreCard(s) {
   if (s.tiktok) links.push('<a href="' + s.tiktok + '" target="_blank" rel="noopener">🎵 TikTok</a>');
   if (s.instagram) links.push('<a href="' + s.instagram + '" target="_blank" rel="noopener">📸 Instagram</a>');
   if (s.whatsapp) links.push('<a href="' + s.whatsapp + '" target="_blank" rel="noopener">💬 WhatsApp</a>');
+  if (s.shop) links.unshift('<a href="#" onclick="goToTab(\'mk\');return false;"><b>🛒 Ver a loja no MyDeck</b></a>');
   const linksHtml = links.length ? links.join(' &nbsp;·&nbsp; ') : '<span style="opacity:.5">links em breve</span>';
   return (
     '<div class="store-card" style="--store-color:' + s.color + '">' +
@@ -727,22 +816,28 @@ async function renderAdminPanel() {
   if (!holder) return;
   if (!isAdmin()) { holder.innerHTML = ''; return; }
 
-  const [terms, coupons, rules] = await Promise.all([loadSearchTerms(), loadCoupons(), loadCouponRules()]);
+  const [terms, coupons, rules, dealScope] = await Promise.all([loadSearchTerms(), loadCoupons(), loadCouponRules(), loadDealScope()]);
+  const watchCount = terms.filter(function (t) { return t.deal_watch; }).length;
   const termsListHtml = terms.length
     ? terms.map(t => {
         const coupon = couponForTerm(coupons, t.id);
         return (
         '<div class="ml-term-card">' +
           '<div class="ml-term-hdr">' +
-            '<span class="ml-term-name">' + (t.featured ? '🔥 ' : '🔎 ') + (t.label || t.term) + '</span>' +
+            '<span class="ml-term-name">' + (t.featured ? '🔥 ' : '🔎 ') + esc(t.label || t.term) + '</span>' +
             '<span class="ml-term-actions">' +
               '<button class="btn-mini" onclick="runSearchForTerm(' + JSON.stringify(t).replace(/"/g, '&quot;') + ', document.getElementById(\'res-' + t.id + '\'))">Buscar agora</button>' +
               '<button class="btn-mini' + (t.featured ? ' btn-mini-active' : '') + '" onclick="toggleFeatured(' + t.id + ',' + (!!t.featured) + ')">' + (t.featured ? '★ Destaque' : '☆ Destacar') + '</button>' +
+              '<button class="btn-mini' + (t.deal_watch ? ' btn-mini-active' : '') + '" title="Marca este produto para receber aviso de promoção (vale quando o escopo é \'só os marcados\')" onclick="toggleDealWatch(' + t.id + ',' + (!!t.deal_watch) + ')">' + (t.deal_watch ? '🔔 Marcado' : '🔕 Marcar') + '</button>' +
               '<button class="btn-mini btn-mini-danger" onclick="removeSearchTerm(' + t.id + ')">✕</button>' +
             '</span>' +
           '</div>' +
-          '<div class="ml-term-sub">catálogo: <code>' + (t.catalog_product_id || t.term) + '</code>' +
+          '<div class="ml-term-sub">catálogo: <code>' + esc(t.catalog_product_id || t.term) + '</code>' +
             ' · <a href="https://www.mercadolivre.com.br/p/' + (t.catalog_product_id || '') + '" target="_blank" rel="noopener">ver no ML →</a></div>' +
+          '<div class="ml-aff-row">' +
+            '<input id="boost-' + t.id + '" type="number" min="1" max="100" style="max-width:90px" placeholder="Nº boosters" title="Quantos boosters (pacotes) vêm no produto — só preencha se tiver certeza" value="' + (t.boosters || '') + '">' +
+            '<button class="btn-mini" onclick="saveBoosters(' + t.id + ')">Salvar boosters</button>' +
+          '</div>' +
           '<div class="ml-aff-row">' +
             '<input id="aff-' + t.id + '" placeholder="Cole aqui o link meli.la gerado" value="' + (t.affiliate_url || '') + '">' +
             '<button class="btn-mini" onclick="saveAffiliateUrl(' + t.id + ')">Salvar link</button>' +
@@ -818,6 +913,11 @@ async function renderAdminPanel() {
         '<button class="btn-mini" id="btn-refresh-all" onclick="refreshAllTerms()">🔄 Atualizar todos agora</button>' +
         '<span id="refresh-all-status" style="font-size:11px;color:var(--muted)"></span>' +
       '</span>' +
+    '</div>' +
+    '<div class="ml-deal-scope" style="margin:6px 0 14px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);font-size:13px">' +
+      '<b>🔔 Avisos de promoção</b> <span style="color:var(--muted)">— preço parado por mais de 24 h não é promoção; só volta a avisar se o preço baixar.</span><br>' +
+      '<label style="margin-right:14px"><input type="radio" name="deal-scope" value="all"' + (dealScope !== 'marked' ? ' checked' : '') + ' onchange="saveDealScope(\'all\')"> Todas as promoções</label>' +
+      '<label><input type="radio" name="deal-scope" value="marked"' + (dealScope === 'marked' ? ' checked' : '') + ' onchange="saveDealScope(\'marked\')"> Só os produtos que eu marcar (' + watchCount + ' marcado' + (watchCount === 1 ? '' : 's') + ')</label>' +
     '</div>' +
     '<div class="ml-add-term">' +
       '<input id="new-ml-label" placeholder="Nome do produto (opcional — puxa do ML se deixar em branco)">' +

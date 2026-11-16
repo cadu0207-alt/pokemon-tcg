@@ -1,0 +1,5004 @@
+{
+ "tipos": {
+  "Fera": {
+   "cor": "#b08a6a",
+   "forte": []
+  },
+  "Fogo": {
+   "cor": "#ef6a2b",
+   "forte": [
+    "Mata",
+    "Inseto"
+   ]
+  },
+  "Água": {
+   "cor": "#3a8fd8",
+   "forte": [
+    "Fogo",
+    "Terra"
+   ]
+  },
+  "Mata": {
+   "cor": "#4caf50",
+   "forte": [
+    "Água",
+    "Terra"
+   ]
+  },
+  "Raio": {
+   "cor": "#e8c228",
+   "forte": [
+    "Água",
+    "Vento"
+   ]
+  },
+  "Terra": {
+   "cor": "#a8743a",
+   "forte": [
+    "Fogo",
+    "Raio",
+    "Veneno"
+   ]
+  },
+  "Vento": {
+   "cor": "#7fc6d8",
+   "forte": [
+    "Mata",
+    "Inseto"
+   ]
+  },
+  "Inseto": {
+   "cor": "#9bb83a",
+   "forte": [
+    "Mata",
+    "Encanto"
+   ]
+  },
+  "Veneno": {
+   "cor": "#a05ac8",
+   "forte": [
+    "Mata",
+    "Fera"
+   ]
+  },
+  "Encanto": {
+   "cor": "#d65a9a",
+   "forte": [
+    "Fera",
+    "Encanto"
+   ]
+  }
+ },
+ "raridades": {
+  "C": {
+   "nome": "Comum",
+   "cor": "#9aa0a6",
+   "mult": 1.0,
+   "captura": 60
+  },
+  "I": {
+   "nome": "Incomum",
+   "cor": "#4caf50",
+   "mult": 1.08,
+   "captura": 40
+  },
+  "R": {
+   "nome": "Raro",
+   "cor": "#3a8fd8",
+   "mult": 1.16,
+   "captura": 22
+  },
+  "E": {
+   "nome": "Épico",
+   "cor": "#a05ac8",
+   "mult": 1.26,
+   "captura": 10
+  },
+  "L": {
+   "nome": "Lendário",
+   "cor": "#e0a92a",
+   "mult": 1.4,
+   "captura": 3
+  }
+ },
+ "papeis": [
+  "Tanque",
+  "Atacante",
+  "Veloz",
+  "Equilibrado",
+  "Suporte"
+ ],
+ "regioes": {
+  "inicial": {
+   "nome": "Iniciais",
+   "chefes": [],
+   "estados": ""
+  },
+  "sudeste": {
+   "nome": "Sudeste",
+   "chefes": [
+    "Curupira",
+    "Mãe-do-Ouro"
+   ],
+   "estados": "SP, RJ, MG, ES"
+  },
+  "sul": {
+   "nome": "Sul",
+   "chefes": [
+    "Boitatá"
+   ],
+   "estados": "PR, SC, RS"
+  },
+  "centro-oeste": {
+   "nome": "Centro-Oeste",
+   "chefes": [
+    "Iara"
+   ],
+   "estados": "MT, MS, GO, DF"
+  },
+  "nordeste": {
+   "nome": "Nordeste",
+   "chefes": [
+    "Anhangá"
+   ],
+   "estados": "BA, PE, CE, RN, PB, AL, SE, PI, MA"
+  },
+  "norte": {
+   "nome": "Norte",
+   "chefes": [
+    "Mapinguari",
+    "Boiúna"
+   ],
+   "estados": "AM, PA, AC, RO, RR, AP, TO"
+  }
+ },
+ "familias": [
+  {
+   "id": 0,
+   "inspiracao": "Tatu-canastra com rachaduras de lava na carapaça",
+   "raridade": "R",
+   "regiao": "inicial",
+   "bioma": "",
+   "papel": "Equilibrado",
+   "criaturas": [
+    1,
+    2,
+    3
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 1,
+   "inspiracao": "Boto-cor-de-rosa dos rios amazônicos",
+   "raridade": "R",
+   "regiao": "inicial",
+   "bioma": "",
+   "papel": "Veloz",
+   "criaturas": [
+    4,
+    5,
+    6
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 2,
+   "inspiracao": "Capivara com musgo e brotos nas costas",
+   "raridade": "R",
+   "regiao": "inicial",
+   "bioma": "",
+   "papel": "Tanque",
+   "criaturas": [
+    7,
+    8,
+    9
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 3,
+   "inspiracao": "Sabiá-laranjeira e seu canto",
+   "raridade": "C",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Veloz",
+   "criaturas": [
+    10,
+    11,
+    12
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 4,
+   "inspiracao": "Formiga saúva e seu formigueiro",
+   "raridade": "C",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Equilibrado",
+   "criaturas": [
+    13,
+    14,
+    15
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 5,
+   "inspiracao": "Borboleta morfo-azul, da lagarta às asas",
+   "raridade": "C",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Suporte",
+   "criaturas": [
+    16,
+    17,
+    18
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 6,
+   "inspiracao": "Sapo-cururu de pele tóxica",
+   "raridade": "C",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Tanque",
+   "criaturas": [
+    19,
+    20
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 7,
+   "inspiracao": "Quati das Cataratas do Iguaçu",
+   "raridade": "C",
+   "regiao": "sul",
+   "bioma": "Mata de Araucárias",
+   "papel": "Atacante",
+   "criaturas": [
+    21,
+    22
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 8,
+   "inspiracao": "Mico-leão-dourado e sua juba",
+   "raridade": "I",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Veloz",
+   "criaturas": [
+    23,
+    24
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 9,
+   "inspiracao": "Bugio, o macaco do ronco que ecoa na mata",
+   "raridade": "I",
+   "regiao": "sul",
+   "bioma": "Mata de Araucárias",
+   "papel": "Atacante",
+   "criaturas": [
+    25,
+    26
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 10,
+   "inspiracao": "Jaguatirica, felino pintado da mata",
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Veloz",
+   "criaturas": [
+    27,
+    28
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 11,
+   "inspiracao": "Vaga-lume das noites de verão",
+   "raridade": "C",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Suporte",
+   "criaturas": [
+    29,
+    30
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 12,
+   "inspiracao": "Taturana, a lagarta que queima a pele",
+   "raridade": "I",
+   "regiao": "sul",
+   "bioma": "Mata de Araucárias",
+   "papel": "Atacante",
+   "criaturas": [
+    31,
+    32
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 13,
+   "inspiracao": "Beija-flor, rápido como um raio",
+   "raridade": "I",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Veloz",
+   "criaturas": [
+    33,
+    34
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 14,
+   "inspiracao": "Ipê florido",
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Suporte",
+   "criaturas": [
+    35,
+    36
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 15,
+   "inspiracao": "Jararaca escondida nas folhas",
+   "raridade": "I",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Atacante",
+   "criaturas": [
+    37,
+    38
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 16,
+   "inspiracao": "Jacaré-do-pantanal tomando sol",
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Tanque",
+   "criaturas": [
+    39,
+    40
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 17,
+   "inspiracao": "Piranha em cardume",
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Atacante",
+   "criaturas": [
+    41,
+    42
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 18,
+   "inspiracao": "Tracajá, a tartaruga dos rios",
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Tanque",
+   "criaturas": [
+    43,
+    44
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 19,
+   "inspiracao": "Tuiuiú, a ave símbolo do Pantanal",
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Equilibrado",
+   "criaturas": [
+    45,
+    46
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 20,
+   "inspiracao": "Arara: a azul e a vermelha (evolução com escolha)",
+   "raridade": "I",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Equilibrado",
+   "criaturas": [
+    47,
+    48,
+    49
+   ],
+   "ramificada": true
+  },
+  {
+   "id": 21,
+   "inspiracao": "Anta, o maior mamífero terrestre do Brasil",
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Tanque",
+   "criaturas": [
+    50,
+    51
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 22,
+   "inspiracao": "Sucuri dos igarapés",
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Tanque",
+   "criaturas": [
+    52,
+    53,
+    54
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 23,
+   "inspiracao": "Poraquê, o peixe-elétrico",
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Atacante",
+   "criaturas": [
+    55,
+    56
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 24,
+   "inspiracao": "Ariranha, a lontra gigante",
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Veloz",
+   "criaturas": [
+    57,
+    58
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 25,
+   "inspiracao": "Peixe-boi-da-amazônia",
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Suporte",
+   "criaturas": [
+    59,
+    60
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 26,
+   "inspiracao": "Pirarucu, o gigante de escamas duras",
+   "raridade": "R",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Tanque",
+   "criaturas": [
+    61,
+    62
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 27,
+   "inspiracao": "Onça-pintada, a rainha da floresta",
+   "raridade": "R",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Atacante",
+   "criaturas": [
+    63,
+    64,
+    65
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 28,
+   "inspiracao": "Gavião-real (harpia)",
+   "raridade": "R",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Atacante",
+   "criaturas": [
+    66,
+    67,
+    68
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 29,
+   "inspiracao": "Tamanduá-bandeira",
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Equilibrado",
+   "criaturas": [
+    69,
+    70
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 30,
+   "inspiracao": "Calango tomando sol na pedra",
+   "raridade": "C",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Veloz",
+   "criaturas": [
+    71,
+    72
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 31,
+   "inspiracao": "Mandacaru, o cacto que guarda água",
+   "raridade": "C",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Tanque",
+   "criaturas": [
+    73,
+    74
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 32,
+   "inspiracao": "Cascavel e seu chocalho",
+   "raridade": "I",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Atacante",
+   "criaturas": [
+    75,
+    76
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 33,
+   "inspiracao": "Escorpião do sertão",
+   "raridade": "I",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Atacante",
+   "criaturas": [
+    77,
+    78
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 34,
+   "inspiracao": "Asa-branca, a pomba que anuncia a chuva",
+   "raridade": "C",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Suporte",
+   "criaturas": [
+    79,
+    80
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 35,
+   "inspiracao": "Carcará, o gavião do sertão",
+   "raridade": "I",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Atacante",
+   "criaturas": [
+    81,
+    82
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 36,
+   "inspiracao": "Lobo-guará sob a lua do Cerrado",
+   "raridade": "R",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Veloz",
+   "criaturas": [
+    83,
+    84
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 37,
+   "inspiracao": "Ema, a corredora dos campos",
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Veloz",
+   "criaturas": [
+    85,
+    86
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 38,
+   "inspiracao": "Seriema, que bate a presa na pedra",
+   "raridade": "I",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Atacante",
+   "criaturas": [
+    87,
+    88
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 39,
+   "inspiracao": "Cupinzeiro, a torre de barro",
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Tanque",
+   "criaturas": [
+    89,
+    90
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 40,
+   "inspiracao": "Pequi e seus espinhos escondidos",
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Atacante",
+   "criaturas": [
+    91,
+    92
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 41,
+   "inspiracao": "Tucano de bico colorido",
+   "raridade": "I",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Equilibrado",
+   "criaturas": [
+    93,
+    94,
+    95
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 42,
+   "inspiracao": "Caranguejo-uçá do mangue",
+   "raridade": "C",
+   "regiao": "nordeste",
+   "bioma": "Litoral nordestino",
+   "papel": "Tanque",
+   "criaturas": [
+    96,
+    97
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 43,
+   "inspiracao": "Água-viva e caravela",
+   "raridade": "I",
+   "regiao": "nordeste",
+   "bioma": "Litoral nordestino",
+   "papel": "Suporte",
+   "criaturas": [
+    98,
+    99
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 44,
+   "inspiracao": "Tartaruga-marinha que volta à praia onde nasceu",
+   "raridade": "R",
+   "regiao": "nordeste",
+   "bioma": "Litoral nordestino",
+   "papel": "Tanque",
+   "criaturas": [
+    100,
+    101
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 45,
+   "inspiracao": "Tubarão-martelo",
+   "raridade": "R",
+   "regiao": "nordeste",
+   "bioma": "Litoral nordestino",
+   "papel": "Atacante",
+   "criaturas": [
+    102,
+    103
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 46,
+   "inspiracao": "Baleia-jubarte de Abrolhos",
+   "raridade": "E",
+   "regiao": "nordeste",
+   "bioma": "Litoral nordestino",
+   "papel": "Tanque",
+   "criaturas": [
+    104,
+    105
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 47,
+   "inspiracao": "Atobá, que mergulha atrás de peixes",
+   "raridade": "C",
+   "regiao": "nordeste",
+   "bioma": "Litoral nordestino",
+   "papel": "Atacante",
+   "criaturas": [
+    106,
+    107
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 48,
+   "inspiracao": "Pedras da serra (Itá é \"pedra\" em tupi)",
+   "raridade": "I",
+   "regiao": "sudeste",
+   "bioma": "Serras de Minas",
+   "papel": "Tanque",
+   "criaturas": [
+    108,
+    109,
+    110
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 49,
+   "inspiracao": "Cristais de quartzo e ametista de Minas",
+   "raridade": "R",
+   "regiao": "sudeste",
+   "bioma": "Serras de Minas",
+   "papel": "Suporte",
+   "criaturas": [
+    111,
+    112
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 50,
+   "inspiracao": "Minhocão, a lenda que abre túneis",
+   "raridade": "R",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Tanque",
+   "criaturas": [
+    113,
+    114
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 51,
+   "inspiracao": "Corisco, o raio que cai na serra",
+   "raridade": "I",
+   "regiao": "sudeste",
+   "bioma": "Serras de Minas",
+   "papel": "Atacante",
+   "criaturas": [
+    115,
+    116
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 52,
+   "inspiracao": "Pepita das minas de ouro",
+   "raridade": "R",
+   "regiao": "sudeste",
+   "bioma": "Serras de Minas",
+   "papel": "Equilibrado",
+   "criaturas": [
+    117,
+    118
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 53,
+   "inspiracao": "Aranha caranguejeira peluda",
+   "raridade": "I",
+   "regiao": "sul",
+   "bioma": "Mata de Araucárias",
+   "papel": "Tanque",
+   "criaturas": [
+    119,
+    120
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 54,
+   "inspiracao": "Gralha-azul, que planta pinhões",
+   "raridade": "I",
+   "regiao": "sul",
+   "bioma": "Mata de Araucárias",
+   "papel": "Suporte",
+   "criaturas": [
+    121,
+    122
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 55,
+   "inspiracao": "Araucária e suas pinhas",
+   "raridade": "C",
+   "regiao": "sul",
+   "bioma": "Mata de Araucárias",
+   "papel": "Tanque",
+   "criaturas": [
+    123,
+    124
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 56,
+   "inspiracao": "Graxaim, a raposa do pampa",
+   "raridade": "C",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Equilibrado",
+   "criaturas": [
+    125,
+    126
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 57,
+   "inspiracao": "Quero-quero, sentinela dos campos",
+   "raridade": "C",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Veloz",
+   "criaturas": [
+    127,
+    128
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 58,
+   "inspiracao": "João-de-barro e sua casinha",
+   "raridade": "C",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Tanque",
+   "criaturas": [
+    129,
+    130
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 59,
+   "inspiracao": "Fogo-fátuo que vaga nos campos à noite",
+   "raridade": "I",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Suporte",
+   "criaturas": [
+    131,
+    132
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 60,
+   "inspiracao": "Saci e o redemoinho de vento",
+   "raridade": "E",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Veloz",
+   "criaturas": [
+    133,
+    134
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 61,
+   "inspiracao": "Mula sem cabeça",
+   "raridade": "E",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Atacante",
+   "criaturas": [
+    135
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 62,
+   "inspiracao": "Lobisomem das noites de lua cheia",
+   "raridade": "E",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Atacante",
+   "criaturas": [
+    136,
+    137
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 63,
+   "inspiracao": "Cuca, a bruxa-jacaré das cantigas",
+   "raridade": "E",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Suporte",
+   "criaturas": [
+    138
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 64,
+   "inspiracao": "Caipora, protetora dos bichos da mata",
+   "raridade": "E",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Equilibrado",
+   "criaturas": [
+    139
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 65,
+   "inspiracao": "Matinta Pereira e seu assobio",
+   "raridade": "E",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Suporte",
+   "criaturas": [
+    140
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 66,
+   "inspiracao": "Boi-bumbá das festas de Parintins",
+   "raridade": "E",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Tanque",
+   "criaturas": [
+    141
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 67,
+   "inspiracao": "Capelobo, o monstro com focinho de tamanduá",
+   "raridade": "E",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Atacante",
+   "criaturas": [
+    142
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 68,
+   "inspiracao": "Corpo-seco, que nem a terra quis",
+   "raridade": "R",
+   "regiao": "sudeste",
+   "bioma": "Serras de Minas",
+   "papel": "Tanque",
+   "criaturas": [
+    143
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 69,
+   "inspiracao": "Curupira, guardião da floresta de pés virados",
+   "raridade": "L",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Veloz",
+   "criaturas": [
+    144
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 70,
+   "inspiracao": "Iara, a mãe-d'água",
+   "raridade": "L",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Suporte",
+   "criaturas": [
+    145
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 71,
+   "inspiracao": "Anhangá, o veado branco que protege os bichos",
+   "raridade": "L",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Suporte",
+   "criaturas": [
+    146
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 72,
+   "inspiracao": "Boitatá, a cobra de fogo que protege os campos",
+   "raridade": "L",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Atacante",
+   "criaturas": [
+    147
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 73,
+   "inspiracao": "Boiúna, a cobra grande das águas",
+   "raridade": "L",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Tanque",
+   "criaturas": [
+    148
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 74,
+   "inspiracao": "Mãe-do-Ouro, a bola de fogo que guarda as minas",
+   "raridade": "L",
+   "regiao": "sudeste",
+   "bioma": "Serras de Minas",
+   "papel": "Equilibrado",
+   "criaturas": [
+    149
+   ],
+   "ramificada": false
+  },
+  {
+   "id": 75,
+   "inspiracao": "Mapinguari, o gigante da Amazônia",
+   "raridade": "L",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Tanque",
+   "criaturas": [
+    150
+   ],
+   "ramificada": false
+  }
+ ],
+ "criaturas": [
+  {
+   "id": 1,
+   "nome": "Brasinho",
+   "tipos": [
+    "Fogo"
+   ],
+   "raridade": "R",
+   "regiao": "inicial",
+   "bioma": "",
+   "papel": "Equilibrado",
+   "estagio": 1,
+   "familia": 0,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Mordisco",
+   "especial": "Rolo Ardente",
+   "efeito": "Rola sobre o inimigo e o deixa queimando.",
+   "atributos": {
+    "vida": 35,
+    "ataque": 31,
+    "defesa": 27,
+    "velocidade": 23
+   }
+  },
+  {
+   "id": 2,
+   "nome": "Brasadilho",
+   "tipos": [
+    "Fogo"
+   ],
+   "raridade": "R",
+   "regiao": "inicial",
+   "bioma": "",
+   "papel": "Equilibrado",
+   "estagio": 2,
+   "familia": 0,
+   "evoluiDe": 1,
+   "nivelEvolucao": 14,
+   "basico": "Garra",
+   "especial": "Couraça em Brasa",
+   "efeito": "Escudo que queima quem o atacar.",
+   "atributos": {
+    "vida": 52,
+    "ataque": 47,
+    "defesa": 40,
+    "velocidade": 35
+   }
+  },
+  {
+   "id": 3,
+   "nome": "Vulcadilho",
+   "tipos": [
+    "Fogo"
+   ],
+   "raridade": "R",
+   "regiao": "inicial",
+   "bioma": "",
+   "papel": "Equilibrado",
+   "estagio": 3,
+   "familia": 0,
+   "evoluiDe": 2,
+   "nivelEvolucao": 30,
+   "basico": "Golpe de Casco",
+   "especial": "Erupção",
+   "efeito": "Dano em todos os inimigos e queimadura forte.",
+   "atributos": {
+    "vida": 70,
+    "ataque": 63,
+    "defesa": 53,
+    "velocidade": 46
+   }
+  },
+  {
+   "id": 4,
+   "nome": "Botinho",
+   "tipos": [
+    "Água"
+   ],
+   "raridade": "R",
+   "regiao": "inicial",
+   "bioma": "",
+   "papel": "Veloz",
+   "estagio": 1,
+   "familia": 1,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Esguicho",
+   "especial": "Bolha",
+   "efeito": "Prende o inimigo numa bolha por 1 segundo.",
+   "atributos": {
+    "vida": 26,
+    "ataque": 35,
+    "defesa": 15,
+    "velocidade": 41
+   }
+  },
+  {
+   "id": 5,
+   "nome": "Botorrosa",
+   "tipos": [
+    "Água"
+   ],
+   "raridade": "R",
+   "regiao": "inicial",
+   "bioma": "",
+   "papel": "Veloz",
+   "estagio": 2,
+   "familia": 1,
+   "evoluiDe": 4,
+   "nivelEvolucao": 14,
+   "basico": "Jato",
+   "especial": "Canto do Rio",
+   "efeito": "Cura 15% da vida de todo o time.",
+   "atributos": {
+    "vida": 38,
+    "ataque": 52,
+    "defesa": 23,
+    "velocidade": 61
+   }
+  },
+  {
+   "id": 6,
+   "nome": "Rosamarés",
+   "tipos": [
+    "Água"
+   ],
+   "raridade": "R",
+   "regiao": "inicial",
+   "bioma": "",
+   "papel": "Veloz",
+   "estagio": 3,
+   "familia": 1,
+   "evoluiDe": 5,
+   "nivelEvolucao": 30,
+   "basico": "Onda",
+   "especial": "Maré Encantada",
+   "efeito": "Dano em área e deixa os inimigos lentos.",
+   "atributos": {
+    "vida": 51,
+    "ataque": 70,
+    "defesa": 30,
+    "velocidade": 81
+   }
+  },
+  {
+   "id": 7,
+   "nome": "Capinho",
+   "tipos": [
+    "Mata"
+   ],
+   "raridade": "R",
+   "regiao": "inicial",
+   "bioma": "",
+   "papel": "Tanque",
+   "estagio": 1,
+   "familia": 2,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Cabeçada",
+   "especial": "Brotar",
+   "efeito": "Recupera vida aos poucos por 5 segundos.",
+   "atributos": {
+    "vida": 46,
+    "ataque": 23,
+    "defesa": 35,
+    "velocidade": 12
+   }
+  },
+  {
+   "id": 8,
+   "nome": "Capivarde",
+   "tipos": [
+    "Mata"
+   ],
+   "raridade": "R",
+   "regiao": "inicial",
+   "bioma": "",
+   "papel": "Tanque",
+   "estagio": 2,
+   "familia": 2,
+   "evoluiDe": 7,
+   "nivelEvolucao": 14,
+   "basico": "Pancada",
+   "especial": "Raízes",
+   "efeito": "Prende o inimigo e drena a vida dele.",
+   "atributos": {
+    "vida": 70,
+    "ataque": 35,
+    "defesa": 52,
+    "velocidade": 17
+   }
+  },
+  {
+   "id": 9,
+   "nome": "Capivárvore",
+   "tipos": [
+    "Mata"
+   ],
+   "raridade": "R",
+   "regiao": "inicial",
+   "bioma": "",
+   "papel": "Tanque",
+   "estagio": 3,
+   "familia": 2,
+   "evoluiDe": 8,
+   "nivelEvolucao": 30,
+   "basico": "Tronco",
+   "especial": "Floresta Viva",
+   "efeito": "Escudo e regeneração para todo o time.",
+   "atributos": {
+    "vida": 93,
+    "ataque": 46,
+    "defesa": 70,
+    "velocidade": 23
+   }
+  },
+  {
+   "id": 10,
+   "nome": "Pipiá",
+   "tipos": [
+    "Vento"
+   ],
+   "raridade": "C",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Veloz",
+   "estagio": 1,
+   "familia": 3,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Bicada",
+   "especial": "Rajada",
+   "efeito": "Empurra o inimigo para trás.",
+   "atributos": {
+    "vida": 22,
+    "ataque": 30,
+    "defesa": 13,
+    "velocidade": 35
+   }
+  },
+  {
+   "id": 11,
+   "nome": "Sabiarte",
+   "tipos": [
+    "Vento"
+   ],
+   "raridade": "C",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Veloz",
+   "estagio": 2,
+   "familia": 3,
+   "evoluiDe": 10,
+   "nivelEvolucao": 12,
+   "basico": "Asa",
+   "especial": "Canto Agudo",
+   "efeito": "Atordoa o inimigo por 1 segundo.",
+   "atributos": {
+    "vida": 33,
+    "ataque": 45,
+    "defesa": 20,
+    "velocidade": 52
+   }
+  },
+  {
+   "id": 12,
+   "nome": "Sabiarauto",
+   "tipos": [
+    "Vento"
+   ],
+   "raridade": "C",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Veloz",
+   "estagio": 3,
+   "familia": 3,
+   "evoluiDe": 11,
+   "nivelEvolucao": 28,
+   "basico": "Asa Cortante",
+   "especial": "Revoada",
+   "efeito": "Cinco golpes espalhados entre os inimigos.",
+   "atributos": {
+    "vida": 44,
+    "ataque": 60,
+    "defesa": 26,
+    "velocidade": 70
+   }
+  },
+  {
+   "id": 13,
+   "nome": "Sauvinha",
+   "tipos": [
+    "Inseto",
+    "Terra"
+   ],
+   "raridade": "C",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Equilibrado",
+   "estagio": 1,
+   "familia": 4,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Pinça",
+   "especial": "Carregar",
+   "efeito": "Aumenta a própria defesa.",
+   "atributos": {
+    "vida": 30,
+    "ataque": 27,
+    "defesa": 23,
+    "velocidade": 20
+   }
+  },
+  {
+   "id": 14,
+   "nome": "Sauvarmada",
+   "tipos": [
+    "Inseto",
+    "Terra"
+   ],
+   "raridade": "C",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Equilibrado",
+   "estagio": 2,
+   "familia": 4,
+   "evoluiDe": 13,
+   "nivelEvolucao": 14,
+   "basico": "Mandíbula",
+   "especial": "Formigueiro",
+   "efeito": "Chama ajudantes que dão dano extra por 5 segundos.",
+   "atributos": {
+    "vida": 45,
+    "ataque": 40,
+    "defesa": 34,
+    "velocidade": 30
+   }
+  },
+  {
+   "id": 15,
+   "nome": "Rainha-Saúva",
+   "tipos": [
+    "Inseto",
+    "Terra"
+   ],
+   "raridade": "C",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Equilibrado",
+   "estagio": 3,
+   "familia": 4,
+   "evoluiDe": 14,
+   "nivelEvolucao": 30,
+   "basico": "Mandíbula Real",
+   "especial": "Colônia",
+   "efeito": "Todo o time ganha ataque por 8 segundos.",
+   "atributos": {
+    "vida": 60,
+    "ataque": 54,
+    "defesa": 46,
+    "velocidade": 40
+   }
+  },
+  {
+   "id": 16,
+   "nome": "Lagartinha",
+   "tipos": [
+    "Inseto"
+   ],
+   "raridade": "C",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Suporte",
+   "estagio": 1,
+   "familia": 5,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Fio de Seda",
+   "especial": "Casulo",
+   "efeito": "Cria um pequeno escudo.",
+   "atributos": {
+    "vida": 33,
+    "ataque": 20,
+    "defesa": 27,
+    "velocidade": 20
+   }
+  },
+  {
+   "id": 17,
+   "nome": "Casulim",
+   "tipos": [
+    "Inseto"
+   ],
+   "raridade": "C",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Suporte",
+   "estagio": 2,
+   "familia": 5,
+   "evoluiDe": 16,
+   "nivelEvolucao": 7,
+   "basico": "Endurecer",
+   "especial": "Casulo Duro",
+   "efeito": "Cria um escudo grande.",
+   "atributos": {
+    "vida": 50,
+    "ataque": 30,
+    "defesa": 40,
+    "velocidade": 30
+   }
+  },
+  {
+   "id": 18,
+   "nome": "Morfazul",
+   "tipos": [
+    "Inseto",
+    "Vento"
+   ],
+   "raridade": "C",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Suporte",
+   "estagio": 3,
+   "familia": 5,
+   "evoluiDe": 17,
+   "nivelEvolucao": 14,
+   "basico": "Pó de Asa",
+   "especial": "Brilho Azul",
+   "efeito": "Confunde: inimigos erram 30% dos golpes.",
+   "atributos": {
+    "vida": 66,
+    "ataque": 40,
+    "defesa": 54,
+    "velocidade": 40
+   }
+  },
+  {
+   "id": 19,
+   "nome": "Cururuzinho",
+   "tipos": [
+    "Água",
+    "Veneno"
+   ],
+   "raridade": "C",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Tanque",
+   "estagio": 1,
+   "familia": 6,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Língua",
+   "especial": "Pele Tóxica",
+   "efeito": "Envenena quem o atacar.",
+   "atributos": {
+    "vida": 40,
+    "ataque": 20,
+    "defesa": 30,
+    "velocidade": 10
+   }
+  },
+  {
+   "id": 20,
+   "nome": "Cururão",
+   "tipos": [
+    "Água",
+    "Veneno"
+   ],
+   "raridade": "C",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Tanque",
+   "estagio": 2,
+   "familia": 6,
+   "evoluiDe": 19,
+   "nivelEvolucao": 18,
+   "basico": "Pulo Pesado",
+   "especial": "Coaxo Venenoso",
+   "efeito": "Veneno em todos os inimigos.",
+   "atributos": {
+    "vida": 60,
+    "ataque": 30,
+    "defesa": 45,
+    "velocidade": 15
+   }
+  },
+  {
+   "id": 21,
+   "nome": "Quatinho",
+   "tipos": [
+    "Fera"
+   ],
+   "raridade": "C",
+   "regiao": "sul",
+   "bioma": "Mata de Araucárias",
+   "papel": "Atacante",
+   "estagio": 1,
+   "familia": 7,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Focinhada",
+   "especial": "Farejar",
+   "efeito": "O próximo golpe é crítico.",
+   "atributos": {
+    "vida": 28,
+    "ataque": 44,
+    "defesa": 16,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 22,
+   "nome": "Quatirabo",
+   "tipos": [
+    "Fera"
+   ],
+   "raridade": "C",
+   "regiao": "sul",
+   "bioma": "Mata de Araucárias",
+   "papel": "Atacante",
+   "estagio": 2,
+   "familia": 7,
+   "evoluiDe": 21,
+   "nivelEvolucao": 16,
+   "basico": "Cauda Listrada",
+   "especial": "Bando",
+   "efeito": "Quatro golpes rápidos.",
+   "atributos": {
+    "vida": 41,
+    "ataque": 66,
+    "defesa": 25,
+    "velocidade": 33
+   }
+  },
+  {
+   "id": 23,
+   "nome": "Miquinho",
+   "tipos": [
+    "Fogo",
+    "Fera"
+   ],
+   "raridade": "I",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Veloz",
+   "estagio": 1,
+   "familia": 8,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Tapa",
+   "especial": "Juba Dourada",
+   "efeito": "Aumenta a velocidade do time.",
+   "atributos": {
+    "vida": 24,
+    "ataque": 32,
+    "defesa": 14,
+    "velocidade": 38
+   }
+  },
+  {
+   "id": 24,
+   "nome": "Micoleão",
+   "tipos": [
+    "Fogo",
+    "Fera"
+   ],
+   "raridade": "I",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Veloz",
+   "estagio": 2,
+   "familia": 8,
+   "evoluiDe": 23,
+   "nivelEvolucao": 22,
+   "basico": "Garra Dourada",
+   "especial": "Rugido Solar",
+   "efeito": "Queima e reduz o ataque dos inimigos.",
+   "atributos": {
+    "vida": 36,
+    "ataque": 49,
+    "defesa": 21,
+    "velocidade": 57
+   }
+  },
+  {
+   "id": 25,
+   "nome": "Bugiozinho",
+   "tipos": [
+    "Fera",
+    "Vento"
+   ],
+   "raridade": "I",
+   "regiao": "sul",
+   "bioma": "Mata de Araucárias",
+   "papel": "Atacante",
+   "estagio": 1,
+   "familia": 9,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Soco",
+   "especial": "Uivo",
+   "efeito": "Reduz a defesa do inimigo.",
+   "atributos": {
+    "vida": 27,
+    "ataque": 43,
+    "defesa": 16,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 26,
+   "nome": "Bugiorrugido",
+   "tipos": [
+    "Fera",
+    "Vento"
+   ],
+   "raridade": "I",
+   "regiao": "sul",
+   "bioma": "Mata de Araucárias",
+   "papel": "Atacante",
+   "estagio": 2,
+   "familia": 9,
+   "evoluiDe": 25,
+   "nivelEvolucao": 24,
+   "basico": "Pancada",
+   "especial": "Ronco da Mata",
+   "efeito": "Dano sonoro em todos os inimigos.",
+   "atributos": {
+    "vida": 40,
+    "ataque": 65,
+    "defesa": 24,
+    "velocidade": 32
+   }
+  },
+  {
+   "id": 27,
+   "nome": "Jaguatiri",
+   "tipos": [
+    "Fera",
+    "Mata"
+   ],
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Veloz",
+   "estagio": 1,
+   "familia": 10,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Unha",
+   "especial": "Espreita",
+   "efeito": "Some por 2 segundos e volta com crítico.",
+   "atributos": {
+    "vida": 24,
+    "ataque": 32,
+    "defesa": 14,
+    "velocidade": 38
+   }
+  },
+  {
+   "id": 28,
+   "nome": "Jaguatigra",
+   "tipos": [
+    "Fera",
+    "Mata"
+   ],
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Veloz",
+   "estagio": 2,
+   "familia": 10,
+   "evoluiDe": 27,
+   "nivelEvolucao": 24,
+   "basico": "Bote",
+   "especial": "Salto Sombrio",
+   "efeito": "Um único golpe de dano muito alto.",
+   "atributos": {
+    "vida": 36,
+    "ataque": 49,
+    "defesa": 21,
+    "velocidade": 57
+   }
+  },
+  {
+   "id": 29,
+   "nome": "Vagaluz",
+   "tipos": [
+    "Inseto",
+    "Raio"
+   ],
+   "raridade": "C",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Suporte",
+   "estagio": 1,
+   "familia": 11,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Faísca",
+   "especial": "Piscar",
+   "efeito": "Cega o inimigo, que erra mais.",
+   "atributos": {
+    "vida": 33,
+    "ataque": 20,
+    "defesa": 27,
+    "velocidade": 20
+   }
+  },
+  {
+   "id": 30,
+   "nome": "Vagalumão",
+   "tipos": [
+    "Inseto",
+    "Raio"
+   ],
+   "raridade": "C",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Suporte",
+   "estagio": 2,
+   "familia": 11,
+   "evoluiDe": 29,
+   "nivelEvolucao": 16,
+   "basico": "Choque",
+   "especial": "Luz da Noite",
+   "efeito": "Cura o time e cega os inimigos.",
+   "atributos": {
+    "vida": 50,
+    "ataque": 30,
+    "defesa": 40,
+    "velocidade": 30
+   }
+  },
+  {
+   "id": 31,
+   "nome": "Taturinha",
+   "tipos": [
+    "Inseto",
+    "Fogo"
+   ],
+   "raridade": "I",
+   "regiao": "sul",
+   "bioma": "Mata de Araucárias",
+   "papel": "Atacante",
+   "estagio": 1,
+   "familia": 12,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Pelo Urticante",
+   "especial": "Ardência",
+   "efeito": "Deixa o inimigo queimando.",
+   "atributos": {
+    "vida": 27,
+    "ataque": 43,
+    "defesa": 16,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 32,
+   "nome": "Taturana",
+   "tipos": [
+    "Inseto",
+    "Fogo"
+   ],
+   "raridade": "I",
+   "regiao": "sul",
+   "bioma": "Mata de Araucárias",
+   "papel": "Atacante",
+   "estagio": 2,
+   "familia": 12,
+   "evoluiDe": 31,
+   "nivelEvolucao": 20,
+   "basico": "Espinho Ardente",
+   "especial": "Toque de Fogo",
+   "efeito": "Queimadura forte e longa.",
+   "atributos": {
+    "vida": 40,
+    "ataque": 65,
+    "defesa": 24,
+    "velocidade": 32
+   }
+  },
+  {
+   "id": 33,
+   "nome": "Beijinho",
+   "tipos": [
+    "Vento",
+    "Raio"
+   ],
+   "raridade": "I",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Veloz",
+   "estagio": 1,
+   "familia": 13,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Bicada Veloz",
+   "especial": "Zumbido",
+   "efeito": "Aumenta muito a própria velocidade.",
+   "atributos": {
+    "vida": 24,
+    "ataque": 32,
+    "defesa": 14,
+    "velocidade": 38
+   }
+  },
+  {
+   "id": 34,
+   "nome": "Beija-Raio",
+   "tipos": [
+    "Vento",
+    "Raio"
+   ],
+   "raridade": "I",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Veloz",
+   "estagio": 2,
+   "familia": 13,
+   "evoluiDe": 33,
+   "nivelEvolucao": 22,
+   "basico": "Agulha Elétrica",
+   "especial": "Mil Bicadas",
+   "efeito": "Oito bicadas elétricas.",
+   "atributos": {
+    "vida": 36,
+    "ataque": 49,
+    "defesa": 21,
+    "velocidade": 57
+   }
+  },
+  {
+   "id": 35,
+   "nome": "Ipêzinho",
+   "tipos": [
+    "Mata"
+   ],
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Suporte",
+   "estagio": 1,
+   "familia": 14,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Folhada",
+   "especial": "Florada",
+   "efeito": "Cura um pouco o time.",
+   "atributos": {
+    "vida": 33,
+    "ataque": 20,
+    "defesa": 27,
+    "velocidade": 20
+   }
+  },
+  {
+   "id": 36,
+   "nome": "Ipê-Dourado",
+   "tipos": [
+    "Mata"
+   ],
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Suporte",
+   "estagio": 2,
+   "familia": 14,
+   "evoluiDe": 35,
+   "nivelEvolucao": 20,
+   "basico": "Galhada",
+   "especial": "Chuva de Flores",
+   "efeito": "Cura muito o time e remove veneno.",
+   "atributos": {
+    "vida": 50,
+    "ataque": 30,
+    "defesa": 40,
+    "velocidade": 30
+   }
+  },
+  {
+   "id": 37,
+   "nome": "Jararinha",
+   "tipos": [
+    "Veneno",
+    "Terra"
+   ],
+   "raridade": "I",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Atacante",
+   "estagio": 1,
+   "familia": 15,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Picada",
+   "especial": "Bote",
+   "efeito": "Golpe que envenena.",
+   "atributos": {
+    "vida": 27,
+    "ataque": 43,
+    "defesa": 16,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 38,
+   "nome": "Jararacão",
+   "tipos": [
+    "Veneno",
+    "Terra"
+   ],
+   "raridade": "I",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Atacante",
+   "estagio": 2,
+   "familia": 15,
+   "evoluiDe": 37,
+   "nivelEvolucao": 22,
+   "basico": "Presa",
+   "especial": "Veneno Fundo",
+   "efeito": "Veneno que acumula a cada golpe.",
+   "atributos": {
+    "vida": 40,
+    "ataque": 65,
+    "defesa": 24,
+    "velocidade": 32
+   }
+  },
+  {
+   "id": 39,
+   "nome": "Jacarezinho",
+   "tipos": [
+    "Água",
+    "Terra"
+   ],
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Tanque",
+   "estagio": 1,
+   "familia": 16,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Mordida",
+   "especial": "Couro",
+   "efeito": "Aumenta muito a defesa.",
+   "atributos": {
+    "vida": 40,
+    "ataque": 20,
+    "defesa": 30,
+    "velocidade": 10
+   }
+  },
+  {
+   "id": 40,
+   "nome": "Jacarecouro",
+   "tipos": [
+    "Água",
+    "Terra"
+   ],
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Tanque",
+   "estagio": 2,
+   "familia": 16,
+   "evoluiDe": 39,
+   "nivelEvolucao": 20,
+   "basico": "Rabada",
+   "especial": "Giro da Morte",
+   "efeito": "Agarra e gira: dano muito alto.",
+   "atributos": {
+    "vida": 60,
+    "ataque": 30,
+    "defesa": 45,
+    "velocidade": 15
+   }
+  },
+  {
+   "id": 41,
+   "nome": "Piranhinha",
+   "tipos": [
+    "Água"
+   ],
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Atacante",
+   "estagio": 1,
+   "familia": 17,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Mordiscada",
+   "especial": "Cardume",
+   "efeito": "Cinco mordidas rápidas.",
+   "atributos": {
+    "vida": 25,
+    "ataque": 40,
+    "defesa": 15,
+    "velocidade": 20
+   }
+  },
+  {
+   "id": 42,
+   "nome": "Piranhavoraz",
+   "tipos": [
+    "Água"
+   ],
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Atacante",
+   "estagio": 2,
+   "familia": 17,
+   "evoluiDe": 41,
+   "nivelEvolucao": 18,
+   "basico": "Mordida Feroz",
+   "especial": "Frenesi",
+   "efeito": "Ganha ataque a cada golpe por 6 segundos.",
+   "atributos": {
+    "vida": 38,
+    "ataque": 60,
+    "defesa": 22,
+    "velocidade": 30
+   }
+  },
+  {
+   "id": 43,
+   "nome": "Tracajazinho",
+   "tipos": [
+    "Água",
+    "Terra"
+   ],
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Tanque",
+   "estagio": 1,
+   "familia": 18,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Cabeçada",
+   "especial": "Esconder",
+   "efeito": "Fica invulnerável por 1 segundo.",
+   "atributos": {
+    "vida": 40,
+    "ataque": 20,
+    "defesa": 30,
+    "velocidade": 10
+   }
+  },
+  {
+   "id": 44,
+   "nome": "Tracascudo",
+   "tipos": [
+    "Água",
+    "Terra"
+   ],
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Tanque",
+   "estagio": 2,
+   "familia": 18,
+   "evoluiDe": 43,
+   "nivelEvolucao": 20,
+   "basico": "Casco",
+   "especial": "Fortaleza",
+   "efeito": "Escudo muito grande.",
+   "atributos": {
+    "vida": 60,
+    "ataque": 30,
+    "defesa": 45,
+    "velocidade": 15
+   }
+  },
+  {
+   "id": 45,
+   "nome": "Tuiuiuzinho",
+   "tipos": [
+    "Vento",
+    "Água"
+   ],
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Equilibrado",
+   "estagio": 1,
+   "familia": 19,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Bico",
+   "especial": "Pescar",
+   "efeito": "Golpe que rouba vida.",
+   "atributos": {
+    "vida": 30,
+    "ataque": 27,
+    "defesa": 23,
+    "velocidade": 20
+   }
+  },
+  {
+   "id": 46,
+   "nome": "Tuiuiú-Real",
+   "tipos": [
+    "Vento",
+    "Água"
+   ],
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Equilibrado",
+   "estagio": 2,
+   "familia": 19,
+   "evoluiDe": 45,
+   "nivelEvolucao": 20,
+   "basico": "Bico Longo",
+   "especial": "Voo Rasante",
+   "efeito": "Dano em todos os inimigos.",
+   "atributos": {
+    "vida": 45,
+    "ataque": 40,
+    "defesa": 34,
+    "velocidade": 30
+   }
+  },
+  {
+   "id": 47,
+   "nome": "Ararinha",
+   "tipos": [
+    "Vento"
+   ],
+   "raridade": "I",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Equilibrado",
+   "estagio": 1,
+   "familia": 20,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Bicada",
+   "especial": "Grito",
+   "efeito": "Reduz o ataque do inimigo.",
+   "atributos": {
+    "vida": 32,
+    "ataque": 29,
+    "defesa": 25,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 48,
+   "nome": "Ararazul",
+   "tipos": [
+    "Vento",
+    "Água"
+   ],
+   "raridade": "I",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Equilibrado",
+   "estagio": 2,
+   "familia": 20,
+   "evoluiDe": 47,
+   "nivelEvolucao": 25,
+   "basico": "Asa Azul",
+   "especial": "Chuva do Céu",
+   "efeito": "Dano de água em todos. (Escolha 1)",
+   "atributos": {
+    "vida": 49,
+    "ataque": 44,
+    "defesa": 37,
+    "velocidade": 32
+   }
+  },
+  {
+   "id": 49,
+   "nome": "Araraubra",
+   "tipos": [
+    "Vento",
+    "Fogo"
+   ],
+   "raridade": "I",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Equilibrado",
+   "estagio": 2,
+   "familia": 20,
+   "evoluiDe": 47,
+   "nivelEvolucao": 25,
+   "basico": "Asa Rubra",
+   "especial": "Pena de Fogo",
+   "efeito": "Queima todos os inimigos. (Escolha 2)",
+   "atributos": {
+    "vida": 49,
+    "ataque": 44,
+    "defesa": 37,
+    "velocidade": 32
+   }
+  },
+  {
+   "id": 50,
+   "nome": "Antinha",
+   "tipos": [
+    "Terra",
+    "Fera"
+   ],
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Tanque",
+   "estagio": 1,
+   "familia": 21,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Empurrão",
+   "especial": "Focinho",
+   "efeito": "Aumenta a defesa.",
+   "atributos": {
+    "vida": 40,
+    "ataque": 20,
+    "defesa": 30,
+    "velocidade": 10
+   }
+  },
+  {
+   "id": 51,
+   "nome": "Antabruta",
+   "tipos": [
+    "Terra",
+    "Fera"
+   ],
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Tanque",
+   "estagio": 2,
+   "familia": 21,
+   "evoluiDe": 50,
+   "nivelEvolucao": 24,
+   "basico": "Atropelar",
+   "especial": "Estouro",
+   "efeito": "Dano em todos os inimigos.",
+   "atributos": {
+    "vida": 60,
+    "ataque": 30,
+    "defesa": 45,
+    "velocidade": 15
+   }
+  },
+  {
+   "id": 52,
+   "nome": "Sucurinha",
+   "tipos": [
+    "Água",
+    "Fera"
+   ],
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Tanque",
+   "estagio": 1,
+   "familia": 22,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Mordida",
+   "especial": "Enrolar",
+   "efeito": "Prende o inimigo por 2 segundos.",
+   "atributos": {
+    "vida": 43,
+    "ataque": 22,
+    "defesa": 32,
+    "velocidade": 11
+   }
+  },
+  {
+   "id": 53,
+   "nome": "Sucuriá",
+   "tipos": [
+    "Água",
+    "Fera"
+   ],
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Tanque",
+   "estagio": 2,
+   "familia": 22,
+   "evoluiDe": 52,
+   "nivelEvolucao": 18,
+   "basico": "Constrição",
+   "especial": "Aperto",
+   "efeito": "Dano contínuo enquanto prende.",
+   "atributos": {
+    "vida": 65,
+    "ataque": 32,
+    "defesa": 49,
+    "velocidade": 16
+   }
+  },
+  {
+   "id": 54,
+   "nome": "Sucurimor",
+   "tipos": [
+    "Água",
+    "Fera"
+   ],
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Tanque",
+   "estagio": 3,
+   "familia": 22,
+   "evoluiDe": 53,
+   "nivelEvolucao": 34,
+   "basico": "Esmagar",
+   "especial": "Abraço do Rio",
+   "efeito": "Prende e drena a vida do inimigo.",
+   "atributos": {
+    "vida": 86,
+    "ataque": 43,
+    "defesa": 65,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 55,
+   "nome": "Poraquinho",
+   "tipos": [
+    "Água",
+    "Raio"
+   ],
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Atacante",
+   "estagio": 1,
+   "familia": 23,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Choquinho",
+   "especial": "Descarga",
+   "efeito": "Atordoa o inimigo.",
+   "atributos": {
+    "vida": 27,
+    "ataque": 43,
+    "defesa": 16,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 56,
+   "nome": "Poraquê-Trovão",
+   "tipos": [
+    "Água",
+    "Raio"
+   ],
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Atacante",
+   "estagio": 2,
+   "familia": 23,
+   "evoluiDe": 55,
+   "nivelEvolucao": 24,
+   "basico": "Choque",
+   "especial": "Corrente",
+   "efeito": "Raio que salta entre os inimigos.",
+   "atributos": {
+    "vida": 40,
+    "ataque": 65,
+    "defesa": 24,
+    "velocidade": 32
+   }
+  },
+  {
+   "id": 57,
+   "nome": "Ariranhinha",
+   "tipos": [
+    "Água",
+    "Fera"
+   ],
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Veloz",
+   "estagio": 1,
+   "familia": 24,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Mordida",
+   "especial": "Mergulho",
+   "efeito": "Esquiva do próximo golpe.",
+   "atributos": {
+    "vida": 24,
+    "ataque": 32,
+    "defesa": 14,
+    "velocidade": 38
+   }
+  },
+  {
+   "id": 58,
+   "nome": "Ariranhaz",
+   "tipos": [
+    "Água",
+    "Fera"
+   ],
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Veloz",
+   "estagio": 2,
+   "familia": 24,
+   "evoluiDe": 57,
+   "nivelEvolucao": 22,
+   "basico": "Garra",
+   "especial": "Ataque em Grupo",
+   "efeito": "Três golpes e atordoa.",
+   "atributos": {
+    "vida": 36,
+    "ataque": 49,
+    "defesa": 21,
+    "velocidade": 57
+   }
+  },
+  {
+   "id": 59,
+   "nome": "Peixebolha",
+   "tipos": [
+    "Água"
+   ],
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Suporte",
+   "estagio": 1,
+   "familia": 25,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Empurrão",
+   "especial": "Bolhas",
+   "efeito": "Escudo de bolhas.",
+   "atributos": {
+    "vida": 36,
+    "ataque": 22,
+    "defesa": 29,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 60,
+   "nome": "Manatiaba",
+   "tipos": [
+    "Água"
+   ],
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Suporte",
+   "estagio": 2,
+   "familia": 25,
+   "evoluiDe": 59,
+   "nivelEvolucao": 26,
+   "basico": "Corpo Pesado",
+   "especial": "Canção das Águas",
+   "efeito": "Cura e escudo para o time.",
+   "atributos": {
+    "vida": 53,
+    "ataque": 32,
+    "defesa": 44,
+    "velocidade": 32
+   }
+  },
+  {
+   "id": 61,
+   "nome": "Piraruquinho",
+   "tipos": [
+    "Água",
+    "Terra"
+   ],
+   "raridade": "R",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Tanque",
+   "estagio": 1,
+   "familia": 26,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Rabada",
+   "especial": "Escama",
+   "efeito": "Reduz o dano recebido.",
+   "atributos": {
+    "vida": 46,
+    "ataque": 23,
+    "defesa": 35,
+    "velocidade": 12
+   }
+  },
+  {
+   "id": 62,
+   "nome": "Pirarucolosso",
+   "tipos": [
+    "Água",
+    "Terra"
+   ],
+   "raridade": "R",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Tanque",
+   "estagio": 2,
+   "familia": 26,
+   "evoluiDe": 61,
+   "nivelEvolucao": 30,
+   "basico": "Salto do Rio",
+   "especial": "Escamas de Ferro",
+   "efeito": "Devolve parte do dano recebido.",
+   "atributos": {
+    "vida": 70,
+    "ataque": 35,
+    "defesa": 52,
+    "velocidade": 17
+   }
+  },
+  {
+   "id": 63,
+   "nome": "Oncinha",
+   "tipos": [
+    "Fera"
+   ],
+   "raridade": "R",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Atacante",
+   "estagio": 1,
+   "familia": 27,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Patada",
+   "especial": "Rugido",
+   "efeito": "Reduz a defesa dos inimigos.",
+   "atributos": {
+    "vida": 32,
+    "ataque": 51,
+    "defesa": 19,
+    "velocidade": 26
+   }
+  },
+  {
+   "id": 64,
+   "nome": "Onçalume",
+   "tipos": [
+    "Fera"
+   ],
+   "raridade": "R",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Atacante",
+   "estagio": 2,
+   "familia": 27,
+   "evoluiDe": 63,
+   "nivelEvolucao": 22,
+   "basico": "Bote",
+   "especial": "Mordida Certeira",
+   "efeito": "Golpe com crítico garantido.",
+   "atributos": {
+    "vida": 48,
+    "ataque": 77,
+    "defesa": 29,
+    "velocidade": 38
+   }
+  },
+  {
+   "id": 65,
+   "nome": "Onçaraí",
+   "tipos": [
+    "Fera"
+   ],
+   "raridade": "R",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Atacante",
+   "estagio": 3,
+   "familia": 27,
+   "evoluiDe": 64,
+   "nivelEvolucao": 38,
+   "basico": "Garra Real",
+   "especial": "Fúria da Onça",
+   "efeito": "Quatro golpes críticos.",
+   "atributos": {
+    "vida": 64,
+    "ataque": 102,
+    "defesa": 38,
+    "velocidade": 51
+   }
+  },
+  {
+   "id": 66,
+   "nome": "Harpinha",
+   "tipos": [
+    "Vento",
+    "Fera"
+   ],
+   "raridade": "R",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Atacante",
+   "estagio": 1,
+   "familia": 28,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Garra",
+   "especial": "Mergulho",
+   "efeito": "Golpe de dano alto.",
+   "atributos": {
+    "vida": 29,
+    "ataque": 46,
+    "defesa": 17,
+    "velocidade": 23
+   }
+  },
+  {
+   "id": 67,
+   "nome": "Harpião",
+   "tipos": [
+    "Vento",
+    "Fera"
+   ],
+   "raridade": "R",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Atacante",
+   "estagio": 2,
+   "familia": 28,
+   "evoluiDe": 66,
+   "nivelEvolucao": 20,
+   "basico": "Garra Dupla",
+   "especial": "Mergulho Fatal",
+   "efeito": "Dano muito alto em inimigo ferido.",
+   "atributos": {
+    "vida": 44,
+    "ataque": 70,
+    "defesa": 26,
+    "velocidade": 35
+   }
+  },
+  {
+   "id": 68,
+   "nome": "Harpiarréu",
+   "tipos": [
+    "Vento",
+    "Fera"
+   ],
+   "raridade": "R",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Atacante",
+   "estagio": 3,
+   "familia": 28,
+   "evoluiDe": 67,
+   "nivelEvolucao": 36,
+   "basico": "Garra Real",
+   "especial": "Tempestade de Penas",
+   "efeito": "Dano em todos e sangramento.",
+   "atributos": {
+    "vida": 58,
+    "ataque": 93,
+    "defesa": 35,
+    "velocidade": 46
+   }
+  },
+  {
+   "id": 69,
+   "nome": "Tamanduzinho",
+   "tipos": [
+    "Fera",
+    "Terra"
+   ],
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Equilibrado",
+   "estagio": 1,
+   "familia": 29,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Lingada",
+   "especial": "Cavar",
+   "efeito": "Aumenta a defesa.",
+   "atributos": {
+    "vida": 32,
+    "ataque": 29,
+    "defesa": 25,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 70,
+   "nome": "Tamanduá-Bandeira",
+   "tipos": [
+    "Fera",
+    "Terra"
+   ],
+   "raridade": "I",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Equilibrado",
+   "estagio": 2,
+   "familia": 29,
+   "evoluiDe": 69,
+   "nivelEvolucao": 24,
+   "basico": "Garra Gigante",
+   "especial": "Abraço",
+   "efeito": "Dano alto e atordoa.",
+   "atributos": {
+    "vida": 49,
+    "ataque": 44,
+    "defesa": 37,
+    "velocidade": 32
+   }
+  },
+  {
+   "id": 71,
+   "nome": "Calanguinho",
+   "tipos": [
+    "Fogo",
+    "Terra"
+   ],
+   "raridade": "C",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Veloz",
+   "estagio": 1,
+   "familia": 30,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Mordida",
+   "especial": "Sol",
+   "efeito": "Aumenta o ataque.",
+   "atributos": {
+    "vida": 22,
+    "ataque": 30,
+    "defesa": 13,
+    "velocidade": 35
+   }
+  },
+  {
+   "id": 72,
+   "nome": "Calangão",
+   "tipos": [
+    "Fogo",
+    "Terra"
+   ],
+   "raridade": "C",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Veloz",
+   "estagio": 2,
+   "familia": 30,
+   "evoluiDe": 71,
+   "nivelEvolucao": 18,
+   "basico": "Rabada Quente",
+   "especial": "Corrida Solar",
+   "efeito": "Três golpes que queimam.",
+   "atributos": {
+    "vida": 33,
+    "ataque": 45,
+    "defesa": 20,
+    "velocidade": 52
+   }
+  },
+  {
+   "id": 73,
+   "nome": "Cactinho",
+   "tipos": [
+    "Mata",
+    "Terra"
+   ],
+   "raridade": "C",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Tanque",
+   "estagio": 1,
+   "familia": 31,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Espinho",
+   "especial": "Reserva",
+   "efeito": "Cura a si mesmo.",
+   "atributos": {
+    "vida": 40,
+    "ataque": 20,
+    "defesa": 30,
+    "velocidade": 10
+   }
+  },
+  {
+   "id": 74,
+   "nome": "Mandacarudo",
+   "tipos": [
+    "Mata",
+    "Terra"
+   ],
+   "raridade": "C",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Tanque",
+   "estagio": 2,
+   "familia": 31,
+   "evoluiDe": 73,
+   "nivelEvolucao": 22,
+   "basico": "Espinhada",
+   "especial": "Couraça de Espinhos",
+   "efeito": "Devolve dano a quem o atacar.",
+   "atributos": {
+    "vida": 60,
+    "ataque": 30,
+    "defesa": 45,
+    "velocidade": 15
+   }
+  },
+  {
+   "id": 75,
+   "nome": "Cascavelzinha",
+   "tipos": [
+    "Veneno",
+    "Terra"
+   ],
+   "raridade": "I",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Atacante",
+   "estagio": 1,
+   "familia": 32,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Picada",
+   "especial": "Chocalho",
+   "efeito": "Atordoa o inimigo.",
+   "atributos": {
+    "vida": 27,
+    "ataque": 43,
+    "defesa": 16,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 76,
+   "nome": "Cascavelha",
+   "tipos": [
+    "Veneno",
+    "Terra"
+   ],
+   "raridade": "I",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Atacante",
+   "estagio": 2,
+   "familia": 32,
+   "evoluiDe": 75,
+   "nivelEvolucao": 24,
+   "basico": "Presa",
+   "especial": "Bote Duplo",
+   "efeito": "Duas picadas venenosas.",
+   "atributos": {
+    "vida": 40,
+    "ataque": 65,
+    "defesa": 24,
+    "velocidade": 32
+   }
+  },
+  {
+   "id": 77,
+   "nome": "Escorpim",
+   "tipos": [
+    "Inseto",
+    "Veneno"
+   ],
+   "raridade": "I",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Atacante",
+   "estagio": 1,
+   "familia": 33,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Pinça",
+   "especial": "Ferroada",
+   "efeito": "Envenena o inimigo.",
+   "atributos": {
+    "vida": 27,
+    "ataque": 43,
+    "defesa": 16,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 78,
+   "nome": "Escorpião-Rei",
+   "tipos": [
+    "Inseto",
+    "Veneno"
+   ],
+   "raridade": "I",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Atacante",
+   "estagio": 2,
+   "familia": 33,
+   "evoluiDe": 77,
+   "nivelEvolucao": 24,
+   "basico": "Ferrão",
+   "especial": "Ferrão Real",
+   "efeito": "Veneno forte e atordoa.",
+   "atributos": {
+    "vida": 40,
+    "ataque": 65,
+    "defesa": 24,
+    "velocidade": 32
+   }
+  },
+  {
+   "id": 79,
+   "nome": "Asinha",
+   "tipos": [
+    "Vento"
+   ],
+   "raridade": "C",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Suporte",
+   "estagio": 1,
+   "familia": 34,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Bicada",
+   "especial": "Voo da Chuva",
+   "efeito": "Cura a criatura da frente.",
+   "atributos": {
+    "vida": 33,
+    "ataque": 20,
+    "defesa": 27,
+    "velocidade": 20
+   }
+  },
+  {
+   "id": 80,
+   "nome": "Asa-Branca",
+   "tipos": [
+    "Vento"
+   ],
+   "raridade": "C",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Suporte",
+   "estagio": 2,
+   "familia": 34,
+   "evoluiDe": 79,
+   "nivelEvolucao": 18,
+   "basico": "Asa",
+   "especial": "Volta da Chuva",
+   "efeito": "Cura o time e remove efeitos ruins.",
+   "atributos": {
+    "vida": 50,
+    "ataque": 30,
+    "defesa": 40,
+    "velocidade": 30
+   }
+  },
+  {
+   "id": 81,
+   "nome": "Carcarazinho",
+   "tipos": [
+    "Vento",
+    "Fogo"
+   ],
+   "raridade": "I",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Atacante",
+   "estagio": 1,
+   "familia": 35,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Garra",
+   "especial": "Mergulho",
+   "efeito": "Golpe de dano alto.",
+   "atributos": {
+    "vida": 27,
+    "ataque": 43,
+    "defesa": 16,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 82,
+   "nome": "Carcarazão",
+   "tipos": [
+    "Vento",
+    "Fogo"
+   ],
+   "raridade": "I",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Atacante",
+   "estagio": 2,
+   "familia": 35,
+   "evoluiDe": 81,
+   "nivelEvolucao": 24,
+   "basico": "Garra Ardente",
+   "especial": "Caça do Sertão",
+   "efeito": "Dano dobrado em inimigo ferido.",
+   "atributos": {
+    "vida": 40,
+    "ataque": 65,
+    "defesa": 24,
+    "velocidade": 32
+   }
+  },
+  {
+   "id": 83,
+   "nome": "Guarazinho",
+   "tipos": [
+    "Fera",
+    "Encanto"
+   ],
+   "raridade": "R",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Veloz",
+   "estagio": 1,
+   "familia": 36,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Mordida",
+   "especial": "Uivo da Lua",
+   "efeito": "Aumenta o crítico do time.",
+   "atributos": {
+    "vida": 26,
+    "ataque": 35,
+    "defesa": 15,
+    "velocidade": 41
+   }
+  },
+  {
+   "id": 84,
+   "nome": "Guaraluar",
+   "tipos": [
+    "Fera",
+    "Encanto"
+   ],
+   "raridade": "R",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Veloz",
+   "estagio": 2,
+   "familia": 36,
+   "evoluiDe": 83,
+   "nivelEvolucao": 30,
+   "basico": "Presa Lunar",
+   "especial": "Caçada Noturna",
+   "efeito": "Dano muito alto e fica invisível.",
+   "atributos": {
+    "vida": 38,
+    "ataque": 52,
+    "defesa": 23,
+    "velocidade": 61
+   }
+  },
+  {
+   "id": 85,
+   "nome": "Eminha",
+   "tipos": [
+    "Terra",
+    "Vento"
+   ],
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Veloz",
+   "estagio": 1,
+   "familia": 37,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Chute",
+   "especial": "Corrida",
+   "efeito": "Aumenta a velocidade.",
+   "atributos": {
+    "vida": 22,
+    "ataque": 30,
+    "defesa": 13,
+    "velocidade": 35
+   }
+  },
+  {
+   "id": 86,
+   "nome": "Emarrada",
+   "tipos": [
+    "Terra",
+    "Vento"
+   ],
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Veloz",
+   "estagio": 2,
+   "familia": 37,
+   "evoluiDe": 85,
+   "nivelEvolucao": 20,
+   "basico": "Coice",
+   "especial": "Disparada",
+   "efeito": "Atropela todos os inimigos.",
+   "atributos": {
+    "vida": 33,
+    "ataque": 45,
+    "defesa": 20,
+    "velocidade": 52
+   }
+  },
+  {
+   "id": 87,
+   "nome": "Seriemita",
+   "tipos": [
+    "Vento",
+    "Fera"
+   ],
+   "raridade": "I",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Atacante",
+   "estagio": 1,
+   "familia": 38,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Bicada",
+   "especial": "Grito",
+   "efeito": "Atordoa o inimigo.",
+   "atributos": {
+    "vida": 27,
+    "ataque": 43,
+    "defesa": 16,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 88,
+   "nome": "Seriemaga",
+   "tipos": [
+    "Vento",
+    "Fera"
+   ],
+   "raridade": "I",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Atacante",
+   "estagio": 2,
+   "familia": 38,
+   "evoluiDe": 87,
+   "nivelEvolucao": 22,
+   "basico": "Pisão",
+   "especial": "Arremesso",
+   "efeito": "Golpe de dano muito alto.",
+   "atributos": {
+    "vida": 40,
+    "ataque": 65,
+    "defesa": 24,
+    "velocidade": 32
+   }
+  },
+  {
+   "id": 89,
+   "nome": "Cupinzinho",
+   "tipos": [
+    "Inseto",
+    "Terra"
+   ],
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Tanque",
+   "estagio": 1,
+   "familia": 39,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Mordida",
+   "especial": "Barro",
+   "efeito": "Aumenta a defesa.",
+   "atributos": {
+    "vida": 40,
+    "ataque": 20,
+    "defesa": 30,
+    "velocidade": 10
+   }
+  },
+  {
+   "id": 90,
+   "nome": "Cupinzeiro",
+   "tipos": [
+    "Inseto",
+    "Terra"
+   ],
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Tanque",
+   "estagio": 2,
+   "familia": 39,
+   "evoluiDe": 89,
+   "nivelEvolucao": 24,
+   "basico": "Torre de Barro",
+   "especial": "Fortaleza",
+   "efeito": "Escudo para todo o time.",
+   "atributos": {
+    "vida": 60,
+    "ataque": 30,
+    "defesa": 45,
+    "velocidade": 15
+   }
+  },
+  {
+   "id": 91,
+   "nome": "Pequizinho",
+   "tipos": [
+    "Mata",
+    "Veneno"
+   ],
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Atacante",
+   "estagio": 1,
+   "familia": 40,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Espinho",
+   "especial": "Caroço",
+   "efeito": "Golpe de dano alto.",
+   "atributos": {
+    "vida": 25,
+    "ataque": 40,
+    "defesa": 15,
+    "velocidade": 20
+   }
+  },
+  {
+   "id": 92,
+   "nome": "Pequizão",
+   "tipos": [
+    "Mata",
+    "Veneno"
+   ],
+   "raridade": "C",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Atacante",
+   "estagio": 2,
+   "familia": 40,
+   "evoluiDe": 91,
+   "nivelEvolucao": 20,
+   "basico": "Espinhos",
+   "especial": "Chuva de Espinhos",
+   "efeito": "Dano em todos os inimigos.",
+   "atributos": {
+    "vida": 38,
+    "ataque": 60,
+    "defesa": 22,
+    "velocidade": 30
+   }
+  },
+  {
+   "id": 93,
+   "nome": "Tucaninho",
+   "tipos": [
+    "Vento",
+    "Fogo"
+   ],
+   "raridade": "I",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Equilibrado",
+   "estagio": 1,
+   "familia": 41,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Bicada",
+   "especial": "Bico Quente",
+   "efeito": "Queima o inimigo.",
+   "atributos": {
+    "vida": 32,
+    "ataque": 29,
+    "defesa": 25,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 94,
+   "nome": "Tucanário",
+   "tipos": [
+    "Vento",
+    "Fogo"
+   ],
+   "raridade": "I",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Equilibrado",
+   "estagio": 2,
+   "familia": 41,
+   "evoluiDe": 93,
+   "nivelEvolucao": 18,
+   "basico": "Bico Grande",
+   "especial": "Fruta Explosiva",
+   "efeito": "Dano em área.",
+   "atributos": {
+    "vida": 49,
+    "ataque": 44,
+    "defesa": 37,
+    "velocidade": 32
+   }
+  },
+  {
+   "id": 95,
+   "nome": "Tucanaflama",
+   "tipos": [
+    "Vento",
+    "Fogo"
+   ],
+   "raridade": "I",
+   "regiao": "centro-oeste",
+   "bioma": "Cerrado",
+   "papel": "Equilibrado",
+   "estagio": 3,
+   "familia": 41,
+   "evoluiDe": 94,
+   "nivelEvolucao": 32,
+   "basico": "Bico de Fogo",
+   "especial": "Sol do Cerrado",
+   "efeito": "Dano em área e queimadura.",
+   "atributos": {
+    "vida": 65,
+    "ataque": 58,
+    "defesa": 50,
+    "velocidade": 43
+   }
+  },
+  {
+   "id": 96,
+   "nome": "Caranguejito",
+   "tipos": [
+    "Água",
+    "Terra"
+   ],
+   "raridade": "C",
+   "regiao": "nordeste",
+   "bioma": "Litoral nordestino",
+   "papel": "Tanque",
+   "estagio": 1,
+   "familia": 42,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Pinça",
+   "especial": "Mangue",
+   "efeito": "Aumenta a defesa.",
+   "atributos": {
+    "vida": 40,
+    "ataque": 20,
+    "defesa": 30,
+    "velocidade": 10
+   }
+  },
+  {
+   "id": 97,
+   "nome": "Caranguarda",
+   "tipos": [
+    "Água",
+    "Terra"
+   ],
+   "raridade": "C",
+   "regiao": "nordeste",
+   "bioma": "Litoral nordestino",
+   "papel": "Tanque",
+   "estagio": 2,
+   "familia": 42,
+   "evoluiDe": 96,
+   "nivelEvolucao": 22,
+   "basico": "Garra",
+   "especial": "Barreira de Mangue",
+   "efeito": "Escudo para todo o time.",
+   "atributos": {
+    "vida": 60,
+    "ataque": 30,
+    "defesa": 45,
+    "velocidade": 15
+   }
+  },
+  {
+   "id": 98,
+   "nome": "Aguaviva",
+   "tipos": [
+    "Água",
+    "Veneno"
+   ],
+   "raridade": "I",
+   "regiao": "nordeste",
+   "bioma": "Litoral nordestino",
+   "papel": "Suporte",
+   "estagio": 1,
+   "familia": 43,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Tentáculo",
+   "especial": "Queimadura",
+   "efeito": "Envenena o inimigo.",
+   "atributos": {
+    "vida": 36,
+    "ataque": 22,
+    "defesa": 29,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 99,
+   "nome": "Caravela",
+   "tipos": [
+    "Água",
+    "Veneno"
+   ],
+   "raridade": "I",
+   "regiao": "nordeste",
+   "bioma": "Litoral nordestino",
+   "papel": "Suporte",
+   "estagio": 2,
+   "familia": 43,
+   "evoluiDe": 98,
+   "nivelEvolucao": 24,
+   "basico": "Tentáculos",
+   "especial": "Rede Tóxica",
+   "efeito": "Veneno e lentidão em todos.",
+   "atributos": {
+    "vida": 53,
+    "ataque": 32,
+    "defesa": 44,
+    "velocidade": 32
+   }
+  },
+  {
+   "id": 100,
+   "nome": "Tartarinha",
+   "tipos": [
+    "Água"
+   ],
+   "raridade": "R",
+   "regiao": "nordeste",
+   "bioma": "Litoral nordestino",
+   "papel": "Tanque",
+   "estagio": 1,
+   "familia": 44,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Nadadeira",
+   "especial": "Casco",
+   "efeito": "Escudo.",
+   "atributos": {
+    "vida": 46,
+    "ataque": 23,
+    "defesa": 35,
+    "velocidade": 12
+   }
+  },
+  {
+   "id": 101,
+   "nome": "Tartamar",
+   "tipos": [
+    "Água"
+   ],
+   "raridade": "R",
+   "regiao": "nordeste",
+   "bioma": "Litoral nordestino",
+   "papel": "Tanque",
+   "estagio": 2,
+   "familia": 44,
+   "evoluiDe": 100,
+   "nivelEvolucao": 30,
+   "basico": "Casco Antigo",
+   "especial": "Maré Alta",
+   "efeito": "Cura e escudo para o time.",
+   "atributos": {
+    "vida": 70,
+    "ataque": 35,
+    "defesa": 52,
+    "velocidade": 17
+   }
+  },
+  {
+   "id": 102,
+   "nome": "Tubarinho",
+   "tipos": [
+    "Água",
+    "Fera"
+   ],
+   "raridade": "R",
+   "regiao": "nordeste",
+   "bioma": "Litoral nordestino",
+   "papel": "Atacante",
+   "estagio": 1,
+   "familia": 45,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Mordida",
+   "especial": "Faro de Sangue",
+   "efeito": "Mais dano em inimigos feridos.",
+   "atributos": {
+    "vida": 29,
+    "ataque": 46,
+    "defesa": 17,
+    "velocidade": 23
+   }
+  },
+  {
+   "id": 103,
+   "nome": "Tubarão-Martelo",
+   "tipos": [
+    "Água",
+    "Fera"
+   ],
+   "raridade": "R",
+   "regiao": "nordeste",
+   "bioma": "Litoral nordestino",
+   "papel": "Atacante",
+   "estagio": 2,
+   "familia": 45,
+   "evoluiDe": 102,
+   "nivelEvolucao": 30,
+   "basico": "Martelada",
+   "especial": "Frenesi do Mar",
+   "efeito": "Cinco mordidas.",
+   "atributos": {
+    "vida": 44,
+    "ataque": 70,
+    "defesa": 26,
+    "velocidade": 35
+   }
+  },
+  {
+   "id": 104,
+   "nome": "Jubartinha",
+   "tipos": [
+    "Água"
+   ],
+   "raridade": "E",
+   "regiao": "nordeste",
+   "bioma": "Litoral nordestino",
+   "papel": "Tanque",
+   "estagio": 1,
+   "familia": 46,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Pancada",
+   "especial": "Canto",
+   "efeito": "Cura a si mesma.",
+   "atributos": {
+    "vida": 50,
+    "ataque": 25,
+    "defesa": 38,
+    "velocidade": 13
+   }
+  },
+  {
+   "id": 105,
+   "nome": "Jubartão",
+   "tipos": [
+    "Água"
+   ],
+   "raridade": "E",
+   "regiao": "nordeste",
+   "bioma": "Litoral nordestino",
+   "papel": "Tanque",
+   "estagio": 2,
+   "familia": 46,
+   "evoluiDe": 104,
+   "nivelEvolucao": 36,
+   "basico": "Cauda Colossal",
+   "especial": "Canto das Baleias",
+   "efeito": "Cura muito o time e atordoa todos.",
+   "atributos": {
+    "vida": 76,
+    "ataque": 38,
+    "defesa": 57,
+    "velocidade": 19
+   }
+  },
+  {
+   "id": 106,
+   "nome": "Atobazinho",
+   "tipos": [
+    "Vento",
+    "Água"
+   ],
+   "raridade": "C",
+   "regiao": "nordeste",
+   "bioma": "Litoral nordestino",
+   "papel": "Atacante",
+   "estagio": 1,
+   "familia": 47,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Mergulho",
+   "especial": "Pesca",
+   "efeito": "Golpe de dano alto.",
+   "atributos": {
+    "vida": 25,
+    "ataque": 40,
+    "defesa": 15,
+    "velocidade": 20
+   }
+  },
+  {
+   "id": 107,
+   "nome": "Atobarpão",
+   "tipos": [
+    "Vento",
+    "Água"
+   ],
+   "raridade": "C",
+   "regiao": "nordeste",
+   "bioma": "Litoral nordestino",
+   "papel": "Atacante",
+   "estagio": 2,
+   "familia": 47,
+   "evoluiDe": 106,
+   "nivelEvolucao": 20,
+   "basico": "Bico Arpão",
+   "especial": "Mergulho Arpão",
+   "efeito": "Dano muito alto que ignora defesa.",
+   "atributos": {
+    "vida": 38,
+    "ataque": 60,
+    "defesa": 22,
+    "velocidade": 30
+   }
+  },
+  {
+   "id": 108,
+   "nome": "Itaí",
+   "tipos": [
+    "Terra"
+   ],
+   "raridade": "I",
+   "regiao": "sudeste",
+   "bioma": "Serras de Minas",
+   "papel": "Tanque",
+   "estagio": 1,
+   "familia": 48,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Pedrada",
+   "especial": "Endurecer",
+   "efeito": "Aumenta a defesa.",
+   "atributos": {
+    "vida": 43,
+    "ataque": 22,
+    "defesa": 32,
+    "velocidade": 11
+   }
+  },
+  {
+   "id": 109,
+   "nome": "Itamirim",
+   "tipos": [
+    "Terra"
+   ],
+   "raridade": "I",
+   "regiao": "sudeste",
+   "bioma": "Serras de Minas",
+   "papel": "Tanque",
+   "estagio": 2,
+   "familia": 48,
+   "evoluiDe": 108,
+   "nivelEvolucao": 20,
+   "basico": "Rolar",
+   "especial": "Avalanche",
+   "efeito": "Dano em todos os inimigos.",
+   "atributos": {
+    "vida": 65,
+    "ataque": 32,
+    "defesa": 49,
+    "velocidade": 16
+   }
+  },
+  {
+   "id": 110,
+   "nome": "Itaguaçu",
+   "tipos": [
+    "Terra"
+   ],
+   "raridade": "I",
+   "regiao": "sudeste",
+   "bioma": "Serras de Minas",
+   "papel": "Tanque",
+   "estagio": 3,
+   "familia": 48,
+   "evoluiDe": 109,
+   "nivelEvolucao": 36,
+   "basico": "Soco de Pedra",
+   "especial": "Terremoto",
+   "efeito": "Dano em todos e atordoa.",
+   "atributos": {
+    "vida": 86,
+    "ataque": 43,
+    "defesa": 65,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 111,
+   "nome": "Quartzim",
+   "tipos": [
+    "Terra",
+    "Encanto"
+   ],
+   "raridade": "R",
+   "regiao": "sudeste",
+   "bioma": "Serras de Minas",
+   "papel": "Suporte",
+   "estagio": 1,
+   "familia": 49,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Brilho",
+   "especial": "Cristalizar",
+   "efeito": "Escudo de cristal.",
+   "atributos": {
+    "vida": 38,
+    "ataque": 23,
+    "defesa": 31,
+    "velocidade": 23
+   }
+  },
+  {
+   "id": 112,
+   "nome": "Ametistão",
+   "tipos": [
+    "Terra",
+    "Encanto"
+   ],
+   "raridade": "R",
+   "regiao": "sudeste",
+   "bioma": "Serras de Minas",
+   "papel": "Suporte",
+   "estagio": 2,
+   "familia": 49,
+   "evoluiDe": 111,
+   "nivelEvolucao": 32,
+   "basico": "Raio Cristal",
+   "especial": "Geodo",
+   "efeito": "Escudo para o time que devolve dano.",
+   "atributos": {
+    "vida": 57,
+    "ataque": 35,
+    "defesa": 47,
+    "velocidade": 35
+   }
+  },
+  {
+   "id": 113,
+   "nome": "Minhoquinha",
+   "tipos": [
+    "Terra"
+   ],
+   "raridade": "R",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Tanque",
+   "estagio": 1,
+   "familia": 50,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Cavar",
+   "especial": "Sumir",
+   "efeito": "Esquiva do próximo golpe.",
+   "atributos": {
+    "vida": 46,
+    "ataque": 23,
+    "defesa": 35,
+    "velocidade": 12
+   }
+  },
+  {
+   "id": 114,
+   "nome": "Minhocão",
+   "tipos": [
+    "Terra"
+   ],
+   "raridade": "R",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Tanque",
+   "estagio": 2,
+   "familia": 50,
+   "evoluiDe": 113,
+   "nivelEvolucao": 34,
+   "basico": "Engolir",
+   "especial": "Tremor",
+   "efeito": "Dano em todos e atordoa.",
+   "atributos": {
+    "vida": 70,
+    "ataque": 35,
+    "defesa": 52,
+    "velocidade": 17
+   }
+  },
+  {
+   "id": 115,
+   "nome": "Corisquinho",
+   "tipos": [
+    "Raio"
+   ],
+   "raridade": "I",
+   "regiao": "sudeste",
+   "bioma": "Serras de Minas",
+   "papel": "Atacante",
+   "estagio": 1,
+   "familia": 51,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Faísca",
+   "especial": "Estalo",
+   "efeito": "Atordoa o inimigo.",
+   "atributos": {
+    "vida": 27,
+    "ataque": 43,
+    "defesa": 16,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 116,
+   "nome": "Corisco",
+   "tipos": [
+    "Raio"
+   ],
+   "raridade": "I",
+   "regiao": "sudeste",
+   "bioma": "Serras de Minas",
+   "papel": "Atacante",
+   "estagio": 2,
+   "familia": 51,
+   "evoluiDe": 115,
+   "nivelEvolucao": 26,
+   "basico": "Raio",
+   "especial": "Relâmpago",
+   "efeito": "Golpe de dano muito alto.",
+   "atributos": {
+    "vida": 40,
+    "ataque": 65,
+    "defesa": 24,
+    "velocidade": 32
+   }
+  },
+  {
+   "id": 117,
+   "nome": "Pepitinha",
+   "tipos": [
+    "Terra",
+    "Raio"
+   ],
+   "raridade": "R",
+   "regiao": "sudeste",
+   "bioma": "Serras de Minas",
+   "papel": "Equilibrado",
+   "estagio": 1,
+   "familia": 52,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Pancada",
+   "especial": "Brilho",
+   "efeito": "Os inimigos derrotados dão mais ouro.",
+   "atributos": {
+    "vida": 35,
+    "ataque": 31,
+    "defesa": 27,
+    "velocidade": 23
+   }
+  },
+  {
+   "id": 118,
+   "nome": "Pepitão",
+   "tipos": [
+    "Terra",
+    "Raio"
+   ],
+   "raridade": "R",
+   "regiao": "sudeste",
+   "bioma": "Serras de Minas",
+   "papel": "Equilibrado",
+   "estagio": 2,
+   "familia": 52,
+   "evoluiDe": 117,
+   "nivelEvolucao": 30,
+   "basico": "Golpe Dourado",
+   "especial": "Veio de Ouro",
+   "efeito": "Mais ouro e escudo para o time.",
+   "atributos": {
+    "vida": 52,
+    "ataque": 47,
+    "defesa": 40,
+    "velocidade": 35
+   }
+  },
+  {
+   "id": 119,
+   "nome": "Caranguejeirinha",
+   "tipos": [
+    "Inseto",
+    "Fera"
+   ],
+   "raridade": "I",
+   "regiao": "sul",
+   "bioma": "Mata de Araucárias",
+   "papel": "Tanque",
+   "estagio": 1,
+   "familia": 53,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Pelos",
+   "especial": "Teia",
+   "efeito": "Deixa o inimigo lento.",
+   "atributos": {
+    "vida": 43,
+    "ataque": 22,
+    "defesa": 32,
+    "velocidade": 11
+   }
+  },
+  {
+   "id": 120,
+   "nome": "Caranguejeira",
+   "tipos": [
+    "Inseto",
+    "Fera"
+   ],
+   "raridade": "I",
+   "regiao": "sul",
+   "bioma": "Mata de Araucárias",
+   "papel": "Tanque",
+   "estagio": 2,
+   "familia": 53,
+   "evoluiDe": 119,
+   "nivelEvolucao": 24,
+   "basico": "Presa",
+   "especial": "Teia Gigante",
+   "efeito": "Prende todos os inimigos.",
+   "atributos": {
+    "vida": 65,
+    "ataque": 32,
+    "defesa": 49,
+    "velocidade": 16
+   }
+  },
+  {
+   "id": 121,
+   "nome": "Gralhinha",
+   "tipos": [
+    "Vento",
+    "Mata"
+   ],
+   "raridade": "I",
+   "regiao": "sul",
+   "bioma": "Mata de Araucárias",
+   "papel": "Suporte",
+   "estagio": 1,
+   "familia": 54,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Bicada",
+   "especial": "Plantar Pinhão",
+   "efeito": "Cura a criatura da frente.",
+   "atributos": {
+    "vida": 36,
+    "ataque": 22,
+    "defesa": 29,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 122,
+   "nome": "Gralha-Azul",
+   "tipos": [
+    "Vento",
+    "Mata"
+   ],
+   "raridade": "I",
+   "regiao": "sul",
+   "bioma": "Mata de Araucárias",
+   "papel": "Suporte",
+   "estagio": 2,
+   "familia": 54,
+   "evoluiDe": 121,
+   "nivelEvolucao": 24,
+   "basico": "Asa",
+   "especial": "Bosque de Araucárias",
+   "efeito": "Cura e escudo para o time.",
+   "atributos": {
+    "vida": 53,
+    "ataque": 32,
+    "defesa": 44,
+    "velocidade": 32
+   }
+  },
+  {
+   "id": 123,
+   "nome": "Pinhãozinho",
+   "tipos": [
+    "Mata"
+   ],
+   "raridade": "C",
+   "regiao": "sul",
+   "bioma": "Mata de Araucárias",
+   "papel": "Tanque",
+   "estagio": 1,
+   "familia": 55,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Pinhão",
+   "especial": "Casca",
+   "efeito": "Aumenta a defesa.",
+   "atributos": {
+    "vida": 40,
+    "ataque": 20,
+    "defesa": 30,
+    "velocidade": 10
+   }
+  },
+  {
+   "id": 124,
+   "nome": "Araucarião",
+   "tipos": [
+    "Mata"
+   ],
+   "raridade": "C",
+   "regiao": "sul",
+   "bioma": "Mata de Araucárias",
+   "papel": "Tanque",
+   "estagio": 2,
+   "familia": 55,
+   "evoluiDe": 123,
+   "nivelEvolucao": 24,
+   "basico": "Galhada",
+   "especial": "Chuva de Pinhas",
+   "efeito": "Dano em todos os inimigos.",
+   "atributos": {
+    "vida": 60,
+    "ataque": 30,
+    "defesa": 45,
+    "velocidade": 15
+   }
+  },
+  {
+   "id": 125,
+   "nome": "Graxainzinho",
+   "tipos": [
+    "Fera"
+   ],
+   "raridade": "C",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Equilibrado",
+   "estagio": 1,
+   "familia": 56,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Mordida",
+   "especial": "Astúcia",
+   "efeito": "Esquiva do próximo golpe.",
+   "atributos": {
+    "vida": 33,
+    "ataque": 30,
+    "defesa": 25,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 126,
+   "nome": "Graxaimão",
+   "tipos": [
+    "Fera"
+   ],
+   "raridade": "C",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Equilibrado",
+   "estagio": 2,
+   "familia": 56,
+   "evoluiDe": 125,
+   "nivelEvolucao": 18,
+   "basico": "Mordida",
+   "especial": "Emboscada",
+   "efeito": "Golpe com crítico garantido.",
+   "atributos": {
+    "vida": 50,
+    "ataque": 45,
+    "defesa": 38,
+    "velocidade": 33
+   }
+  },
+  {
+   "id": 127,
+   "nome": "Quero",
+   "tipos": [
+    "Vento"
+   ],
+   "raridade": "C",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Veloz",
+   "estagio": 1,
+   "familia": 57,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Bicada",
+   "especial": "Alarme",
+   "efeito": "Aumenta a velocidade do time.",
+   "atributos": {
+    "vida": 22,
+    "ataque": 30,
+    "defesa": 13,
+    "velocidade": 35
+   }
+  },
+  {
+   "id": 128,
+   "nome": "Queroquerão",
+   "tipos": [
+    "Vento"
+   ],
+   "raridade": "C",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Veloz",
+   "estagio": 2,
+   "familia": 57,
+   "evoluiDe": 127,
+   "nivelEvolucao": 16,
+   "basico": "Esporão",
+   "especial": "Defesa do Ninho",
+   "efeito": "Dano alto em quem atacou por último.",
+   "atributos": {
+    "vida": 33,
+    "ataque": 45,
+    "defesa": 20,
+    "velocidade": 52
+   }
+  },
+  {
+   "id": 129,
+   "nome": "Joãozinho",
+   "tipos": [
+    "Terra",
+    "Vento"
+   ],
+   "raridade": "C",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Tanque",
+   "estagio": 1,
+   "familia": 58,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Bicada",
+   "especial": "Barro Fresco",
+   "efeito": "Escudo.",
+   "atributos": {
+    "vida": 40,
+    "ataque": 20,
+    "defesa": 30,
+    "velocidade": 10
+   }
+  },
+  {
+   "id": 130,
+   "nome": "João-Barreiro",
+   "tipos": [
+    "Terra",
+    "Vento"
+   ],
+   "raridade": "C",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Tanque",
+   "estagio": 2,
+   "familia": 58,
+   "evoluiDe": 129,
+   "nivelEvolucao": 20,
+   "basico": "Pancada",
+   "especial": "Casa de Barro",
+   "efeito": "Escudo grande para o time.",
+   "atributos": {
+    "vida": 60,
+    "ataque": 30,
+    "defesa": 45,
+    "velocidade": 15
+   }
+  },
+  {
+   "id": 131,
+   "nome": "Fatuinho",
+   "tipos": [
+    "Fogo",
+    "Encanto"
+   ],
+   "raridade": "I",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Suporte",
+   "estagio": 1,
+   "familia": 59,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Chama",
+   "especial": "Luz Fria",
+   "efeito": "Cega o inimigo.",
+   "atributos": {
+    "vida": 36,
+    "ataque": 22,
+    "defesa": 29,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 132,
+   "nome": "Fatuchama",
+   "tipos": [
+    "Fogo",
+    "Encanto"
+   ],
+   "raridade": "I",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Suporte",
+   "estagio": 2,
+   "familia": 59,
+   "evoluiDe": 131,
+   "nivelEvolucao": 26,
+   "basico": "Chama Azul",
+   "especial": "Fogo-Fátuo",
+   "efeito": "Queima e reduz o ataque dos inimigos.",
+   "atributos": {
+    "vida": 53,
+    "ataque": 32,
+    "defesa": 44,
+    "velocidade": 32
+   }
+  },
+  {
+   "id": 133,
+   "nome": "Redemoinho",
+   "tipos": [
+    "Vento",
+    "Encanto"
+   ],
+   "raridade": "E",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Veloz",
+   "estagio": 1,
+   "familia": 60,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Rajada",
+   "especial": "Sumir",
+   "efeito": "Fica invisível por 2 segundos.",
+   "atributos": {
+    "vida": 28,
+    "ataque": 38,
+    "defesa": 16,
+    "velocidade": 44
+   }
+  },
+  {
+   "id": 134,
+   "nome": "Saci-Ventania",
+   "tipos": [
+    "Vento",
+    "Encanto"
+   ],
+   "raridade": "E",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Veloz",
+   "estagio": 2,
+   "familia": 60,
+   "evoluiDe": 133,
+   "nivelEvolucao": 34,
+   "basico": "Chute Giratório",
+   "especial": "Pé de Vento",
+   "efeito": "Dano em área, confunde e rouba ouro extra.",
+   "atributos": {
+    "vida": 42,
+    "ataque": 57,
+    "defesa": 25,
+    "velocidade": 66
+   }
+  },
+  {
+   "id": 135,
+   "nome": "Mula-de-Fogo",
+   "tipos": [
+    "Fogo",
+    "Encanto"
+   ],
+   "raridade": "E",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Atacante",
+   "estagio": 0,
+   "familia": 61,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Coice Flamejante",
+   "especial": "Galope em Chamas",
+   "efeito": "Atropela todos e deixa queimando.",
+   "atributos": {
+    "vida": 60,
+    "ataque": 96,
+    "defesa": 36,
+    "velocidade": 48
+   }
+  },
+  {
+   "id": 136,
+   "nome": "Lobacho",
+   "tipos": [
+    "Fera",
+    "Encanto"
+   ],
+   "raridade": "E",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Atacante",
+   "estagio": 1,
+   "familia": 62,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Mordida",
+   "especial": "Uivo",
+   "efeito": "Aumenta o próprio ataque.",
+   "atributos": {
+    "vida": 32,
+    "ataque": 50,
+    "defesa": 19,
+    "velocidade": 25
+   }
+  },
+  {
+   "id": 137,
+   "nome": "Lobisomem",
+   "tipos": [
+    "Fera",
+    "Encanto"
+   ],
+   "raridade": "E",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Atacante",
+   "estagio": 2,
+   "familia": 62,
+   "evoluiDe": 136,
+   "nivelEvolucao": 40,
+   "basico": "Garra",
+   "especial": "Transformação",
+   "efeito": "Dobra o ataque por 6 segundos.",
+   "atributos": {
+    "vida": 47,
+    "ataque": 76,
+    "defesa": 28,
+    "velocidade": 38
+   }
+  },
+  {
+   "id": 138,
+   "nome": "Cuca",
+   "tipos": [
+    "Veneno",
+    "Encanto"
+   ],
+   "raridade": "E",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Suporte",
+   "estagio": 0,
+   "familia": 63,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Colherada",
+   "especial": "Poção do Sono",
+   "efeito": "Faz os inimigos dormirem por 2 segundos.",
+   "atributos": {
+    "vida": 79,
+    "ataque": 48,
+    "defesa": 65,
+    "velocidade": 48
+   }
+  },
+  {
+   "id": 139,
+   "nome": "Caipora",
+   "tipos": [
+    "Mata",
+    "Fera"
+   ],
+   "raridade": "E",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Equilibrado",
+   "estagio": 0,
+   "familia": 64,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Cajado",
+   "especial": "Proteção da Caça",
+   "efeito": "Escudo com espinhos para todo o time.",
+   "atributos": {
+    "vida": 72,
+    "ataque": 65,
+    "defesa": 55,
+    "velocidade": 48
+   }
+  },
+  {
+   "id": 140,
+   "nome": "Matinta",
+   "tipos": [
+    "Vento",
+    "Encanto"
+   ],
+   "raridade": "E",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Suporte",
+   "estagio": 0,
+   "familia": 65,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Assobio",
+   "especial": "Assobio Agourento",
+   "efeito": "Atordoa todos os inimigos.",
+   "atributos": {
+    "vida": 79,
+    "ataque": 48,
+    "defesa": 65,
+    "velocidade": 48
+   }
+  },
+  {
+   "id": 141,
+   "nome": "Boi-Bumbá",
+   "tipos": [
+    "Fera",
+    "Encanto"
+   ],
+   "raridade": "E",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Tanque",
+   "estagio": 0,
+   "familia": 66,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Chifrada",
+   "especial": "Festa do Boi",
+   "efeito": "Cura o time e aumenta o ataque de todos.",
+   "atributos": {
+    "vida": 96,
+    "ataque": 48,
+    "defesa": 72,
+    "velocidade": 24
+   }
+  },
+  {
+   "id": 142,
+   "nome": "Capelobo",
+   "tipos": [
+    "Fera",
+    "Veneno"
+   ],
+   "raridade": "E",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Atacante",
+   "estagio": 0,
+   "familia": 67,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Focinho",
+   "especial": "Devorar",
+   "efeito": "Dano muito alto e recupera vida.",
+   "atributos": {
+    "vida": 60,
+    "ataque": 96,
+    "defesa": 36,
+    "velocidade": 48
+   }
+  },
+  {
+   "id": 143,
+   "nome": "Corpo-Seco",
+   "tipos": [
+    "Encanto",
+    "Terra"
+   ],
+   "raridade": "R",
+   "regiao": "sudeste",
+   "bioma": "Serras de Minas",
+   "papel": "Tanque",
+   "estagio": 0,
+   "familia": 68,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Galho Seco",
+   "especial": "Não Morre",
+   "efeito": "Volta uma vez com 30% da vida.",
+   "atributos": {
+    "vida": 88,
+    "ataque": 44,
+    "defesa": 66,
+    "velocidade": 22
+   }
+  },
+  {
+   "id": 144,
+   "nome": "Curupira",
+   "tipos": [
+    "Mata",
+    "Encanto"
+   ],
+   "raridade": "L",
+   "regiao": "sudeste",
+   "bioma": "Mata Atlântica",
+   "papel": "Veloz",
+   "estagio": 0,
+   "familia": 69,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Pegada",
+   "especial": "Pés Trocados",
+   "efeito": "Os inimigos se perdem e atacam uns aos outros.",
+   "atributos": {
+    "vida": 59,
+    "ataque": 80,
+    "defesa": 35,
+    "velocidade": 93
+   }
+  },
+  {
+   "id": 145,
+   "nome": "Iara",
+   "tipos": [
+    "Água",
+    "Encanto"
+   ],
+   "raridade": "L",
+   "regiao": "centro-oeste",
+   "bioma": "Pantanal",
+   "papel": "Suporte",
+   "estagio": 0,
+   "familia": 70,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Canto",
+   "especial": "Canto da Iara",
+   "efeito": "Encanta: os inimigos param de atacar por 3 segundos.",
+   "atributos": {
+    "vida": 88,
+    "ataque": 53,
+    "defesa": 72,
+    "velocidade": 53
+   }
+  },
+  {
+   "id": 146,
+   "nome": "Anhangá",
+   "tipos": [
+    "Mata",
+    "Encanto"
+   ],
+   "raridade": "L",
+   "regiao": "nordeste",
+   "bioma": "Caatinga",
+   "papel": "Suporte",
+   "estagio": 0,
+   "familia": 71,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Chifre de Luz",
+   "especial": "Guardião dos Bichos",
+   "efeito": "Cura todo o time e reanima quem desmaiou.",
+   "atributos": {
+    "vida": 88,
+    "ataque": 53,
+    "defesa": 72,
+    "velocidade": 53
+   }
+  },
+  {
+   "id": 147,
+   "nome": "Boitatá",
+   "tipos": [
+    "Fogo",
+    "Encanto"
+   ],
+   "raridade": "L",
+   "regiao": "sul",
+   "bioma": "Pampa",
+   "papel": "Atacante",
+   "estagio": 0,
+   "familia": 72,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Chicote de Fogo",
+   "especial": "Serpente de Fogo",
+   "efeito": "Dano enorme em todos e queimadura.",
+   "atributos": {
+    "vida": 66,
+    "ataque": 106,
+    "defesa": 40,
+    "velocidade": 53
+   }
+  },
+  {
+   "id": 148,
+   "nome": "Boiúna",
+   "tipos": [
+    "Água",
+    "Encanto"
+   ],
+   "raridade": "L",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Tanque",
+   "estagio": 0,
+   "familia": 73,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Esmagar",
+   "especial": "Cheia do Rio",
+   "efeito": "Onda gigante em todos os inimigos.",
+   "atributos": {
+    "vida": 106,
+    "ataque": 53,
+    "defesa": 80,
+    "velocidade": 27
+   }
+  },
+  {
+   "id": 149,
+   "nome": "Mãe-do-Ouro",
+   "tipos": [
+    "Raio",
+    "Terra"
+   ],
+   "raridade": "L",
+   "regiao": "sudeste",
+   "bioma": "Serras de Minas",
+   "papel": "Equilibrado",
+   "estagio": 0,
+   "familia": 74,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Raio",
+   "especial": "Bola Dourada",
+   "efeito": "Dano alto e muito ouro.",
+   "atributos": {
+    "vida": 80,
+    "ataque": 72,
+    "defesa": 61,
+    "velocidade": 53
+   }
+  },
+  {
+   "id": 150,
+   "nome": "Mapinguari",
+   "tipos": [
+    "Fera",
+    "Terra"
+   ],
+   "raridade": "L",
+   "regiao": "norte",
+   "bioma": "Amazônia",
+   "papel": "Tanque",
+   "estagio": 0,
+   "familia": 75,
+   "evoluiDe": null,
+   "nivelEvolucao": null,
+   "basico": "Garra",
+   "especial": "Grito do Mapinguari",
+   "efeito": "Atordoa todos e causa dano enorme.",
+   "atributos": {
+    "vida": 106,
+    "ataque": 53,
+    "defesa": 80,
+    "velocidade": 27
+   }
+  }
+ ],
+ "cartas": [
+  {
+   "raridade": "C",
+   "nome": "Garras Afiadas",
+   "efeito": "+15% de dano."
+  },
+  {
+   "raridade": "C",
+   "nome": "Couro Grosso",
+   "efeito": "+15% de vida máxima."
+  },
+  {
+   "raridade": "C",
+   "nome": "Faro de Ouro",
+   "efeito": "+20% de ouro ganho."
+  },
+  {
+   "raridade": "C",
+   "nome": "Curiosidade",
+   "efeito": "+20% de XP ganho."
+  },
+  {
+   "raridade": "C",
+   "nome": "Fôlego",
+   "efeito": "Cura 25% da vida de todo o time."
+  },
+  {
+   "raridade": "C",
+   "nome": "Passo Ligeiro",
+   "efeito": "+12% de velocidade de ataque."
+  },
+  {
+   "raridade": "I",
+   "nome": "Olho Vivo",
+   "efeito": "+6% de chance de crítico."
+  },
+  {
+   "raridade": "I",
+   "nome": "Seiva",
+   "efeito": "Regenera 1% da vida por segundo."
+  },
+  {
+   "raridade": "I",
+   "nome": "Ninho Cheio",
+   "efeito": "Ganha 5% do ouro guardado a cada onda vencida."
+  },
+  {
+   "raridade": "I",
+   "nome": "Energia Rápida",
+   "efeito": "O especial carrega 20% mais rápido."
+  },
+  {
+   "raridade": "I",
+   "nome": "Escudo de Folhas",
+   "efeito": "Bloqueia um golpe a cada 8 segundos."
+  },
+  {
+   "raridade": "R",
+   "nome": "Brasa Viva",
+   "efeito": "Golpes de Fogo deixam o inimigo queimando."
+  },
+  {
+   "raridade": "R",
+   "nome": "Maré Forte",
+   "efeito": "Golpes de Água ficam 25% mais fortes e deixam lento."
+  },
+  {
+   "raridade": "R",
+   "nome": "Espinhos",
+   "efeito": "Devolve 20% do dano recebido."
+  },
+  {
+   "raridade": "R",
+   "nome": "Mordida Vampira",
+   "efeito": "Recupera 8% do dano causado."
+  },
+  {
+   "raridade": "R",
+   "nome": "Golpe Duplo",
+   "efeito": "15% de chance de atacar duas vezes."
+  },
+  {
+   "raridade": "E",
+   "nome": "Sintonia de Tipo",
+   "efeito": "+40% de dano quando há vantagem de tipo."
+  },
+  {
+   "raridade": "E",
+   "nome": "Explosão Final",
+   "efeito": "Inimigos derrotados explodem e ferem os próximos."
+  },
+  {
+   "raridade": "E",
+   "nome": "Segundo Fôlego",
+   "efeito": "A primeira criatura que desmaiar volta com 40% da vida."
+  },
+  {
+   "raridade": "L",
+   "nome": "Bênção de Pindorama",
+   "efeito": "+25% em todos os atributos do time."
+  },
+  {
+   "raridade": "L",
+   "nome": "Despertar",
+   "efeito": "O especial é usado duas vezes seguidas."
+  }
+ ],
+ "temperamentos": [
+  {
+   "nome": "Bravo",
+   "sobe": "Ataque",
+   "desce": "Defesa"
+  },
+  {
+   "nome": "Teimoso",
+   "sobe": "Defesa",
+   "desce": "Velocidade"
+  },
+  {
+   "nome": "Afoito",
+   "sobe": "Velocidade",
+   "desce": "Defesa"
+  },
+  {
+   "nome": "Robusto",
+   "sobe": "Vida",
+   "desce": "Velocidade"
+  },
+  {
+   "nome": "Sereno",
+   "sobe": "Defesa",
+   "desce": "Ataque"
+  },
+  {
+   "nome": "Esperto",
+   "sobe": "Velocidade",
+   "desce": "Vida"
+  },
+  {
+   "nome": "Feroz",
+   "sobe": "Ataque",
+   "desce": "Vida"
+  },
+  {
+   "nome": "Calmo",
+   "sobe": "Vida",
+   "desce": "Ataque"
+  },
+  {
+   "nome": "Equilibrado",
+   "sobe": null,
+   "desce": null
+  }
+ ]
+}

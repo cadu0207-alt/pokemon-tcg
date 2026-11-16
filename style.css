@@ -191,6 +191,10 @@ body {
   font-family: 'DM Sans', sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
+  overflow-x: clip; /* 17/10/2026: 'clip' não cria contêiner de rolagem no body — no iOS Safari o 'hidden' faz a barra fixa de baixo acompanhar a rolagem */
+}
+@media (max-width: 900px) {
+  body { background-attachment: scroll; } /* iOS ignora 'fixed' e repinta a página inteira a cada rolagem (a barra inferior "treme") */
 }
 
 .page { display: none; }
@@ -610,8 +614,13 @@ h1 {
     background: rgba(255,255,255,.96);
     border-top: 1px solid var(--border);
     box-shadow: 0 -6px 20px rgba(28,34,56,.1);
+    /* própria camada de composição: o Safari do iPhone não reposiciona a barra durante a rolagem/recolhimento da barra do navegador */
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+    -webkit-backface-visibility: hidden;
   }
   [data-theme="dark"] .mnav { background: rgba(17,20,34,.96); box-shadow: 0 -6px 20px rgba(0,0,0,.4); }
+  body.kbd-open .mnav { display: none; } /* teclado aberto: some (ver script em index.html) */
 }
 
 .mnav-btn {
@@ -936,7 +945,6 @@ h1 {
   #pg-app > header { margin-left: 0; }
   #pg-app > .stripe,
   #pg-app > #feedback-bar-wrap,
-  #pg-app > #global-ctcg-banner-wrap,
   #pg-app .pane {
     margin-left: var(--tdesk-w, 224px);
   }
@@ -2213,6 +2221,8 @@ body.share-view .btn-add { display: none !important; }
 .staff-perm-check { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text); cursor: pointer; }
 .staff-perm-check input[type=checkbox] { cursor: pointer; }
 .product-note { font-size: 10px; color: var(--muted); margin-top: 3px; }
+.product-ppb { font-size: 12px; font-weight: 700; color: var(--teal, #0e7898); margin-top: 3px; }
+.product-ppb span { font-weight: 400; color: var(--muted); }
 .product-note-warn { font-size: 10px; color: #a16207; background: #fef3c7; border-radius: 6px; padding: 4px 8px; margin-top: 6px; line-height: 1.4; }
 .product-stats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .product-stat {
@@ -3444,9 +3454,10 @@ body.share-view .btn-add { display: none !important; }
 @media (min-width: 901px) {
   #inicio-market-feed-wrap-top { display: none; }
   #inicio-market-feed-wrap-side:not(:empty) { display: block; }
-  .mkt-feed-card { width: 52px; }
-  .mkt-feed-card img { width: 44px; }
-  .mkt-feed-name, .mkt-feed-price { max-width: 52px; }
+  .mkt-feed-card { width: 64px; }
+  .mkt-feed-card img { width: 56px; }
+  .mkt-feed-name, .mkt-feed-price { max-width: 64px; }
+  .mkt-feed-name { font-size: 9px; }
 }
 
 .inicio-legal-footer {
@@ -3686,6 +3697,16 @@ body.inicio-modal-open { overflow: hidden; }
 }
 .hc-list-snippet { font-size: 12.5px; color: var(--text); }
 .hc-list-meta { font-size: 10.5px; color: var(--muted); margin-top: 3px; font-family: 'Space Mono', monospace; }
+/* Envio de imagem da notícia (09/10/2026) */
+.hc-img-box { margin-top: 8px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 8px; }
+.hc-img-or { font-size: 11px; color: var(--muted); }
+.hc-img-status { font-size: 12px; margin-top: 6px; min-height: 0; }
+.hc-img-status:empty { display: none; }
+.hc-img-preview { margin-top: 8px; display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+.hc-img-preview:empty { display: none; }
+.hc-img-preview img { max-width: 220px; max-height: 140px; border-radius: 6px; border: 1px solid var(--border); object-fit: cover; }
+.hc-img-bad { font-size: 12px; color: var(--accent, #e63946); }
+.hc-block.hc-drop { outline: 2px dashed var(--accent, #e63946); outline-offset: 4px; }
 
 @media (max-width: 900px) {
   .inicio-news-grid, .inicio-video-grid { grid-template-columns: 1fr 1fr; }
@@ -3804,3 +3825,225 @@ body.inicio-modal-open { overflow: hidden; }
 .emsair-btn:hover { filter: brightness(1.06); }
 .emsair-foot { text-align: center; margin-top: 14px; }
 .emsair-link { background: none; border: none; cursor: pointer; font-family: inherit; font-size: 12.5px; color: var(--muted); text-decoration: underline; }
+
+/* ── Boas-vindas ao visitante (17/10/2026, inicio.js → renderInicioWelcome) ── */
+.inicio-welcome { position: relative; border-radius: 16px; padding: 22px 24px; margin-bottom: 22px;
+  background: linear-gradient(150deg, var(--surface2, var(--surface)) 0%, var(--surface) 70%); border: 1px solid var(--border); }
+.inicio-welcome-x { position: absolute; top: 8px; right: 8px; width: 36px; height: 36px; border: 0; border-radius: 99px;
+  background: transparent; color: var(--muted); font-size: 15px; cursor: pointer; }
+.inicio-welcome-x:hover { background: var(--surface2, rgba(0,0,0,.06)); color: var(--text); }
+.inicio-welcome-eyebrow { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+.inicio-welcome-title { font-size: 22px; line-height: 1.2; margin: 0 36px 12px 0; color: var(--text); }
+.inicio-welcome-list { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 8px; font-size: 13.5px; color: var(--text2, var(--text)); line-height: 1.45; }
+.inicio-welcome-list li { display: flex; gap: 10px; align-items: baseline; }
+.inicio-welcome-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.inicio-welcome-cta, .inicio-welcome-sec { min-height: 44px; padding: 0 18px; border-radius: 10px; font-weight: 700; font-size: 14px; font-family: inherit; cursor: pointer; }
+.inicio-welcome-cta { border: 0; background: var(--accent); color: #fff; }
+.inicio-welcome-cta:hover { filter: brightness(1.08); }
+.inicio-welcome-sec { border: 1px solid var(--border); background: transparent; color: var(--text); }
+.inicio-welcome-sec:hover { background: var(--surface2, rgba(0,0,0,.05)); }
+@media (min-width: 720px) { .inicio-welcome-list { grid-template-columns: repeat(3, 1fr); } .inicio-welcome-list li { flex-direction: column; gap: 2px; } }
+@media (max-width: 719px) { .inicio-welcome { padding: 18px 16px; } .inicio-welcome-title { font-size: 19px; } .inicio-welcome-actions > button { flex: 1 1 100%; } }
+
+/* ── Ajustes da Início (17/10/2026) ── */
+.wa-community-btn .wa-label-short { display: none; }
+@media (max-width: 640px) { .wa-community-btn .wa-label-short { display: inline; } }
+/* sidebar desktop: o contador do minigame (fixo no canto) cobria os últimos itens — folga no fim da lista */
+@media (min-width: 901px) { .tdesk { padding-bottom: 120px; } }
+.mkt-feed-card img { aspect-ratio: 5 / 7; object-fit: cover; }
+
+/* ── Início: vídeo sob demanda, foco e movimento reduzido (17/10/2026) ── */
+.inicio-yt-facade { cursor: pointer; }
+.inicio-yt-facade img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.inicio-yt-play { position: absolute; inset: 0; margin: auto; width: 64px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+  background: rgba(230,57,70,.92); color: #fff; font-size: 20px; padding-left: 3px; box-shadow: 0 2px 10px rgba(0,0,0,.35); transition: transform .15s; }
+.inicio-yt-facade:hover .inicio-yt-play, .inicio-yt-facade:focus-visible .inicio-yt-play { transform: scale(1.08); }
+.inicio-yt-facade:focus-visible, .inicio-ranking-tab:focus-visible, .inicio-welcome-cta:focus-visible, .inicio-welcome-sec:focus-visible,
+.inicio-welcome-x:focus-visible, .mkt-feed-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+  /* a tira de compra/venda deixa de andar sozinha: vira uma fila que a pessoa rola com o dedo/mouse */
+  .mkt-feed-row-sell .mkt-feed-track, .mkt-feed-row-buy .mkt-feed-track { animation: none !important; }
+  .mkt-feed-row { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
+  .inicio-news-card, .inicio-news-card:hover, .wa-community-btn:hover, .inicio-yt-play { transition: none !important; transform: none !important; }
+}
+
+/* ── Fichário: favoritos e foco por teclado (17/10/2026) ── */
+.fav-toggle { margin-top: 8px; padding: 5px 12px; border-radius: 99px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2, var(--text));
+  font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.fav-toggle:hover { border-color: #f5b301; color: #f5b301; }
+.fav-toggle.on { background: rgba(245,179,1,.16); border-color: #f5b301; color: #f5b301; }
+.fav-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fav-badge { position: absolute; top: 3px; left: 4px; font-size: 13px; line-height: 1; color: #f5b301; text-shadow: 0 0 3px rgba(0,0,0,.85); pointer-events: none; }
+.fic-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* ── Fichário no celular: toolbar recolhível e cabeçalho do set no topo (17/10/2026) ── */
+#fic-filters-toggle { display: none; }
+.fic-info-toggle { display: none; }
+@media (max-width: 900px) {
+  /* ordem: resumo global, abas, set aberto (nome + %), busca/filtros, cartas — o set aparece ANTES dos controles */
+  #fichario.active { display: flex; flex-direction: column; }
+  #fichario > #binder-stats { order: 1; }
+  #fichario > #fic-tabs-desktop { order: 2; }
+  #fichario > #binder-tabs { order: 3; }
+  #fichario > #fic-set-info { order: 4; }
+  #fichario > .bctl { order: 5; }
+  #fichario > #bwrap { order: 6; }
+  #fichario > * { min-width: 0; }
+
+  #binder-stats { padding: 10px 12px !important; gap: 8px 16px !important; margin-bottom: 8px !important; }
+  #binder-stats .bsv { font-size: 19px; }
+
+  #fic-filters-toggle { display: inline-flex; align-items: center; flex: 0 0 auto; }
+  .fic-toolbar-row1 .bsrch { flex: 1 1 140px; min-width: 0; max-width: none; }
+  /* recolhido: só busca + botão Filtros; aberto: tudo como antes */
+  .bctl:not(.fic-opts-open) .fic-toolbar-row1 > :not(#bsrch):not(#fic-filters-toggle) { display: none !important; }
+  .bctl:not(.fic-opts-open) #fic-binder-controls,
+  .bctl:not(.fic-opts-open) #fm-dexsort-btn { display: none !important; }
+  .fic-toolbar-lbl { display: none; }
+  .fic-toolbar-row2 { gap: 6px !important; }
+
+  /* cabeçalho do set: 2ª linha (Base/Secretas, chase, dica) só ao tocar no ⓘ */
+  .fic-info-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 99px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 13px; cursor: pointer; }
+  #fic-set-info .fic-info-more { display: none !important; }
+  #fic-set-info.open .fic-info-more { display: flex !important; }
+  #fic-set-info { margin-bottom: 10px !important; padding: 9px 12px !important; }
+}
+@media (max-width: 900px) {
+  .fic-toolbar-row1 .bsrch { flex: 1 1 0 !important; width: auto !important; }
+  #fic-set-info:not(.open) #fm-ev-bridge { display: none !important; }
+  .fic-toolbar-row2 .fic-btn { padding: 9px 10px !important; }
+  #fic-more-btn .fic-more-txt { display: none; }
+  #fic-more-btn { margin-left: auto; }
+}
+
+/* ── Dashboard: KPI órfão no celular (17/10/2026) ── o 5º cartão ocupa a linha toda em vez de ficar sozinho em meia coluna */
+@media (max-width: 600px) {
+  .kpi-grid > .kpi:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+
+/* ── Dashboard: pacote 2 (17/10/2026) ── */
+/* KPIs do Dashboard e da aba Gastos (5 cartões): grade que fecha sem sobra — 5 colunas (≥1180px), 3 colunas com o
+   1º em destaque (601–1179px) e 2 colunas com o último em largura total (≤600px, regra mais acima) */
+#kpi-dash, #gastos-resumo .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+#kpi-dash > .kpi:first-child, #gastos-resumo .kpi-grid > .kpi:first-child { grid-column: span 2; }
+@media (min-width: 1180px) {
+  #kpi-dash, #gastos-resumo .kpi-grid { grid-template-columns: repeat(5, 1fr); }
+  #kpi-dash > .kpi:first-child, #gastos-resumo .kpi-grid > .kpi:first-child { grid-column: span 1; }
+}
+@media (max-width: 600px) {
+  #kpi-dash, #gastos-resumo .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  #kpi-dash > .kpi:first-child, #gastos-resumo .kpi-grid > .kpi:first-child { grid-column: span 1; }
+}
+.kpi-value { font-size: clamp(24px, 2.3vw, 34px); overflow-wrap: anywhere; }
+
+/* coleções sem cartas / em breve: seção recolhida com linhas compactas */
+.dash-others { grid-column: 1 / -1; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.dash-others > summary { cursor: pointer; padding: 12px 16px; font-size: 12px; font-weight: 700; color: var(--text2, var(--text)); list-style: none; }
+.dash-others > summary::-webkit-details-marker { display: none; }
+.dash-others > summary::before { content: "▸ "; }
+.dash-others[open] > summary::before { content: "▾ "; }
+.dash-others > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 12px; }
+.dash-others-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; padding: 0 12px 12px; }
+.dash-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left; width: 100%; min-height: 40px;
+  padding: 8px 12px; border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 8px; background: var(--surface2, var(--surface));
+  color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+.dash-row:hover { border-color: var(--accent); }
+.dash-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dash-row-lbl { font-weight: 700; min-width: 0; }
+.dash-row-val { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted); white-space: nowrap; }
+
+/* foco visível nos cartões clicáveis do Dashboard */
+.panel-link:focus-visible, .kpi[tabindex]:focus-visible, .pc[tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* ── Dashboard: estado vazio de conta nova (17/10/2026) ── */
+.dash-empty-card { border: 1px dashed var(--border); border-radius: 14px; padding: 18px 20px; margin-bottom: 22px;
+  background: linear-gradient(150deg, var(--surface2, var(--surface)) 0%, var(--surface) 70%); }
+.dash-empty-title { margin: 0 0 12px; font-size: 17px; color: var(--text); }
+.dash-empty-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.dash-empty-steps li { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dash-empty-steps li > div { flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.dash-empty-steps small { color: var(--muted); font-size: 11.5px; line-height: 1.4; }
+.dash-empty-n { width: 28px; height: 28px; border-radius: 99px; display: grid; place-items: center; background: var(--accent); color: #fff; font-weight: 800; font-size: 13px; flex: 0 0 auto; }
+.dash-empty-steps .btn-mini { min-height: 38px; }
+
+/* 17/10/2026: Gastos — linha do tempo recolhida por padrão (repete os cartões das compras) */
+.gastos-tl > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+.gastos-tl > summary::-webkit-details-marker { display: none; }
+.gastos-tl > summary::after { content: '▸'; margin-left: auto; color: var(--muted); transition: transform .15s; }
+.gastos-tl[open] > summary::after { transform: rotate(90deg); }
+.gastos-tl > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+/* Gastos: barras pequenas não podem quebrar o texto do valor (a barra cresce até caber o rótulo) */
+#gastos-charts .bfill { white-space: nowrap; min-width: max-content; padding: 0 8px; box-sizing: border-box; }
+
+/* Centralização: lupa durante o arraste dos pontos (17/10/2026) */
+.cent-loupe { position: absolute; z-index: 20; border-radius: 50%; overflow: hidden; pointer-events: none; border: 2px solid #fff; box-shadow: 0 2px 14px rgba(0,0,0,.6); background: #000; }
+.cent-loupe-inner { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.cent-loupe-inner .cent-photo-layer { position: absolute; }
+.cent-loupe-cross { position: absolute; inset: 0; }
+.cent-loupe-cross::before, .cent-loupe-cross::after { content: ''; position: absolute; background: rgba(255,255,255,.85); box-shadow: 0 0 0 1px rgba(0,0,0,.6); }
+.cent-loupe-cross::before { left: 50%; top: 0; bottom: 0; width: 1px; }
+.cent-loupe-cross::after { top: 50%; left: 0; right: 0; height: 1px; }
+.cent-upload-zone.cent-drop-over { border-color: var(--accent); background: rgba(var(--accent-rgb, 230,57,70), .08); }
+.cent-handle:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+/* Leilão em tempo real (17/10/2026): o valor atual pisca quando chega um lance novo */
+@keyframes aucflash { 0% { background: rgba(247,183,49,.55); } 100% { background: transparent; } }
+.auc-flash { animation: aucflash 1.3s ease-out; border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) { .auc-flash { animation: none; } }
+
+/* Leilão em tempo real (17/10/2026): o valor atual pisca quando chega um lance novo */
+@keyframes aucflash { 0% { background: rgba(247,183,49,.55); } 100% { background: transparent; } }
+.auc-flash { animation: aucflash 1.3s ease-out; border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) { .auc-flash { animation: none; } }
+
+/* Painel Admin — Visão Geral (17/10/2026) */
+.admin-ov-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-bottom: 6px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); cursor: pointer; font-size: 13px; }
+.admin-ov-row:hover, .admin-ov-row:focus-visible { border-color: var(--accent); outline: none; }
+.admin-ov-n { min-width: 30px; text-align: center; font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--accent); }
+.admin-ov-go { margin-left: auto; font-size: 11px; color: var(--muted); }
+.admin-ov-ok { padding: 12px; border: 1px dashed var(--border); border-radius: 10px; color: var(--muted); font-size: 13px; }
+.admin-ov-health > div { padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; line-height: 1.5; }
+.admin-ov-pill { display: inline-block; min-width: 54px; text-align: center; padding: 1px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; margin-right: 6px; }
+.admin-ov-pill.ok { background: rgba(6,163,127,.15); color: var(--teal); }
+.admin-ov-pill.bad { background: rgba(230,57,70,.15); color: var(--accent); }
+.admin-ov-details { margin-top: 10px; font-size: 12px; }
+.admin-ov-details summary { cursor: pointer; color: var(--muted); }
+.admin-ov-bad td { color: var(--accent); }
+
+/* ── Alertas de preço pessoais (lojas_alertas.js, 18/10/2026) ─────────────────────── */
+.pa-bell { position: absolute; top: 8px; right: 8px; z-index: 3; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 16px; line-height: 1; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.18); opacity: .85; }
+.pa-bell:hover, .pa-bell:focus-visible { opacity: 1; outline: 2px solid var(--accent); }
+.pa-bell.pa-on { background: var(--accent); border-color: var(--accent); opacity: 1; }
+.pa-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 8px 0 12px; padding: 9px 12px; border-radius: 10px; background: var(--surface2); border: 1px solid var(--border); font-size: 13px; color: var(--text2); }
+.pa-modal { width: 440px; }
+.pa-h { margin: 0 0 10px; font-size: 18px; }
+.pa-n { font-weight: 400; font-size: 13px; color: var(--muted); }
+.pa-prod { font-weight: 700; font-size: 14px; line-height: 1.35; margin-bottom: 4px; }
+.pa-cur { font-size: 13px; color: var(--text2); margin-bottom: 12px; }
+.pa-lbl { display: block; font-size: 12px; font-weight: 700; color: var(--text2); margin-bottom: 4px; }
+.pa-input { width: 100%; box-sizing: border-box; padding: 11px 12px; font-size: 18px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface); color: var(--text); }
+.pa-quick { display: flex; gap: 6px; margin: 8px 0 4px; }
+.pa-hint { font-size: 12px; color: var(--text2); background: var(--surface2); border-radius: 8px; padding: 8px 10px; margin-top: 10px; line-height: 1.45; }
+.pa-err { color: #dc2626; font-size: 13px; min-height: 18px; margin-top: 6px; }
+.pa-actions { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.pa-save { background: var(--accent); color: #fff; border-color: var(--accent); }
+.pa-note { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.4; }
+.pa-empty { font-size: 14px; color: var(--text2); text-align: center; padding: 18px 4px; line-height: 1.5; }
+.pa-list { display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow: auto; }
+.pa-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 10px; }
+.pa-row-name { font-size: 13px; font-weight: 700; line-height: 1.3; }
+.pa-row-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.pa-hit { color: var(--teal, #16a34a); }
+.pa-row-act { display: flex; gap: 6px; flex: none; }
+.pa-modes { display: flex; gap: 6px; margin: 4px 0 12px; }
+.pa-mode { flex: 1; padding: 8px 6px; border-radius: 9px; border: 1px solid var(--border2); background: var(--surface); color: var(--text2); font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.pa-mode.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ── Ordenar promoções (lojas_ordenar.js, 18/10/2026) ───────────────────────────── */
+.lo-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; font-size: 13px; color: var(--text2); }
+.lo-bar label { font-weight: 700; }
+.lo-bar select { padding: 7px 10px; border-radius: 9px; border: 1px solid var(--border2); background: var(--surface); color: var(--text); font-size: 13px; font-family: inherit; max-width: 100%; }
+.lo-note { font-size: 12px; color: var(--muted); flex-basis: 100%; }
+.lo-off { display: none !important; }

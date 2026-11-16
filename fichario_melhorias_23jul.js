@@ -94,8 +94,9 @@ function fmRebuildSetInfoHeader(){
         <div style="height:100%;width:${pct}%;background:${pct>=100?'var(--teal)':'var(--gold)'};border-radius:3px;transition:width .4s"></div>
       </div>
       <span style="font-size:10px;color:var(--muted)">${all.c}/${all.t} slots</span>
+      <button type="button" class="fic-info-toggle" aria-label="Mais informações deste set" onclick="document.getElementById('fic-set-info').classList.toggle('open')">ⓘ</button>
     </div>
-    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;width:100%;margin-top:6px;font-size:9px;color:var(--muted-oncard,var(--muted))">
+    <div class="fic-info-more" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;width:100%;margin-top:6px;font-size:9px;color:var(--muted-oncard,var(--muted))">
       ${sectionHtml}
       ${priceUpdated}
       ${chase}
@@ -235,7 +236,7 @@ async function fmBulkMarkRarity(){
       if(!collected.has(key)) await saveSlot(key,1,[]);
     }
   }
-  if(btn){ btn.disabled=false; btn.textContent='✅ Marcar raridade'; }
+  if(btn){ btn.disabled=false; btn.textContent='✅ Marcar como coletadas'; }
   renderBinder();
   if(typeof setStatus==='function') setStatus(`${cards.length} carta(s) marcadas como coletadas`,'success');
 }
@@ -252,11 +253,13 @@ function fmInjectRarityBulk(){
   const box=document.createElement('div');
   box.id='fm-rarity-bulk';
   box.style.cssText='display:flex;gap:6px;align-items:center';
+  // 17/10/2026: "Comum | Marcar raridade" parecia um filtro, mas é uma AÇÃO EM MASSA — agora diz o que faz.
   box.innerHTML=`
-    <select id="fm-rarity-select" class="fic-btn" style="max-width:170px"></select>
+    <span class="fic-toolbar-lbl" id="fm-rarity-lbl">MARCAR TODAS:</span>
+    <select id="fm-rarity-select" class="fic-btn" style="max-width:170px" aria-labelledby="fm-rarity-lbl"></select>
     <button id="fm-rarity-btn" type="button" class="fic-btn"
-      title="Marca como coletadas todas as cartas visíveis (respeitando busca/filtros atuais) dessa raridade">
-      ✅ Marcar raridade</button>`;
+      title="Marca como coletadas todas as cartas visíveis (respeitando busca/filtros atuais) da raridade escolhida">
+      ✅ Marcar como coletadas</button>`;
   row1.appendChild(box);
   box.querySelector('#fm-rarity-btn').addEventListener('click', fmBulkMarkRarity);
   fmRefreshRarityOptions();
@@ -958,6 +961,7 @@ function fmInjectArtistFilter(){
   if(!sel){
     sel=document.createElement('select');
     sel.id='fm-artist-select';
+    sel.setAttribute('aria-label','Filtrar por artista');
     sel.className='fic-btn';
     sel.style.maxWidth='190px';
     sel.onchange=fmOnArtistChange;

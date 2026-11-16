@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 250" width="300" height="250">
+  <defs>
+    <radialGradient id="fur" cx="40%" cy="30%" r="80%">
+      <stop offset="0" stop-color="#c79a6a"/><stop offset=".6" stop-color="#8f6440"/><stop offset="1" stop-color="#5a3c24"/>
+    </radialGradient>
+    <linearGradient id="moss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9be36a"/><stop offset="1" stop-color="#3f8a2e"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#c8f58a"/><stop offset="1" stop-color="#4caf50"/>
+    </linearGradient>
+    <radialGradient id="glow" r=".5"><stop offset="0" stop-color="#7fe06a" stop-opacity=".35"/><stop offset="1" stop-color="#7fe06a" stop-opacity="0"/></radialGradient>
+  </defs>
+  <circle cx="150" cy="150" r="115" fill="url(#glow)"/>
+  <!-- patas de trás -->
+  <rect x="78" y="196" width="30" height="36" rx="12" fill="#5a3c24"/>
+  <rect x="172" y="198" width="28" height="34" rx="12" fill="#5a3c24"/>
+  <!-- corpo -->
+  <path d="M56 170 q-4 -60 70 -62 h70 q50 0 52 50 q2 52 -50 54 h-90 q-50 0 -52 -42z" fill="url(#fur)"/>
+  <!-- musgo nas costas -->
+  <path d="M80 118 q10 -18 30 -12 q8 -16 28 -8 q14 -14 32 -2 q18 -6 26 10 q-6 12 -20 8 q-10 12 -26 4 q-12 10 -28 2 q-14 8 -26 0 q-14 6 -16 -2z" fill="url(#moss)"/>
+  <circle cx="102" cy="120" r="3" fill="#e9ff9a"/><circle cx="152" cy="112" r="3" fill="#e9ff9a"/><circle cx="184" cy="122" r="2.5" fill="#e9ff9a"/>
+  <!-- broto -->
+  <path d="M142 104 q0 -22 4 -34" stroke="#3f8a2e" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M146 72 q-30 -16 -40 6 q24 10 40 -6z" fill="url(#leaf)"/>
+  <path d="M146 72 q22 -26 44 -10 q-18 22 -44 10z" fill="url(#leaf)"/>
+  <!-- cabeça -->
+  <path d="M196 116 q40 -16 72 6 q22 16 16 50 q-4 26 -36 28 q-40 2 -54 -22z" fill="url(#fur)"/>
+  <path d="M262 150 q22 4 22 22 q-2 20 -24 20 q-14 0 -18 -14z" fill="#a37850"/>
+  <ellipse cx="276" cy="162" rx="5" ry="3.5" fill="#2a1a10"/>
+  <path d="M262 182 q8 4 16 0" stroke="#3a2618" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- orelha -->
+  <ellipse cx="214" cy="112" rx="10" ry="8" fill="#6e4a2e"/>
+  <ellipse cx="215" cy="113" rx="5" ry="4" fill="#c79a6a"/>
+  <!-- olho calmo -->
+  <ellipse cx="240" cy="140" rx="9" ry="10" fill="#1e140c"/>
+  <circle cx="243" cy="136" r="3.5" fill="#fff"/>
+  <path d="M229 130 q11 -6 22 0" stroke="#5a3c24" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <ellipse cx="248" cy="168" rx="9" ry="5" fill="#e88a6a" opacity=".45"/>
+  <!-- patas da frente -->
+  <rect x="96" y="200" width="30" height="34" rx="12" fill="#6e4a2e"/>
+  <rect x="190" y="202" width="30" height="32" rx="12" fill="#6e4a2e"/>
+  <path d="M196 232 h18 M102 232 h18" stroke="#3a2618" stroke-width="3" stroke-linecap="round"/>
+</svg>

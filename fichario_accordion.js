@@ -25,42 +25,71 @@
 // direto.
 (function(){
 
-// ── Dropdown "Fichários" na barra de abas ──────────────────────────────
+// ── Dropdowns "Pokédex" e "Fichários" na barra de abas (mobile) ─────────
 // Reaproveita as classes .fic-more-menu/.fic-more-item (já usadas pelo menu
 // "⋯ Mais ações") pra manter a mesma linguagem visual sem CSS novo.
-function fmToggleBindersTabMenu(e){
-  if(e) e.stopPropagation();
-  const menu=document.getElementById('fic-tabs-binders-menu');
-  if(!menu) return;
-  menu.classList.toggle('open');
+// CORRIGIDO 04/11/2026 (relato no iPhone: "ao clicar em Pokédex não aciona as opções"): o menu era position:absolute
+// DENTRO de #binder-tabs, que tem overflow-x:auto (=> overflow-y também vira auto). Resultado: a barra tem ~41px de
+// altura, o menu nascia logo abaixo dela e ficava 100% cortado (a classe "open" ligava, mas nada aparecia), e ainda
+// saía pela esquerda da tela (right:0 num botão que está no meio da barra). Agora o menu é position:fixed, calculado a
+// partir do botão e limitado à tela — fixed não é cortado pelo overflow da barra.
+const FM_TAB_MENUS=[['fic-tabs-pokedex-btn','fic-tabs-pokedex-menu'],['fic-tabs-binders-btn','fic-tabs-binders-menu']];
+// 04/11/2026 (2ª tentativa — no iPhone/Chrome o position:fixed DENTRO de #binder-tabs ainda é cortado: a barra tem
+// -webkit-overflow-scrolling:touch e o WebKit prende filhos fixed ao scroller): ao abrir, o menu é CLONADO pro <body>
+// (data-fm-portal) e posicionado a partir do botão — fora de qualquer contêiner com overflow/transform. O menu original
+// dentro da barra fica só como molde escondido. Fechar = remover o clone.
+function fmClosePortals(){ document.querySelectorAll('[data-fm-portal]').forEach(function(x){ x.remove(); }); }
+function fmPlaceTabMenu(menu,btn){
+  const r=btn.getBoundingClientRect();
+  const vw=document.documentElement.clientWidth;
+  menu.style.position='fixed';
+  menu.style.right='auto';
+  menu.style.zIndex='9000';
+  menu.style.overflowY='auto';
+  menu.style.maxWidth=(vw-16)+'px';
+  menu.style.maxHeight=Math.max(180,window.innerHeight-r.bottom-90)+'px';   // deixa a barra de baixo (Início/Fichário/...) livre
+  const w=menu.offsetWidth||240;
+  menu.style.left=Math.max(8,Math.min(r.left,vw-w-8))+'px';
+  menu.style.top=(r.bottom+6)+'px';
 }
+function fmToggleTabMenu(menuId,btnId,e){
+  if(e) e.stopPropagation();
+  const src=document.getElementById(menuId), btn=document.getElementById(btnId);
+  if(!src||!btn) return;
+  const wasOpen=!!document.querySelector('[data-fm-portal="'+menuId+'"]');
+  fmClosePortals();
+  if(wasOpen) return;
+  const menu=src.cloneNode(true);
+  menu.id=menuId+'-portal';
+  menu.setAttribute('data-fm-portal',menuId);
+  menu.className='fic-more-menu open';
+  document.body.appendChild(menu);
+  fmPlaceTabMenu(menu,btn);
+}
+function fmToggleBindersTabMenu(e){ fmToggleTabMenu('fic-tabs-binders-menu','fic-tabs-binders-btn',e); }
 window.fmToggleBindersTabMenu=fmToggleBindersTabMenu;
-document.addEventListener('click', function(e){
-  const menu=document.getElementById('fic-tabs-binders-menu');
-  const btn=document.getElementById('fic-tabs-binders-btn');
-  if(!menu||!menu.classList.contains('open')) return;
-  if(e.target===btn||(btn&&btn.contains(e.target))||menu.contains(e.target)) return;
-  menu.classList.remove('open');
-});
-
 // NOVO 02/09/2026 (pedido do Eduardo — ver fichario_masterdex.js): dropdown
 // próprio pro Pokédex (Master Set Nacional + regionais) na barra de abas
 // mobile, sempre visível (não depende de pinnedBinders como o de "📚
-// Fichários" logo abaixo) — mesmo padrão de toggle.
-function fmTogglePokedexTabMenu(e){
-  if(e) e.stopPropagation();
-  const menu=document.getElementById('fic-tabs-pokedex-menu');
-  if(!menu) return;
-  menu.classList.toggle('open');
-}
+// Fichários") — mesmo padrão de toggle.
+function fmTogglePokedexTabMenu(e){ fmToggleTabMenu('fic-tabs-pokedex-menu','fic-tabs-pokedex-btn',e); }
 window.fmTogglePokedexTabMenu=fmTogglePokedexTabMenu;
-document.addEventListener('click', function(e){
-  const menu=document.getElementById('fic-tabs-pokedex-menu');
-  const btn=document.getElementById('fic-tabs-pokedex-btn');
-  if(!menu||!menu.classList.contains('open')) return;
-  if(e.target===btn||(btn&&btn.contains(e.target))||menu.contains(e.target)) return;
-  menu.classList.remove('open');
-});
+// fecha ao tocar fora. pointerdown (não click): no iOS o click não dispara ao tocar em área "não clicável" da página.
+function fmCloseTabMenus(e){
+  if(e&&e.target&&e.target.closest&&(e.target.closest('[data-fm-portal]')||e.target.closest('#fic-tabs-pokedex-btn,#fic-tabs-binders-btn'))) return;
+  fmClosePortals();
+}
+window.fmCloseTabMenus=fmCloseTabMenus;
+document.addEventListener('pointerdown',fmCloseTabMenus);
+// scroll/resize só REPOSICIONAM (não fecham): no iOS a barra do navegador recolhendo dispara os dois sozinhos
+function fmRepositionTabMenus(){
+  FM_TAB_MENUS.forEach(function(pair){
+    const m=document.querySelector('[data-fm-portal="'+pair[1]+'"]'), b=document.getElementById(pair[0]);
+    if(m&&b) fmPlaceTabMenu(m,b);
+  });
+}
+window.addEventListener('scroll',fmRepositionTabMenus,{passive:true});
+window.addEventListener('resize',fmRepositionTabMenus);
 
 window.renderTabs=function(){
   const container=document.getElementById('binder-tabs');
@@ -89,11 +118,11 @@ window.renderTabs=function(){
       <div id="fic-tabs-pokedex-menu" class="fic-more-menu">
         ${mdexItems.map(it=>{
           if(it.create){
-            return`<button class="fic-more-item" style="opacity:.75" onclick="${it.onclickFn};fmTogglePokedexTabMenu()">${it.emoji} + ${it.label}</button>`;
+            return`<button class="fic-more-item" style="opacity:.75" onclick="${it.onclickFn};fmCloseTabMenus()">${it.emoji} + ${it.label}</button>`;
           }
           const isActive=it.tabId===cur;
           return`<button class="fic-more-item" style="${isActive?`color:${it.color};font-weight:700`:''}"
-            onclick="switchSet('${it.tabId}',null);fmTogglePokedexTabMenu()">${it.emoji} ${it.label}</button>`;
+            onclick="switchSet('${it.tabId}',null);fmCloseTabMenus()">${it.emoji} ${it.label}</button>`;
         }).join('')}
       </div>
     </div>`;
@@ -119,7 +148,7 @@ window.renderTabs=function(){
           const isActive=cur==='__cb__'+pid;
           const bcol=b.cover_color||'#a855f7';
           return`<button class="fic-more-item" style="${isActive?`color:${bcol};font-weight:700`:''}"
-            onclick="switchSet('__cb__${pid}',null);fmToggleBindersTabMenu()">
+            onclick="switchSet('__cb__${pid}',null);fmCloseTabMenus()">
             ${b.emoji||'📚'} ${b.name} <span style="opacity:.6">· ${getBinderCards(b).length}</span></button>`;
         }).join('')}
       </div>

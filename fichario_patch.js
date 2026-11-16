@@ -146,7 +146,19 @@ function _badgeInk(hex) {
    ESTADO LOCAL (view mode e size)
 ───────────────────────────────────────────── */
 let ficViewMode   = 'grid'; // 'grid' | 'binder'
-let ficBinderSize = 3;      // 2, 3 ou 4
+let ficBinderSize = 3;      // 2, 3, 4 (quadrados NxN) ou 5 (= 4×5: 4 colunas × 5 linhas, 20 por página)
+// 01/11/2026 (pedido do Eduardo): fichário 4×5 em todas as coleções (o Eduardo chamou de "5x4"; confirmou: 4 colunas e 5 linhas). O valor guardado continua sendo UM número (vai em
+// binder_shares.layout etc.): 2/3/4 = NxN; 5 = 5 colunas × 4 linhas. Tudo que pagina (grade do fichário, impressão,
+// Master Set) lê as dimensões por aqui.
+// 04/11/2026: 6 = 5 colunas × 4 linhas (20 por página) — pedido "inclua a opção de 5 colunas e 4 linhas", ao lado do 4×5.
+// 08/11/2026: 7 = 4 colunas × 3 linhas (12 por página) — usado só pelo fichário beta (fichario-novo.js); os botões do fichário atual (BINDER_SIZES) não mudam.
+function binderDims(n) { return n === 5 ? { cols: 4, rows: 5 } : n === 6 ? { cols: 5, rows: 4 } : n === 7 ? { cols: 4, rows: 3 } : { cols: n, rows: n }; }
+window.binderDims = binderDims;
+// Rótulo único dos tamanhos (colunas × linhas): 2→2×2, 3→3×3, 4→4×4, 5→4×5, 6→5×4. Todo botão de tamanho usa isto.
+function binderSizeLabel(n) { const d = binderDims(n); return d.cols + '×' + d.rows; }
+window.binderSizeLabel = binderSizeLabel;
+const BINDER_SIZES = [2, 3, 4, 5, 6];
+window.BINDER_SIZES = BINDER_SIZES;
 // Idioma de exibição (30/09/2026, piloto cel30) — troca nome/arte/preço
 // exibidos por carta; NÃO afeta a coleção rastreada nem os totais em R$
 // (dashboard/gastos continuam em cima de c.price, igual sempre foi).
@@ -360,7 +372,7 @@ function setFicView(mode, onRefresh, ids) {
 function setBinderSize(n, onRefresh, ids) {
   ficBinderSize = n;
   const prefix = (ids && ids.sizePrefix) || 'fic-binder-';
-  [2, 3, 4].forEach(s => {
+  BINDER_SIZES.forEach(s => {
     const btn = document.getElementById(prefix + s);
     if (!btn) return;
     btn.style.borderColor = s === n ? 'var(--gold)' : 'var(--border)';
@@ -400,6 +412,8 @@ const FIC_LANG_SETS = {
   me05: ['pt', 'en', 'jp'],
   // ME04(CRI): idem (JP via limitlesstcg, ver header de cards_me04.js); sem chinês
   me04: ['pt', 'en', 'jp'],
+  // ME03(POR): idem (JP via limitlesstcg, ver header de cards_me03.js); sem chinês
+  me03: ['pt', 'en', 'jp'],
 };
 
 function setFicLang(lang, onRefresh, ids) {
@@ -629,6 +643,7 @@ function ficCardHtml(c, setId) {
   const allCol = vers.every(v => collected.has(`${setId}:${c.n}:${v}`));
   const hasAny = vers.some(v  => collected.has(`${setId}:${c.n}:${v}`));
   const isImp  = c.important;
+  const isFav  = (typeof favIsFav === 'function') && favIsFav(setId, c.n); // fichario_favoritos.js
 
   const imgFilter = allCol ? 'none' : hasAny ? 'saturate(.6) brightness(.75)' : 'grayscale(80%) brightness(.55)';
   const border    = allCol ? '2px solid var(--teal)' : hasAny ? '2px solid var(--blue)' : (isImp ? '2px solid var(--gold)' : '2px solid var(--border)');
@@ -663,6 +678,7 @@ function ficCardHtml(c, setId) {
   return `
   <div class="bc2 fic-card${allCol?' collected':''}${isImp?' important':''}"
        data-n="${c.n}" data-ver="${vers[0]}" data-setid="${setId}"
+       role="button" tabindex="0" aria-label="${String(lc.name).replace(/"/g,'&quot;')} #${c.n} — ${allCol?'coletada':hasAny?'parcialmente coletada':'faltando'}${isFav?' — favorita':''}. Enter para editar"
        style="cursor:pointer;border-radius:7px;transition:transform .2s"
        onmouseover="this.style.transform='scale(1.1) translateY(-4px)'"
        onmouseout="this.style.transform=''">
@@ -683,6 +699,7 @@ function ficCardHtml(c, setId) {
         background:var(--teal);color:var(--bg);font-size:11px;display:flex;align-items:center;
         justify-content:center;font-weight:900;box-shadow:0 2px 8px rgba(6,214,160,.6)">✓</div>`:''}
       ${isImp&&!hasAny?`<div style="position:absolute;top:3px;right:4px;font-size:11px;color:var(--gold)">★</div>`:''}
+      ${isFav?'<span class="fav-badge" aria-hidden="true">★</span>':''}
     </div>
     <!-- CORRIGIDO 04/09/2026 (pedido do Eduardo: "espaço abaixo da carta,
          imagens ficam apagadas") — dots de versão saíram de cima da imagem
@@ -755,6 +772,7 @@ function renderGridView(cards, setIdOf) {
 // (comportamento idêntico a antes).
 function renderBinderView(cards, setIdOf) {
   const N = ficBinderSize;
+  const { cols: BC, rows: BR } = binderDims(N);
   const sIdOf = setIdOf || (() => currentSet);
   const slots = [];
   cards.forEach(c => {
@@ -762,15 +780,15 @@ function renderBinderView(cards, setIdOf) {
     getSlots(c, setId).forEach(s => slots.push({ card: c, ver: s.ver, setId }));
   });
 
-  const slotsPerPage = N * N;
+  const slotsPerPage = BC * BR;
   const pages = [];
   for (let i = 0; i < slots.length; i += slotsPerPage) {
     pages.push(slots.slice(i, i + slotsPerPage));
   }
 
   const isMob = window.innerWidth <= 600;
-  const cellSize = N === 2 ? (isMob ? 130 : 160) : N === 3 ? (isMob ? 96 : 130) : (isMob ? 72 : 90);
-  const gap = N === 2 ? (isMob ? 12 : 14) : N === 3 ? (isMob ? 8 : 12) : (isMob ? 6 : 8);
+  const cellSize = N === 2 ? (isMob ? 130 : 160) : N === 3 ? (isMob ? 96 : 130) : N === 5 ? (isMob ? 72 : 100) : N === 6 ? (isMob ? 56 : 92) : (isMob ? 72 : 90);
+  const gap = N === 2 ? (isMob ? 12 : 14) : N === 3 ? (isMob ? 8 : 12) : N === 5 ? (isMob ? 6 : 8) : N === 6 ? (isMob ? 5 : 8) : (isMob ? 6 : 8);
 
   function slotHtml(slot) {
     if (!slot) return `<div style="width:${cellSize}px;height:${Math.round(cellSize*1.4)}px;
@@ -839,7 +857,7 @@ function renderBinderView(cards, setIdOf) {
         <div style="flex:1;height:1px;background:var(--border)"></div>
       </div>
       <div style="display:flex;justify-content:center">
-        <div style="display:grid;grid-template-columns:repeat(${N},${cellSize}px);gap:${gap}px;
+        <div style="display:grid;grid-template-columns:repeat(${BC},${cellSize}px);gap:${gap}px;
              background:var(--surface);border:1px solid var(--border);border-radius:10px;
              padding:16px">
           ${page.map(slotHtml).join('')}
@@ -946,6 +964,7 @@ async function openSlotModal(cardN, defaultVer, setIdOverride, cardOverride, onS
         <div class="slot-modal-rare">${card.rare||''}</div>
         ${_lcCard.price?`<div class="slot-modal-price">${_lcCard.symbol}${fmtR(_lcCard.price)}</div>`:''}
         ${card.important?'<div style="color:var(--gold);font-size:12px;margin-top:4px">★ Carta importante</div>':''}
+        ${typeof favButtonHtml === 'function' ? favButtonHtml(setId, card.n) : ''}
       </div>
     </div>
     <div id="slot-modal-body">
@@ -1065,6 +1084,7 @@ window._printOnlyState = _printOnlyState;
 
 async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
   const N     = ficBinderSize;
+  const { cols: BC, rows: BR } = binderDims(N);
   const cards = cardsOverride || getSetCards();
   const sIdOf = setIdOf || (() => currentSet);
   let slots = [];
@@ -1096,7 +1116,7 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
     if (!ok) return;
   }
 
-  const slotsPerPage = N * N;
+  const slotsPerPage = BC * BR;
   // CORRIGIDO 04/09/2026 (pedido do Eduardo: "colocar um espaço logo abaixo
   // da carta, pois as imagens ficam muito apagadas") — badge e número
   // viviam OVERLAY em cima da imagem (que já fica escurecida/dessaturada
@@ -1106,8 +1126,8 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
   // badge + número — a imagem em si fica intocada, sem nada sobreposto.
   const CARD_W_MM = 63, CARD_H_MM = 88, LABEL_H_MM = 6, GAP_MM = 3;
   const SLOT_H_MM = CARD_H_MM + LABEL_H_MM;
-  const PAGE_W = N * CARD_W_MM + (N - 1) * GAP_MM + 20;
-  const PAGE_H = N * SLOT_H_MM + (N - 1) * GAP_MM + 20;
+  const PAGE_W = BC * CARD_W_MM + (BC - 1) * GAP_MM + 20;
+  const PAGE_H = BR * SLOT_H_MM + (BR - 1) * GAP_MM + 20;
 
   const popup = window.open('', '_blank');
   if (!popup) { alert('Permita pop-ups para imprimir.'); return; }
@@ -1117,8 +1137,8 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
     * { margin:0; padding:0; box-sizing:border-box; }
     body { background:#fff; font-family:sans-serif; -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
     .page { width:${PAGE_W}mm; height:${PAGE_H}mm; display:grid;
-      grid-template-columns:repeat(${N},${CARD_W_MM}mm);
-      grid-template-rows:repeat(${N},${SLOT_H_MM}mm);
+      grid-template-columns:repeat(${BC},${CARD_W_MM}mm);
+      grid-template-rows:repeat(${BR},${SLOT_H_MM}mm);
       gap:${GAP_MM}mm; padding:10mm; page-break-after:always; break-after:page; }
     .slot { width:${CARD_W_MM}mm; height:${SLOT_H_MM}mm; border:0.5px solid #ccc;
       border-radius:3mm; overflow:hidden; background:#f5f5f5; display:flex; flex-direction:column; }
@@ -1224,3 +1244,70 @@ window.imgUrl            = imgUrl;
 // oferecer o toggle Grade/Fichário físico (renderBinderView já aceita setIdOf
 // explícito, então funciona com cartas de múltiplos sets misturados).
 window.renderBinderView  = renderBinderView;
+
+/* ─────────────────────────────────────────────
+   17/10/2026 — busca com atraso + teclado nas cartas
+   • A busca reconstruía a grade INTEIRA a cada tecla (oninput="renderBinder()"); agora espera 150 ms de pausa.
+   • As cartas (.fic-card) ganharam role=button/tabindex/aria-label em ficCardHtml(); Enter/Espaço dispara o mesmo
+     clique que o mouse (a delegação de clique em renderBinder() e o wireGridClicks() do fichário personalizado
+     continuam sendo o único caminho — aqui só traduzimos o teclado em clique).
+───────────────────────────────────────────── */
+function ficDebounceFn(fn, ms) { let t; return function () { clearTimeout(t); t = setTimeout(fn, ms); }; }
+window.ficSearchDebounced = ficDebounceFn(function () { renderBinder(); }, 150);
+window.cbSearchDebounced  = ficDebounceFn(function () { if (typeof window._cbRefreshGrid === 'function') window._cbRefreshGrid(); }, 150);
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const el = e.target;
+  if (!el || !el.matches || !el.matches('.fic-card[role="button"]')) return;
+  e.preventDefault();
+  el.click();
+});
+
+/* ─────────────────────────────────────────────
+   17/10/2026 — Fichário no celular: toolbar recolhível + aba ativa visível
+   • "⚙ Filtros" (#fic-filters-toggle, só ≤900px) abre/fecha checkboxes, raridade, artista, "Ordenar por Dex" e
+     tamanho; o selo mostra quantos filtros estão ligados ("Filtros (2)"). Busca, modo e "Mais ações" ficam sempre.
+   • A aba do set aberto passa a ficar centralizada na barra horizontal (antes o set ativo podia estar fora da tela).
+   Desktop não muda: o botão fica oculto e nada é recolhido (ver style.css, bloco "Fichário no celular").
+───────────────────────────────────────────── */
+function ficUpdateFilterBadge() {
+  const t = document.getElementById('fic-filters-toggle');
+  if (!t) return;
+  let n = 0;
+  ['fc', 'fm', 'fi2'].forEach(function (id) { if (document.getElementById(id)?.checked) n++; });
+  const art = document.getElementById('fm-artist-select');
+  if (art && art.value) n++;
+  t.textContent = '⚙ Filtros' + (n ? ' (' + n + ')' : '');
+  t.classList.toggle('active', n > 0);
+}
+function ficToggleOpts(force) {
+  const b = document.querySelector('.bctl');
+  if (!b) return;
+  const open = force !== undefined ? !!force : !b.classList.contains('fic-opts-open');
+  b.classList.toggle('fic-opts-open', open);
+  const t = document.getElementById('fic-filters-toggle');
+  if (t) t.setAttribute('aria-expanded', open ? 'true' : 'false');
+  ficUpdateFilterBadge();
+}
+window.ficToggleOpts = ficToggleOpts;
+document.addEventListener('change', function (e) {
+  if (e.target && e.target.closest && e.target.closest('.fic-toolbar-row1')) ficUpdateFilterBadge();
+});
+(function () {
+  const rb = window.renderBinder;
+  if (typeof rb === 'function') {
+    window.renderBinder = function () { const r = rb.apply(this, arguments); try { ficUpdateFilterBadge(); } catch (e) { /* ok */ } return r; };
+  }
+  const rt = window.renderTabs;
+  if (typeof rt === 'function') {
+    window.renderTabs = function () {
+      const r = rt.apply(this, arguments);
+      try {
+        const c = document.getElementById('binder-tabs');
+        const a = c && c.querySelector('.ctab.active');
+        if (c && a && c.clientWidth && c.scrollWidth > c.clientWidth) c.scrollLeft = Math.max(0, a.offsetLeft - (c.clientWidth - a.offsetWidth) / 2);
+      } catch (e) { /* ok */ }
+      return r;
+    };
+  }
+})();

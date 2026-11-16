@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Minhas opiniões — MyDeck</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#f1f2f6">
+<link rel="icon" href="logo-mydeck.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f1f2f6; --surface:#fff; --surface2:#f6f7fb; --border:#dfe2ec; --border2:#c9cddd;
+  --text:#1c1f2e; --text2:#454b63; --muted:#6a7088;
+  --accent:#e63946; --accent-soft:rgba(230,57,70,.10); --teal:#06a37f; --teal-soft:rgba(6,163,127,.12);
+  --gold:#b98508; --gold-soft:rgba(200,150,10,.14); --blue:#0e7898; --blue-soft:rgba(14,120,152,.12);
+  --r-sm:8px; --r-md:12px; --r-lg:16px;
+  --shadow:0 1px 2px rgba(20,24,40,.06),0 4px 14px rgba(20,24,40,.06);
+  --f-body:'DM Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --f-head:'Fraunces',Georgia,serif;
+}
+[data-theme="dark"]{
+  --bg:#0d0f18; --surface:#161a2b; --surface2:#1c2135; --border:#262c45; --border2:#343b5c;
+  --text:#eceef7; --text2:#b7bdd6; --muted:#8e96b6;
+  --accent:#ff5a67; --accent-soft:rgba(255,90,103,.14); --teal:#22c9a1; --teal-soft:rgba(34,201,161,.14);
+  --gold:#ffc83d; --gold-soft:rgba(255,200,61,.14); --blue:#4cc3e6; --blue-soft:rgba(76,195,230,.14);
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--f-body);font-size:15px;line-height:1.45;min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+[hidden]{display:none!important}
+a{color:var(--accent)}
+
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;height:52px;padding:0 14px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.top a.back{color:var(--text2);text-decoration:none;font-weight:600;font-size:14px;padding:6px 8px;margin-left:-6px;border-radius:var(--r-sm)}
+.top a.back:hover{background:var(--surface2)}
+.top .sp{flex:1}
+.top .who{font-size:13px;color:var(--text2);max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ico{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--surface)}
+
+main{max-width:760px;margin:0 auto;padding:18px 14px 90px;display:grid;gap:18px}
+h1{font-family:var(--f-head);font-size:28px;line-height:1.15;margin:4px 0 4px}
+.lead{margin:0;color:var(--text2)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow)}
+.card h2{margin:0 0 12px;font-size:17px}
+.gate{text-align:center;padding:26px 16px}
+.gate .btn{display:inline-flex;margin-top:12px;text-decoration:none}
+
+form{display:grid;gap:14px}
+.lbl{font-size:13px;font-weight:700;color:var(--text2);display:block;margin-bottom:6px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{height:38px;padding:0 14px;border:1px solid var(--border);background:var(--surface);border-radius:999px;font-weight:600;font-size:14px;color:var(--text2)}
+.chip.on{background:var(--text);border-color:var(--text);color:var(--bg)}
+select,textarea{width:100%;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);padding:11px 12px;font-size:15px}
+select{height:44px;padding:0 12px}
+textarea{min-height:130px;resize:vertical}
+textarea:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px}
+.count{text-align:right;font-size:12px;color:var(--muted);margin-top:4px}
+
+.drop{border:2px dashed var(--border2);border-radius:var(--r-md);background:var(--surface2);padding:16px;text-align:center;color:var(--text2);font-size:14px}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop b{color:var(--text)}
+.thumbs{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.th{position:relative;width:92px;height:92px;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--border);background:var(--surface2)}
+.th img{width:100%;height:100%;object-fit:cover;display:block}
+.th button{position:absolute;top:3px;right:3px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:16px;line-height:1}
+.btn{height:46px;padding:0 20px;border:0;border-radius:var(--r-md);background:var(--accent);color:#fff;font-weight:800;font-size:15px}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.alt{background:var(--surface2);color:var(--text);border:1px solid var(--border2)}
+.btn.sm{height:38px;padding:0 14px;font-size:14px}
+.note{font-size:13px;color:var(--muted)}
+.err{color:var(--accent);font-weight:600;font-size:14px}
+
+.list{display:grid;gap:14px}
+.item{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;box-shadow:var(--shadow);display:grid;gap:10px}
+.item-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.tag{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:99px;font-size:12px;font-weight:700;background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.tag.s-novo{background:var(--blue-soft);color:var(--blue);border-color:transparent}
+.tag.s-analisando{background:var(--gold-soft);color:var(--gold);border-color:transparent}
+.tag.s-respondido{background:var(--teal-soft);color:var(--teal);border-color:transparent}
+.tag.s-aprovado,.tag.s-feito{background:var(--teal-soft);color:var(--teal);border-color:transparent}
+.tag.s-descartado{opacity:.7}
+.item-b{white-space:pre-wrap;word-wrap:break-word}
+.imgs{display:flex;gap:8px;flex-wrap:wrap}
+.imgs button{padding:0;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;width:110px;height:110px;background:var(--surface2)}
+.imgs img{width:100%;height:100%;object-fit:cover;display:block}
+.thread{display:grid;gap:8px;border-top:1px solid var(--border);padding-top:10px}
+.msg{max-width:92%;padding:9px 12px;border-radius:14px;font-size:14.5px;white-space:pre-wrap;word-wrap:break-word}
+.msg small{display:block;font-size:11.5px;font-weight:700;opacity:.75;margin-bottom:2px}
+.msg.usuario{justify-self:end;background:var(--text);color:var(--bg);border-bottom-right-radius:4px}
+.msg.claude,.msg.eduardo{justify-self:start;background:var(--surface2);border:1px solid var(--border);border-bottom-left-radius:4px}
+.reply{display:flex;gap:8px}
+.reply input{flex:1;min-width:0;height:42px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);padding:0 12px}
+.empty{text-align:center;color:var(--muted);padding:22px 10px}
+.viewer{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:16px}
+.viewer img{max-width:100%;max-height:100%;border-radius:8px}
+.viewer button{position:absolute;top:12px;right:12px;width:42px;height:42px;border-radius:50%;border:0;background:#fff;color:#000;font-size:22px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:200;background:var(--text);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:13.5px;font-weight:600;box-shadow:var(--shadow);max-width:92vw}
+</style>
+<script>
+  try {
+    var t = localStorage.getItem('mydeck-theme');
+    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) {}
+</script>
+</head>
+<body>
+<header class="top">
+  <a class="back" href="fichario-novo.html">‹ Voltar ao fichário</a>
+  <span class="sp"></span>
+  <span class="who" id="who"></span>
+  <button class="ico" id="theme" type="button" title="Tema claro/escuro" aria-label="Alternar tema">◐</button>
+</header>
+
+<main>
+  <div>
+    <h1>Suas opiniões 💬</h1>
+    <p class="lead">Conte o que melhorar, o que quebrou ou o que ficou confuso. Pode mandar texto e prints. O Eduardo e o Claude leem tudo, respondem aqui mesmo e você acompanha o andamento embaixo.</p>
+  </div>
+
+  <section class="card gate" id="gate" hidden>
+    <b>Entre no MyDeck para enviar sua opinião.</b>
+    <p class="note">Entre pelo site normal (a mesma conta que você usa no fichário) e volte aqui.</p>
+    <a class="btn" href="./">Ir para o MyDeck</a>
+  </section>
+
+  <section class="card" id="formCard" hidden>
+    <h2>Nova opinião</h2>
+    <form id="form" autocomplete="off">
+      <div>
+        <span class="lbl">O que é?</span>
+        <div class="chips" id="kinds" role="group" aria-label="Tipo">
+          <button type="button" class="chip on" data-kind="melhoria">💡 Melhoria</button>
+          <button type="button" class="chip" data-kind="problema">🐞 Problema</button>
+          <button type="button" class="chip" data-kind="duvida">❓ Dúvida</button>
+        </div>
+      </div>
+      <div>
+        <label class="lbl" for="area">Em qual parte do site?</label>
+        <select id="area">
+          <option>Fichário novo (beta)</option>
+          <option>Fichário atual</option>
+          <option>Escolher coleção / nomes</option>
+          <option>Leilão</option>
+          <option>Loja e ofertas</option>
+          <option>Outra parte</option>
+        </select>
+      </div>
+      <div>
+        <label class="lbl" for="body">Conte com suas palavras</label>
+        <textarea id="body" maxlength="4000" placeholder="Ex.: no modo Fichário, as cartas ficam cortadas quando eu uso zoom de 90%…"></textarea>
+        <div class="count"><span id="cnt">0</span>/4000</div>
+      </div>
+      <div>
+        <span class="lbl">Prints (até 6)</span>
+        <div class="drop" id="drop">
+          <p style="margin:0 0 10px">📎 <b>Cole um print (Ctrl+V)</b>, arraste imagens para cá ou escolha do aparelho.</p>
+          <button type="button" class="btn alt sm" id="pick">Escolher imagens</button>
+          <input type="file" id="file" accept="image/*" multiple hidden>
+        </div>
+        <div class="thumbs" id="thumbs"></div>
+        <p class="note" style="margin:8px 0 0">Evite prints com dados pessoais (endereço, e-mail, telefone). As imagens ficam guardadas só para análise do projeto.</p>
+      </div>
+      <div class="err" id="err" hidden></div>
+      <div><button class="btn" id="send" type="submit">Enviar opinião</button></div>
+    </form>
+  </section>
+
+  <section id="mine" hidden>
+    <h2 style="font-size:18px;margin:0 0 10px">Minhas opiniões</h2>
+    <div class="list" id="list"></div>
+  </section>
+</main>
+
+<div class="viewer" id="viewer" hidden><button type="button" id="vx" aria-label="Fechar">×</button><img id="vimg" alt="Print ampliado"></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  var URL_ = 'https://dvkiodmhtzlkvmyyzelx.supabase.co', KEY = 'sb_publishable_f4d1JHAzTWPWYAI0Vm6aRA_NwM-uzr3';
+  var sb = window.supabase.createClient(URL_, KEY);
+  var BUCKET = 'feedback-prints', MAXIMG = 6;
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var user = null, kind = 'melhoria', files = []; // files: [{blob, url}]
+  var KIND = { melhoria: '💡 Melhoria', problema: '🐞 Problema', duvida: '❓ Dúvida' };
+  var STATUS = { novo: 'Enviado', analisando: 'Em análise', respondido: 'Respondido', aprovado: 'Aprovado ✅', feito: 'Feito 🎉', descartado: 'Arquivado' };
+  var WHO = { usuario: 'Você', claude: 'Claude', eduardo: 'Eduardo' };
+
+  var tT; function toast(m) { var t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(tT); tT = setTimeout(function () { t.hidden = true; }, 3200); }
+  function when(iso) { try { return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } }
+
+  // ── imagens: reduz o print antes de enviar (leve e legível) ──
+  function shrink(file) {
+    return new Promise(function (res, rej) {
+      var img = new Image(), u = URL.createObjectURL(file);
+      img.onload = function () {
+        var max = 1800, w = img.naturalWidth, h = img.naturalHeight, k = Math.min(1, max / Math.max(w, h));
+        var c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
+        var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob(function (b) { URL.revokeObjectURL(u); b ? res(b) : rej(new Error('blob')); }, 'image/jpeg', 0.88);
+      };
+      img.onerror = function () { URL.revokeObjectURL(u); rej(new Error('img')); };
+      img.src = u;
+    });
+  }
+  async function addFiles(list) {
+    var arr = Array.prototype.slice.call(list || []).filter(function (f) { return /^image\//.test(f.type); });
+    if (!arr.length) return;
+    for (var i = 0; i < arr.length; i++) {
+      if (files.length >= MAXIMG) { toast('Máximo de ' + MAXIMG + ' prints por opinião.'); break; }
+      try { var b = await shrink(arr[i]); files.push({ blob: b, url: URL.createObjectURL(b) }); } catch (e) { toast('Não consegui ler uma das imagens.'); }
+    }
+    renderThumbs();
+  }
+  function renderThumbs() {
+    $('#thumbs').innerHTML = files.map(function (f, i) { return '<div class="th"><img src="' + f.url + '" alt="Print ' + (i + 1) + '"><button type="button" data-rm="' + i + '" aria-label="Remover print">×</button></div>'; }).join('');
+  }
+
+  // ── envio ──
+  async function submit(e) {
+    e.preventDefault();
+    var body = $('#body').value.trim(), err = $('#err'); err.hidden = true;
+    if (body.length < 3) { err.textContent = 'Escreva pelo menos uma frase.'; err.hidden = false; return; }
+    var btn = $('#send'); btn.disabled = true; btn.textContent = 'Enviando…';
+    try {
+      var urls = [];
+      for (var i = 0; i < files.length; i++) {
+        btn.textContent = 'Enviando print ' + (i + 1) + '/' + files.length + '…';
+        var path = user.id + '/' + (crypto.randomUUID ? crypto.randomUUID() : (Date.now() + '-' + i)) + '.jpg';
+        var up = await sb.storage.from(BUCKET).upload(path, files[i].blob, { contentType: 'image/jpeg', upsert: false });
+        if (up.error) throw up.error;
+        urls.push(sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl);
+      }
+      var r = await sb.from('tester_items').insert({ kind: kind, area: $('#area').value, body: body, images: urls });
+      if (r.error) throw r.error;
+      $('#body').value = ''; $('#cnt').textContent = '0'; files.forEach(function (f) { URL.revokeObjectURL(f.url); }); files = []; renderThumbs();
+      toast('Opinião enviada! Obrigado 💙'); await loadMine();
+      window.scrollTo({ top: $('#mine').offsetTop - 70, behavior: 'smooth' });
+    } catch (x) {
+      console.error(x); err.textContent = 'Não consegui enviar. Confira a internet e tente de novo.'; err.hidden = false;
+    } finally { btn.disabled = false; btn.textContent = 'Enviar opinião'; }
+  }
+
+  // ── lista ──
+  function itemHtml(it) {
+    var msgs = (it.tester_msgs || []).slice().sort(function (a, b) { return a.id - b.id; });
+    return '<article class="item" data-id="' + esc(it.id) + '"><div class="item-h"><span class="tag s-' + esc(it.status) + '">' + esc(STATUS[it.status] || it.status) + '</span><span>' + esc(KIND[it.kind] || '') + '</span><span>· ' + esc(it.area || '') + '</span><span>· ' + esc(when(it.created_at)) + '</span></div>' +
+      '<div class="item-b">' + esc(it.body) + '</div>' +
+      ((it.images && it.images.length) ? '<div class="imgs">' + it.images.map(function (u) { return '<button type="button" data-view="' + esc(u) + '" aria-label="Ampliar print"><img loading="lazy" src="' + esc(u) + '" alt="Print"></button>'; }).join('') + '</div>' : '') +
+      (msgs.length ? '<div class="thread">' + msgs.map(function (m) { return '<div class="msg ' + esc(m.author) + '"><small>' + esc(WHO[m.author] || m.author) + ' · ' + esc(when(m.created_at)) + '</small>' + esc(m.body) + '</div>'; }).join('') + '</div>' : '') +
+      '<form class="reply" data-reply="' + esc(it.id) + '"><input type="text" maxlength="1000" placeholder="Responder…" aria-label="Responder"><button class="btn alt sm" type="submit">Enviar</button></form></article>';
+  }
+  async function loadMine() {
+    var r = await sb.from('tester_items').select('*, tester_msgs(*)').eq('user_id', user.id).order('created_at', { ascending: false });
+    var box = $('#list'); $('#mine').hidden = false;
+    if (r.error) { box.innerHTML = '<div class="empty">Não consegui carregar suas opiniões agora.</div>'; return; }
+    box.innerHTML = r.data.length ? r.data.map(itemHtml).join('') : '<div class="empty">Você ainda não enviou nada. Conte sua primeira ideia acima 👆</div>';
+  }
+  async function sendReply(form) {
+    var inp = $('input', form), v = inp.value.trim(); if (!v) return;
+    var b = $('button', form); b.disabled = true;
+    var r = await sb.from('tester_msgs').insert({ item_id: form.dataset.reply, author: 'usuario', body: v });
+    b.disabled = false;
+    if (r.error) { toast('Não consegui enviar a resposta.'); return; }
+    inp.value = ''; await loadMine();
+  }
+
+  function bind() {
+    $('#theme').addEventListener('click', function () { var n = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', n); try { localStorage.setItem('mydeck-theme', n); } catch (e) { } });
+    $$kinds();
+    $('#body').addEventListener('input', function (e) { $('#cnt').textContent = e.target.value.length; });
+    $('#pick').addEventListener('click', function () { $('#file').click(); });
+    $('#file').addEventListener('change', function (e) { addFiles(e.target.files); e.target.value = ''; });
+    var d = $('#drop');
+    ['dragenter', 'dragover'].forEach(function (n) { d.addEventListener(n, function (e) { e.preventDefault(); d.classList.add('over'); }); });
+    ['dragleave', 'drop'].forEach(function (n) { d.addEventListener(n, function (e) { e.preventDefault(); d.classList.remove('over'); }); });
+    d.addEventListener('drop', function (e) { addFiles(e.dataTransfer && e.dataTransfer.files); });
+    document.addEventListener('paste', function (e) {
+      var items = (e.clipboardData && e.clipboardData.files) || []; if (items.length && /^image\//.test(items[0].type)) { e.preventDefault(); addFiles(items); }
+    });
+    $('#form').addEventListener('submit', submit);
+    document.addEventListener('click', function (e) {
+      var rm = e.target.closest('[data-rm]'); if (rm) { var i = +rm.dataset.rm; URL.revokeObjectURL(files[i].url); files.splice(i, 1); renderThumbs(); return; }
+      var v = e.target.closest('[data-view]'); if (v) { $('#vimg').src = v.dataset.view; $('#viewer').hidden = false; return; }
+      if (e.target.id === 'viewer' || e.target.id === 'vx') $('#viewer').hidden = true;
+    });
+    document.addEventListener('submit', function (e) { var f = e.target.closest('[data-reply]'); if (f) { e.preventDefault(); sendReply(f); } });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') $('#viewer').hidden = true; });
+  }
+  function $$kinds() {
+    $('#kinds').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-kind]'); if (!b) return; kind = b.dataset.kind;
+      Array.prototype.forEach.call($('#kinds').children, function (c) { c.classList.toggle('on', c === b); });
+    });
+  }
+
+  async function start() {
+    bind();
+    var s = await sb.auth.getSession(); user = s.data && s.data.session ? s.data.session.user : null;
+    if (!user) { $('#gate').hidden = false; sb.auth.onAuthStateChange(function (ev, sess) { if (sess && sess.user && !user) location.reload(); }); return; }
+    var nm = (user.user_metadata && (user.user_metadata.full_name || user.user_metadata.name)) || user.email || '';
+    $('#who').textContent = nm;
+    $('#formCard').hidden = false;
+    await loadMine();
+  }
+  start();
+})();
+</script>
+</body>
+</html>

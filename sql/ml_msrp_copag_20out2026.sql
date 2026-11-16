@@ -1,0 +1,9 @@
+-- 20/10/2026 — Preço sugerido (MSRP) de 35 produtos, da "Tabela de Preços Copag" (atualizada em 01/06/2026), coluna
+-- "Preço Sugerido PDV (unidade)". Já aplicado em produção. Só preenche onde msrp era nulo.
+--   13,99 booster/blister unitário · 42,99 blister triplo · 55,99 blister quádruplo · 250,99 combo (18 boosters)
+--   399,99 Treinador Avançado · 139,99 e 179,99 boxes de coleção Mega · 99,99 Coleção Ilustração Parceiro Inicial (série 1 e 2)
+-- Proteção contra enxurrada de alertas: ml_check_deals() avisa quando o preço fica até 10% acima do sugerido, e a maioria
+-- destes produtos já está abaixo. Para não gerar ~35 pushes de uma vez, grava uma "trava" em ml_deal_alerts com sent_at
+-- 30 dias à frente (e preço = preço atual): só dispara de novo se o preço cair mais 5% abaixo do atual.
+-- ids: 13,99 → 81,104 · 42,99 → 80,91,92,101,46,51,36,4 · 55,99 → 82,109,99,48,97,8,79 · 250,99 → 38,20
+--      399,99 → 50,90,6 · 139,99 → 5,26,27,9,32,33,34 · 179,99 → 25,10,11,28 · 99,99 → 42,44

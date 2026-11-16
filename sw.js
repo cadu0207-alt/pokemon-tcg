@@ -17,7 +17,9 @@
 // só o bump de CACHE (que muda o conteudo do proprio sw.js) faz o browser
 // perceber a atualização, instalar a nova versao e limpar o cache antigo
 // (activate acima já faz isso). Ver [[feedback_coding]].
-const CACHE = 'mydeck-v5';
+// v6 (04/11/2026): menus Pokédex/Fichários do iPhone (fichario_accordion.js) e seletor do Master Set — força quem
+// já tem o SW instalado a trocar de versão e baixar os scripts novos.
+const CACHE = 'mydeck-v6';
 const STATIC = ['./', './index.html', './style.css', './app.js', './fichario_patch.js', './ev_calculator.js',
   './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 

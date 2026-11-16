@@ -228,6 +228,11 @@ function _updateUserChip(user){
   const chip=document.getElementById('user-chip');
   if(!chip) return;
   chip.style.display=user?'flex':'none';
+  // 17/10/2026: o "Conectando..." do HTML só faz sentido pra quem tem conta (loadAll troca o texto). Visitante
+  // sem login ficava lendo "Conectando..." pra sempre — esconde bolinha e texto até haver sessão.
+  const _sd=document.getElementById('status-dot'),_st=document.getElementById('status-txt');
+  if(_sd)_sd.style.display=user?'':'none';
+  if(_st)_st.style.display=user?'':'none';
   if(!user) return;
   const m=user.user_metadata||{};
   const av=document.getElementById('user-avatar');
@@ -239,10 +244,30 @@ function _updateUserChip(user){
   if(nm) nm.textContent=(m.full_name||m.name||m.username||user.email||'').split(' ')[0];
 }
 
+// Estado da última carga de dados do usuário logado (loadAll): null = nunca rodou / saiu da conta,
+// 'loading' = em andamento, 'ok' = tudo carregado, 'partial'/'fail' = deu problema (tenta de novo no próximo evento).
+let _authLoadState=null;
+
 // Escuta mudanças de sessão (login/logout/refresh)
 if(sbClient){
   sbClient.auth.onAuthStateChange((_event,session)=>{
     if(shareMode) return; // visitante de link compartilhado: não mexe na tela de login
+    // 04/10/2026 — "a página dá refresh quando volto pra aba": toda vez que a aba volta a ficar visível o
+    // supabase-js (v2) dispara SIGNED_IN de novo com a MESMA sessão (e INITIAL_SESSION junto, ao abrir a página).
+    // Até aqui isso refazia a tela inteira: loadAll() (6 consultas + coleção inteira), renderAll(), initFichario(),
+    // routeFromHash() e todos os ganchos de _updateUserChip. Medido: cada volta = ~31 requisições e a tela
+    // redesenhada. Agora, mesmo usuário + dados já carregados (ou carregando) => só atualiza o objeto da sessão.
+    // Não pula: SIGNED_OUT, troca de usuário nem carga que falhou ('partial'/'fail' => o evento da volta serve
+    // de nova tentativa, como antes). USER_UPDATED (nome/avatar mudou) só atualiza o chip do topo.
+    const _nextUser=session?.user??null;
+    if(_nextUser&&currentUser&&_nextUser.id===currentUser.id
+       &&_event!=='SIGNED_OUT'
+       &&(_authLoadState==='ok'||_authLoadState==='loading')){
+      currentUser=_nextUser;
+      if(_event==='USER_UPDATED') _updateUserChip(currentUser);
+      return;
+    }
+    if(!_nextUser) _authLoadState=null; // saiu da conta: o próximo login carrega do zero
     currentUser=session?.user??null;
     _updateUserChip(currentUser);
     if(currentUser){
@@ -319,7 +344,17 @@ function imgMe04(nOrCard,lang){
   }
   return`https://images.scrydex.com/pokemon/me4-${parseInt(n)}/large`;
 }
-function imgMe03(n){return`https://images.scrydex.com/pokemon/me3-${parseInt(n)}/large`;}
+// me03: 04/10/2026 — mesmo padrão do me04/me05 (tcgdex slug "me03"; jp = `img` da carta, set JP M3
+// "Nihil Zero" + reimpressões de outros sets — ver cards_me03.js). Sem `lang` = scrydex EN de antes.
+function imgMe03(nOrCard,lang){
+  const isCard=nOrCard&&typeof nOrCard==='object';
+  const n=isCard?nOrCard.n:nOrCard;
+  if(lang==='jp')return(isCard&&nOrCard.img)||'';
+  if(lang==='pt'||lang==='en'){
+    return`https://assets.tcgdex.net/${lang}/me/me03/${String(parseInt(n,10)).padStart(3,'0')}/high.png`;
+  }
+  return`https://images.scrydex.com/pokemon/me3-${parseInt(n)}/large`;
+}
 function imgMe02(n){return`https://images.scrydex.com/pokemon/me2-${parseInt(n)}/large`;}
 // me05: 03/10/2026 — mesma estrutura do me2pt5 (arte por idioma, tcgdex slug "me05"):
 // pt = arte em português da Copag, en = arte americana, jp = URL pronta no campo `img`
@@ -361,45 +396,7 @@ function imgMe2pt5(nOrCard,lang){
   const id=String(parseInt(n,10)).padStart(3,'0');
   return`https://assets.tcgdex.net/${l}/me/me02.5/${id}/high.png`;
 }
-// cel30: sem entrada no scrydex (set novo) — hotlink direto no CDN do
-// limitlesstcg.com/cards/30C (conferido 30/09/2026: padrao
-// 30C_<codigo>_R_EN_LG.png). Cartas normais/secretas usam o numero com 3
-// digitos (001, 023, 158); RGB usa a letra sozinha (G/R/B); a Coleção
-// Clássica guarda no `n` o codigo ORIGINAL do set de origem (ex "4/102"),
-// que não é o que o limitlesstcg usa na URL — por isso o mapa CEL30_CC_IMG
-// (mesmo mapeamento nome<->CC-index conferido na correção de 30/09/2026).
-const CEL30_CC_IMG={
-  '4/102':'CC2','5/109':'CC8','11/113':'CC11','11/101':'CC20','18/132':'CC3',
-  '19/109':'CC9','25/111':'CC5','33/181':'CC25','41/122':'CC22','43/146':'CC13',
-  '47/127':'CC14','050/185':'CC27','57/111':'CC24','58/102':'CC1','69/132':'CC4',
-  '85/124':'CC19','89/149':'CC23','94/102':'CC15','99/102':'CC16','100/102':'CC17',
-  '101/101':'CC18','106/106':'CC12','106/160':'CC21','106/105':'CC6','108/115':'CC10',
-  '114/264':'CC28','123/172':'CC29','138/202':'CC26','149/147':'CC7','203/193':'CC30',
-};
-// lang (30/09/2026, seletor de idioma do Fichário): 'pt'|'en'|'de'|'fr'|'es'|'it'
-// — os 6 confirmados no mesmo CDN pra este set (30C_<codigo>_R_<LANG>_LG.png,
-// todos retornam 200). Japonês/Chinês NÃO seguem este padrão — são sets com
-// numeração própria (M6a/30thC), ainda não integrados.
-function imgCel30(n,lang){
-  const l=(lang||'en').toUpperCase();
-  // CORRIGIDO 01/10/2026 (pedido do Eduardo: "procure as artes das
-  // energias") — as 8 Energias Básicas (MEE 009-016) NÃO pertencem ao set
-  // "30C" no limitlesstcg, têm catálogo próprio "MEE" (Mega Evolution
-  // Energy — set perene reaproveitado em vários produtos, #9-16 são a
-  // versão ilustrada por YOSHIROTTEN usada no 30th Celebration). Mesmo CDN,
-  // pasta/set diferente, número com 3 dígitos (ex "MEE 009" -> "009").
-  if(/^MEE/.test(n)){
-    const num=n.replace(/\D/g,'').padStart(3,'0');
-    return`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEE/MEE_${num}_R_${l}_LG.png`;
-  }
-  let code;
-  if(CEL30_CC_IMG[n]) code=CEL30_CC_IMG[n];
-  else if(n==='R/RGB') code='R';
-  else if(n==='G/RGB') code='G';
-  else if(n==='B/RGB') code='B';
-  else code=String(parseInt(n)).padStart(3,'0');
-  return`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/30C/30C_${code}_R_${l}_LG.png`;
-}
+// cel30: CEL30_CC_IMG e imgCel30() agora moram em img_cel30.js (17/10/2026) — o Simulador usa as mesmas artes.
 // cel30jp: set japones M6a (checklist DIFERENTE do cel30, nao e so tradução
 // — ver cards_cel30_jp.js). CDN confirmado 30/09/2026: mesmo provedor do
 // EN, mas pasta "tpc" (nao "tpci") e set "M6a" — numeros 001-103 e as 8
@@ -498,7 +495,7 @@ function imgMep(n) {
 
 function getPurchaseImg(product){
   const p=product.toLowerCase();
-  if(p.includes('me06')||p.includes('esmeralda')||p.includes('storm'))  return imgMe06(1);
+  if(p.includes('me06')||p.includes('reinado')||p.includes('delta reign')||p.includes('esmeralda')||p.includes('storm'))  return imgMe06(1);
   if(p.includes('me05')||p.includes('negrura')||p.includes('pitch'))    return imgMe05(61);
   if(p.includes('me04')||p.includes('caos')||p.includes('chaos'))       return p.includes('quádr')||p.includes('quadr')?imgMe04(15):imgMe04(22);
   if(p.includes('me03')||p.includes('ordem')||p.includes('perfect'))    return imgMe03(63);
@@ -512,7 +509,7 @@ function getCardImg(card){
   const num=(card.num||'').match(/(\d+)/);
   if(!num) return null;
   const n=num[1];const lote=(card.lote||'').toLowerCase();const ns=card.num||'';
-  if(lote.includes('me06')||lote.includes('esmeralda')||lote.includes('storm'))  return imgMe06(n);
+  if(lote.includes('me06')||lote.includes('reinado')||lote.includes('delta reign')||lote.includes('esmeralda')||lote.includes('storm'))  return imgMe06(n);
   if(lote.includes('me05')||lote.includes('negrura')||lote.includes('pitch'))    return imgMe05(n);
   if(lote.includes('me03')||lote.includes('ordem')||lote.includes('perfect'))    return imgMe03(n);
   if(lote.includes('me02')||lote.includes('phantasmal')||lote.includes('fogo'))  return imgMe02(n);
@@ -548,6 +545,10 @@ function imgAltUrl(setId,n){
 function imgThumb(url){
   if(typeof url!=='string')return url;
   if(url.includes('images.scrydex.com'))return url.replace(/\/large$/,'/small');
+  // 17/10/2026: ME2.5/ME03/ME04/ME05 vêm do tcgdex em /high.png (~320 KB por carta). /low.webp tem 245×337 e
+  // ~15–25 KB (medido nas mesmas cartas) — mais que suficiente pro tamanho de grade/fichário. Impressão
+  // (imgMedium) e o modal da carta continuam na arte grande.
+  if(url.includes('assets.tcgdex.net')&&/\/high\.png$/.test(url))return url.replace(/\/high\.png$/,'/low.webp');
   return url;
 }
 // PERF 18/08/2026: variante intermediária pra impressão/PDF — /small (~55KB)
@@ -590,7 +591,7 @@ function getBinderImg(c,setId,lang){
   if(setId==='me2pt5') return imgMe2pt5(c,lang);
   if(setId==='me06') return imgMe06(n);
   if(setId==='me05') return imgMe05(c,lang);
-  if(setId==='me03') return imgMe03(n);
+  if(setId==='me03') return imgMe03(c,lang);
   if(setId==='me02') return imgMe02(n);
   if(setId==='meg')  return imgMeg(n);
   if(setId==='mep')  return imgMep(n);
@@ -926,11 +927,13 @@ async function fetchAllRows(queryFactory){
 let _loadAllPromise = null;
 async function loadAll(){
   if(_loadAllPromise) return _loadAllPromise;
+  _authLoadState='loading'; // ver o handler de onAuthStateChange: evita refazer tudo a cada volta à aba
   _loadAllPromise = _loadAllImpl();
   try{
     return await _loadAllPromise;
   } finally {
     _loadAllPromise = null;
+    if(_authLoadState==='loading') _authLoadState='fail'; // saiu sem concluir (sem login, erro, exceção)
   }
 }
 async function _loadAllImpl(){
@@ -951,7 +954,12 @@ async function _loadAllImpl(){
   const queryFactories=[
     ()=>sbClient.from('purchases').select('*').eq('user_id',myUid).order('date',{ascending:false}),
     ()=>sbClient.from('pulled_cards').select('*').eq('user_id',myUid).order('id',{ascending:true}),
-    ()=>fetchAllRows(()=>sbClient.from('collection').select('slot_key,quantity,origins').eq('user_id',myUid)),
+    // CORRIGIDO 02/11/2026 (relato de usuário com 1425 cartas: "marco que tenho e ao voltar some"): fetchAllRows
+    // pagina em blocos de 1000 e esta consulta NÃO tinha ORDER BY — sem ordem fixa o Postgres pode devolver
+    // linhas repetidas/faltando entre as páginas (as linhas recém-gravadas mudam de posição no heap), então quem
+    // passa de 1000 cartas via parte da coleção "sumir" ao recarregar, mesmo com tudo salvo no banco.
+    // slot_key é único por usuário (collection_user_slot_unique), então ordena de forma estável.
+    ()=>fetchAllRows(()=>sbClient.from('collection').select('slot_key,quantity,origins').eq('user_id',myUid).order('slot_key',{ascending:true})),
     ()=>sbClient.from('value_history').select('date,total_value').eq('user_id',myUid).order('date',{ascending:true}),
     ()=>sbClient.from('card_listings').select('*').eq('user_id',myUid).order('created_at',{ascending:false}),
     ()=>sbClient.from('buy_orders').select('*').eq('buyer_id',myUid).order('created_at',{ascending:false})
@@ -1001,8 +1009,10 @@ async function _loadAllImpl(){
   if(failedCount>0){
     setStatus('Conexão instável','warning');
     console.warn('loadAll: '+failedCount+' de '+results.length+' queries falharam — mostrando dados parciais',results);
+    _authLoadState='partial';
   }else{
     setStatus('Online ✓','ok');
+    _authLoadState='ok';
   }
   fetchCambio();  // atualiza USD_BRL e EUR_BRL para conversão de preços
   renderAll();
@@ -1103,7 +1113,7 @@ function goPage(id){
 // Abas que qualquer visitante pode ver sem login — hoje só a Início
 // (conteúdo público: novidades/notícias/vídeos/links/revista + atalhos).
 // Todo o resto exige conta (Opção 1 — ver conversa de 29/08/2026).
-const PUBLIC_TABS = new Set(['inicio']);
+const PUBLIC_TABS = new Set(['inicio','mk']); // mk = vitrine da Loja Toybox (leitura pública)
 function tabRequiresAuth(id){ return !PUBLIC_TABS.has(id); }
 function go(id,el){
   // GATE 29/08/2026 (Opção 1): abas pessoais exigem login — sem sair da
@@ -1136,6 +1146,7 @@ function go(id,el){
   if(id==='cartas'){renderCartas();}
   if(id==='gastos'){renderGastos();}
   if(id==='lojas'){if(typeof renderLojas==='function')renderLojas();}
+  if(id==='mk'){if(typeof renderMk==='function')renderMk();}
   if(id==='mercado'){if(typeof renderMercado==='function')renderMercado();}
   if(id==='leilao'){if(typeof renderLeilaoTab==='function')renderLeilaoTab();}
   if(id==='rifas'){if(typeof renderRifasTab==='function')renderRifasTab();}
@@ -1159,7 +1170,11 @@ function go(id,el){
 // Dashboard não levava a lugar nenhum visualmente. Qualquer onclick que
 // combine switchSet(...) com uma coleção/fichário agora chama goToTab
 // primeiro.
+// 17/10/2026: Lojas Confiáveis e Cadastro Positivo saíram do menu (decisão do Eduardo, foco na Loja Toybox);
+// links antigos caem na Loja Toybox. Painéis, código e dados continuam no repo/banco, só sem entrada.
+const RETIRED_TABS={mercado:'mk',positivo:'mk'};
 function goToTab(id){
+  if(RETIRED_TABS[id])id=RETIRED_TABS[id];
   const el=document.getElementById('nav-tab-'+id);
   if(el)go(id,el);
 }
@@ -1207,7 +1222,7 @@ const fmtR=v=>(+v||0).toFixed(2).replace('.',',');
 // virar um link clicável pra aba correspondente (goToTab). Chamadas
 // existentes que não passam esse parâmetro continuam idênticas (KPI sem
 // onclick), então não muda nada nas outras telas que reusam kpiHTML().
-const kpiHTML=(cls,lbl,val,sub,nav)=>`<div class="kpi ${cls}"${nav?` onclick="goToTab('${nav}')" style="cursor:pointer" title="Ver na aba correspondente"`:''}><div class="kpi-label">${lbl}</div><div class="kpi-value">${val}</div><div class="kpi-sub">${sub}</div></div>`;
+const kpiHTML=(cls,lbl,val,sub,nav)=>`<div class="kpi ${cls}"${nav?` onclick="goToTab('${nav}')" role="link" tabindex="0" style="cursor:pointer" title="Ver na aba correspondente"`:''}><div class="kpi-label">${lbl}</div><div class="kpi-value">${val}</div><div class="kpi-sub">${sub}</div></div>`;
 
 // ── ÍCONES DO DASHBOARD (27/07/2026) ────────────────────────────
 // CORRIGIDO: KPIs/títulos do Dashboard usavam emoji solto (💰📦💵📊 etc.),
@@ -1262,6 +1277,26 @@ function calcCollectedValue(){
 }
 
 // ── DASHBOARD ────────────────────────────────────────────────────
+// 17/10/2026: etiqueta de raridade dos "Destaques". O código antigo usava c.rare.split(' ')[0], então "Rara Dupla",
+// "Rara Ilustrada", "Rara Holo" e "Rara" viravam todas "RARA". Agora cada raridade tem sigla própria; as cores
+// existentes em style.css são .br (vermelho), .bi (dourado), .bp (verde) e .bx (cinza).
+function dashRarBadge(rare){
+  const r=String(rare||'');
+  if(/Hiper|Hyper|Secreta/i.test(r))return{lbl:'HIPER',cls:'br'};
+  if(/Mega|Attack/i.test(r))return{lbl:'MEGA',cls:'br'};
+  if(/Ilustr/i.test(r)&&/Esp/i.test(r))return{lbl:'SAR',cls:'br'};
+  if(/Ultra/i.test(r))return{lbl:'UR',cls:'br'};
+  if(/Ilustr/i.test(r))return{lbl:'IR',cls:'bi'};
+  if(/Dupla/i.test(r))return{lbl:'RR',cls:'bi'};
+  if(/Holo/i.test(r))return{lbl:'HOLO',cls:'bi'};
+  if(/^Promo/i.test(r))return{lbl:'PROMO',cls:'bp'};
+  if(/Cl[aá]ssica/i.test(r))return{lbl:'CLÁSSICA',cls:'bx'};
+  if(/^Incomum/i.test(r))return{lbl:'INCOMUM',cls:'bx'};
+  if(/^Comum/i.test(r))return{lbl:'COMUM',cls:'bx'};
+  return{lbl:(r.split(' ')[0]||'').toUpperCase(),cls:'bx'};
+}
+window.dashRarBadge=dashRarBadge;
+
 function renderDash(){
   const invested=purchases.reduce((s,p)=>s+Number(p.price),0);
   const bst=purchases.filter(p=>!p.acessorio);
@@ -1274,9 +1309,25 @@ function renderDash(){
   // no R$/Booster logo abaixo).
   const roi=tg>0?(fichVal/tg*100).toFixed(0):0;
   const apb=tb>0?(tg/tb).toFixed(2):'0,00';
+  // 17/10/2026: conta nova (sem cartas, compras nem pulls) — em vez de uma parede de zeros, um passo a passo. Só depois
+  // que a carga dos dados terminou (_authLoadState==='ok'), pra não piscar pra quem já tem coleção enquanto carrega.
+  const _emptyEl=document.getElementById('dash-empty');
+  if(_emptyEl){
+    const _isNew=typeof _authLoadState!=='undefined'&&_authLoadState==='ok'&&collected.size===0&&purchases.length===0&&pulledCards.length===0;
+    _emptyEl.innerHTML=_isNew
+      ?`<section class="dash-empty-card" aria-label="Como começar">
+          <h3 class="dash-empty-title">Seu Dashboard ainda está vazio — comece por aqui</h3>
+          <ol class="dash-empty-steps">
+            <li><span class="dash-empty-n">1</span><div><b>Marque suas cartas</b><small>Abra um fichário e toque nas cartas que você já tem.</small></div><button type="button" class="btn-mini" onclick="goToTab('fichario')">Abrir Fichário</button></li>
+            <li><span class="dash-empty-n">2</span><div><b>Registre o que você gastou</b><small>Boosters, ETBs e acessórios entram no total investido e no R$/booster.</small></div><button type="button" class="btn-mini" onclick="goToTab('gastos')">Registrar compra</button></li>
+            <li><span class="dash-empty-n">3</span><div><b>Confira o preço justo</b><small>Veja quanto vale a pena pagar por um produto antes de comprar.</small></div><button type="button" class="btn-mini" onclick="goToTab('preco')">Calcular</button></li>
+          </ol>
+        </section>`
+      :'';
+  }
   document.getElementById('kpi-dash').innerHTML=
     kpiHTML('red',dico('wallet')+' Total Investido','R$'+fmtR(invested),purchases.length+' compras','gastos')+
-    kpiHTML('orange',dico('box')+' Boosters',''+tb,'~'+(tb*6)+' cartas','gastos')+
+    kpiHTML('orange',dico('box')+' Boosters',''+tb,'~'+bst.reduce((a,p)=>a+(Number(p.cards)||0),0)+' cartas','gastos')+
     kpiHTML('gold',dico('coins')+' R$/Booster','R$'+apb.replace('.',','),'média ponderada','gastos')+
     kpiHTML('teal',dico('book')+' Valor Fichário','R$'+fmtR(fichVal),collected.size+' slots coletados','fichario')+
     kpiHTML('blue',dico('trend')+' Fichário ÷ Investido',roi+'%','valor do fichário ÷ investido em cartas','fichario');
@@ -1328,29 +1379,16 @@ function renderDash(){
   // Gráfico gastos
   const byDate={};purchases.forEach(p=>{byDate[p.date]=(byDate[p.date]||0)+Number(p.price);});
   const dMax=Math.max(...Object.values(byDate),1);
-  document.getElementById('chart-gastos').innerHTML=Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0]))
+  const _cg=document.getElementById('chart-gastos'); // 17/10/2026: painel removido do Dashboard (a Evolução Mensal cobre); mantido só se existir
+  if(_cg)_cg.innerHTML=Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0]))
     .map(([d,v])=>barHTML(d.slice(5),v,dMax,'linear-gradient(90deg,var(--accent),var(--accent2))','R$'+fmtR(v))).join('');
 
-  // Destaques do Fichário — cartas coletadas (aleatório, priorizando especiais e importantes)
-  const rl={'Dupla Rara (RR)':'RR','Ilustração Rara (SAR)':'SAR','Ilustracao Rara (SAR)':'SAR',
-    'Ilustração Rara (IR)':'IR','Ilustracao Rara (IR)':'IR','Rara Ultra (UR)':'UR',
-    'Rara (Holo)':'HOLO','Incomum (RH)':'RH','Comum (RH)':'RH','Promocional':'PROMO'};
-  const bcMap={SAR:'bs',UR:'bur',IR:'bi',RR:'brr',HOLO:'bh',RH:'brh',PROMO:'bp'};
+  // Destaques do Fichário — as 6 cartas MAIS VALIOSAS que o usuário tem.
+  // 17/10/2026: antes era sorteio (sort(()=>Math.random()-0.5)) — a lista mudava a cada visita e a cada slot salvo,
+  // e o sorteio era enviesado. Agora é determinístico: maior preço primeiro, empate por nome.
   const allFich=getAllCardsWithSet();
-  // cartas que o usuário coletou E têm algum destaque (importante, especial, ou preço ≥ R$20)
-  const colFich=allFich.filter(c=>{
-    const sid=c._setId;
-    const slots=getSlots(c,sid);
-    const hasCol=slots.some(s=>collected.has(slotKey(sid+':',c.n,s.ver)));
-    return hasCol&&(c.important||!c.base||(c.price>=20));
-  });
-  // se tiver poucos destaques, complementa com qualquer carta coletada com preço
-  const fallback=colFich.length<6?allFich.filter(c=>{
-    const sid=c._setId;
-    const slots=getSlots(c,sid);
-    return slots.some(s=>collected.has(slotKey(sid+':',c.n,s.ver)))&&c.price>0&&!colFich.includes(c);
-  }):[];
-  const pool=[...colFich,...fallback].sort(()=>Math.random()-0.5).slice(0,6);
+  const owned=allFich.filter(c=>getSlots(c,c._setId).some(s=>collected.has(slotKey(c._setId+':',c.n,s.ver))));
+  const pool=owned.sort((a,b)=>(b.price||0)-(a.price||0)||String(a.name).localeCompare(String(b.name))).slice(0,6);
   document.getElementById('dash-highlights').innerHTML=pool.length>0?pool.map(c=>{
     const sid=c._setId;
     const slots=getSlots(c,sid);
@@ -1359,12 +1397,12 @@ function renderDash(){
     const imgSrc=getBinderImg(c,sid);
     const catMeta=SET_CATALOG.find(s=>s.id===sid);
     const setShort=sid.toUpperCase().replace('SV3PT5','151').replace('SV8PT5','SV8.5').replace('SV6PT5','SV6.5').replace('SV4PT5','SV4.5');
-    const rarLbl=rl[c.rare]||c.rare?.split(' ')[0]||'';
+    const rb=dashRarBadge(c.rare);
     // CORRIGIDO 02/08/2026: só chamava switchSet(), que atualiza o fichário
     // por baixo dos panos mas nunca ativa a pane #fichario — clicar aqui a
     // partir do Dashboard não levava a lugar nenhum visualmente. goToTab
     // primeiro faz a troca de aba de verdade.
-    return`<div class="pc" onclick="goToTab('fichario');switchSet('${sid}',null)">
+    return`<div class="pc" role="link" tabindex="0" onclick="goToTab('fichario');switchSet('${sid}',null)">
       <img class="pc-img" src="${imgSrc}" alt="${c.name}"
         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
       <div class="fb" style="display:none"><div class="fb-n">${c.n}</div><div class="fb-name">${c.name}</div>
@@ -1373,7 +1411,7 @@ function renderDash(){
         <div class="pc-meta">${setShort} · ${c.n}</div>
         <div class="pc-src">Fichário</div>
         <div class="ver-dots"><div class="ver-dot" style="background:${VER_COLOR[ver]};border-color:${VER_COLOR[ver]}" title="${VER_LABEL[ver]}"></div></div></div>
-      <div class="pc-right"><span class="rb ${bcMap[rarLbl]||'bx'}">${rarLbl}</span>
+      <div class="pc-right"><span class="rb ${rb.cls}">${rb.lbl}</span>
         ${c.price?`<div class="pc-price">R$${fmtR(c.price)}</div>`:''}</div>
     </div>`;
   }).join(''):`<div style="color:var(--muted);padding:16px;font-size:.85rem">Nenhuma carta coletada no fichário ainda.</div>`;
@@ -1419,7 +1457,7 @@ const GEN1=[
 // ── PROGRESS ────────────────────────────────────────────────────
 const SET_META={
   cel30:{label:'🎉 CEL30 — Celebração de 30 Anos',color:'#FFD700',chase:'Mew ex Ultra Rare — R$568,40',heroCard:'158',imgFn:imgCel30,releaseDate:'16/set/2026'},
-  me06:{label:'💎 ME06 — Esmeralda Tempestuosa',color:'#00c853',chase:'Mega Rayquaza ex Gold — R$1.500 (est.)',heroCard:1,imgFn:imgMe06,upcoming:true,releaseDate:'out/2026'},
+  me06:{label:'💎 ME06 — Reinado Delta',color:'#00c853',chase:'Mega Rayquaza ex Hiper Rara Mega — US$349',heroCard:141,imgFn:imgMe06,releaseDate:'06/nov/2026'},
   me2pt5:{label:'🦸 ME2.5(ASC) — Heróis Excelsos',color:'#5C6BC0',chase:'Mega Charizard Y ex Hiper Rara Mega — preço a confirmar',heroCard:294,imgFn:imgMe2pt5,releaseDate:'30/jan/2026'},
   me05:{label:'🌑 ME05(PBL) — Escuridão Absoluta',color:'#424242',chase:'Batalha Decisiva do Gladio SAR — US$1.090',heroCard:118,imgFn:imgMe05,releaseDate:'17/jul/2026'},
   me04:{label:'🔥 ME04(CRI) — Caos Ascendente',color:'var(--accent)',chase:'Mega Greninja ex Gold — R$1.482',heroCard:22,imgFn:imgMe04},
@@ -1474,7 +1512,7 @@ const SET_CATALOG=[
   // Padrão pensado pra repetir em futuras coleções multi-região, sem inchar
   // a lista principal com 1 entrada a mais por idioma a cada lançamento.
   {id:'cel30',label:'CEL30 — Celebração de 30 Anos',emoji:'🎉',cards:typeof CARDS_CEL30!=='undefined'?CARDS_CEL30.length:199,color:'#FFD700',series:'ME'},
-  {id:'me06',label:'ME06 — Esmeralda Tempestuosa',emoji:'💎',cards:0,  color:'#00c853',series:'ME',upcoming:true},
+  {id:'me06',label:'ME06 — Reinado Delta',emoji:'💎',cards:typeof CARDS_ME06!=='undefined'?CARDS_ME06.length:141,color:'#00c853',series:'ME'},
   {id:'me2pt5',label:'ME2.5(ASC) — Heróis Excelsos', emoji:'🦸',cards:typeof CARDS_ME2PT5!=='undefined'?CARDS_ME2PT5.length:295,color:'#5C6BC0',series:'ME'},
   {id:'me05',label:'ME05(PBL) — Escuridão Absoluta', emoji:'🌑',cards:typeof CARDS_ME05!=='undefined'?CARDS_ME05.length:120,color:'#757575',series:'ME'},
   {id:'me04',label:'ME04(CRI) — Caos Ascendente',  emoji:'🔥',cards:122,color:'#FF5722',series:'ME'},
@@ -1489,19 +1527,19 @@ const SET_CATALOG=[
   {id:'mep', label:'MEP(MEP) — Promos Mega Evolução', emoji:'⭐',cards:typeof CARDS_MEP!=='undefined'?CARDS_MEP.length:54, color:'#ffd166',series:'ME'},
   {id:'pgo', label:'PGO(PGO) — Pokémon GO',emoji:'🗺️',cards:typeof CARDS_PGO!=='undefined'?CARDS_PGO.length:88,color:'#4285F4',series:'SWSH'},
   {id:'svp', label:'SVP(SVP) — Promos Escarlate e Violeta',emoji:'🎫',cards:typeof CARDS_SVP!=='undefined'?CARDS_SVP.length:218,color:'#546E7A',series:'SV'},
-  {id:'sv10',label:'SV10(DRI) — Rivais do Destino',emoji:'⚔️',cards:244,color:'#E91E63',series:'SV'},
-  {id:'sv9', label:'SV9(JTG) — Jornada Juntos',     emoji:'🤝',cards:190,color:'#3F51B5',series:'SV'},
+  {id:'sv10',label:'SV10(DRI) — Rivais Predestinados',emoji:'⚔️',cards:244,color:'#E91E63',series:'SV'},
+  {id:'sv9', label:'SV9(JTG) — Amigos de Jornada',     emoji:'🤝',cards:190,color:'#3F51B5',series:'SV'},
   {id:'sv8pt5',label:'SV8.5(PRE) — Evoluções Prismáticas',emoji:'💫',cards:180,color:'#9C27B0',series:'SV'},
-  {id:'sv8', label:'SV8(SSP) — Faíscas Furiosas',   emoji:'⚡',cards:252,color:'#FF9800',series:'SV'},
+  {id:'sv8', label:'SV8(SSP) — Fagulhas Impetuosas',   emoji:'⚡',cards:252,color:'#FF9800',series:'SV'},
   {id:'sv7', label:'SV7(SCR) — Coroa Estelar',      emoji:'👑',cards:175,color:'#FFC107',series:'SV'},
-  {id:'sv6pt5',label:'SV6.5(SFA) — Véu das Sombras',emoji:'🌑',cards:99, color:'#607D8B',series:'SV'},
-  {id:'sv6', label:'SV6(TWM) — Máscara do Futuro',  emoji:'🎭',cards:226,color:'#00BCD4',series:'SV'},
-  {id:'sv5', label:'SV5(TEF) — Forças Triplas',     emoji:'💥',cards:218,color:'#FF5722',series:'SV'},
+  {id:'sv6pt5',label:'SV6.5(SFA) — Fábulas Nebulosas',emoji:'🌑',cards:99, color:'#607D8B',series:'SV'},
+  {id:'sv6', label:'SV6(TWM) — Máscaras do Crepúsculo',  emoji:'🎭',cards:226,color:'#00BCD4',series:'SV'},
+  {id:'sv5', label:'SV5(TEF) — Forças Temporais',     emoji:'💥',cards:218,color:'#FF5722',series:'SV'},
   {id:'sv4pt5',label:'SV4.5(PAF) — Destinos de Paldea',emoji:'✨',cards:245,color:'#FFD700',series:'SV'},
-  {id:'sv4', label:'SV4(PAR) — Fenda Temporal',     emoji:'⏰',cards:266,color:'#673AB7',series:'SV'},
-  {id:'sv3pt5',label:'SV3.5(MEW) — Coleção 151',   emoji:'💯',cards:207,color:'#E91E63',series:'SV'},
-  {id:'sv3', label:'SV3(OBF) — Obsidiana Chamejante',emoji:'🌋',cards:230,color:'#BF360C',series:'SV'},
-  {id:'sv2', label:'SV2(PAL) — Evolução em Paldea', emoji:'🏔️',cards:279,color:'#00ACC1',series:'SV'},
+  {id:'sv4', label:'SV4(PAR) — Fenda Paradoxal',     emoji:'⏰',cards:266,color:'#673AB7',series:'SV'},
+  {id:'sv3pt5',label:'SV3.5(MEW) — 151',   emoji:'💯',cards:207,color:'#E91E63',series:'SV'},
+  {id:'sv3', label:'SV3(OBF) — Obsidiana em Chamas',emoji:'🌋',cards:230,color:'#BF360C',series:'SV'},
+  {id:'sv2', label:'SV2(PAL) — Evoluções em Paldea', emoji:'🏔️',cards:279,color:'#00ACC1',series:'SV'},
   {id:'sv1', label:'SV1(SVI) — Escarlate e Violeta',emoji:'🌿',cards:258,color:'#8E24AA',series:'SV'},
 ];
 
@@ -1633,6 +1671,23 @@ function slotsAndValue(cards,sid){
   });
   return{total,col,have,missing};
 }
+// 17/10/2026: totais por coleção numa passada só — base/especiais (total e coletados) + R$ coletado e faltante.
+// Equivale a countSlotsFor(base) + countSlotsFor(!base) + slotsAndValue(cards,sid) juntos.
+function dashSetStats(cards,sid){
+  const base={total:0,col:0},sec={total:0,col:0};
+  let have=0,missing=0;
+  cards.forEach(c=>{
+    const acc=c.base?base:sec;
+    getSlots(c,sid).forEach(s=>{
+      acc.total++;
+      const key=slotKey(sid+':',c.n,s.ver);
+      const p=s.price||c.price||0;
+      if(collected.has(key)){acc.col++;have+=p*(collectedQty.get(key)?.qty||1);}
+      else missing+=p;
+    });
+  });
+  return{base,sec,have,missing};
+}
 function updateDashProgress(){
   let grand=0,grandC=0;
 
@@ -1645,23 +1700,30 @@ function updateDashProgress(){
     ?myCollections
     :SET_CATALOG.map(s=>s.id);
 
-  const html=activeIds.map(id=>{
+  const _info={};
+  const _htmlArr=activeIds.map(id=>{
     const meta=SET_META[id]||null;
     const cat=SET_CATALOG?SET_CATALOG.find(s=>s.id===id):null;
     const cards=SET_CARDS_MAP[id]?.()||[];
     if(!meta&&!cat)return''; // set desconhecido
-    const base=countSlotsFor(cards.filter(c=>c.base),id);
-    const sec=countSlotsFor(cards.filter(c=>!c.base),id);
+    // 17/10/2026: uma passada só (antes: countSlotsFor ×2 + slotsAndValue = 3 passadas de getSlots por carta, a cada
+    // slot salvo). O resultado é idêntico.
+    const _st=dashSetStats(cards,id);
+    const base=_st.base,sec=_st.sec;
     const tot=base.total+sec.total,col=base.col+sec.col;
     grand+=tot;grandC+=col;
     const pct=tot>0?(col/tot*100).toFixed(0):0;
     // NOVO 27/07/2026: valor R$ já coletado e R$ faltante pra completar esta coleção.
-    const{have,missing}=slotsAndValue(cards,id);
+    const{have,missing}=_st;
     const valorRow=tot>0?`<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;font-family:'Space Mono',monospace">
       <span style="color:var(--teal)">R$${fmtR(have)} coletado</span>
       <span style="color:var(--muted)">faltam R$${fmtR(missing)}</span>
     </div>`:'';
 
+    // 17/10/2026: metadados pra ordenar/recolher (ver depois do map): coleção "iniciada" = tem ao menos 1 slot e não é "em breve"
+    const _upc=!!((meta&&meta.upcoming)||(cat&&cat.upcoming));
+    _info[id]={id,pct:Number(pct)||0,started:col>0&&!_upc,upcoming:_upc,tot,have,missing,
+      lbl:meta?meta.label:cat.label,color:meta?meta.color:(cat.color||'#666')};
     if(meta){
       // ── Display completo (sets ME com SET_META) ──
       const color=meta.color;
@@ -1672,7 +1734,7 @@ function updateDashProgress(){
       // NOVO 02/08/2026: painel agora navega pro Fichário dessa coleção ao
       // clicar — mesmo padrão de goToTab+switchSet usado nos outros cards
       // do Dashboard que referenciam uma coleção.
-      return`<div class="panel panel-link" style="border-color:${color}44;overflow:hidden;position:relative;${meta.upcoming?'opacity:.8':''}" onclick="goToTab('fichario');switchSet('${id}',null)">
+      return`<div class="panel panel-link" role="link" tabindex="0" style="border-color:${color}44;overflow:hidden;position:relative;${meta.upcoming?'opacity:.8':''}" onclick="goToTab('fichario');switchSet('${id}',null)">
         ${upBadge}
         <div style="position:absolute;right:-8px;top:-8px;width:70px;height:100px;opacity:.1;pointer-events:none">
           <img loading="lazy" decoding="async" alt="" src="${imgThumb(meta.imgFn(meta.heroCard))}" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">
@@ -1683,9 +1745,9 @@ function updateDashProgress(){
           <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;color:${color};line-height:1">${meta.upcoming?'?':pct+'%'}</div>
         </div>
         ${!meta.upcoming?`<div class="prog"><div class="prog-lbl"><span>Base</span><span>${base.col}/${base.total}</span></div>
-          <div class="prog-t"><div class="prog-f" style="width:${base.total>0?(base.col/base.total*100).toFixed(1):0}%;background:${color}"></div></div></div>
+          <div class="prog-t" aria-hidden="true"><div class="prog-f" style="width:${base.total>0?(base.col/base.total*100).toFixed(1):0}%;background:${color}"></div></div></div>
         ${sec.total>0?`<div class="prog" style="margin:0"><div class="prog-lbl"><span>Especiais</span><span>${sec.col}/${sec.total}</span></div>
-          <div class="prog-t"><div class="prog-f" style="width:${sec.total>0?(sec.col/sec.total*100).toFixed(1):0}%;background:${color}88"></div></div></div>`:''}
+          <div class="prog-t" aria-hidden="true"><div class="prog-f" style="width:${sec.total>0?(sec.col/sec.total*100).toFixed(1):0}%;background:${color}88"></div></div></div>`:''}
         ${valorRow}`:''}
         <div style="margin-top:10px;font-size:10px;font-family:'Space Mono',monospace;color:var(--muted)">Chase: <span style="color:${color}">${chaseFor(id)||meta.chase}</span></div>
       </div>`;
@@ -1693,7 +1755,7 @@ function updateDashProgress(){
       // ── Display simplificado (sets SV via SET_CATALOG) ──
       const color=cat.color||'#666';
       const upcoming=cat.upcoming||false;
-      return`<div class="panel panel-link" style="border-color:${color}44;overflow:hidden;position:relative;${upcoming?'opacity:.7':''}" onclick="goToTab('fichario');switchSet('${id}',null)">
+      return`<div class="panel panel-link" role="link" tabindex="0" style="border-color:${color}44;overflow:hidden;position:relative;${upcoming?'opacity:.7':''}" onclick="goToTab('fichario');switchSet('${id}',null)">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
           <div style="font-size:28px;line-height:1">${cat.emoji||'📦'}</div>
           <div style="flex:1">
@@ -1705,15 +1767,31 @@ function updateDashProgress(){
         </div>
         ${tot>0&&!upcoming?`
         <div class="prog"><div class="prog-lbl"><span>Base</span><span>${base.col}/${base.total}</span></div>
-          <div class="prog-t"><div class="prog-f" style="width:${base.total>0?(base.col/base.total*100).toFixed(1):0}%;background:${color}"></div></div></div>
+          <div class="prog-t" aria-hidden="true"><div class="prog-f" style="width:${base.total>0?(base.col/base.total*100).toFixed(1):0}%;background:${color}"></div></div></div>
         ${sec.total>0?`<div class="prog" style="margin:0"><div class="prog-lbl"><span>Especiais</span><span>${sec.col}/${sec.total}</span></div>
-          <div class="prog-t"><div class="prog-f" style="width:${(sec.col/sec.total*100).toFixed(1)}%;background:${color}88"></div></div></div>`:''}
+          <div class="prog-t" aria-hidden="true"><div class="prog-f" style="width:${(sec.col/sec.total*100).toFixed(1)}%;background:${color}88"></div></div></div>`:''}
         ${valorRow}
         `:`<div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;padding:6px 0">
           ${upcoming?'Lançamento em breve':'Ative o set no Fichário para carregar as cartas'}</div>`}
       </div>`;
     }
-  }).filter(Boolean).join('');
+  });
+
+  // 17/10/2026: antes os painéis saíam na ordem do catálogo — CEL30 (0%), ME06 ("em breve") e ME2.5 (0%) vinham
+  // ANTES das coleções que a pessoa realmente está montando. Agora: coleções com cartas, da mais completa pra
+  // menos; as sem cartas e as "em breve" ficam numa seção recolhida, em linhas de uma linha.
+  const _items=activeIds.map((id,i)=>({html:_htmlArr[i],info:_info[id]})).filter(x=>x.html&&x.info);
+  const _started=_items.filter(x=>x.info.started).sort((a,b)=>b.info.pct-a.info.pct||b.info.have-a.info.have);
+  const _rest=_items.filter(x=>!x.info.started).sort((a,b)=>(a.info.upcoming-b.info.upcoming)||String(a.info.lbl).localeCompare(String(b.info.lbl)));
+  const _restRows=_rest.map(x=>{
+    const i=x.info;
+    const right=i.upcoming?'em breve':(i.tot>0?'0% · faltam R$'+fmtR(i.missing):'sem dados');
+    return `<button type="button" class="dash-row" style="border-left-color:${i.color}" onclick="goToTab('fichario');switchSet('${i.id}',null)">
+      <span class="dash-row-lbl">${i.lbl}</span><span class="dash-row-val">${right}</span></button>`;
+  }).join('');
+  const html=_started.map(x=>x.html).join('')+(_rest.length
+    ?`<details class="dash-others"${_started.length?'':' open'}><summary>Outras coleções (${_rest.length}) — ainda sem cartas ou em breve</summary><div class="dash-others-list">${_restRows}</div></details>`
+    :'');
 
   // NOVO 27/07/2026: pedido do Eduardo — o Progresso Master Set deve incluir
   // também os fichários personalizados que ele fixou (pinnedBinders), com o
@@ -1729,7 +1807,7 @@ function updateDashProgress(){
     const pct=total>0?(col/total*100).toFixed(0):0;
     const color=b.cover_color||'#a855f7';
     // CORRIGIDO 02/08/2026: mesmo bug do switchSet() sem goToTab — ver nota acima nos cards de "Destaques do Fichário".
-    return`<div class="panel panel-link" style="border-color:${color}44;overflow:hidden;position:relative" onclick="goToTab('fichario');switchSet('__cb__${pid}',null)">
+    return`<div class="panel panel-link" role="link" tabindex="0" style="border-color:${color}44;overflow:hidden;position:relative" onclick="goToTab('fichario');switchSet('__cb__${pid}',null)">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
         <div style="font-size:26px;line-height:1">${b.emoji||'📚'}</div>
         <div style="flex:1"><div style="font-weight:700;font-size:12px;line-height:1.3">${b.name}</div>
@@ -1738,7 +1816,7 @@ function updateDashProgress(){
         <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:${color};line-height:1">${total>0?pct+'%':'–'}</div>
       </div>
       ${total>0?`<div class="prog"><div class="prog-lbl"><span>Slots</span><span>${col}/${total}</span></div>
-        <div class="prog-t"><div class="prog-f" style="width:${pct}%;background:${color}"></div></div></div>
+        <div class="prog-t" aria-hidden="true"><div class="prog-f" style="width:${pct}%;background:${color}"></div></div></div>
         <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;font-family:'Space Mono',monospace">
           <span style="color:var(--teal)">R$${fmtR(have)} coletado</span>
           <span style="color:var(--muted)">faltam R$${fmtR(missing)}</span>
@@ -1766,30 +1844,81 @@ function updateDashProgress(){
 }
 
 // ── GASTOS ──────────────────────────────────────────────────────
+let _gastosFilter={tipo:'',mes:''};
+function setGastosFilter(k,v){
+  if(k===undefined)_gastosFilter={tipo:'',mes:''}; else _gastosFilter[k]=v||'';
+  renderGastos();
+}
 function renderGastos(){
   const total=purchases.reduce((s,p)=>s+Number(p.price),0);
   const bst=purchases.filter(p=>!p.acessorio);
   const tb=bst.reduce((s,p)=>s+p.boost,0),tc=bst.reduce((s,p)=>s+p.cards,0),tg=bst.reduce((s,p)=>s+Number(p.price),0);
-  const pull=pulledCards.reduce((s,c)=>s+Number(c.price||0),0);
-  const roi=total>0?(pull/total*100).toFixed(0):0;
+  // 17/10/2026 (revisão da página): saíram "Valor Tirado", "Recuperado em Pulls" e o "lucro por compra" — dividiam o
+  // valor de TODAS as cartas tiradas pelo gasto total sem vínculo real (0 de 137 cartas tinham purchase_id no banco),
+  // então o número era uma soma de universos diferentes. Entrou "Neste mês", que responde "quanto gastei agora?".
   const apb=tb>0?(tg/tb).toFixed(2):'0,00',apc=tc>0?(tg/tc).toFixed(2):'0,00';
+  const _now=new Date(),_ym=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0');
+  const _mes=purchases.filter(p=>String(p.date||'').slice(0,7)===_ym);
+  const _mesTotal=_mes.reduce((s,p)=>s+Number(p.price),0);
+  const _tlDet=document.getElementById('gastos-tl-wrap');
+  if(!purchases.length){
+    // sem compras: em vez de cinco KPIs zerados e uma tela em branco, convida a registrar a primeira
+    document.getElementById('gastos-resumo').innerHTML=`<div style="text-align:center;padding:36px 16px;margin-bottom:24px;border:1px dashed var(--border2);border-radius:12px;color:var(--muted)">
+      <div style="font-size:34px;margin-bottom:8px">🧾</div>
+      <div style="font-weight:700;color:var(--text);margin-bottom:6px">Nenhuma compra registrada ainda</div>
+      <div style="font-size:13px;line-height:1.5;margin-bottom:16px">Registre blisters, boxes e coleções que você comprou pra ver quanto investiu, quanto paga por booster e por carta, e como seus gastos evoluem mês a mês.</div>
+      <button class="btn-add" onclick="openModal('mp')">+ REGISTRAR PRIMEIRA COMPRA</button></div>`;
+    document.getElementById('gastos-cards').innerHTML='';
+    document.getElementById('gastos-charts').innerHTML='';
+    document.getElementById('gastos-filter').innerHTML='';
+    document.getElementById('tlwrap').innerHTML='';
+    if(_tlDet)_tlDet.style.display='none';
+    return;
+  }
+  if(_tlDet)_tlDet.style.display='';
   document.getElementById('gastos-resumo').innerHTML=`<div class="kpi-grid">
     ${kpiHTML('red','💰 Total Investido','R$'+fmtR(total),purchases.length+' compras · '+tb+' boosters')}
-    ${kpiHTML('gold','📦 R$/Booster','R$'+apb.replace('.',','),'média ponderada')}
-    ${kpiHTML('orange','🃏 R$/Carta','R$'+apc.replace('.',','),'~'+tc+' cartas')}
-    ${kpiHTML('teal','💎 Valor Tirado','R$'+fmtR(pull),pulledCards.length+' cartas')}
-    ${kpiHTML('blue','📊 Recuperado em Pulls',roi+'%',(pull>=total?'✅ acima do gasto':'📉 abaixo do gasto')+' · R$ tirado ÷ R$ gasto')}
+    ${kpiHTML('gold','📦 R$/Booster','R$'+apb.replace('.',','),'média ponderada · só boosters, sem acessórios')}
+    ${kpiHTML('orange','🃏 R$/Carta','R$'+apc.replace('.',','),'~'+tc+' cartas (estimativa: 6 por booster)')}
+    ${kpiHTML('teal','🗓️ Neste mês','R$'+fmtR(_mesTotal),_mes.length?_mes.length+' compra'+(_mes.length!==1?'s':''):'nenhuma compra neste mês')}
   </div>`;
 
-  document.getElementById('gastos-cards').innerHTML=purchases.map(p=>{
+  // ── 17/10/2026 (pacote 2): para onde vai o dinheiro + filtros por tipo e mês ──
+  const _mesLbl=k=>new Date(k+'-15T12:00:00').toLocaleDateString('pt-BR',{month:'short',year:'2-digit'});
+  const _byTipo={},_byMes={};
+  purchases.forEach(p=>{
+    const t=p.tipo||'Outro',m=String(p.date||'').slice(0,7),v=Number(p.price)||0;
+    (_byTipo[t]=_byTipo[t]||{v:0,n:0}).v+=v;_byTipo[t].n++;
+    if(m)_byMes[m]=(_byMes[m]||0)+v;
+  });
+  const _tipos=Object.entries(_byTipo).sort((a,b)=>b[1].v-a[1].v);
+  const _meses=Object.keys(_byMes).sort();
+  if(_gastosFilter.tipo&&!_byTipo[_gastosFilter.tipo])_gastosFilter.tipo='';
+  if(_gastosFilter.mes&&!_byMes[_gastosFilter.mes])_gastosFilter.mes='';
+  const _maxT=Math.max(..._tipos.map(([,o])=>o.v),1),_maxM=Math.max(...Object.values(_byMes),1);
+  document.getElementById('gastos-charts').innerHTML=`<div class="dual" style="margin-bottom:22px">
+    <div class="panel"><div class="panel-t">💸 Gasto por tipo</div><div class="bc">${_tipos.map(([t,o])=>
+      barHTML(esc(t)+' <span style="color:var(--muted)">('+o.n+')</span>',o.v,_maxT,'var(--accent)','R$'+fmtR(o.v)+' · '+(total>0?Math.round(o.v/total*100):0)+'%')).join('')}</div></div>
+    <div class="panel"><div class="panel-t">🗓️ Gasto por mês</div><div class="bc">${_meses.slice(-12).map(k=>
+      barHTML(_mesLbl(k),_byMes[k],_maxM,'var(--gold)','R$'+fmtR(_byMes[k]))).join('')}</div></div>
+  </div>`;
+  const shown=purchases.filter(p=>(!_gastosFilter.tipo||(p.tipo||'Outro')===_gastosFilter.tipo)&&(!_gastosFilter.mes||String(p.date||'').slice(0,7)===_gastosFilter.mes));
+  const shownTotal=shown.reduce((s,p)=>s+Number(p.price),0);
+  const _selCss='padding:7px 10px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font:inherit;font-size:13px';
+  const _filtActive=!!(_gastosFilter.tipo||_gastosFilter.mes);
+  document.getElementById('gastos-filter').innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+    <select style="${_selCss}" aria-label="Filtrar compras por tipo" onchange="setGastosFilter('tipo',this.value)">
+      <option value="">Todos os tipos</option>${_tipos.map(([t])=>`<option value="${esc(t)}"${t===_gastosFilter.tipo?' selected':''}>${esc(t)}</option>`).join('')}</select>
+    <select style="${_selCss}" aria-label="Filtrar compras por mês" onchange="setGastosFilter('mes',this.value)">
+      <option value="">Todos os meses</option>${[..._meses].reverse().map(k=>`<option value="${k}"${k===_gastosFilter.mes?' selected':''}>${_mesLbl(k)}</option>`).join('')}</select>
+    <span style="font-size:12px;color:var(--muted)">${_filtActive?'Mostrando '+shown.length+' de '+purchases.length+' compras · R$'+fmtR(shownTotal):purchases.length+' compras'}</span>
+    ${_filtActive?'<button type="button" class="btn-cx" onclick="setGastosFilter()">Limpar filtro</button>':''}
+  </div>`;
+
+  document.getElementById('gastos-cards').innerHTML=!shown.length?'<div style="color:var(--muted);font-size:13px;padding:18px;text-align:center">Nenhuma compra com esse filtro.</div>':shown.map(p=>{
     const pb=p.boost>0?(Number(p.price)/p.boost).toFixed(2):null;
     const d=new Date(p.date+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
     const imgSrc=getPurchaseImg(p.product);
-    // Profit por compra: soma das cartas tiradas vinculadas via purchase_id - preço pago.
-    // Cartas antigas (lançadas antes do vínculo existir) não têm purchase_id e não entram aqui.
-    const linked=pulledCards.filter(c=>String(c.purchase_id)===String(p.id));
-    const linkedVal=linked.reduce((s,c)=>s+Number(c.price||0),0);
-    const profit=linked.length?linkedVal-Number(p.price):null;
     return`<div class="pcard">
       <div class="pcard-img-wrap">
         <img src="${imgSrc}" alt="${esc(p.product)}" onerror="this.style.display='none'">
@@ -1806,7 +1935,6 @@ function renderGastos(){
             </div>
             <div style="font-weight:700;font-size:14px;margin-bottom:4px">${esc(p.product)}</div>
             ${p.boost>0?`<div style="font-size:11px;color:var(--muted)">${p.boost} boosters · ~${p.cards} cartas</div>`:''}
-            ${profit!==null?`<div style="font-size:11px;margin-top:4px;color:${profit>=0?'var(--teal)':'var(--accent)'}">${profit>=0?'▲':'▼'} R$${fmtR(Math.abs(profit))} ${profit>=0?'de lucro':'abaixo do gasto'} · ${linked.length} carta${linked.length!==1?'s':''} vinculada${linked.length!==1?'s':''}</div>`:''}
           </div>
           <div style="display:flex;gap:16px;align-items:center">
             <div style="text-align:center"><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--accent);line-height:1">R$${fmtR(p.price)}</div>
@@ -1823,7 +1951,7 @@ function renderGastos(){
     </div>`;
   }).join('');
 
-  document.getElementById('tlwrap').innerHTML=[...purchases].reverse().map(p=>{
+  document.getElementById('tlwrap').innerHTML=[...shown].reverse().map(p=>{
     const d=new Date(p.date+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',year:'numeric',month:'short',day:'numeric'});
     const pb=p.boost>0?(Number(p.price)/p.boost).toFixed(2):null;
     return`<div class="tli"><div class="tl-date">${d}</div><div class="tl-desc">${esc(p.product)}</div>
@@ -2721,16 +2849,16 @@ function getSetData(){
         {lbl:'📄 Base',                 filter:c=>c.base&&c.rare!=='Rara Ilustrada'},
         {lbl:'⚡ Pikachu Especial',      filter:c=>c.base&&c.rare==='Rara Ilustrada'},
         {lbl:'✨ Secretas — 129 a 158',  filter:c=>!c.base&&/^\d+$/.test(c.n)},
-        {lbl:'💎 Especial RGB (Mew)',    filter:c=>c.n==='R/RGB'||c.n==='G/RGB'||c.n==='B/RGB'},
         {lbl:'🕰️ Coleção Clássica',      filter:c=>c.rare==='Coleção Clássica'},
         {lbl:'🔋 Energias Básicas',      filter:c=>c.n.startsWith('MEE')},
+        {lbl:'💎 Especial RGB (Mew)',    filter:c=>c.n==='R/RGB'||c.n==='G/RGB'||c.n==='B/RGB'},   // por último (pedido 01/11/2026)
       ]},
     cel30jp:{cards:typeof CARDS_CEL30JP!=='undefined'?CARDS_CEL30JP:[],imgFn:imgCel30Jp,label:'CEL30(JP) — 30th Celebration',
       sections:[{lbl:'📄 Base — 001 a 103',filter:c=>c.base},{lbl:'✨ Coleção Clássica e Energias',filter:c=>!c.base}]},
     cel30cn:{cards:typeof CARDS_CEL30CN!=='undefined'?CARDS_CEL30CN:[],label:'CEL30(CN) — 30周年庆典',
       sections:[{lbl:'📄 Base — 001 a 103',filter:c=>c.base},{lbl:'✨ Secretas e Coleção Clássica',filter:c=>!c.base}]},
-    me06:{cards:me06c,imgFn:imgMe06,label:'ME06 — Esmeralda Tempestuosa',upcoming:true,
-      sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Secretas',filter:c=>!c.base}]},
+    me06:{cards:me06c,imgFn:imgMe06,label:'ME06 — Reinado Delta', // lançou 06/nov/2026 (EN) — já ativo, consistente com SET_CATALOG
+      sections:[{lbl:'📄 Base — 001 a 103',filter:c=>c.base},{lbl:'✨ Secretas — 104 a 141',filter:c=>!c.base}]},
     me2pt5:{cards:me2pt5c,imgFn:imgMe2pt5,label:'ME2.5(ASC) — Heróis Excelsos', // lançou 30/jan/2026
       sections:[{lbl:'📄 Base — 001 a 217',filter:c=>c.base},{lbl:'✨ Secretas — 218 a 295',filter:c=>!c.base}]},
     me05:{cards:me05c,imgFn:imgMe05,label:'ME05(PBL) — Escuridão Absoluta', // lançou 17/jul/2026 — já ativo, consistente com SET_CATALOG
@@ -2759,35 +2887,35 @@ function getSetData(){
     // ── Escarlate e Violeta (2023-2025) ─────────────────────────────
     svp:   {cards:typeof CARDS_SVP!=='undefined'?CARDS_SVP:[],    label:'SVP(SVP) — Promos Escarlate e Violeta',
       sections:[{lbl:'🎫 Promos (todas)',filter:c=>true}]},
-    sv10:  {cards:typeof CARDS_SV10!=='undefined'?CARDS_SV10:[],  label:'SV10(DRI) — Rivais do Destino',
+    sv10:  {cards:typeof CARDS_SV10!=='undefined'?CARDS_SV10:[],  label:'SV10(DRI) — Rivais Predestinados',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
     zsv10pt5:{cards:typeof CARDS_ZSV10PT5!=='undefined'?CARDS_ZSV10PT5:[],label:'EV10.5(BLK) — Raio Preto',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
     rsv10pt5:{cards:typeof CARDS_RSV10PT5!=='undefined'?CARDS_RSV10PT5:[],label:'EV10.5(WHT) — Fogo Branco',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv9:   {cards:typeof CARDS_SV9!=='undefined'?CARDS_SV9:[],    label:'SV9(JTG) — Jornada Juntos',
+    sv9:   {cards:typeof CARDS_SV9!=='undefined'?CARDS_SV9:[],    label:'SV9(JTG) — Amigos de Jornada',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
     sv8pt5:{cards:typeof CARDS_SV8PT5!=='undefined'?CARDS_SV8PT5:[],label:'SV8.5(PRE) — Evoluções Prismáticas',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv8:   {cards:typeof CARDS_SV8!=='undefined'?CARDS_SV8:[],    label:'SV8(SSP) — Faíscas Furiosas',
+    sv8:   {cards:typeof CARDS_SV8!=='undefined'?CARDS_SV8:[],    label:'SV8(SSP) — Fagulhas Impetuosas',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
     sv7:   {cards:typeof CARDS_SV7!=='undefined'?CARDS_SV7:[],    label:'SV7(SCR) — Coroa Estelar',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv6pt5:{cards:typeof CARDS_SV6PT5!=='undefined'?CARDS_SV6PT5:[],label:'SV6.5(SFA) — Véu das Sombras',
+    sv6pt5:{cards:typeof CARDS_SV6PT5!=='undefined'?CARDS_SV6PT5:[],label:'SV6.5(SFA) — Fábulas Nebulosas',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv6:   {cards:typeof CARDS_SV6!=='undefined'?CARDS_SV6:[],    label:'SV6(TWM) — Máscara do Futuro',
+    sv6:   {cards:typeof CARDS_SV6!=='undefined'?CARDS_SV6:[],    label:'SV6(TWM) — Máscaras do Crepúsculo',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv5:   {cards:typeof CARDS_SV5!=='undefined'?CARDS_SV5:[],    label:'SV5(TEF) — Forças Triplas',
+    sv5:   {cards:typeof CARDS_SV5!=='undefined'?CARDS_SV5:[],    label:'SV5(TEF) — Forças Temporais',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
     sv4pt5:{cards:typeof CARDS_SV4PT5!=='undefined'?CARDS_SV4PT5:[],label:'SV4.5(PAF) — Destinos de Paldea',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv4:   {cards:typeof CARDS_SV4!=='undefined'?CARDS_SV4:[],    label:'SV4(PAR) — Fenda Temporal',
+    sv4:   {cards:typeof CARDS_SV4!=='undefined'?CARDS_SV4:[],    label:'SV4(PAR) — Fenda Paradoxal',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv3pt5:{cards:typeof CARDS_SV3PT5!=='undefined'?CARDS_SV3PT5:[],label:'SV3.5(MEW) — Coleção 151',
+    sv3pt5:{cards:typeof CARDS_SV3PT5!=='undefined'?CARDS_SV3PT5:[],label:'SV3.5(MEW) — 151',
       sections:[{lbl:'📄 Base (001-165)',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv3:   {cards:typeof CARDS_SV3!=='undefined'?CARDS_SV3:[],    label:'SV3(OBF) — Obsidiana Chamejante',
+    sv3:   {cards:typeof CARDS_SV3!=='undefined'?CARDS_SV3:[],    label:'SV3(OBF) — Obsidiana em Chamas',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
-    sv2:   {cards:typeof CARDS_SV2!=='undefined'?CARDS_SV2:[],    label:'SV2(PAL) — Evolução em Paldea',
+    sv2:   {cards:typeof CARDS_SV2!=='undefined'?CARDS_SV2:[],    label:'SV2(PAL) — Evoluções em Paldea',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
     sv1:   {cards:typeof CARDS_SV1!=='undefined'?CARDS_SV1:[],    label:'SV1(SVI) — Escarlate e Violeta',
       sections:[{lbl:'📄 Base',filter:c=>c.base},{lbl:'✨ Especiais',filter:c=>!c.base}]},
@@ -3311,8 +3439,15 @@ const rBC={'Dupla Rara (RR)':'br','Ilustração Rara (IR)':'bi','Ilustracao Rara
 // Compra em edição (null = criando nova). Setado por editPurchase().
 let _editPurchaseId=null;
 
+let _savingPurchase=false;
 async function addPurchase(){
   if(!uid()) return;
+  if(_savingPurchase) return; // 17/10/2026: clique duplo em "Salvar" criava a compra duas vezes
+  _savingPurchase=true;
+  const _btn=document.querySelector('#mp .btn-add');if(_btn)_btn.disabled=true;
+  try{await _addPurchaseInner();}finally{_savingPurchase=false;if(_btn)_btn.disabled=false;}
+}
+async function _addPurchaseInner(){
   const prod=document.getElementById('m-prod').value.trim();
   const tipo=document.getElementById('m-tipo').value;
   const date=document.getElementById('m-data').value;
@@ -3432,7 +3567,7 @@ const CB_SET_LABELS={
   meg: '🌿 MEG(MEG) — Megaevolução',
   mep: '⭐ MEP(MEP) — Promos',
   me05:'🌑 ME05(PBL) — Escuridão Absoluta',
-  me06:'💎 ME06 — Esmeralda Tempestuosa',
+  me06:'💎 ME06 — Reinado Delta',
   me2pt5:'🦸 ME2.5(ASC) — Heróis Excelsos',
 };
 
@@ -3523,17 +3658,44 @@ async function loadCustomBinders(){
 async function saveCustomBinder(binder){
   if(!uid())return null;
   const payload={...binder,user_id:uid(),updated_at:new Date().toISOString()};
+  // CORRIGIDO 02/11/2026 (relato de usuário: "não salva o fichário, ao voltar apaga o que marquei"): o update
+  // antigo descartava o erro do Supabase — se a gravação fosse recusada (sessão/JWT vencido depois de ficar
+  // um tempo fora, RLS filtrando a linha => 0 linhas afetadas, queda de rede), a tela seguia mostrando a
+  // escolha como "salva" e, ao voltar, o servidor devolvia a versão antiga. Agora: confere erro E se alguma
+  // linha foi realmente atualizada, tenta de novo uma vez com a sessão renovada e, se ainda falhar, AVISA e
+  // devolve null (quem chama deve desfazer a mudança na tela).
+  const _run=async()=>{
+    if(payload.id){
+      const{data,error}=await sbClient.from('custom_binders').update(payload).eq('id',payload.id).eq('user_id',uid()).select('id');
+      if(error)return{error};
+      if(!data||!data.length)return{error:{message:'nenhuma linha atualizada (sessão vencida ou fichário não encontrado)'}};
+      return{ok:true};
+    }
+    const row={...payload};delete row.id;
+    const{data,error}=await sbClient.from('custom_binders').insert(row).select();
+    if(error||!data?.[0])return{error:error||{message:'insert sem retorno'}};
+    return{ok:true,row:data[0]};
+  };
+  let res;
+  try{res=await _run();}catch(e){res={error:e};}
+  if(res.error){
+    console.warn('[saveCustomBinder] falhou, renovando sessão e tentando de novo:',res.error);
+    try{await sbClient.auth.refreshSession();}catch(e){}
+    try{res=await _run();}catch(e){res={error:e};}
+  }
+  if(res.error){
+    console.error('[saveCustomBinder] erro ao salvar fichário',res.error);
+    if(typeof toast==='function')toast('Não foi possível salvar o fichário — confira a conexão e tente de novo','error');
+    else alert('Não foi possível salvar o fichário — confira a conexão e tente de novo.');
+    return null;
+  }
   if(payload.id){
-    await sbClient.from('custom_binders').update(payload).eq('id',payload.id).eq('user_id',uid());
     const idx=customBinders.findIndex(b=>b.id===payload.id);
     if(idx>=0)customBinders[idx]={...customBinders[idx],...payload};
     return payload;
-  }else{
-    delete payload.id;
-    const{data}=await sbClient.from('custom_binders').insert(payload).select();
-    if(data?.[0])customBinders.unshift(data[0]);
-    return data?.[0]||null;
   }
+  customBinders.unshift(res.row);
+  return res.row;
 }
 
 async function deleteCustomBinder(id){
@@ -3808,11 +3970,11 @@ function openCustomBinderView(binder){
              color:${cbViewMode==='binder'?'#fff':'var(--muted)'};font-family:'Space Mono',monospace;font-size:10px;
              cursor:pointer;font-weight:${cbViewMode==='binder'?700:400};white-space:nowrap">📖 Fichário físico</button>`;
   const cbBinderSize=(typeof ficBinderSize!=='undefined'&&ficBinderSize)||3;
-  const binderSizeBtns=[2,3,4].map(n=>`<button id="cb-binder-${n}" onclick="cbSetBinderSize(${n})"
+  const binderSizeBtns=(window.BINDER_SIZES||[2,3,4,5,6]).map(n=>`<button id="cb-binder-${n}" onclick="cbSetBinderSize(${n})"
     style="padding:4px 12px;border-radius:5px;border:1px solid ${n===cbBinderSize?'var(--gold)':'var(--border)'};
            background:var(--surface2);color:${n===cbBinderSize?'var(--gold)':'var(--muted)'};
            font-family:'Space Mono',monospace;font-size:10px;cursor:pointer;
-           font-weight:${n===cbBinderSize?700:400}">${n}×${n} por página</button>`).join('');
+           font-weight:${n===cbBinderSize?700:400}">${(typeof binderSizeLabel==='function'?binderSizeLabel(n):n+'×'+n)} por página</button>`).join('');
 
   document.getElementById('bwrap').innerHTML=`
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
@@ -3852,7 +4014,7 @@ function openCustomBinderView(binder){
       const pinned=(typeof isBinderPinned==='function')&&binder.id&&isBinderPinned(binder.id);
       return `
     <div class="bctl" style="gap:10px;flex-wrap:wrap;margin-bottom:10px">
-      <input class="bsrch" id="cb-view-q" placeholder="Buscar carta..." oninput="_cbRefreshGrid()"
+      <input class="bsrch" id="cb-view-q" placeholder="Buscar carta..." oninput="cbSearchDebounced()"
         style="padding:7px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;
                color:var(--text);font-size:12px;flex:1;min-width:120px;outline:none">
       <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer">
@@ -4226,8 +4388,11 @@ async function cbConfirmSave(editId){
     cover_color:_cbDraft.cover_color||'#a855f7',
   };
   const wantsPin=!!(document.getElementById('cb-pin-inp')&&document.getElementById('cb-pin-inp').checked);
+  // 02/11/2026: só fecha o modal se gravou — se falhar, o modal fica aberto com a seleção intacta
+  // (saveCustomBinder já avisou o erro) em vez de sumir com o que a pessoa tinha marcado.
+  const savedBinder=await saveCustomBinder(payload);
+  if(!savedBinder) return;
   closeModal('mcustom');
-  await saveCustomBinder(payload);
   const binder=editId
     ?customBinders.find(b=>b.id===editId)
     :customBinders[0];
@@ -4438,7 +4603,7 @@ function renderEvolucao(){
   el.innerHTML=keys.map(k=>{
     const{inv,pull}=byMonth[k];accI+=inv;accP+=pull;
     const lbl=k===SEM_DATA?'sem data':new Date(k+'-15T12:00:00').toLocaleDateString('pt-BR',{month:'short',year:'2-digit'});
-    return barHTML(lbl,inv,maxV,'var(--accent)','R$'+fmtR(inv))+
+    return (k===SEM_DATA&&inv===0?'':barHTML(lbl,inv,maxV,'var(--accent)','R$'+fmtR(inv)))+
            (pull>0?barHTML('↳ pulls',pull,maxV,'var(--teal)','R$'+fmtR(pull)):'');
   }).join('')+
   `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-family:'Space Mono',monospace;font-size:11px;display:flex;gap:18px;flex-wrap:wrap">
@@ -4659,10 +4824,10 @@ function copyShareUrl(){
 // Enquanto isso o site funciona 100% com os sets ME (uso diário) — os
 // consumidores de SET_CARDS_MAP são todos guarded (typeof/?.()||[]).
 const LAZY_SET_SCRIPTS=[
-  'cards_sv1.js','cards_sv2.js','cards_sv3.js','cards_sv3pt5.js',
-  'cards_sv4.js','cards_sv4pt5.js','cards_sv5.js','cards_sv6.js',
-  'cards_sv6pt5.js','cards_sv7.js','cards_sv8.js','cards_sv8pt5.js',
-  'cards_sv9.js','cards_sv10.js','cards_zsv10pt5.js','cards_rsv10pt5.js','cards_svp.js','cards_pgo.js',
+  'cards/cards_sv1.js','cards/cards_sv2.js','cards/cards_sv3.js','cards/cards_sv3pt5.js',
+  'cards/cards_sv4.js','cards/cards_sv4pt5.js','cards/cards_sv5.js','cards/cards_sv6.js',
+  'cards/cards_sv6pt5.js','cards/cards_sv7.js','cards/cards_sv8.js','cards/cards_sv8pt5.js',
+  'cards/cards_sv9.js','cards/cards_sv10.js','cards/cards_zsv10pt5.js','cards/cards_rsv10pt5.js','cards/cards_svp.js','cards/cards_pgo.js',
   'legacy_swsh.js','legacy_sm.js','legacy_xy.js','legacy_bw.js',
   'legacy_hgss.js','legacy_dp.js','legacy_ex.js','legacy_classic.js',
 ];
@@ -4833,3 +4998,13 @@ async function saveUserProfile(){
   _profileAfterSaveCb=null;
   if(cb)cb();
 }
+
+
+// 17/10/2026: cartões do Dashboard (KPIs, painéis de coleção, destaques) são <div onclick>; role=link + tabindex=0 os
+// deixam focáveis, e aqui Enter/Espaço dispara o mesmo clique do mouse.
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Enter'&&e.key!==' ')return;
+  const el=e.target;
+  if(!el||!el.matches||!el.matches('.panel-link[tabindex],.kpi[tabindex],.pc[tabindex]'))return;
+  e.preventDefault();el.click();
+});

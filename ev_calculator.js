@@ -38,70 +38,8 @@ function calcEV(cards) {
   return { evMin:evMin, evAvg:evAvg, evMax:evMax, breakdown:breakdown };
 }
 
-// ============================================================
-//  CATALOGO DE PRODUTOS
-// ============================================================
-// Campo `premium` removido do CATALOG (jul/2026): era declarado em todo produto
-// (0/5/8/12) mas nunca lido em nenhuma função deste arquivo — código morto,
-// provavelmente sobra de uma feature planejada e nunca implementada. Se um dia
-// fizer sentido dar bônus de EV pra ETB/caixas especiais por causa de promos
-// exclusivas, é só reintroduzir com a lógica de verdade em calcEVForProduct().
-var CATALOG = [
-  // ── ME04 Caos Ascendente ──────────────────────────────────
-  { id:'me04-display',  grupo:'ME04 — Caos Ascendente', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me04', extras:[] },
-  { id:'me04-etb',      grupo:'ME04 — Caos Ascendente', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me04', extras:[] },
-  { id:'me04-blister4', grupo:'ME04 — Caos Ascendente', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me04', extras:[] },
-  { id:'me04-blister3', grupo:'ME04 — Caos Ascendente', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me04', extras:[] },
-  { id:'me04-blister2', grupo:'ME04 — Caos Ascendente', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me04', extras:[] },
-  { id:'me04-booster',  grupo:'ME04 — Caos Ascendente', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me04', extras:[] },
-  // ME05 — Escuridão Absoluta (lançou 17/jul/2026 — varejo ainda copiado do ME04, urgente confirmar preço real de tabela)
-  { id:'me05-display',  grupo:'ME05 — Escuridão Absoluta', nome:'Box Display (36 boosters)',      boosters:36, varejo:539.99, set:'me05', extras:[], estimado:true },
-  { id:'me05-etb',      grupo:'ME05 — Escuridão Absoluta', nome:'Elite Trainer Box (9 boosters)', boosters:9,  varejo:199.99, set:'me05', extras:[], estimado:true },
-  { id:'me05-blister4', grupo:'ME05 — Escuridão Absoluta', nome:'Blister Quadriplo (4 boosters)',boosters:4,  varejo:59.99,  set:'me05', extras:[], estimado:true },
-  { id:'me05-blister3', grupo:'ME05 — Escuridão Absoluta', nome:'Blister Triplo (3 boosters)',   boosters:3,  varejo:44.99,  set:'me05', extras:[], estimado:true },
-  { id:'me05-booster',  grupo:'ME05 — Escuridão Absoluta', nome:'Booster Avulso',                boosters:1,  varejo:14.99,  set:'me05', extras:[], estimado:true },
-  // ── ME03 Equilíbrio Perfeito ───────────────────────────────────
-  { id:'me03-display',  grupo:'ME03 — Equilíbrio Perfeito', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me03', extras:[] },
-  { id:'me03-etb',      grupo:'ME03 — Equilíbrio Perfeito', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me03', extras:[] },
-  { id:'me03-blister4', grupo:'ME03 — Equilíbrio Perfeito', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me03', extras:[] },
-  { id:'me03-blister3', grupo:'ME03 — Equilíbrio Perfeito', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me03', extras:[] },
-  { id:'me03-blister2', grupo:'ME03 — Equilíbrio Perfeito', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me03', extras:[] },
-  { id:'me03-booster',  grupo:'ME03 — Equilíbrio Perfeito', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me03', extras:[] },
-  // ── ME02 Fogo Fantasmagorico ──────────────────────────────
-  { id:'me02-display',  grupo:'ME02 — Fogo Fantasmagorico', nome:'Box Display (36 boosters)',       boosters:36, varejo:539.99, set:'me02', extras:[] },
-  { id:'me02-etb',      grupo:'ME02 — Fogo Fantasmagorico', nome:'Elite Trainer Box (9 boosters)',  boosters:9,  varejo:199.99, set:'me02', extras:[] },
-  { id:'me02-blister4', grupo:'ME02 — Fogo Fantasmagorico', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:59.99,  set:'me02', extras:[] },
-  { id:'me02-blister3', grupo:'ME02 — Fogo Fantasmagorico', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:44.99,  set:'me02', extras:[] },
-  { id:'me02-blister2', grupo:'ME02 — Fogo Fantasmagorico', nome:'Blister Duplo (2 boosters)',     boosters:2,  varejo:29.99,  set:'me02', extras:[] },
-  { id:'me02-booster',  grupo:'ME02 — Fogo Fantasmagorico', nome:'Booster Avulso',                 boosters:1,  varejo:14.99,  set:'me02', extras:[] },
-  // ── MEG Megaevolucao ──────────────────────────────────────
-  { id:'meg-display',   grupo:'MEG — Megaevolucao', nome:'Box Display (36 boosters)',       boosters:36, varejo:499.99, set:'meg', extras:[] },
-  { id:'meg-blister4',  grupo:'MEG — Megaevolucao', nome:'Blister Quadriplo (4 boosters)', boosters:4,  varejo:54.99,  set:'meg', extras:[] },
-  { id:'meg-blister3',  grupo:'MEG — Megaevolucao', nome:'Blister Triplo (3 boosters)',    boosters:3,  varejo:39.99,  set:'meg', extras:[] },
-  { id:'meg-booster',   grupo:'MEG — Megaevolucao', nome:'Booster Avulso',                 boosters:1,  varejo:13.99,  set:'meg', extras:[] },
-  // ── Caixas Especiais ──────────────────────────────────────
-  // Bandas min/max destas duas caixas eram fabricadas (evBoosterMin = c*0.6, evBoosterMax = c*1.5,
-  // sem base em dado nenhum). Trocado por minValor/maxValor reais por raridade (mesmo padrão dos
-  // sets normais, que usam mín/máx real observado por raridade em calcEV()).
-  { id:'clefable-box', grupo:'Caixas Especiais', nome:'Box Mega Luar Clefable ex (8 boost.)', boosters:8, varejo:139.90,
-    raridades:[
-      {nome:'Rev. Holo', freq:1.00,valor:0.80,minValor:0.50,maxValor:1.20},
-      {nome:'Rara Holo',freq:0.33,valor:4.00,minValor:2.00,maxValor:8.00},
-      {nome:'Dupla Rara',freq:0.12,valor:7.00,minValor:3.00,maxValor:15.00},
-      {nome:'IR',freq:0.07,valor:35.00,minValor:15.00,maxValor:70.00},
-      {nome:'UR/SAR',freq:0.035,valor:120.00,minValor:40.00,maxValor:300.00},
-      {nome:'Hyper Rare',freq:0.0011,valor:1500.00,minValor:500.00,maxValor:3500.00}
-    ], extras:[{descricao:'Promo Mega Clefable ex',valor:10.00}] },
-  { id:'chary-box', grupo:'Caixas Especiais', nome:'Box Charizard Y ex (9 boost.)', boosters:9, varejo:149.99,
-    raridades:[
-      {nome:'Rev. Holo',freq:1.00,valor:0.80,minValor:0.50,maxValor:1.20},
-      {nome:'Rara Holo',freq:0.33,valor:4.00,minValor:2.00,maxValor:8.00},
-      {nome:'Dupla Rara',freq:0.12,valor:7.00,minValor:3.00,maxValor:15.00},
-      {nome:'IR',freq:0.07,valor:35.00,minValor:15.00,maxValor:70.00},
-      {nome:'UR/SAR',freq:0.035,valor:120.00,minValor:40.00,maxValor:300.00},
-      {nome:'Hyper Rare',freq:0.0011,valor:1500.00,minValor:500.00,maxValor:3500.00}
-    ], extras:[{descricao:'Promo Charizard Y ex',valor:15.00}] }
-];
+// CATALOG (produtos, boosters e preço de tabela) agora mora em produtos_catalogo.js (17/10/2026), compartilhado com o
+// Simulador. Os produtos dos sets SV continuam sendo acrescentados logo abaixo (dependem do SET_CATALOG do app.js).
 
 // ── Sets SV (Escarlate & Violeta) — adicionados a partir do SET_CATALOG (app.js) ──
 // IMPORTANTE: os precos de varejo abaixo sao ESTIMATIVAS genericas (nao ha nota
@@ -123,10 +61,10 @@ var CATALOG = [
 })();
 
 function getVerdict(mult) {
-  if (mult < 1.00) return { label:'ABAIXO DO EV', grade:'S', cls:'verdict-s', desc:'Voce paga MENOS que o EV. Rarissimo — compra imediata.' };
-  if (mult < 1.15) return { label:'EXCELENTE',    grade:'A', cls:'verdict-a', desc:'Ate 15% acima do EV. Compra recomendada.' };
+  if (mult < 1.00) return { label:'ABAIXO DO EV', grade:'S', cls:'verdict-s', desc:'Você paga MENOS que o EV. Raríssimo — compra imediata.' };
+  if (mult < 1.15) return { label:'EXCELENTE',    grade:'A', cls:'verdict-a', desc:'Até 15% acima do EV. Compra recomendada.' };
   if (mult < 1.35) return { label:'BOM',           grade:'B', cls:'verdict-b', desc:'Preco justo para colecionador. Vale a pena.' };
-  if (mult < 1.55) return { label:'ACEITAVEL',     grade:'C', cls:'verdict-c', desc:'So com interesse especifico (promo, exclusivo).' };
+  if (mult < 1.55) return { label:'ACEITÁVEL',     grade:'C', cls:'verdict-c', desc:'Só com interesse específico (promo, exclusivo).' };
   return              { label:'CARO',           grade:'D', cls:'verdict-d', desc:'Prefira comprar singles avulsos no mercado.' };
 }
 
@@ -154,6 +92,7 @@ function evSelectProduct(id) {
   renderEVControls();
   renderEVResults();
   evApplyRealPrice(id); // busca assincrona — atualiza quando (se) responder
+  if (typeof evRenderRanking === 'function') evRenderRanking(); // só atualiza a linha destacada (preços já em cache)
 }
 
 function evSetPrice(v) {
@@ -180,10 +119,36 @@ function evGetSetCards(setId) {
   return [];
 }
 
+// Taxas e classificação do pacote da Celebração de 30 Anos (CEL30_RATES, cel30Classify) agora vivem em pull_rates.js,
+// fonte única usada também pelo Simulador.
+function cel30Pools() {
+  var cards = evGetSetCards('cel30').filter(function(c){ return c.price && c.price > 0; });
+  var pools = [];
+  CEL30_RATES.forEach(function(r) {
+    var prices = cards.filter(function(c){ return cel30Classify(c) === r.key; }).map(function(c){ return c.price; });
+    if (prices.length) pools.push({ key:r.key, nome:r.nome, freq:r.freq, prices:prices });
+  });
+  return pools;
+}
+
 function calcEVForProduct(prod) {
   var evBooster = 0, evBoosterMin = 0, evBoosterMax = 0;
   var rarBreakdown = [];
-  if (prod.set) {
+  if (prod.model === 'cel30') {
+    var cpools = cel30Pools();
+    if (!cpools.length) {
+      return { evBooster:0, evBoosterMin:0, evBoosterMax:0, evBoostersTotal:0,
+               evExtras:0, evTotal:0, evTotalMin:0, evTotalMax:0, rarBreakdown:[], noData:true };
+    }
+    cpools.forEach(function(pl) {
+      var mean = pl.prices.reduce(function(a, v){ return a + v; }, 0) / pl.prices.length;
+      var c = pl.freq * mean;
+      evBooster += c;
+      evBoosterMin += pl.freq * Math.min.apply(null, pl.prices);
+      evBoosterMax += pl.freq * Math.max.apply(null, pl.prices);
+      rarBreakdown.push({ nome:pl.nome, freq:pl.freq, valor:mean, evContrib:c, key:pl.key });
+    });
+  } else if (prod.set) {
     var cards = evGetSetCards(prod.set).filter(function(c){return c.price && c.price > 0;});
     if (cards.length === 0) {
       return { evBooster:0, evBoosterMin:0, evBoosterMax:0, evBoostersTotal:0,
@@ -217,6 +182,225 @@ function calcEVForProduct(prod) {
            rarBreakdown:rarBreakdown, noData:false };
 }
 
+// ============================================================
+//  SIMULAÇÃO — chance de recuperar o valor pago (pacote 2, 17/10/2026)
+// ============================================================
+// O EV é uma MÉDIA; quem compra 1 display de 36 boosters quer saber também "qual a chance de eu sair no zero a zero?".
+// Simula 20.000 aberturas do produto com as mesmas taxas (PULL_RATES) e os mesmos preços de carta do EV: cada booster
+// tem 1 slot raro (sorteia a raridade pela taxa e depois uma carta daquela raridade); comuns/incomuns não valem nada
+// (bulk fora do cálculo, igual ao EV). Caixas especiais usam a frequência por raridade do próprio cadastro. O resultado
+// é guardado por produto (a distribuição não depende do preço digitado) e usa semente fixa: os números não "mexem" a
+// cada re-render.
+var EV_SIM_TRIALS = 20000;
+var EV_SELL_FEE = 0.15; // taxa média de venda (ML + frete) — só pra mostrar o retorno "se revender"
+var evSimCache = {};
+
+function evHashStr(str) { var h = 2166136261; for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function evRng(seed) {
+  return function() { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+
+function evSimulate(prod) {
+  if (evSimCache[prod.id]) return evSimCache[prod.id];
+  var rnd = evRng(evHashStr(prod.id));
+  var pools = [], rows = [], indep = [];
+  if (prod.model === 'cel30') {
+    indep = cel30Pools();
+    if (!indep.length) return null;
+  } else if (prod.set) {
+    var groups = {};
+    evGetSetCards(prod.set).forEach(function(c) {
+      if (!c.price || c.price <= 0) return;
+      var r = normalizeRare(c.rare);
+      if (EV_EXCLUDE[r]) return;
+      var pr = PULL_RATES[r];
+      if (!pr || pr.prob === 0) return;
+      if (!groups[r]) groups[r] = { prob: pr.prob, prices: [] };
+      groups[r].prices.push(c.price);
+    });
+    Object.keys(groups).forEach(function(k) { pools.push(groups[k]); });
+    if (!pools.length) return null;
+  } else {
+    rows = (prod.raridades || []).map(function(r) { return { freq: r.freq, valor: r.valor }; });
+    if (!rows.length) return null;
+  }
+  var extras = (prod.extras || []).reduce(function(a, e) { return a + (e.valor || 0); }, 0);
+  var totals = new Float64Array(EV_SIM_TRIALS);
+  for (var t = 0; t < EV_SIM_TRIALS; t++) {
+    var sum = extras;
+    for (var b = 0; b < prod.boosters; b++) {
+      if (indep.length) {
+        // Celebração 30 Anos: cada raridade é um sorteio independente por pacote (a Pikachu é garantida: freq 1)
+        for (var q = 0; q < indep.length; q++) {
+          var nq = Math.floor(indep[q].freq);
+          if (rnd() < indep[q].freq - nq) nq++;
+          for (var w = 0; w < nq; w++) sum += indep[q].prices[Math.floor(rnd() * indep[q].prices.length)];
+        }
+      } else if (pools.length) {
+        var u = rnd(), acc = 0;
+        for (var i = 0; i < pools.length; i++) {
+          acc += pools[i].prob;
+          if (u < acc) { sum += pools[i].prices[Math.floor(rnd() * pools[i].prices.length)]; break; }
+        }
+      } else {
+        for (var j = 0; j < rows.length; j++) {
+          var n = Math.floor(rows[j].freq);
+          if (rnd() < rows[j].freq - n) n++;
+          sum += n * rows[j].valor;
+        }
+      }
+    }
+    totals[t] = sum;
+  }
+  totals.sort();
+  evSimCache[prod.id] = totals;
+  return totals;
+}
+// fração das aberturas simuladas que rendeu pelo menos `price`
+function evSimChance(totals, price) {
+  var lo = 0, hi = totals.length;
+  while (lo < hi) { var mid = (lo + hi) >> 1; if (totals[mid] < price) lo = mid + 1; else hi = mid; }
+  return (totals.length - lo) / totals.length;
+}
+function evSimPct(totals, q) { return totals[Math.min(totals.length - 1, Math.floor(q * totals.length))]; }
+
+// ============================================================
+//  RANKING "ONDE VALE MAIS COMPRAR" (pacote 2)
+// ============================================================
+var evRankCache = null; // { real: {product_key:{price,updatedAt}} }
+function evHasDataFor(p) {
+  if (!p.set) return true;
+  return evGetSetCards(p.set).some(function(c) { return c.price && c.price > 0; });
+}
+async function evRenderRanking() {
+  var box = document.getElementById('ev-rank');
+  if (!box) return;
+  if (!evRankCache) {
+    var real = {};
+    try { if (typeof window.mydeckGetAllRealPrices === 'function') real = await window.mydeckGetAllRealPrices(); } catch (e) { real = {}; }
+    evRankCache = { real: real };
+    box = document.getElementById('ev-rank');
+    if (!box) return;
+  }
+  var rows = [];
+  CATALOG.forEach(function(p) {
+    if (!evHasDataFor(p)) return;
+    var ev = calcEVForProduct(p);
+    if (ev.noData || !(ev.evTotal > 0)) return;
+    var real = evRankCache.real[p.id];
+    var price = real ? real.price : p.varejo;
+    rows.push({ p: p, price: price, isReal: !!real, ret: ev.evTotal / price * 100 });
+  });
+  rows.sort(function(a, b) { return b.ret - a.ret; });
+  var body = rows.map(function(r) {
+    var v = getVerdict(100 / r.ret);
+    var origem = r.isReal ? '<span style="color:#16a34a">ML · 7 dias</span>' : '<span style="color:var(--muted)">' + (r.p.estimado ? '⚠ tabela estimada' : 'preço de tabela') + '</span>';
+    if (r.p.model === 'cel30') origem += '<br><span style="color:var(--gold)">⚠ taxas de pull não oficiais</span>';
+    var sel = r.p.id === evState.productId;
+    return '<tr onclick="evPickFromRanking(\'' + r.p.id + '\')" style="cursor:pointer;border-top:1px solid var(--border);' + (sel ? 'background:var(--surface2)' : '') + '">' +
+      '<td style="padding:8px 10px;font-size:12px">' + r.p.nome.replace(/ \[estimado\]/, '') + '<div style="font-size:10px;color:var(--muted)">' + r.p.grupo + '</div></td>' +
+      '<td style="padding:8px 10px;font-size:12px;text-align:right;color:var(--gold);white-space:nowrap">R$' + fmtR(r.price) + '<div style="font-size:9px">' + origem + '</div></td>' +
+      '<td style="padding:8px 10px;font-family:\'Bebas Neue\',sans-serif;font-size:20px;text-align:right;white-space:nowrap">' + Math.round(r.ret) + '%</td>' +
+      '<td style="padding:8px 10px;text-align:center"><span style="font-family:\'Bebas Neue\',sans-serif;font-size:16px">' + v.grade + '</span></td></tr>';
+  }).join('');
+  box.innerHTML =
+    '<div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin:28px 0 6px">🏆 Onde vale mais comprar hoje</div>' +
+    '<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Todos os produtos com preços de carta cadastrados, do maior para o menor retorno esperado. O preço usado é o menor achado no ML nos últimos 7 dias, quando o produto é monitorado; nos demais, o preço de tabela. Toque numa linha pra ver o detalhe.</div>' +
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;max-height:420px;overflow-y:auto">' +
+      '<table style="width:100%;border-collapse:collapse"><thead><tr style="background:var(--surface2)">' +
+        '<th style="padding:8px 10px;font-size:9px;letter-spacing:2px;color:var(--muted);text-align:left;font-weight:400">PRODUTO</th>' +
+        '<th style="padding:8px 10px;font-size:9px;letter-spacing:2px;color:var(--muted);text-align:right;font-weight:400">PREÇO</th>' +
+        '<th style="padding:8px 10px;font-size:9px;letter-spacing:2px;color:var(--muted);text-align:right;font-weight:400">RETORNO</th>' +
+        '<th style="padding:8px 10px;font-size:9px;letter-spacing:2px;color:var(--muted);text-align:center;font-weight:400">NOTA</th>' +
+      '</tr></thead><tbody>' + body + '</tbody></table></div>';
+}
+// ============================================================
+//  PREÇO vs SUGERIDO — Celebração 30 Anos (e qualquer coleção com preço oficial cadastrado)
+// ============================================================
+// A Celebração 30 Anos é um set comemorativo (reimpressões da Coleção Clássica, 3 Mews RGB…) e a composição dos
+// produtos (boosters por caixa, raridade por pacote) ainda não está cadastrada — então NÃO dá pra calcular EV. O que
+// já dá é comparar o preço do ML com o preço sugerido pela Copag (ml_search_terms.msrp): quanto de ágio o mercado cobra.
+var evMsrpCache = null;
+async function evRenderMsrp() {
+  var box = document.getElementById('ev-msrp');
+  if (!box) return;
+  if (!evMsrpCache) {
+    try { evMsrpCache = (typeof window.mydeckGetMsrpProducts === 'function') ? await window.mydeckGetMsrpProducts() : []; } catch (e) { evMsrpCache = []; }
+    box = document.getElementById('ev-msrp');
+    if (!box) return;
+  }
+  var rows = evMsrpCache.filter(function(r) { return r.price && +r.term.msrp > 0; }).map(function(r) {
+    var msrp = +r.term.msrp, price = r.price.price;
+    return { t: r.term, p: r.price, msrp: msrp, price: price, pct: (price - msrp) / msrp * 100 };
+  });
+  if (!rows.length) { box.innerHTML = ''; return; }
+  var tol = (typeof MSRP_TOLERANCE === 'number' ? MSRP_TOLERANCE : 0.10) * 100;
+  function nome(t) {
+    var n = (t.label && t.label.trim()) || t.term || '';
+    return n.length > 64 ? n.slice(0, 61) + '…' : n;
+  }
+  var body = rows.map(function(r) {
+    var cor = r.pct <= tol ? '#16a34a' : (r.pct <= 30 ? 'var(--gold)' : '#e74c3c');
+    var sel = r.pct <= tol ? '🎯 preço de tabela' : (r.pct <= 30 ? 'ágio moderado' : 'ágio alto');
+    var href = r.p.url ? String(r.p.url).replace(/"/g, '%22') : null;
+    return '<tr style="border-top:1px solid var(--border)">' +
+      '<td style="padding:8px 10px;font-size:12px">' + esc(nome(r.t)) + '</td>' +
+      '<td style="padding:8px 10px;font-size:12px;text-align:right;white-space:nowrap">R$' + fmtR(r.msrp) + '</td>' +
+      '<td style="padding:8px 10px;font-size:12px;text-align:right;color:var(--gold);white-space:nowrap">R$' + fmtR(r.price) + '</td>' +
+      '<td style="padding:8px 10px;text-align:right;white-space:nowrap;color:' + cor + '"><span style="font-family:\'Bebas Neue\',sans-serif;font-size:18px">' + (r.pct >= 0 ? '+' : '') + Math.round(r.pct) + '%</span><div style="font-size:9px">' + sel + '</div></td>' +
+      '<td style="padding:8px 10px;text-align:center">' + (href ? '<a href="' + href + '" target="_blank" rel="noopener sponsored" title="Ver no Mercado Livre" style="text-decoration:none">↗</a>' : '') + '</td></tr>';
+  }).join('');
+  var anyAff = rows.some(function(r) { return r.p.affiliate; });
+  box.innerHTML =
+    '<div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin:28px 0 6px">🎉 Celebração 30 Anos — preço no ML × sugerido Copag</div>' +
+    '<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Lançamento em 16/09/2026. O EV desses produtos está na calculadora acima (grupo CEL30), com taxas de pull da comunidade — não oficiais. Aqui aparece quanto o Mercado Livre cobra acima do preço sugerido pela Copag — menor preço dos últimos 7 dias.</div>' +
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow-x:auto">' +
+      '<table style="width:100%;border-collapse:collapse"><thead><tr style="background:var(--surface2)">' +
+        '<th style="padding:8px 10px;font-size:9px;letter-spacing:2px;color:var(--muted);text-align:left;font-weight:400">PRODUTO</th>' +
+        '<th style="padding:8px 10px;font-size:9px;letter-spacing:2px;color:var(--muted);text-align:right;font-weight:400">SUGERIDO</th>' +
+        '<th style="padding:8px 10px;font-size:9px;letter-spacing:2px;color:var(--muted);text-align:right;font-weight:400">ML HOJE</th>' +
+        '<th style="padding:8px 10px;font-size:9px;letter-spacing:2px;color:var(--muted);text-align:right;font-weight:400">ÁGIO</th>' +
+        '<th style="padding:8px 10px"></th>' +
+      '</tr></thead><tbody>' + body + '</tbody></table></div>' +
+    (anyAff ? '<div style="font-size:10px;color:var(--muted);margin-top:6px">🔗 Os links ↗ são de afiliado do Mercado Livre — o MyDeck pode receber uma pequena comissão, sem custo pra você.</div>' : '');
+}
+
+function evPickFromRanking(id) {
+  evSelectProduct(id);
+  var sel = document.getElementById('ev-product'); if (sel) sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  evRenderRanking();
+}
+
+// ── Onde comprar (pacote 3, 17/10/2026): link do anúncio no ML (quando o produto é monitorado) e atalho pra Toybox ──
+var evToyboxCache = {}; // set -> true/false (há produto ativo da Toybox naquela coleção?)
+function evLinksHtml(prod) {
+  var btn = 'display:inline-block;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--fg);font-size:12px;text-decoration:none;cursor:pointer';
+  var html = '';
+  if (evRealPriceInfo && evRealPriceInfo.url) {
+    html += '<a href="' + String(evRealPriceInfo.url).replace(/"/g, '%22') + '" target="_blank" rel="noopener sponsored" style="' + btn + '">🛒 Ver no Mercado Livre ↗</a>' +
+      (evRealPriceInfo.affiliate ? ' <span style="font-size:10px;color:var(--muted)">(link de afiliado — o MyDeck pode receber uma pequena comissão, sem custo pra você)</span>' : '');
+  }
+  if (prod.set && evToyboxCache[prod.set]) {
+    html += ' <a onclick="evGoToybox(\'' + prod.set + '\')" style="' + btn + '">🧸 Ver na Loja Toybox</a>';
+  } else if (prod.set && !(prod.set in evToyboxCache)) {
+    evCheckToybox(prod.set);
+  }
+  return html ? '<div id="ev-links" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px">' + html + '</div>' : '';
+}
+async function evCheckToybox(setId) {
+  evToyboxCache[setId] = false; // marca já (evita consultas repetidas); vira true se achar
+  try {
+    if (typeof sbClient === 'undefined' || !sbClient) return;
+    var r = await sbClient.from('mk_products').select('id', { count: 'exact', head: true }).eq('set_id', setId).eq('status', 'ativo');
+    if (!r.error && r.count > 0) { evToyboxCache[setId] = true; renderEVResults(); }
+  } catch (e) { /* sem Toybox: sem botão */ }
+}
+function evGoToybox(setId) {
+  if (typeof goToTab === 'function') goToTab('mk');
+  setTimeout(function() { if (typeof mkSetFilter === 'function') mkSetFilter('setId', setId); }, 450);
+}
+
 function kpi(label, value, color) {
   return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px">' +
     '<div style="font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">' + label + '</div>' +
@@ -230,8 +414,19 @@ function renderEVControls() {
   var prod = CATALOG.find(function(p){return p.id===evState.productId;}) || CATALOG[0];
   var pixPrice = evState.pixPrice !== null ? evState.pixPrice : prod.varejo;
 
+  // 17/10/2026: produtos de sets sem NENHUM preço de carta cadastrado (hoje: os 14 sets SV) levavam a "Banco de dados em
+  // construção" — 42 dos 70 itens do menu. Ficam fora do menu até haver dados (o produto selecionado fica sempre).
+  var dataBySet = {}, hidden = 0;
+  function hasData(p) {
+    if (!p.set) return true;
+    if (!(p.set in dataBySet)) dataBySet[p.set] = evGetSetCards(p.set).some(function(c){ return c.price && c.price > 0; });
+    return dataBySet[p.set];
+  }
   var grupos = {};
-  CATALOG.forEach(function(p){ if(!grupos[p.grupo]) grupos[p.grupo]=[]; grupos[p.grupo].push(p); });
+  CATALOG.forEach(function(p){
+    if (!hasData(p) && p.id !== evState.productId) { hidden++; return; }
+    if(!grupos[p.grupo]) grupos[p.grupo]=[]; grupos[p.grupo].push(p);
+  });
   var sel = '<select id="ev-product" onchange="evSelectProduct(this.value)" style="' +
     'background:var(--surface2);border:1px solid var(--border);color:var(--fg);' +
     'padding:10px 14px;border-radius:8px;font-size:14px;cursor:pointer;min-width:260px">';
@@ -251,7 +446,7 @@ function renderEVControls() {
         sel +
       '</div>' +
       '<div>' +
-        '<div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Preco Pix (R$)</div>' +
+        '<div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Preço Pix (R$)</div>' +
         '<input type="number" id="ev-pix-price" value="' + pixPrice.toFixed(2) + '" min="0" step="0.01"' +
         ' oninput="evSetPrice(this.value)"' +
         ' style="background:var(--surface2);border:1px solid var(--accent);color:var(--fg);' +
@@ -259,11 +454,12 @@ function renderEVControls() {
       '</div>' +
       '<div style="font-size:11px;color:var(--muted);padding-bottom:14px">' +
         (evRealPriceInfo
-          ? '<span style="color:#16a34a">Preco real (menor achado no ML' + (evRealPriceInfo.updatedAt ? ' · ' + new Date(evRealPriceInfo.updatedAt).toLocaleDateString('pt-BR') : '') + ')</span>'
+          ? '<span style="color:#16a34a">Preço real (menor achado no ML, últimos 7 dias' + (evRealPriceInfo.updatedAt ? ' · ' + new Date(evRealPriceInfo.updatedAt).toLocaleDateString('pt-BR') : '') + ')</span>'
           : 'MSRP estimado') +
         ' &nbsp;|&nbsp; ' + prod.boosters + ' booster' + (prod.boosters>1?'s':'') +
       '</div>' +
-    '</div>';
+    '</div>' +
+    (hidden ? '<div style="font-size:10px;color:var(--muted);margin:-12px 0 20px">' + hidden + ' produtos de sets antigos (Escarlate e Violeta) ficam fora da lista até os preços das cartas serem cadastrados.</div>' : '');
 }
 
 function renderEVResults() {
@@ -274,6 +470,7 @@ function renderEVResults() {
   var pixPrice = inp ? parseFloat(inp.value)||prod.varejo : (evState.pixPrice!==null?evState.pixPrice:prod.varejo);
   // Clamp >= 0 (auditoria 03/08/2026): valor negativo no input caía direto aqui
   // e saía "ABAIXO DO EV — compra imediata" com lucro fictício.
+  var precoInvalido = !!inp && !(parseFloat(inp.value) > 0);
   if (!(pixPrice > 0)) pixPrice = prod.varejo;
   var ev = calcEVForProduct(prod);
 
@@ -281,14 +478,20 @@ function renderEVResults() {
     area.innerHTML = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;' +
       'padding:32px;text-align:center;color:var(--muted)">' +
       '<div style="font-size:32px;margin-bottom:12px">🚧</div>' +
-      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:2px;margin-bottom:8px">Banco de dados em construcao</div>' +
-      '<div style="font-size:12px">Os precos das cartas deste set ainda nao foram cadastrados.<br>' +
-      'Adicione os cards ao arquivo correspondente para habilitar o calculo de EV.</div></div>';
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:2px;margin-bottom:8px">Banco de dados em construção</div>' +
+      '<div style="font-size:12px">Os preços das cartas deste set ainda não foram cadastrados.<br>' +
+      'Adicione os cards ao arquivo correspondente para habilitar o cálculo de EV.</div></div>';
     return;
   }
 
   var mult = ev.evTotal > 0 ? pixPrice / ev.evTotal : 0;
   var lucro = ev.evTotal - pixPrice;
+  var retorno = pixPrice > 0 ? ev.evTotal / pixPrice * 100 : 0;                  // "recupero X% do que pago, em média"
+  var retornoLiq = pixPrice > 0 ? ev.evTotal * (1 - EV_SELL_FEE) / pixPrice * 100 : 0; // se revender as cartas (taxa ~15%)
+  var sim = evSimulate(prod);
+  var chance = sim ? evSimChance(sim, pixPrice) : null;
+  var faixaLo = sim ? evSimPct(sim, 0.10) : null, faixaHi = sim ? evSimPct(sim, 0.90) : null;
+  function fmtPct(f) { return f <= 0 ? '0%' : (f < 0.005 ? '<1%' : (f > 0.995 ? '>99%' : Math.round(f * 100) + '%')); }
   var verdict = getVerdict(mult);
   var precoAlvo = ev.evTotal * 0.85;
   var precoAbaixoTeto = pixPrice <= precoAlvo;
@@ -332,7 +535,7 @@ function renderEVResults() {
   var estimadoBanner = prod.estimado ? (
     '<div style="background:rgba(247,183,49,.12);border:1px solid var(--gold);border-radius:8px;' +
     'padding:10px 14px;margin-bottom:16px;font-size:11px;color:var(--gold)">' +
-    '⚠ Preco de varejo estimado — ainda sem referencia real de compra para este set. O EV/booster usa dados reais de mercado.' +
+    '⚠ Preço de varejo estimado — ainda sem referência real de compra para este set. O EV/booster usa dados reais de mercado.' +
     '</div>'
   ) : '';
 
@@ -362,7 +565,27 @@ function renderEVResults() {
     '</div>'
   ) : '';
 
-  area.innerHTML = estimadoBanner + varianceBanner + updatedBanner +
+  // campo vazio/inválido: antes voltava ao preço de tabela em silêncio, parecendo que era o preço digitado
+  var precoBanner = precoInvalido ? (
+    '<div style="background:rgba(230,57,70,.10);border:1px solid var(--accent);border-radius:8px;' +
+    'padding:10px 14px;margin-bottom:16px;font-size:11px;color:var(--accent)">' +
+    'Informe o preço que você pagaria — enquanto isso o cálculo usa o preço de tabela (R$ ' + fmtR(prod.varejo) + ').' +
+    '</div>'
+  ) : '';
+
+  var cel30Banner = '';
+  if (prod.model === 'cel30') {
+    var cl = ev.rarBreakdown.filter(function(r){ return r.key === 'classic'; })[0];
+    var semClassic = cl ? ev.evBooster - cl.evContrib : ev.evBooster;
+    cel30Banner =
+      '<div style="background:rgba(247,183,49,.12);border:1px solid var(--gold);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:11px;color:var(--gold);line-height:1.6">' +
+      '⚠ <b>Taxas não oficiais.</b> A Pokémon Company não publica pull rates; usamos a média de contagens da comunidade (de ~400 a ~4.000 pacotes por fonte). ' +
+      'Os preços das cartas são de lançamento e tendem a cair. O EV deste set é dominado pela <b>Coleção Clássica</b> (1 em cada 10 pacotes; o Charizard 4/102 vale R$ 1.220): ' +
+      'sem ela o EV por booster seria R$ ' + fmtR(semClassic) + ' (hoje R$ ' + fmtR(ev.evBooster) + '). Os 3 Mews RGB ficam fora do cálculo (sem taxa confiável). ' +
+      'Promos, adesivos, moeda, fichário e demais itens do kit não entram.' +
+      '</div>';
+  }
+  area.innerHTML = precoBanner + estimadoBanner + cel30Banner + varianceBanner + updatedBanner + evLinksHtml(prod) +
     '<div style="background:' + verdictBg + ';border-radius:16px;padding:24px 28px;' +
     'display:flex;align-items:center;gap:24px;margin-bottom:24px;flex-wrap:wrap">' +
       '<div style="background:rgba(0,0,0,0.25);border-radius:12px;width:72px;height:72px;' +
@@ -374,23 +597,28 @@ function renderEVResults() {
         '<div style="font-size:13px;color:rgba(255,255,255,0.85);margin-top:4px">' + verdict.desc + '</div>' +
       '</div>' +
       '<div style="text-align:right">' +
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:42px;color:#fff;line-height:1">' + mult.toFixed(2) + 'x</div>' +
-        '<div style="font-size:10px;color:rgba(255,255,255,0.7);letter-spacing:2px;text-transform:uppercase">multiplicador</div>' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:42px;color:#fff;line-height:1">' + Math.round(retorno) + '%</div>' +
+        '<div style="font-size:10px;color:rgba(255,255,255,0.7);letter-spacing:2px;text-transform:uppercase">retorno esperado</div>' +
+        '<div style="font-size:10px;color:rgba(255,255,255,0.6);margin-top:2px">você paga ' + mult.toFixed(2) + '× o EV</div>' +
       '</div>' +
     '</div>' +
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px">' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:24px">' +
       kpi('EV / booster', fmtR(ev.evBooster), 'var(--fg)') +
       kpi('EV total (' + prod.boosters + 'x)', fmtR(ev.evTotal), 'var(--fg)') +
-      kpi('Voce paga', fmtR(pixPrice), 'var(--gold)') +
+      kpi('Você paga', fmtR(pixPrice), 'var(--gold)') +
       kpi('Lucro esperado', (lucro>=0?'+':'') + fmtR(lucro), lucroColor) +
+      (sim ? kpi('Chance de recuperar o valor pago', fmtPct(chance), chance >= 0.5 ? '#43e97b' : (chance >= 0.2 ? 'var(--gold)' : '#e74c3c')) : '') +
+      (sim ? kpi('Faixa provável (80% dos casos)', 'R$' + fmtR(faixaLo) + ' – R$' + fmtR(faixaHi), 'var(--fg)') : '') +
+      kpi('Retorno se revender (taxa ~' + Math.round(EV_SELL_FEE * 100) + '%)', Math.round(retornoLiq) + '%', 'var(--fg)') +
     '</div>' +
+    (sim ? '<div style="font-size:10px;color:var(--muted);margin:-12px 0 24px;line-height:1.6">Chance e faixa vêm de ' + EV_SIM_TRIALS.toLocaleString('pt-BR') + ' aberturas simuladas com as taxas de pull e os preços atuais das cartas (bulk fora, como no EV). O EV é uma média: numa abertura só, o resultado real costuma ficar bem longe dela.</div>' : '') +
     '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;' +
     'padding:14px 18px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">' +
       '<div><div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px">Teto de compra (EV - 15%)</div>' +
       '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:28px;color:var(--gold)">' + fmtR(precoAlvo) + '</div></div>' +
       '<div style="font-size:12px">' + topoAlvo + '</div>' +
     '</div>' +
-    '<div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:10px">Composicao do EV por raridade</div>' +
+    '<div style="font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:10px">Composição do EV por raridade</div>' +
     '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:24px">' +
       '<table style="width:100%;border-collapse:collapse">' +
         '<thead><tr style="background:var(--surface2);border-bottom:1px solid var(--border)">' +
@@ -407,7 +635,9 @@ function renderEVResults() {
       '</table>' +
     '</div>' +
     '<div style="font-size:10px;color:var(--muted);line-height:1.7;padding:12px;background:var(--surface);border-radius:8px;border-left:3px solid var(--accent)">' +
-      'Pack BR: 6 cartas (1 energia + 4 comuns + 1 slot raro). Taxas calibradas para 6–11 hits por display · Teto = EV - 15% (margem de seguranca). Bulk excluido do calculo.' +
+      (prod.model === 'cel30'
+        ? 'Pack da Celebração de 30 Anos: 5 cartas laminadas + 1 Energia Básica laminada (1 Pikachu garantida). Taxas da comunidade · Teto = EV - 15% (margem de segurança). Bulk excluído do cálculo.'
+        : 'Pack BR: 6 cartas (1 energia + 4 comuns + 1 slot raro). Taxas calibradas para 6–11 hits por display · Teto = EV - 15% (margem de segurança). Bulk excluído do cálculo.') +
     '</div>';
 }
 
@@ -415,11 +645,13 @@ function renderEV() {
   var wrap = document.getElementById('ev-wrap');
   if (!wrap) return;
   if (!document.getElementById('ev-ctrl')) {
-    wrap.innerHTML = '<div id="ev-ctrl"></div><div id="ev-res"></div>';
+    wrap.innerHTML = '<div id="ev-ctrl"></div><div id="ev-res"></div><div id="ev-rank"></div><div id="ev-msrp"></div>';
   }
   renderEVControls();
   renderEVResults();
   evApplyRealPrice(evState.productId);
+  evRenderRanking();
+  evRenderMsrp();
 }
 
 function initEV() { renderEV(); }

@@ -25,7 +25,7 @@ let notifLotsEnabled=null;  // e-mails de novos leilões (notification_prefs.lot
 let notifLotsBusy=false;
 
 const NOTIF_LIMIT=30;
-const NOTIF_ICON={auction_outbid:'🔔',auction_closed:'🏁',auction_won:'🏆',auction_ending:'⏰',site_update:'🆕',news:'🗞️',new_auction:'🔨',new_raffle:'🎟️'};
+const NOTIF_ICON={auction_outbid:'🔔',auction_closed:'🏁',auction_won:'🏆',auction_ending:'⏰',site_update:'🆕',news:'🗞️',new_auction:'🔨',new_raffle:'🎟️',mk_order_new:'🛒',mk_consign:'📦',mk_order_update:'📦',wild_event:'⚡',wild_event_info:'⚡'};
 
 // ── CARGA ──────────────────────────────────────────────────────────
 async function notifLoad(){
@@ -166,9 +166,32 @@ function notifRoute(n){
     if(typeof goToTab==='function')goToTab('rifas');
     return;
   }
+  if(d.mk_consignment_id){   // consignação (23/10/2026): a equipe cai na aba Consignação do painel, o dono na Compra/Venda
+    if(d.panel==='consignacao'){
+      if(typeof goToTab==='function')goToTab('mk');
+      setTimeout(async()=>{try{if(typeof mkLoadAll==='function')await mkLoadAll(false);if(typeof mkGoPanel==='function'&&mk.isMember)mkGoPanel('consignacao');}catch(e){}},300);
+    }else if(typeof goToTab==='function')goToTab('cartas');
+    return;
+  }
+  if(d.mk_order_id){   // pedidos da Loja Toybox: lojista cai na aba Pedidos, comprador em "Meus pedidos"
+    if(typeof goToTab==='function')goToTab('mk');
+    setTimeout(async()=>{
+      try{
+        if(typeof mkLoadAll==='function')await mkLoadAll(false);
+        if(n.type==='mk_order_new'&&typeof mkGoPanel==='function'&&mk.isMember)mkGoPanel('pedidos');
+        else if(typeof mkOpenMyOrders==='function')mkOpenMyOrders();
+      }catch(e){}
+    },300);
+    return;
+  }
   if(d.news_id){
     if(typeof goToTab==='function')goToTab('inicio');
     if(typeof openInicioArticle==='function')setTimeout(()=>openInicioArticle(d.news_id),250);
+    return;
+  }
+  if(d.event_id){   // evento de aparição do minigame: leva pra Início, onde fica o banner
+    if(typeof goToTab==='function')goToTab('inicio');
+    setTimeout(()=>{const w=document.getElementById('inicio-wild-event-slot');if(w)w.scrollIntoView({behavior:'smooth',block:'center'});},300);
     return;
   }
   if(n.type==='site_update'){

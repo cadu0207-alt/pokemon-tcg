@@ -1,0 +1,111 @@
+{
+ "characters": {},
+ "backgrounds": {
+  "whitewood": [
+   {
+    "key": "sky",
+    "file": "bg/whitewood_sky.webp",
+    "width": 1280,
+    "height": 720
+   },
+   {
+    "key": "cloud",
+    "file": "bg/whitewood_cloud.webp",
+    "width": 806,
+    "height": 336
+   },
+   {
+    "key": "mountains",
+    "file": "bg/whitewood_mountains.webp",
+    "width": 1280,
+    "height": 640
+   },
+   {
+    "key": "hills_back",
+    "file": "bg/whitewood_hills_back.webp",
+    "width": 1280,
+    "height": 444
+   },
+   {
+    "key": "hills_mid",
+    "file": "bg/whitewood_hills_mid.webp",
+    "width": 1280,
+    "height": 321
+   },
+   {
+    "key": "trees",
+    "file": "bg/whitewood_trees.webp",
+    "width": 1280,
+    "height": 682
+   },
+   {
+    "key": "ground",
+    "file": "bg/whitewood_ground.webp",
+    "width": 1280,
+    "height": 310
+   }
+  ]
+ },
+ "cardFrames": {
+  "common": "cards/frame_common.webp",
+  "uncommon": "cards/frame_uncommon.webp",
+  "rare": "cards/frame_rare.webp",
+  "epic": "cards/frame_epic.webp",
+  "legendary": "cards/frame_legendary.webp"
+ },
+ "icons": {
+  "sharp_blade": "icons/sharp_blade.webp",
+  "iron_skin": "icons/iron_skin.webp",
+  "greed": "icons/greed.webp",
+  "scholar": "icons/scholar.webp",
+  "haste": "icons/haste.webp",
+  "potion": "icons/potion.webp",
+  "keen_eye": "icons/keen_eye.webp",
+  "brutal": "icons/brutal.webp",
+  "vampire": "icons/vampire.webp",
+  "shield": "icons/shield.webp",
+  "interest": "icons/interest.webp",
+  "burn": "icons/burn.webp",
+  "double": "icons/double.webp",
+  "explode": "icons/explode.webp",
+  "berserk": "icons/berserk.webp",
+  "blessing": "icons/blessing.webp",
+  "coin": "icons/coin.webp",
+  "upgrade_strength": "icons/upgrade_strength.webp",
+  "upgrade_vitality": "icons/upgrade_vitality.webp",
+  "upgrade_potions": "icons/upgrade_potions.webp",
+  "upgrade_luck": "icons/upgrade_luck.webp"
+ },
+ "slash": {
+  "file": "fx/slash.webp",
+  "frameWidth": 202,
+  "frameHeight": 240,
+  "frames": 6
+ },
+ "ui": {
+  "bar_hp": "ui/bar_hp.png",
+  "bar_xp": "ui/bar_xp.png",
+  "paper": "ui/paper.webp",
+  "wood": "ui/wood.webp"
+ },
+ "audio": {
+  "swing": "audio/swing.wav",
+  "hit": "audio/hit.ogg",
+  "hero_hurt": "audio/hero_hurt.ogg",
+  "card": "audio/card.wav",
+  "level_up": "audio/level_up.ogg",
+  "music_battle": "audio/music_battle.mp3",
+  "music_camp": "audio/music_camp.mp3"
+ },
+ "creatures": {
+  "botinho": "creatures/botinho.svg",
+  "brasinho": "creatures/brasinho.svg",
+  "capinho": "creatures/capinho.svg"
+ },
+ "parts": {
+  "espinhos": "parts/espinhos.svg",
+  "olho_rubro": "parts/olho_rubro.svg",
+  "pata_mecanica": "parts/pata_mecanica.svg",
+  "pata_metralhadora": "parts/pata_metralhadora.svg"
+ }
+}

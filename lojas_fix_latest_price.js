@@ -26,8 +26,10 @@
 
 function renderProductCard(term, history, featured, coupon, rules, dealScore) {
   const latest = latestRecord(history);
-  const label = term.label || term.term;
-  const linkUrl = term.affiliate_url || (latest ? latest.url : null);
+  // 17/10/2026 (segurança): o nome vem do cadastro/ML e as URLs do ML — escapa o texto e só aceita https nos links/imagens
+  const label = esc(term.label || term.term);
+  const safeUrl = function (u) { return (typeof u === 'string' && /^https:\/\//i.test(u)) ? u.replace(/"/g, '%22') : null; };
+  const linkUrl = safeUrl(term.affiliate_url) || (latest ? safeUrl(latest.url) : null);
 
   const collectionAttr = ' data-collection="' + (term.collection || '').replace(/"/g, '&quot;') + '"';
   const scoreAttr = ' data-deal-score="' + (dealScore == null ? '' : dealScore) + '"';
@@ -45,7 +47,7 @@ function renderProductCard(term, history, featured, coupon, rules, dealScore) {
   }
 
   const updatedStr = latest.found_at ? new Date(latest.found_at).toLocaleDateString('pt-BR') : '';
-  const imgSrc = term.image_url || latest.thumbnail;
+  const imgSrc = safeUrl(term.image_url) || safeUrl(latest.thumbnail) || '';
 
   // Compara o cupom vinculado direto ao produto (manual) com a melhor
   // regra geral aplicável ao preço — usa o que der mais desconto.
@@ -87,13 +89,19 @@ function renderProductCard(term, history, featured, coupon, rules, dealScore) {
         '<div class="product-coupon-badge">🎟️ Cupom <code>' + badgeCode + '</code> · ' + badgeLabel + '</div>'
       )
     : '<div class="product-price">R$ ' + fmtBRLLoja(latest.price) + '</div>';
+  // 17/10/2026: valor por booster (preço ÷ nº de boosters), só quando o nº de boosters é conhecido (ml_search_terms.boosters)
+  const nBoost = term.boosters > 0 ? +term.boosters : 0;
+  const perBoost = nBoost ? (discounted != null ? discounted : +latest.price) / nBoost : null;
+  const boosterHtml = perBoost != null
+    ? '<div class="product-ppb" title="Preço do produto ÷ número de boosters. Não desconta brindes (moeda, adesivo, promo).' + (term.boosters_nota ? ' Nº de boosters: ' + String(term.boosters_nota).replace(/"/g, '&quot;') + '.' : '') + (term.boosters_estimado ? ' (estimativa — ainda não confirmado)' : '') + '">🃏 ≈ R$ ' + fmtBRLLoja(perBoost) + ' por booster <span>(' + nBoost + (nBoost === 1 ? ' booster' : ' boosters') + (term.boosters_estimado ? ', estimado' : '') + ')</span></div>'
+    : '';
   return (
-    '<a class="product-card' + (featured ? ' product-card-featured' : '') + '"' + collectionAttr + scoreAttr + ' href="' + linkUrl + '" target="_blank" rel="noopener' + (term.affiliate_url ? ' sponsored' : '') + '">' +
+    '<a class="product-card' + (featured ? ' product-card-featured' : '') + '"' + collectionAttr + scoreAttr + ' href="' + (linkUrl || '#') + '" target="_blank" rel="noopener' + (term.affiliate_url ? ' sponsored' : '') + '">' +
       (featured ? '<div class="product-badge">🔥 OFERTA IMPERDÍVEL</div>' : '') +
       '<img class="product-img" src="' + imgSrc + '" alt="' + label + '">' +
       '<div class="product-info">' +
         '<div class="product-name">' + label + '</div>' +
-        priceHtml +
+        priceHtml + boosterHtml +
         // AUDITORIA 03/08/2026: o aviso de raspagem repetia em TODOS os cards
         // (ruído visual) — a informação já está no aviso amarelo global no topo
         // da aba. Aqui fica só o "atualizado em", com tooltip pra quem quiser.

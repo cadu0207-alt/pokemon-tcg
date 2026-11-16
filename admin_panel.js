@@ -64,6 +64,7 @@ function updateAdminTabVisibility() {
 // ================================================================
 
 const ADMIN_SECTION_PENDING_VAR = {
+  overview: '__adminOverviewPending',
   feedback: '__adminFeedbackUnread',
   marketplace: '__adminMktPending',
   positivo: '__adminPositivoPending'
@@ -77,8 +78,20 @@ function toggleAdminSection(key) {
   const open = !el.classList.contains('admin-sec-open');
   el.classList.toggle('admin-sec-open', open);
   try { localStorage.setItem(adminSectionStorageKey(key), open ? '1' : '0'); } catch (e) { /* localStorage indisponível — ignora */ }
+  if (open && typeof adminLoadSection === 'function') adminLoadSection(key);
 }
 window.toggleAdminSection = toggleAdminSection;
+
+// abre uma seção (e rola até ela) — usado pelos atalhos da Visão Geral
+function openAdminSection(key) {
+  const el = document.getElementById('asec-' + key);
+  if (!el) return;
+  el.classList.add('admin-sec-open');
+  try { localStorage.setItem(adminSectionStorageKey(key), '1'); } catch (e) { /* ignora */ }
+  if (typeof adminLoadSection === 'function') adminLoadSection(key);
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.openAdminSection = openAdminSection;
 
 function setAdminSectionBadge(key, count) {
   const el = document.getElementById('asec-badge-' + key);
@@ -101,16 +114,61 @@ function applyAdminSectionStates() {
 
     let stored = null;
     try { stored = localStorage.getItem(adminSectionStorageKey(key)); } catch (e) { /* ignora */ }
-    const open = stored !== null ? stored === '1' : pendingCount > 0;
+    // a Visão Geral nasce aberta (é a tela inicial do painel); as demais só abrem sozinhas se houver pendência
+    const open = stored !== null ? stored === '1' : (key === 'overview' ? true : pendingCount > 0);
+    // Lojas Confiáveis e Cadastro Positivo saíram do menu (17/10/2026): a seção só aparece enquanto houver pendência
+    if (key === 'marketplace' || key === 'positivo') el.style.display = pendingCount > 0 ? '' : 'none';
     el.classList.toggle('admin-sec-open', open);
   });
 }
+
+// ── CARGA SOB DEMANDA (17/10/2026) ────────────────────────────────────────────────────────────────────────
+// Antes, abrir a aba Admin disparava ~9 consultas de uma vez (inclusive as de Lojas Confiáveis e Cadastro Positivo, recursos
+// já aposentados), mesmo com todas as seções recolhidas. Agora só a Visão Geral carrega ao entrar; cada seção carrega na
+// primeira vez que é aberta (e de novo a cada visita à aba). Os selos de pendência vêm da Visão Geral (1 consulta só).
+const ADMIN_SECTION_LOADERS = {
+  staff: async function () { if (typeof renderStaffAccessPanel === 'function') renderStaffAccessPanel(); },
+  stats: async function () {
+    if (typeof renderAdminStats === 'function') renderAdminStats();
+    if (typeof renderAdminTabStats === 'function') renderAdminTabStats();
+    if (typeof renderAdminProductRedirects === 'function') renderAdminProductRedirects();
+    if (typeof renderAdminSetDistribution === 'function') renderAdminSetDistribution();
+    if (typeof renderAdminUserList === 'function') renderAdminUserList();
+  },
+  feedback: async function () { if (typeof renderAdminFeedback === 'function') renderAdminFeedback(); },
+  updates: async function () { if (typeof renderUpdatesAdminForm === 'function') renderUpdatesAdminForm(); },
+  inicio: async function () { if (typeof renderHomeContentAdmin === 'function') renderHomeContentAdmin(); },
+  marketplace: async function () {
+    if (typeof loadMarketplaceData === 'function' && typeof renderStoreLists === 'function') {
+      try { await loadMarketplaceData(); renderStoreLists(); } catch (e) { console.error('[admin] lojas confiáveis', e); }
+    }
+  },
+  positivo: async function () {
+    if (typeof loadPositiveCompanies === 'function' && typeof renderPositiveLists === 'function') {
+      try {
+        await loadPositiveCompanies();
+        if (typeof loadCompanyReviews === 'function') await loadCompanyReviews();
+        renderPositiveLists();
+      } catch (e) { console.error('[admin] cadastro positivo', e); }
+    }
+  },
+  produtos: async function () { if (typeof renderAdminPanel === 'function') renderAdminPanel(); }
+};
+
+async function adminLoadSection(key) {
+  const el = document.getElementById('asec-' + key);
+  const loader = ADMIN_SECTION_LOADERS[key];
+  if (!el || !loader || el.dataset.loaded === '1') return;
+  el.dataset.loaded = '1';
+  try { await loader(); } catch (e) { console.error('[admin] seção ' + key, e); el.dataset.loaded = ''; }
+}
+window.adminLoadSection = adminLoadSection;
 
 async function renderAdminTab() {
   if (typeof isAdmin !== 'function' || !isAdmin()) {
     // Segurança extra: mesmo que alguém force go('admin', ...) via console,
     // os containers ficam vazios pra quem não é o Eduardo.
-    ['admin-stats-wrap', 'admin-tab-analytics-wrap', 'admin-product-redirects-wrap',
+    ['admin-overview-wrap', 'admin-stats-wrap', 'admin-tab-analytics-wrap', 'admin-product-redirects-wrap',
      'admin-set-distribution-wrap', 'admin-userlist-wrap', 'admin-feedback-wrap',
      'admin-updates-wrap', 'home-content-admin-wrap', 'lojas-admin', 'mkt-pending-list', 'pc-pending-list',
      'staff-access-wrap']
@@ -118,29 +176,17 @@ async function renderAdminTab() {
     return;
   }
 
-  if (typeof renderStaffAccessPanel === 'function') renderStaffAccessPanel();
-  if (typeof renderAdminStats === 'function') renderAdminStats();
-  if (typeof renderAdminTabStats === 'function') renderAdminTabStats();
-  if (typeof renderAdminProductRedirects === 'function') renderAdminProductRedirects();
-  if (typeof renderAdminSetDistribution === 'function') renderAdminSetDistribution();
-  if (typeof renderAdminUserList === 'function') renderAdminUserList();
-  if (typeof renderAdminFeedback === 'function') renderAdminFeedback();
-  if (typeof renderUpdatesAdminForm === 'function') renderUpdatesAdminForm();
-  if (typeof renderHomeContentAdmin === 'function') renderHomeContentAdmin();
+  // nova visita à aba: tudo volta a "não carregado" (as seções abertas recarregam já, as fechadas só quando abrirem)
+  document.querySelectorAll('.admin-section').forEach(function (el) { el.dataset.loaded = ''; });
 
-  if (typeof loadMarketplaceData === 'function' && typeof renderStoreLists === 'function') {
-    try { await loadMarketplaceData(); renderStoreLists(); } catch (e) { console.error('[admin] lojas confiáveis', e); }
+  // a Visão Geral abastece os selos de pendência (mensagens, Lojas Confiáveis, Cadastro Positivo) numa consulta só
+  if (typeof renderAdminOverview === 'function') {
+    try { await renderAdminOverview(); } catch (e) { console.error('[admin] visão geral', e); }
   }
-  if (typeof loadPositiveCompanies === 'function' && typeof renderPositiveLists === 'function') {
-    try {
-      await loadPositiveCompanies();
-      if (typeof loadCompanyReviews === 'function') await loadCompanyReviews();
-      renderPositiveLists();
-    } catch (e) { console.error('[admin] cadastro positivo', e); }
-  }
-  if (typeof renderAdminPanel === 'function') renderAdminPanel();
-
   applyAdminSectionStates();
+  document.querySelectorAll('.admin-section.admin-sec-open').forEach(function (el) {
+    adminLoadSection(el.id.replace(/^asec-/, ''));
+  });
 }
 
 (function hookAdminTabVisibility() {

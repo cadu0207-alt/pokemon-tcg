@@ -38,6 +38,7 @@ const CENT_PX_PER_CM = 28; // escala visual da régua — referência aproximada
 
 const CENT = {
   rawDataUrl: null,      // foto original, como veio do upload (pode estar em ângulo)
+  cardMm: null,          // {w,h} em mm da carta quando a foto foi corrigida (imagem = carta inteira); null = sem calibração
   dataUrl: null,          // foto usada na ferramenta — igual à raw, ou já corrigida de perspectiva
   corners: null,            // {tl,tr,br,bl}:{x,y} frações 0..1 — os 4 cantos marcados na foto original
   calibDragging: null,        // 'tl'|'tr'|'br'|'bl' — canto sendo arrastado na tela de calibração
@@ -54,6 +55,8 @@ const CENT = {
   guidesOn: true,                  // linhas-guia horizontal/vertical fixas (retas de referência)
   rulersOn: true,                   // réguas com marcação em cm
   subgrades: { corners: '', edges: '', surface: '' }, // autoavaliação manual 1-10
+  backPct: '',                                        // % do lado maior do verso (opcional); '' = não medido
+  worth: { co: 'PSA', raw: '', graded: '', cost: '' }, // calculadora "vale graduar?"
   listenersBound: false
 };
 
@@ -91,29 +94,46 @@ function centDefaultEdges() {
 // TCG — acima de 8.5 a fonte não detalha publicamente, os degraus
 // abaixo disso são extrapolação nossa seguindo o mesmo padrão de
 // queda das outras 3 empresas.
+// REVISÃO 17/10/2026 — fontes conferidas:
+//  • CGC  — página oficial "Grading Scale" (cgccards.com): Pristine 10 = 50/50; Gem Mint 10 = frente ≤ ~55/45 e verso ≤ 75/25;
+//    Mint 9 = 60/40 (verso 90/10); 8 = 65/35; 7,5 = 65/35; 7 = 70/30; 6 = 75/25; 4,5 = 85/15; 3,5 = 90/10. A CGC não dá % pro 9,5.
+//  • TAG  — rubrica oficial (taggrading.com/pages/rubric): tolerâncias de frente por faixa (Pristine ~51/49; 10 ~55/45; 9 ~60/40;
+//    8,5 ~62,5/37,5 … 3 ~90/10 … 1,5 ~98/2) e de verso pra TCG (Pristine ~52/48; 10 ~65/35; 9 ~75/25; 8,5 ~85/15; 8 ~95/5).
+//  • PSA  — o site oficial não abriu pra conferência; usei o consenso dos guias (10: 55/45 frente e 75/25 verso; 9: 60/40 e 90/10).
+//    Abaixo do 9 os guias divergem — ficou uma estimativa CONSERVADORA (a versão anterior dava 8,5 e 8 pra 65/35 e 70/30, o que
+//    parece generoso; PSA não costuma dar meia nota além do 1,5).
+//  • BGS  — a Beckett não publica % oficiais abaixo do 9,5 e os guias divergem; mantida a tabela anterior, marcada como estimativa.
+// Cada item é [percentual máximo do lado maior, nota].
 const CENT_BREAKS = {
   PSA: [
-    [50, 10], [55, 10], [60, 9], [65, 8.5],
-    [70, 8], [75, 7], [80, 6], [85, 5], [90, 4], [100, 3]
+    [50, 10], [55, 10], [60, 9], [65, 8],
+    [70, 7], [80, 6], [85, 5], [90, 3], [100, 2]
   ],
   BGS: [
     [50, 10], [55, 9.5], [60, 9], [65, 8.5],
     [70, 8], [75, 7.5], [80, 7], [85, 6], [90, 5], [100, 4]
   ],
   CGC: [
-    [50, 10], [55, 9.5], [65, 9], [70, 8.5],
-    [75, 8], [80, 7.5], [85, 7], [90, 6], [100, 5]
+    [50, 10], [55, 10], [60, 9], [65, 8],
+    [70, 7], [75, 6], [80, 5], [85, 4.5], [90, 3.5], [100, 3]
   ],
   TAG: [
-    [51, 10], [55, 9], [62.5, 8.5], [65, 8],
-    [70, 7.5], [75, 7], [80, 6.5], [85, 6], [90, 5], [100, 4]
+    [51, 10], [55, 10], [60, 9], [62.5, 8.5], [65, 8], [67.5, 7.5], [70, 7],
+    [72.5, 6.5], [75, 6], [77.5, 5.5], [80, 5], [82.5, 4.5], [85, 4],
+    [87.5, 3.5], [90, 3], [92.5, 2.5], [95, 2], [100, 1.5]
   ]
+};
+// Verso (opcional): mesma ideia. BGS fica de fora (sem número confiável). TAG = coluna "TCG" da rubrica.
+const CENT_BREAKS_BACK = {
+  PSA: [[75, 10], [90, 9], [100, 8]],
+  CGC: [[75, 10], [90, 9], [100, 8]],
+  TAG: [[65, 10], [75, 9], [85, 8.5], [95, 8], [100, 7]]
 };
 const CENT_BREAKS_LABEL_EXTRA = {
   PSA: { 10: (pct) => pct <= 50 ? ' (perfeita)' : '' },
   BGS: { 10: () => ' · Pristine/Black Label*' },
-  CGC: { 10: () => ' · Pristine' },
-  TAG: { 10: () => ' · Pristine (~990+/1000)*' }
+  CGC: { 10: (pct) => pct <= 50 ? ' · Pristine' : ' · Gem Mint' },
+  TAG: { 10: (pct) => pct <= 51 ? ' · Pristine (~990+/1000)*' : ' · Gem Mint' }
 };
 
 function centGradeFromBreaks(company, pctBig) {
@@ -177,6 +197,7 @@ function renderCentralizacao() {
 
   if (!CENT.rawDataUrl) {
     holder.innerHTML = centUploadScreenHTML();
+    centBindUploadExtras();
     return;
   }
   if (!CENT.dataUrl) {
@@ -214,24 +235,66 @@ function centUploadScreenHTML() {
     </div>
 
     <label class="cent-upload-zone" id="cent-upload-zone">
-      <input type="file" id="cent-file-input" accept="image/*" style="display:none" onchange="centHandleFile(this.files[0])">
+      <input type="file" id="cent-file-input" accept="image/*" style="display:none" onchange="centHandleFile(this.files[0]); this.value=''">
       <span style="font-size:28px">📷</span>
-      <span style="margin-top:8px">Clique para carregar a foto da carta</span>
+      <span style="margin-top:8px">Clique, arraste ou cole (Ctrl+V) a foto da carta</span>
       <span style="font-size:10px;color:var(--muted);margin-top:4px">JPG, PNG — só neste navegador, não é salva</span>
+    </label>
+    <label class="fic-btn" style="display:inline-block;margin-top:10px;cursor:pointer">
+      <input type="file" accept="image/*" capture="environment" style="display:none" onchange="centHandleFile(this.files[0]); this.value=''">
+      📸 Tirar foto agora (celular)
     </label>
   `;
 }
 
-function centHandleFile(file) {
+const CENT_MAX_UPLOAD_BYTES = 30 * 1024 * 1024;
+
+function centToast(msg) { if (typeof toast === 'function') toast(msg, 'error'); else alert(msg); }
+
+// 17/10/2026: valida o arquivo, respeita a orientação EXIF e reduz foto gigante (12 MP+ pesava na distorção e no celular).
+async function centHandleFile(file) {
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    CENT.rawDataUrl = e.target.result;
-    CENT.dataUrl = null;
-    CENT.corners = centDefaultCorners();
-    renderCentralizacao();
-  };
-  reader.readAsDataURL(file);
+  const nameType = (file.type || '') + ' ' + (file.name || '');
+  if (/heic|heif/i.test(nameType)) { centToast('Fotos HEIC/HEIF não abrem direto no navegador — salve/exporte como JPG e tente de novo.'); return; }
+  if (!/^image\//.test(file.type || '') && !/\.(jpe?g|png|webp|gif|bmp|avif)$/i.test(file.name || '')) { centToast('Esse arquivo não é uma imagem (use JPG ou PNG).'); return; }
+  if (file.size > CENT_MAX_UPLOAD_BYTES) { centToast('A foto passa de 30 MB — reduza e tente de novo.'); return; }
+  let dataUrl = null;
+  try {
+    const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const sc = Math.min(1, CENT_MAX_SRC / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(bmp.width * sc)); c.height = Math.max(1, Math.round(bmp.height * sc));
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    dataUrl = c.toDataURL('image/jpeg', 0.92);
+    if (bmp.close) bmp.close();
+  } catch (err) {
+    dataUrl = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result); r.onerror = () => res(null); r.readAsDataURL(file); });
+  }
+  if (!dataUrl) { centToast('Não consegui abrir essa imagem.'); return; }
+  CENT.rawDataUrl = dataUrl;
+  CENT.dataUrl = null;
+  CENT.cardMm = null;
+  CENT.corners = centDefaultCorners();
+  renderCentralizacao();
+}
+
+// arrastar e soltar na zona de upload + colar (Ctrl+V) com a aba aberta
+function centBindUploadExtras() {
+  const zone = document.getElementById('cent-upload-zone');
+  if (zone) {
+    ['dragenter', 'dragover'].forEach(ev => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.add('cent-drop-over'); }));
+    ['dragleave', 'drop'].forEach(ev => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.remove('cent-drop-over'); }));
+    zone.addEventListener('drop', (e) => { const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (f) centHandleFile(f); });
+  }
+  if (!CENT.pasteBound) {
+    CENT.pasteBound = true;
+    document.addEventListener('paste', (e) => {
+      const pane = document.getElementById('centralizacao');
+      if (!pane || !pane.classList.contains('active') || CENT.rawDataUrl) return;
+      const items = (e.clipboardData && e.clipboardData.items) || [];
+      for (const it of items) { if (it.kind === 'file' && /^image\//.test(it.type)) { const f = it.getAsFile(); if (f) { e.preventDefault(); centHandleFile(f); } return; } }
+    });
+  }
 }
 
 function centReset() {
@@ -255,6 +318,7 @@ function centStartTool() {
   CENT.guidesOn = true;
   CENT.rulersOn = true;
   CENT.subgrades = { corners: '', edges: '', surface: '' };
+  CENT.backPct = '';
   renderCentralizacao();
 }
 
@@ -346,6 +410,7 @@ function centUpdateCalibVisual() {
 }
 
 function centSkipCalib() {
+  CENT.cardMm = null;   // foto usada como veio: o enquadramento é desconhecido, então não dá pra converter pixel em mm
   CENT.dataUrl = CENT.rawDataUrl;
   centStartTool();
 }
@@ -373,58 +438,98 @@ function centOpenCalib() {
   renderCentralizacao();
 }
 
-// Distorce a foto original pra que o quadrilátero marcado pelo usuário
-// (4 cantos da carta) vire um retângulo perfeito. Técnica: divide o
-// quadrilátero em 2 triângulos e usa uma transformação afim (canvas
-// 2D só suporta afim, não perspectiva "de verdade") pra mapear cada
-// triângulo da foto original pro triângulo correspondente no
-// retângulo de destino. É uma aproximação — não é uma homografia
-// matemática exata — mas funciona bem pro caso de uso (foto de carta
-// com inclinação leve/moderada de celular).
+// Corrige a perspectiva: o quadrilátero marcado pelo usuário (4 cantos da carta) vira um retângulo com a proporção
+// REAL da carta (63 × 88 mm). 17/10/2026: antes usava 2 triângulos afins (o canvas 2D só tem transformação afim) — na
+// diagonal a imagem ficava desalinhada em foto inclinada. Agora é uma homografia de verdade, calculada pixel a pixel
+// com amostragem bilinear. Como o resultado tem a proporção exata da carta, a ferramenta também sabe quantos mm vale
+// cada pixel (ver centMmPerStagePx) e mostra a largura das bordas em milímetros.
+const CENT_CARD_MM = { w: 63, h: 88 };
+const CENT_MAX_SRC = 3600;   // maior lado da foto de origem usada na distorção (limita memória em celular)
+const CENT_MAX_OUT = 2200;   // maior lado da imagem corrigida
+
+// resolve H tal que  src = H(dst)  (dst e src: 4 pontos {x,y})
+function centSolveHomography(dst, src) {
+  const A = [], bvec = [];
+  for (let i = 0; i < 4; i++) {
+    const u = dst[i].x, v = dst[i].y, x = src[i].x, y = src[i].y;
+    A.push([u, v, 1, 0, 0, 0, -u * x, -v * x]); bvec.push(x);
+    A.push([0, 0, 0, u, v, 1, -u * y, -v * y]); bvec.push(y);
+  }
+  const n = 8;
+  for (let c = 0; c < n; c++) {            // eliminação de Gauss com pivô parcial
+    let piv = c;
+    for (let r = c + 1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[piv][c])) piv = r;
+    if (Math.abs(A[piv][c]) < 1e-12) throw new Error('cantos degenerados');
+    [A[c], A[piv]] = [A[piv], A[c]]; [bvec[c], bvec[piv]] = [bvec[piv], bvec[c]];
+    for (let r = c + 1; r < n; r++) {
+      const f = A[r][c] / A[c][c];
+      for (let k = c; k < n; k++) A[r][k] -= f * A[c][k];
+      bvec[r] -= f * bvec[c];
+    }
+  }
+  const h = new Array(n);
+  for (let r = n - 1; r >= 0; r--) {
+    let sum = bvec[r];
+    for (let k = r + 1; k < n; k++) sum -= A[r][k] * h[k];
+    h[r] = sum / A[r][r];
+  }
+  return h;
+}
+
 function centWarpPerspective(imgEl, quad) {
-  const wTop = centDist(quad.tl, quad.tr);
-  const wBot = centDist(quad.bl, quad.br);
-  const hLeft = centDist(quad.tl, quad.bl);
-  const hRight = centDist(quad.tr, quad.br);
-  const W = Math.max(80, Math.round((wTop + wBot) / 2));
-  const H = Math.max(80, Math.round((hLeft + hRight) / 2));
+  // 1) foto de origem (reduzida se for enorme)
+  const sc = Math.min(1, CENT_MAX_SRC / Math.max(imgEl.naturalWidth, imgEl.naturalHeight));
+  const sw = Math.max(1, Math.round(imgEl.naturalWidth * sc)), sh = Math.max(1, Math.round(imgEl.naturalHeight * sc));
+  const srcCanvas = document.createElement('canvas');
+  srcCanvas.width = sw; srcCanvas.height = sh;
+  const sctx = srcCanvas.getContext('2d');
+  sctx.drawImage(imgEl, 0, 0, sw, sh);
+  const src = sctx.getImageData(0, 0, sw, sh).data;
+  const q = { tl: { x: quad.tl.x * sc, y: quad.tl.y * sc }, tr: { x: quad.tr.x * sc, y: quad.tr.y * sc },
+              br: { x: quad.br.x * sc, y: quad.br.y * sc }, bl: { x: quad.bl.x * sc, y: quad.bl.y * sc } };
 
-  const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d');
+  // 2) tamanho de saída: lado médio marcado, na proporção real da carta (retrato ou paisagem)
+  const wAvg = (centDist(q.tl, q.tr) + centDist(q.bl, q.br)) / 2;
+  const hAvg = (centDist(q.tl, q.bl) + centDist(q.tr, q.br)) / 2;
+  const landscape = wAvg > hAvg;
+  const mm = landscape ? { w: CENT_CARD_MM.h, h: CENT_CARD_MM.w } : { w: CENT_CARD_MM.w, h: CENT_CARD_MM.h };
+  let W = Math.max(wAvg, hAvg * mm.w / mm.h);   // mantém a resolução do lado que veio maior
+  let H = W * mm.h / mm.w;
+  const k = Math.min(1, CENT_MAX_OUT / Math.max(W, H));
+  W = Math.max(80, Math.round(W * k)); H = Math.max(80, Math.round(H * k));
 
-  const d = { tl: { x: 0, y: 0 }, tr: { x: W, y: 0 }, br: { x: W, y: H }, bl: { x: 0, y: H } };
+  // 3) homografia retângulo de saída → quadrilátero de origem
+  const dstPts = [{ x: 0, y: 0 }, { x: W, y: 0 }, { x: W, y: H }, { x: 0, y: H }];
+  const h = centSolveHomography(dstPts, [q.tl, q.tr, q.br, q.bl]);
 
-  centDrawWarpedTriangle(ctx, imgEl, quad.tl, quad.tr, quad.br, d.tl, d.tr, d.br);
-  centDrawWarpedTriangle(ctx, imgEl, quad.tl, quad.br, quad.bl, d.tl, d.br, d.bl);
-
-  return canvas.toDataURL('image/jpeg', 0.95);
+  const out = document.createElement('canvas');
+  out.width = W; out.height = H;
+  const octx = out.getContext('2d');
+  const img = octx.createImageData(W, H);
+  const od = img.data;
+  for (let v = 0; v < H; v++) {
+    for (let u = 0; u < W; u++) {
+      const pu = u + 0.5, pv = v + 0.5;
+      const wgt = h[6] * pu + h[7] * pv + 1;
+      const x = (h[0] * pu + h[1] * pv + h[2]) / wgt - 0.5;
+      const y = (h[3] * pu + h[4] * pv + h[5]) / wgt - 0.5;
+      const o = (v * W + u) * 4;
+      if (x < 0 || y < 0 || x > sw - 1 || y > sh - 1) { od[o] = od[o + 1] = od[o + 2] = 255; od[o + 3] = 255; continue; }
+      const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;
+      const x1 = Math.min(sw - 1, x0 + 1), y1 = Math.min(sh - 1, y0 + 1);
+      const i00 = (y0 * sw + x0) * 4, i10 = (y0 * sw + x1) * 4, i01 = (y1 * sw + x0) * 4, i11 = (y1 * sw + x1) * 4;
+      for (let c = 0; c < 3; c++) {
+        od[o + c] = src[i00 + c] * (1 - fx) * (1 - fy) + src[i10 + c] * fx * (1 - fy) + src[i01 + c] * (1 - fx) * fy + src[i11 + c] * fx * fy;
+      }
+      od[o + 3] = 255;
+    }
+  }
+  octx.putImageData(img, 0, 0);
+  CENT.cardMm = mm;          // a imagem corrigida É a carta inteira: serve pra calibrar mm
+  return out.toDataURL('image/jpeg', 0.95);
 }
 
 function centDist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
-
-function centDrawWarpedTriangle(ctx, img, s0, s1, s2, d0, d1, d2) {
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(d0.x, d0.y);
-  ctx.lineTo(d1.x, d1.y);
-  ctx.lineTo(d2.x, d2.y);
-  ctx.closePath();
-  ctx.clip();
-
-  const denom = s0.x * (s1.y - s2.y) + s1.x * (s2.y - s0.y) + s2.x * (s0.y - s1.y);
-  const a = (d0.x * (s1.y - s2.y) + d1.x * (s2.y - s0.y) + d2.x * (s0.y - s1.y)) / denom;
-  const c = (d0.x * (s2.x - s1.x) + d1.x * (s0.x - s2.x) + d2.x * (s1.x - s0.x)) / denom;
-  const e = (d0.x * (s1.x * s2.y - s2.x * s1.y) + d1.x * (s2.x * s0.y - s0.x * s2.y) + d2.x * (s0.x * s1.y - s1.x * s0.y)) / denom;
-  const b = (d0.y * (s1.y - s2.y) + d1.y * (s2.y - s0.y) + d2.y * (s0.y - s1.y)) / denom;
-  const dd = (d0.y * (s2.x - s1.x) + d1.y * (s0.x - s2.x) + d2.y * (s1.x - s0.x)) / denom;
-  const f = (d0.y * (s1.x * s2.y - s2.x * s1.y) + d1.y * (s2.x * s0.y - s0.x * s2.y) + d2.y * (s0.x * s1.y - s1.x * s0.y)) / denom;
-
-  ctx.transform(a, b, c, dd, e, f);
-  ctx.drawImage(img, 0, 0);
-  ctx.restore();
-}
 
 // ── FERRAMENTA (imagem + retângulos + resultado) ─────────────────
 function centRenderTool(holder) {
@@ -458,7 +563,7 @@ function centRenderTool(holder) {
           </div>
           <label class="cent-guide-toggle">
             <input type="checkbox" id="cent-ruler-toggle" ${CENT.rulersOn ? 'checked' : ''} onchange="centToggleRulers(this.checked)">
-            Réguas (cm)
+            <span id="cent-ruler-lbl">Réguas (cm)</span>
           </label>
           <label class="cent-guide-toggle">
             <input type="checkbox" id="cent-guide-toggle" ${CENT.guidesOn ? 'checked' : ''} onchange="centToggleGuides(this.checked)">
@@ -516,6 +621,10 @@ function centRenderTool(holder) {
           <button class="fic-btn" onclick="centOpenCalib()">📐 Recalibrar perspectiva</button>
           <button class="fic-btn" onclick="centReset()">🗑️ Trocar foto</button>
         </div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <button class="fic-btn fic-btn-primary" onclick="centCopyResult()">📋 Copiar resultado</button>
+          <button class="fic-btn fic-btn-primary" onclick="centDownloadImage()">🖼️ Baixar imagem com as marcações</button>
+        </div>
       </div>
     </div>
   `;
@@ -526,6 +635,58 @@ function centRenderTool(holder) {
   centUpdateVisual();
   centUpdateRotateBadge();
   centBindSubgradeInputs();
+}
+
+// ── VALE GRADUAR? (17/10/2026) ─────────────────────────────────────────────────────────────────────
+// Não existe tabela confiável de "quanto vale cada nota" (varia por carta e por semana), então a conta é do usuário: ele
+// informa o valor da carta crua, quanto ela vale NA NOTA ESTIMADA (olhe vendas recentes da mesma carta graduada) e o custo
+// total (taxa da empresa + frete + impostos/IOF). A ferramenta dá o ganho líquido e o ponto de equilíbrio.
+function centWorthHTML() {
+  const w = CENT.worth;
+  const opt = (v) => `<option value="${v}" ${w.co === v ? 'selected' : ''}>${v}</option>`;
+  return `
+    <div class="panel cent-result" style="margin-top:16px" id="cent-worth-panel">
+      <div class="panel-t">💰 Vale a pena graduar?</div>
+      <div style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:10px">
+        Preencha com valores reais de venda recente da MESMA carta. Inclua no custo a taxa da empresa, o frete e impostos.
+      </div>
+      <div class="cent-subgrade-block"><div class="cent-subgrade-lbl">Empresa</div>
+        <select class="cv-select" id="cent-worth-co" style="width:100%">${['PSA', 'BGS', 'CGC', 'TAG'].map(opt).join('')}</select></div>
+      <div class="cent-subgrade-block"><div class="cent-subgrade-lbl">Valor da carta crua (R$)</div>
+        <input class="cv-select" id="cent-worth-raw" type="number" min="0" step="0.01" style="width:100%" value="${w.raw}"></div>
+      <div class="cent-subgrade-block"><div class="cent-subgrade-lbl">Valor dela graduada na nota estimada (R$)</div>
+        <input class="cv-select" id="cent-worth-graded" type="number" min="0" step="0.01" style="width:100%" value="${w.graded}"></div>
+      <div class="cent-subgrade-block"><div class="cent-subgrade-lbl">Custo total de graduar (R$)</div>
+        <input class="cv-select" id="cent-worth-cost" type="number" min="0" step="0.01" style="width:100%" value="${w.cost}"></div>
+      <div id="cent-worth-out" style="font-size:12px;line-height:1.6;margin-top:8px"></div>
+    </div>`;
+}
+function centBindWorthInputs() {
+  const ids = { co: 'cent-worth-co', raw: 'cent-worth-raw', graded: 'cent-worth-graded', cost: 'cent-worth-cost' };
+  Object.keys(ids).forEach(k => {
+    const el = document.getElementById(ids[k]);
+    if (el) el.addEventListener('input', () => { CENT.worth[k] = el.value; centRenderWorth(); });
+  });
+  centRenderWorth();
+}
+function centRenderWorth() {
+  const out = document.getElementById('cent-worth-out');
+  if (!out) return;
+  const w = CENT.worth, raw = parseFloat(w.raw), graded = parseFloat(w.graded), cost = parseFloat(w.cost);
+  const r = centCurrentResult();
+  const row = r ? r.rows.find(x => x.co === w.co) : null;
+  const nota = row ? (row.overall !== null ? `${row.overall} (geral estimada)` : `${row.centLabel} (só centralização — preencha cantos/bordas/superfície pra nota geral)`) : '—';
+  let html = `<div>Nota estimada na ${w.co}: <b>${nota}</b></div>`;
+  if ([raw, graded, cost].every(v => Number.isFinite(v) && v >= 0)) {
+    const ganho = graded - raw - cost, equilibrio = raw + cost;
+    const cor = ganho >= 0 ? '#16a34a' : '#e74c3c';
+    html += `<div>Ganho líquido se sair essa nota: <b style="color:${cor}">${ganho >= 0 ? '+' : '−'}R$ ${fmtR(Math.abs(ganho))}</b></div>
+             <div>Ponto de equilíbrio: a carta graduada precisa valer <b>R$ ${fmtR(equilibrio)}</b> ou mais.</div>
+             <div style="font-size:10px;color:var(--muted)">Se a nota sair 1 ponto abaixo do estimado o valor da carta pode cair muito (e a graduação não devolve o custo) — teste esse cenário também.</div>`;
+  } else {
+    html += `<div style="color:var(--muted)">Preencha os 3 valores pra ver o ganho e o ponto de equilíbrio.</div>`;
+  }
+  out.innerHTML = html;
 }
 
 // ── SUBGRADES MANUAIS (cantos / bordas / superfície) ──────────────
@@ -546,6 +707,16 @@ function centSubgradesHTML() {
       </div>`;
   }).join('');
 
+  const backOpts = [50, 55, 60, 65, 70, 75, 80, 85, 90, 95].map(v =>
+    `<option value="${v}" ${CENT.backPct == v ? 'selected' : ''}>${v}/${100 - v}</option>`).join('');
+  const backBlock = `
+      <div class="cent-subgrade-block">
+        <div class="cent-subgrade-lbl">🔄 Centralização do verso (opcional)</div>
+        <div class="cent-subgrade-hint">O verso também conta pro 10 (PSA ≤ 75/25, CGC Gem Mint ≤ 75/25, TAG ~65/35 no TCG). Meça igual à frente (outra foto) ou estime a olho. A BGS não entra: não há número confiável do verso.</div>
+        <select class="cv-select" id="cent-back" style="width:100%">
+          <option value="">— não medi o verso —</option>${backOpts}
+        </select>
+      </div>`;
   return `
     <div class="panel cent-result" style="margin-top:16px">
       <div class="panel-t">🧐 Autoavaliação — Cantos, Bordas e Superfície</div>
@@ -554,11 +725,16 @@ function centSubgradesHTML() {
         carta com as descrições e escolha a nota mais próxima. Use o botão "Inspecionar canto" pra dar zoom.
       </div>
       ${blocks}
+      ${backBlock}
     </div>
+    ${centWorthHTML()}
   `;
 }
 
 function centBindSubgradeInputs() {
+  const back = document.getElementById('cent-back');
+  if (back) back.addEventListener('change', () => { CENT.backPct = back.value === '' ? '' : parseFloat(back.value); centRenderResult(); });
+  centBindWorthInputs();
   document.querySelectorAll('.cent-subgrade-block select').forEach(sel => {
     sel.addEventListener('change', () => {
       CENT.subgrades[sel.dataset.key] = sel.value;
@@ -589,6 +765,7 @@ function centInspectCorner(corner) {
   CENT.panOffsetX = Math.max(-marginX, Math.min(marginX, dx));
   CENT.panOffsetY = Math.max(-marginY, Math.min(marginY, dy));
   centApplyPhotoTransform();
+  centZoomChanged();
 }
 
 // ── ZOOM / PAN ─────────────────────────────────────────────────────
@@ -599,6 +776,7 @@ function centSetZoom(val) {
   const valEl = document.getElementById('cent-zoom-val');
   if (valEl) valEl.textContent = Math.round(CENT.zoom * 100) + '%';
   centApplyPhotoTransform();
+  centZoomChanged();
 }
 function centNudgeZoom(delta) { centSetZoom((CENT.zoom || 1) + delta); }
 
@@ -617,6 +795,7 @@ function centResetZoomPan() {
   const valEl = document.getElementById('cent-zoom-val');
   if (valEl) valEl.textContent = '100%';
   centApplyPhotoTransform();
+  centZoomChanged();
 }
 
 function centWireImgLoad() {
@@ -653,6 +832,13 @@ function centApplyPhotoTransform() {
   layer.style.transform = `scale(${eff}) rotate(${CENT.rotation || 0}deg)`;
 }
 
+// régua real e mm dependem do zoom (mover a foto não muda a escala, então o pan não chama isto)
+function centZoomChanged() {
+  if (!CENT.cardMm) return;
+  centBuildRulers();
+  if (CENT.edges) centRenderResult();
+}
+
 function centBindPan() {
   const stage = document.getElementById('cent-stage');
   if (!stage) return;
@@ -666,6 +852,13 @@ function centBindPan() {
   });
 }
 
+// px de tela por mm (x e y) — só existe quando a foto foi corrigida (a imagem inteira = a carta). Considera zoom atual.
+function centPxPerMm() {
+  if (!CENT.cardMm || !CENT.natW) return null;
+  const eff = (CENT.baseScale || 1) * (CENT.zoom || 1);
+  return { x: CENT.natW * eff / CENT.cardMm.w, y: CENT.natH * eff / CENT.cardMm.h };
+}
+
 // ── RÉGUAS (cm) ─────────────────────────────────────────────────────
 function centBuildRulers() {
   const hEl = document.getElementById('cent-ruler-h');
@@ -673,13 +866,18 @@ function centBuildRulers() {
   const stage = document.getElementById('cent-stage');
   if (!hEl || !vEl || !stage) return;
   const w = stage.clientWidth, h = stage.clientHeight;
+  // com a foto corrigida a régua é REAL (1 cm = 10 mm da carta, acompanha o zoom); sem correção é só referência visual
+  const ppm = centPxPerMm();
+  const pxX = ppm ? ppm.x * 10 : CENT_PX_PER_CM, pxY = ppm ? ppm.y * 10 : CENT_PX_PER_CM;
+  const lbl = document.getElementById('cent-ruler-lbl');
+  if (lbl) lbl.textContent = ppm ? 'Réguas (cm reais da carta)' : 'Réguas (cm, referência)';
 
   let hHtml = '', vHtml = '';
-  for (let cm = 0; cm * CENT_PX_PER_CM <= w; cm++) {
-    hHtml += `<div class="cent-tick cent-tick-h" style="left:${cm * CENT_PX_PER_CM}px"><span>${cm}</span></div>`;
+  for (let cm = 0; cm * pxX <= w; cm++) {
+    hHtml += `<div class="cent-tick cent-tick-h" style="left:${cm * pxX}px"><span>${cm}</span></div>`;
   }
-  for (let cm = 0; cm * CENT_PX_PER_CM <= h; cm++) {
-    vHtml += `<div class="cent-tick cent-tick-v" style="top:${cm * CENT_PX_PER_CM}px"><span>${cm}</span></div>`;
+  for (let cm = 0; cm * pxY <= h; cm++) {
+    vHtml += `<div class="cent-tick cent-tick-v" style="top:${cm * pxY}px"><span>${cm}</span></div>`;
   }
   hEl.innerHTML = hHtml;
   vEl.innerHTML = vHtml;
@@ -738,8 +936,9 @@ function centHandlesHTML() {
     { rect: 'inner', side: 't', cls: 'axis-v', pos: 'left:65%' },
     { rect: 'inner', side: 'b', cls: 'axis-v', pos: 'left:65%' }
   ];
+  const SIDE = { l: 'esquerda', r: 'direita', t: 'superior', b: 'inferior' };
   return cfg.map(h =>
-    `<div class="cent-handle cent-handle-${h.rect} ${h.cls}" data-rect="${h.rect}" data-side="${h.side}" style="${h.pos}"></div>`
+    `<div class="cent-handle cent-handle-${h.rect} ${h.cls}" data-rect="${h.rect}" data-side="${h.side}" style="${h.pos}" tabindex="0" role="slider" aria-label="Ponto da borda ${h.rect === 'outer' ? 'externa (física)' : 'interna (impressa)'} ${SIDE[h.side]} — setas movem, Shift move mais" aria-valuemin="0" aria-valuemax="100"></div>`
   ).join('');
 }
 
@@ -753,6 +952,25 @@ function centBindDrag() {
       e.stopPropagation();
       CENT.dragging = { rect: handle.dataset.rect, side: handle.dataset.side };
       try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+      centLoupeShow(e);
+    });
+    // teclado (17/10/2026): setas movem 0,1% do palco; Shift = 1%. Esq/Dir nos pontos esquerda/direita, Cima/Baixo nos de topo/base.
+    handle.addEventListener('keydown', (e) => {
+      const rect = handle.dataset.rect, side = handle.dataset.side;
+      const horiz = side === 'l' || side === 'r';
+      const dir = horiz ? ({ ArrowLeft: -1, ArrowRight: 1 })[e.key] : ({ ArrowUp: -1, ArrowDown: 1 })[e.key];
+      if (!dir) return;
+      e.preventDefault();
+      const step = (e.shiftKey ? 0.01 : 0.001) * dir;
+      const edges = CENT.edges[rect], MARGIN = 0.01;
+      let pct = edges[side] + step;
+      pct = Math.min(1, Math.max(0, pct));
+      if (side === 'l') pct = Math.min(pct, edges.r - MARGIN);
+      else if (side === 'r') pct = Math.max(pct, edges.l + MARGIN);
+      else if (side === 't') pct = Math.min(pct, edges.b - MARGIN);
+      else pct = Math.max(pct, edges.t + MARGIN);
+      edges[side] = pct;
+      centScheduleVisual();
     });
   });
 
@@ -790,14 +1008,60 @@ function centBindDrag() {
       else pct = Math.max(pct, edges.t + MARGIN);
       edges[side] = pct;
     }
-    centUpdateVisual();
+    centScheduleVisual();
+    centLoupeMove(e);
   });
 
-  window.addEventListener('pointerup', () => { CENT.dragging = null; CENT.panning = null; });
-  window.addEventListener('pointercancel', () => { CENT.dragging = null; CENT.panning = null; });
+  window.addEventListener('pointerup', () => { CENT.dragging = null; CENT.panning = null; centLoupeHide(); });
+  window.addEventListener('pointercancel', () => { CENT.dragging = null; CENT.panning = null; centLoupeHide(); });
 }
 
+// ── LUPA (17/10/2026) ────────────────────────────────────────────────
+// No celular o dedo cobre o ponto de 20 px que está sendo arrastado. Durante o arraste aparece um círculo com a foto
+// ampliada 3x ao redor do ponteiro (mira no centro), no canto oposto do palco pra não ficar debaixo do dedo.
+const CENT_LOUPE = { size: 120, zoom: 3 };
+function centLoupeShow(e) {
+  centLoupeHide();
+  const stage = document.getElementById('cent-stage'), layer = document.getElementById('cent-photo-layer');
+  if (!stage || !layer) return;
+  const loupe = document.createElement('div');
+  loupe.className = 'cent-loupe'; loupe.id = 'cent-loupe';
+  loupe.style.width = loupe.style.height = CENT_LOUPE.size + 'px';
+  const inner = document.createElement('div');
+  inner.className = 'cent-loupe-inner';
+  inner.style.width = stage.clientWidth + 'px'; inner.style.height = stage.clientHeight + 'px';
+  const clone = layer.cloneNode(true);
+  clone.removeAttribute('id');
+  clone.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+  inner.appendChild(clone);
+  loupe.appendChild(inner);
+  const cross = document.createElement('div'); cross.className = 'cent-loupe-cross';
+  loupe.appendChild(cross);
+  stage.appendChild(loupe);
+  centLoupeMove(e);
+}
+function centLoupeMove(e) {
+  const stage = document.getElementById('cent-stage'), loupe = document.getElementById('cent-loupe');
+  if (!stage || !loupe) return;
+  const b = stage.getBoundingClientRect();
+  const px = Math.min(b.width, Math.max(0, e.clientX - b.left)), py = Math.min(b.height, Math.max(0, e.clientY - b.top));
+  const R = CENT_LOUPE.size / 2, Z = CENT_LOUPE.zoom;
+  loupe.firstChild.style.transform = `translate(${R - px * Z}px, ${R - py * Z}px) scale(${Z})`;
+  // canto oposto ao ponteiro (em cima à esquerda; se o ponteiro estiver ali, vai pra baixo à direita)
+  const nearTL = px < CENT_LOUPE.size + 40 && py < CENT_LOUPE.size + 40;
+  loupe.style.left = nearTL ? '' : '8px'; loupe.style.right = nearTL ? '8px' : '';
+  loupe.style.top = nearTL ? '' : '8px'; loupe.style.bottom = nearTL ? '8px' : '';
+}
+function centLoupeHide() { const l = document.getElementById('cent-loupe'); if (l) l.remove(); }
+
 // ── ATUALIZAÇÃO VISUAL + CÁLCULO ─────────────────────────────────
+// 17/10/2026: o painel de resultado era reescrito inteiro a cada pointermove (dezenas de vezes por segundo) — agora 1x por quadro
+let _centRaf = 0;
+function centScheduleVisual() {
+  if (_centRaf) return;
+  _centRaf = requestAnimationFrame(() => { _centRaf = 0; centUpdateVisual(); });
+}
+
 function centUpdateVisual() {
   const stage = document.getElementById('cent-stage');
   if (!stage || !CENT.edges) return;
@@ -811,6 +1075,7 @@ function centUpdateVisual() {
     const pct = CENT.edges[r][side];
     if (side === 'l' || side === 'r') h.style.left = (pct * 100) + '%';
     else h.style.top = (pct * 100) + '%';
+    h.setAttribute('aria-valuenow', (pct * 100).toFixed(1));
   });
 
   centRenderResult();
@@ -846,39 +1111,35 @@ function centRenderResult() {
 
   const lr = centRatio(leftB, rightB, 'Esquerda', 'Direita');
   const tb = centRatio(topB, bottomB, 'Topo', 'Base');
+  // largura das bordas em mm (só com foto corrigida). As frações de `edges` são do palco, então converte via px/mm.
+  const stageEl = document.getElementById('cent-stage');
+  const ppm = centPxPerMm();
+  const fmtMm = (f, axis) => ppm && stageEl ? ((f * (axis === 'x' ? stageEl.clientWidth / ppm.x : stageEl.clientHeight / ppm.y)).toFixed(1).replace('.', ',') + ' mm') : null;
+  const mmLR = ppm ? ` · ${fmtMm(leftB, 'x')} / ${fmtMm(rightB, 'x')}` : '';
+  const mmTB = ppm ? ` · ${fmtMm(topB, 'y')} / ${fmtMm(bottomB, 'y')}` : '';
   const worstPct = Math.max(lr.pctBig, tb.pctBig);
 
-  const subs = CENT.subgrades;
-  const allSubsSet = subs.corners !== '' && subs.edges !== '' && subs.surface !== '';
-
-  const rows = ['PSA', 'BGS', 'CGC', 'TAG'].map(co => {
-    const centGrade = centGradeFromBreaks(co, worstPct);
-    const centLabel = centGradeLabel(co, centGrade, worstPct);
-
+  const allSubsSet = CENT.subgrades.corners !== '' && CENT.subgrades.edges !== '' && CENT.subgrades.surface !== '';
+  const rows = centCompanyRows(worstPct).map(r => {
     let overallHtml = '';
-    if (allSubsSet) {
-      const c = parseFloat(subs.corners), e = parseFloat(subs.edges), s = parseFloat(subs.surface);
-      let overall;
-      if (co === 'PSA') {
-        overall = Math.min(centGrade, c, e, s);
-      } else {
-        overall = (centGrade + c + e + s) / 4;
-        overall = Math.round(overall * 2) / 2; // meio ponto, como BGS/CGC
-      }
-      overallHtml = `<span class="cent-grade-overall">geral: <b>${overall}</b></span>`;
+    if (r.overall !== null) {
+      const lim = r.limit.length
+        ? `<span class="cent-axis-note" style="display:block">${r.co === 'PSA' ? 'limitada por' : 'puxam a média'}: ${r.limit.join(', ')}</span>`
+        : '';
+      overallHtml = `<span class="cent-grade-overall">geral: <b>${r.overall}</b></span>${lim}`;
     }
-
     return `<div class="cent-grade-row">
-      <span class="cent-grade-co">${co}</span>
-      <span class="cent-grade-badge">centr.: ${centLabel}</span>
+      <span class="cent-grade-co">${r.co}</span>
+      <span class="cent-grade-badge">centr.: ${r.centLabel}</span>
       ${overallHtml}
     </div>`;
   }).join('');
 
   box.innerHTML = `
     <div class="panel-t">📐 Resultado</div>
-    <div class="cent-axis-line"><b>Esquerda/Direita:</b> ${lr.label} <span class="cent-axis-note">(${lr.note})</span></div>
-    <div class="cent-axis-line"><b>Topo/Base:</b> ${tb.label} <span class="cent-axis-note">(${tb.note})</span></div>
+    <div class="cent-axis-line"><b>Esquerda/Direita:</b> ${lr.label}${mmLR} <span class="cent-axis-note">(${lr.note})</span></div>
+    <div class="cent-axis-line"><b>Topo/Base:</b> ${tb.label}${mmTB} <span class="cent-axis-note">(${tb.note})</span></div>
+    ${ppm ? '' : `<div class="cent-axis-note" style="margin-top:4px">Sem correção de perspectiva não dá pra mostrar as bordas em mm — use "Recalibrar perspectiva" marcando os 4 cantos da carta.</div>`}
     <div style="height:1px;background:var(--border);margin:12px 0"></div>
     <div style="font-size:10.5px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:8px">
       Nota-teto de centralização e nota geral estimada (combinando com a autoavaliação de cantos/bordas/superfície
@@ -889,26 +1150,125 @@ function centRenderResult() {
       Responda a autoavaliação de cantos, bordas e superfície abaixo pra ver a nota geral estimada.
     </div>` : ''}
     <div style="font-size:9.5px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:12px;line-height:1.5">
-      * Estimativa com base nos padrões públicos de cada empresa (front). PSA usa o pior dos 4 critérios; BGS e
-      CGC fazem uma média. A <b style="color:var(--text)">TAG</b> é a mais rígida em centralização (~51/49 pro
-      10) — ela mede com câmeras e visão computacional numa escala própria de 1000 pontos, então a "nota geral"
-      dela aqui é só uma aproximação nossa pra escala 1-10, não o método oficial deles. Pode variar por versão/
-      época de submissão — use como referência, não como garantia. Verso não entra nesse cálculo.
+      * Estimativa com base nos padrões públicos de cada empresa (frente; o verso só entra se você informar no campo
+      opcional). Tabelas de <b style="color:var(--text)">CGC</b> e <b style="color:var(--text)">TAG</b> conferidas nas
+      páginas oficiais (out/2026); <b style="color:var(--text)">PSA</b> pelo consenso dos guias (o site oficial não
+      pôde ser conferido) e <b style="color:var(--text)">BGS</b> estimada (a Beckett não publica % abaixo do 9,5). PSA usa
+      o pior dos 4 critérios; BGS, CGC e TAG fazem uma média. A TAG mede com câmeras e visão computacional numa escala
+      própria de 1000 pontos, então a "nota geral" dela aqui é só uma aproximação nossa pra escala 1-10. Pode variar
+      por versão/época de submissão — use como referência, não como garantia.
     </div>
   `;
+  centRenderWorth();
+}
+
+// nota de cada empresa: teto de centralização + (com a autoavaliação preenchida) nota geral e o que a limita.
+// PSA pega o pior dos 4 critérios; BGS/CGC/TAG fazem a média em meio ponto (aproximação nossa, ver aviso no rodapé).
+function centCompanyRows(worstPct) {
+  const subs = CENT.subgrades;
+  const all = subs.corners !== '' && subs.edges !== '' && subs.surface !== '';
+  return ['PSA', 'BGS', 'CGC', 'TAG'].map(co => {
+    const frontGrade = centGradeFromBreaks(co, worstPct);
+    const back = CENT.backPct !== '' && CENT.backPct != null && CENT_BREAKS_BACK[co]
+      ? (() => { for (const [mx, g] of CENT_BREAKS_BACK[co]) if (CENT.backPct <= mx) return g; return 7; })() : null;
+    const centGrade = back !== null ? Math.min(frontGrade, back) : frontGrade;
+    let centLabel = centGradeLabel(co, frontGrade, worstPct);
+    if (back !== null && back < frontGrade) centLabel = `${centGrade} (o verso limita)`;
+    let overall = null, limit = [];
+    if (all) {
+      const parts = [[back !== null && back < frontGrade ? 'centralização (verso)' : 'centralização', centGrade], ['cantos', parseFloat(subs.corners)], ['bordas', parseFloat(subs.edges)], ['superfície', parseFloat(subs.surface)]];
+      const minV = Math.min.apply(null, parts.map(x => x[1]));
+      overall = co === 'PSA' ? minV : Math.round(parts.reduce((t, x) => t + x[1], 0) / 4 * 2) / 2;
+      if (!parts.every(x => x[1] === minV)) limit = parts.filter(x => x[1] === minV).map(x => `${x[0]} (${x[1]})`);
+    }
+    return { co, centGrade, centLabel, overall, limit, backGrade: back };
+  });
+}
+
+// dados do resultado atual (ou null se os pontos ainda estão cruzados)
+function centCurrentResult() {
+  if (!CENT.edges) return null;
+  const { outer, inner } = CENT.edges;
+  const leftB = inner.l - outer.l, rightB = outer.r - inner.r, topB = inner.t - outer.t, bottomB = outer.b - inner.b;
+  if (leftB <= 0 || rightB <= 0 || topB <= 0 || bottomB <= 0) return null;
+  const lr = centRatio(leftB, rightB, 'Esquerda', 'Direita'), tb = centRatio(topB, bottomB, 'Topo', 'Base');
+  const stage = document.getElementById('cent-stage'), ppm = centPxPerMm();
+  const mm = (f, axis) => (ppm && stage) ? (f * (axis === 'x' ? stage.clientWidth / ppm.x : stage.clientHeight / ppm.y)).toFixed(1).replace('.', ',') + ' mm' : null;
+  return {
+    lr, tb,
+    mmLR: ppm ? `${mm(leftB, 'x')} / ${mm(rightB, 'x')}` : null,
+    mmTB: ppm ? `${mm(topB, 'y')} / ${mm(bottomB, 'y')}` : null,
+    rows: centCompanyRows(Math.max(lr.pctBig, tb.pctBig))
+  };
+}
+
+function centResultText() {
+  const r = centCurrentResult();
+  if (!r) return null;
+  const lines = ['Centralização (frente) — MyDeck',
+    `Esquerda/Direita: ${r.lr.label}${r.mmLR ? ' (' + r.mmLR + ')' : ''}`,
+    `Topo/Base: ${r.tb.label}${r.mmTB ? ' (' + r.mmTB + ')' : ''}`];
+  r.rows.forEach(x => lines.push(`${x.co}: centr. ${x.centLabel}${x.overall !== null ? ' · geral ' + x.overall + (x.limit.length ? ' (' + x.limit.join(', ') + ')' : '') : ''}`));
+  lines.push('Estimativa pelos padrões públicos de cada empresa — não é garantia de nota. mydecktcg.com.br');
+  return lines.join('\n');
+}
+
+async function centCopyResult() {
+  const txt = centResultText();
+  if (!txt) { centToast('Posicione os pontos primeiro (os dourados ficam por dentro dos vermelhos).'); return; }
+  try { await navigator.clipboard.writeText(txt); }
+  catch (e) {
+    const ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e2) {} ta.remove();
+  }
+  if (typeof toast === 'function') toast('Resultado copiado!');
+}
+
+// imagem do palco como está na tela (foto com zoom/rotação/posição + os 2 retângulos) com o resultado embaixo
+function centDownloadImage() {
+  const r = centCurrentResult();
+  const stage = document.getElementById('cent-stage'), img = document.getElementById('cent-img');
+  if (!r || !stage || !img || !img.naturalWidth) { centToast('Posicione os pontos primeiro.'); return; }
+  const vw = stage.clientWidth, vh = stage.clientHeight, pad = 26 + r.rows.length * 18 + 22;
+  const k = 2; // 2x pra ficar nítido
+  const c = document.createElement('canvas'); c.width = vw * k; c.height = (vh + pad) * k;
+  const g = c.getContext('2d'); g.scale(k, k);
+  g.fillStyle = '#000'; g.fillRect(0, 0, vw, vh + pad);
+  const eff = (CENT.baseScale || 1) * (CENT.zoom || 1);
+  g.save(); g.beginPath(); g.rect(0, 0, vw, vh); g.clip();
+  g.translate((vw - CENT.natW) / 2 + (CENT.panOffsetX || 0) + CENT.natW / 2, (vh - CENT.natH) / 2 + (CENT.panOffsetY || 0) + CENT.natH / 2);
+  g.scale(eff, eff); g.rotate((CENT.rotation || 0) * Math.PI / 180);
+  g.drawImage(img, -CENT.natW / 2, -CENT.natH / 2, CENT.natW, CENT.natH);
+  g.restore();
+  const { outer, inner } = CENT.edges;
+  const box = (e, color) => { g.strokeStyle = color; g.lineWidth = 2; g.strokeRect(e.l * vw, e.t * vh, (e.r - e.l) * vw, (e.b - e.t) * vh); };
+  box(outer, '#e63946'); box(inner, '#ffd166');
+  g.fillStyle = '#fff'; g.font = '13px sans-serif';
+  let y = vh + 20;
+  g.fillText(`Esq/Dir ${r.lr.label}${r.mmLR ? ' (' + r.mmLR + ')' : ''}   ·   Topo/Base ${r.tb.label}${r.mmTB ? ' (' + r.mmTB + ')' : ''}`, 10, y); y += 18;
+  r.rows.forEach(x => { g.fillText(`${x.co}: centr. ${x.centLabel}${x.overall !== null ? ' · geral ' + x.overall : ''}`, 10, y); y += 18; });
+  g.fillStyle = '#9aa0c0'; g.font = '10px sans-serif';
+  g.fillText('Estimativa pelos padrões públicos — não é garantia de nota · mydecktcg.com.br', 10, vh + pad - 8);
+  c.toBlob(blob => {
+    if (!blob) { centToast('Não consegui gerar a imagem.'); return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'centralizacao-mydeck.png';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }, 'image/png');
 }
 
 function centRatio(a, b, nameA, nameB) {
   const total = a + b;
   const big = Math.max(a, b);
   const small = Math.min(a, b);
-  const pctBig = Math.round((big / total) * 100);
-  const pctSmall = 100 - pctBig;
+  // 17/10/2026: antes arredondava pra INTEIRO antes de comparar com o limite da nota — 55,4/44,6 virava "55/45" e levava
+  // PSA 10 (o limite é 55/45). Agora 1 casa decimal: o rótulo e a nota usam o mesmo número (55,4 → nota 9).
+  const pctBig = Math.round((big / total) * 1000) / 10;
+  const pctSmall = Math.round((100 - pctBig) * 10) / 10;
   const biggerSide = a > b ? nameA : nameB;
   const otherSide = a > b ? nameB : nameA;
   return {
     pctBig,
-    label: `${pctBig}/${pctSmall}`,
-    note: `borda de ${biggerSide.toLowerCase()} mais larga — carta puxada pro lado de ${otherSide.toLowerCase()}`
+    label: `${pctBig.toFixed(1)}/${pctSmall.toFixed(1)}`,
+    note: pctBig <= 50 ? 'perfeitamente centralizada nesse eixo' : `borda de ${biggerSide.toLowerCase()} mais larga — carta puxada pro lado de ${otherSide.toLowerCase()}`
   };
 }

@@ -48,18 +48,28 @@ function renderHomeContentAdmin() {
   holder.innerHTML =
     '<div class="hc-block">' +
       '<div class="hc-block-title">Notícia do mundo Pokémon</div>' +
-      '<div class="hc-block-hint">Título obrigatório, subtítulo opcional — vira a matéria que abre no feed. Imagem ou vídeo (YouTube/TikTok tocam embutidos) são opcionais.</div>' +
+      '<div class="hc-block-hint">Título obrigatório, subtítulo opcional — vira a matéria que abre no feed. Imagem ou vídeo (YouTube/TikTok tocam embutidos) são opcionais. Dica: com "Imagem" escolhida você pode enviar o arquivo, arrastar a foto pra cá ou colar uma imagem copiada (Ctrl+V).</div>' +
       '<input id="hc-news-title" placeholder="Título da matéria" maxlength="140">' +
       '<input id="hc-news-subtitle" placeholder="Subtítulo (opcional)" maxlength="200">' +
       '<textarea id="hc-news-body" placeholder="Texto da notícia..." maxlength="4000"></textarea>' +
       '<div class="hc-row">' +
         '<select id="hc-news-media-type" onchange="hcToggleNewsMediaInput()">' +
           '<option value="none">Sem mídia</option>' +
-          '<option value="image">Imagem (URL)</option>' +
+          '<option value="image">Imagem</option>' +
           '<option value="video">Vídeo (URL — YouTube/TikTok tocam embutidos, outros só linkam)</option>' +
         '</select>' +
-        '<input id="hc-news-media-url" placeholder="URL da imagem/vídeo" style="display:none">' +
-        '<button class="btn-mini" onclick="hcPublishNews()">📨 Publicar notícia</button>' +
+        '<input id="hc-news-media-url" placeholder="URL do vídeo" style="display:none" oninput="hcNewsUrlChanged()">' +
+        '<button class="btn-mini" id="hc-news-publish-btn" onclick="hcPublishNews()">📨 Publicar notícia</button>' +
+      '</div>' +
+      // Envio de imagem (09/10/2026): só aparece com "Imagem" escolhida
+      '<div id="hc-news-img-box" class="hc-img-box" style="display:none">' +
+        '<div class="hc-row">' +
+          '<button type="button" class="btn-mini" onclick="document.getElementById(\'hc-news-img-file\').click()">📷 Escolher imagem</button>' +
+          '<input type="file" id="hc-news-img-file" accept="image/*" style="display:none" onchange="hcNewsImgPicked(this)">' +
+          '<span class="hc-img-or">ou arraste/cole (Ctrl+V) a imagem aqui, ou use o link:</span>' +
+        '</div>' +
+        '<div id="hc-news-img-status" class="hc-img-status"></div>' +
+        '<div id="hc-news-img-preview" class="hc-img-preview"></div>' +
       '</div>' +
       '<div id="hc-news-list" class="hc-list"></div>' +
     '</div>' +
@@ -105,6 +115,7 @@ function renderHomeContentAdmin() {
       '<div id="hc-article-list" class="hc-list"></div>' +
     '</div>';
 
+  hcNewsInitImageDrop();
   hcLoadNewsList();
   hcLoadVideoList();
   hcLoadLinkList();
@@ -116,8 +127,174 @@ function hcToggleNewsMediaInput() {
   const input = document.getElementById('hc-news-media-url');
   if (!sel || !input) return;
   input.style.display = sel.value === 'none' ? 'none' : '';
+  input.placeholder = sel.value === 'image' ? 'link da imagem (preenchido sozinho ao enviar)' : 'URL do vídeo';
+  const box = document.getElementById('hc-news-img-box');
+  if (box) box.style.display = sel.value === 'image' ? '' : 'none';
+  if (sel.value !== 'image') hcNewsImgClear(true);
+  else hcNewsUrlChanged();
 }
 window.hcToggleNewsMediaInput = hcToggleNewsMediaInput;
+
+// ── IMAGEM DA NOTÍCIA (09/10/2026) ───────────────────────────────────
+// Antes o formulário só aceitava o LINK de uma imagem. Agora dá pra escolher o arquivo, arrastar a foto
+// pra cima do bloco ou colar uma imagem copiada (Ctrl+V): a tela reduz (lado maior 1600 px), converte pra
+// WebP e envia pro bucket público news-images (noticias_imagens_bucket_09out2026.sql — só quem tem a
+// permissão 'inicio' escreve). O link público volta pro campo sozinho e a prévia aparece embaixo.
+const HC_NEWS_BUCKET = 'news-images';
+const HC_NEWS_IMG_MAX_SIDE = 1600;
+const HC_NEWS_IMG_MAX_INPUT = 25 * 1024 * 1024; // arquivo de origem; o enviado fica bem menor
+let hcNewsImgBusy = false;
+let hcNewsImgPath = null; // arquivo enviado nesta tela e ainda não publicado (apagado se trocar/remover)
+
+function hcNewsImgStatus(msg, isError) {
+  const el = document.getElementById('hc-news-img-status');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.style.color = isError ? 'var(--accent, #e63946)' : 'var(--muted)';
+}
+
+function hcNewsImgPreview(url) {
+  const holder = document.getElementById('hc-news-img-preview');
+  if (!holder) return;
+  if (!url) { holder.innerHTML = ''; return; }
+  holder.innerHTML = '<img src="' + hcEsc(url) + '" alt="Prévia da imagem" onerror="this.parentNode.innerHTML=\'<span class=&quot;hc-img-bad&quot;>Não consegui abrir essa imagem — confira o link.</span>\'">' +
+    '<button type="button" class="btn-mini" onclick="hcNewsImgClear()">🗑️ Remover imagem</button>';
+}
+
+// Link colado/digitado à mão: mostra a prévia (se o endereço parece válido).
+function hcNewsUrlChanged() {
+  const sel = document.getElementById('hc-news-media-type');
+  const input = document.getElementById('hc-news-media-url');
+  if (!sel || !input || sel.value !== 'image') return;
+  const v = input.value.trim();
+  hcNewsImgPreview(/^https?:\/\/\S+$/i.test(v) ? v : '');
+}
+window.hcNewsUrlChanged = hcNewsUrlChanged;
+
+// Remove a imagem da matéria; se ela foi enviada por esta tela (e ainda não publicada), apaga o arquivo do bucket.
+async function hcNewsImgClear(silent) {
+  const input = document.getElementById('hc-news-media-url');
+  if (input) input.value = '';
+  hcNewsImgPreview('');
+  if (!silent) hcNewsImgStatus('');
+  const old = hcNewsImgPath;
+  hcNewsImgPath = null;
+  if (old) { try { await sbClient.storage.from(HC_NEWS_BUCKET).remove([old]); } catch (e) { /* sobra um arquivo órfão, sem impacto */ } }
+}
+window.hcNewsImgClear = hcNewsImgClear;
+
+// Lê o arquivo, reduz e converte. GIF animado vai como está (reduzir perderia a animação).
+async function hcPrepareNewsImage(file) {
+  if (file.type === 'image/gif') {
+    if (file.size > 5 * 1024 * 1024) throw new Error('GIF acima de 5 MB. Use um menor ou um print.');
+    return { blob: file, type: 'image/gif', ext: 'gif' };
+  }
+  let bmp;
+  if (window.createImageBitmap) {
+    try { bmp = await createImageBitmap(file); } catch (e) { bmp = null; }
+  }
+  if (!bmp) {
+    bmp = await new Promise(function (resolve, reject) {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = function () { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('Não consegui ler essa imagem.')); };
+      img.src = url;
+    });
+  }
+  const w0 = bmp.width, h0 = bmp.height;
+  if (!w0 || !h0) throw new Error('Imagem inválida.');
+  const scale = Math.min(1, HC_NEWS_IMG_MAX_SIDE / Math.max(w0, h0));
+  const w = Math.round(w0 * scale), h = Math.round(h0 * scale);
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(bmp, 0, 0, w, h);
+  if (bmp.close) { try { bmp.close(); } catch (e) {} }
+  const toBlob = function (type, q) { return new Promise(function (res) { canvas.toBlob(res, type, q); }); };
+  let blob = await toBlob('image/webp', 0.86);
+  let type = 'image/webp', ext = 'webp';
+  if (!blob || blob.type !== 'image/webp') { // navegador que não codifica WebP
+    blob = await toBlob('image/jpeg', 0.88); type = 'image/jpeg'; ext = 'jpg';
+  }
+  if (!blob) throw new Error('Não consegui converter a imagem.');
+  return { blob: blob, type: type, ext: ext };
+}
+
+async function hcNewsUploadImage(file) {
+  if (!hasPerm('inicio')) return;
+  if (!file || !/^image\//.test(file.type || '')) { hcNewsImgStatus('Escolha um arquivo de imagem (JPG, PNG, WebP ou GIF).', true); return; }
+  if (file.size > HC_NEWS_IMG_MAX_INPUT) { hcNewsImgStatus('Imagem grande demais (máx. 25 MB).', true); return; }
+  if (hcNewsImgBusy) return;
+  hcNewsImgBusy = true;
+  const btn = document.getElementById('hc-news-publish-btn');
+  if (btn) btn.disabled = true;
+  hcNewsImgStatus('Preparando e enviando a imagem…');
+  try {
+    const prep = await hcPrepareNewsImage(file);
+    const rand = Math.random().toString(36).slice(2, 8);
+    const path = uid() + '/' + Date.now() + '-' + rand + '.' + prep.ext;
+    const { error } = await sbClient.storage.from(HC_NEWS_BUCKET).upload(path, prep.blob, {
+      contentType: prep.type, cacheControl: '31536000', upsert: false
+    });
+    if (error) throw new Error(error.message || 'Falha no envio.');
+    const url = sbClient.storage.from(HC_NEWS_BUCKET).getPublicUrl(path).data.publicUrl;
+    // troca a imagem anterior enviada por esta tela (se houver)
+    const old = hcNewsImgPath;
+    hcNewsImgPath = path;
+    if (old && old !== path) { try { await sbClient.storage.from(HC_NEWS_BUCKET).remove([old]); } catch (e) {} }
+    const sel = document.getElementById('hc-news-media-type');
+    if (sel && sel.value !== 'image') { sel.value = 'image'; hcToggleNewsMediaInput(); }
+    const input = document.getElementById('hc-news-media-url');
+    if (input) input.value = url;
+    hcNewsImgPreview(url);
+    hcNewsImgStatus('Imagem enviada (' + Math.max(1, Math.round(prep.blob.size / 1024)) + ' KB). Pode publicar.');
+  } catch (e) {
+    hcNewsImgStatus('Não deu pra enviar: ' + (e && e.message ? e.message : e), true);
+  } finally {
+    hcNewsImgBusy = false;
+    if (btn) btn.disabled = false;
+  }
+}
+
+function hcNewsImgPicked(inputEl) {
+  const f = inputEl && inputEl.files && inputEl.files[0];
+  if (f) hcNewsUploadImage(f);
+  if (inputEl) inputEl.value = ''; // permite escolher o mesmo arquivo de novo
+}
+window.hcNewsImgPicked = hcNewsImgPicked;
+
+// Colar (Ctrl+V) e arrastar valem em todo o bloco da notícia. Colar TEXTO continua normal (só intercepta imagem).
+function hcNewsInitImageDrop() {
+  const title = document.getElementById('hc-news-title');
+  const block = title && title.closest('.hc-block');
+  if (!block || block.dataset.hcImgInit) return;
+  block.dataset.hcImgInit = '1';
+  const firstImage = function (dt) {
+    const files = dt && dt.files ? Array.prototype.slice.call(dt.files) : [];
+    return files.find(function (f) { return /^image\//.test(f.type || ''); }) || null;
+  };
+  block.addEventListener('paste', function (ev) {
+    const f = firstImage(ev.clipboardData);
+    if (!f) return;
+    ev.preventDefault();
+    hcNewsUploadImage(f);
+  });
+  block.addEventListener('dragover', function (ev) {
+    if (ev.dataTransfer && Array.prototype.some.call(ev.dataTransfer.items || [], function (i) { return i.kind === 'file'; })) {
+      ev.preventDefault();
+      block.classList.add('hc-drop');
+    }
+  });
+  block.addEventListener('dragleave', function () { block.classList.remove('hc-drop'); });
+  block.addEventListener('drop', function (ev) {
+    block.classList.remove('hc-drop');
+    const f = firstImage(ev.dataTransfer);
+    if (!f) return;
+    ev.preventDefault();
+    hcNewsUploadImage(f);
+  });
+}
 
 // ── NOTÍCIAS ─────────────────────────────────────────────────────────
 async function hcPublishNews() {
@@ -131,9 +308,11 @@ async function hcPublishNews() {
   const body = bodyEl.value.trim();
   if (!title) { alert('Escreva o título da matéria.'); return; }
   if (!body) { alert('Escreva o texto da notícia.'); return; }
+  if (hcNewsImgBusy) { alert('Aguarde: a imagem ainda está sendo enviada.'); return; }
 
   const mediaType = typeEl.value;
   const mediaUrl = mediaType === 'none' ? null : urlEl.value.trim() || null;
+  if (mediaType === 'image' && !mediaUrl) { alert('Você escolheu "Imagem", mas ainda não enviou nenhuma. Envie a imagem ou mude para "Sem mídia".'); return; }
 
   const { error } = await sbClient.from('pokemon_news').insert({
     title: title, subtitle: subEl.value.trim() || null, body: body,
@@ -141,7 +320,9 @@ async function hcPublishNews() {
   });
   if (error) { alert('Erro ao publicar: ' + error.message); return; }
 
+  hcNewsImgPath = null; // a imagem enviada agora pertence à notícia publicada: não apagar mais
   titleEl.value = ''; subEl.value = ''; bodyEl.value = ''; urlEl.value = ''; typeEl.value = 'none'; hcToggleNewsMediaInput();
+  hcNewsImgStatus('');
   hcLoadNewsList();
 }
 window.hcPublishNews = hcPublishNews;

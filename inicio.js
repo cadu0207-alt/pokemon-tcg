@@ -73,6 +73,25 @@ function inicioTruncate(s, max) {
   return (lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut) + '…';
 }
 
+// 17/10/2026: "há 3 dias" em vez de só 09/10/2026 — dá noção de quão fresco é o conteúdo. Passou de 30 dias
+// volta pra data completa. inicioDateTitle() mantém a data exata ao passar o mouse.
+function inicioDateLabel(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (days < 0) return d.toLocaleDateString('pt-BR');
+  if (days === 0) return 'hoje';
+  if (days === 1) return 'ontem';
+  if (days < 7) return 'há ' + days + ' dias';
+  if (days < 30) { const w = Math.floor(days / 7); return 'há ' + w + (w === 1 ? ' semana' : ' semanas'); }
+  return d.toLocaleDateString('pt-BR');
+}
+function inicioDateTitle(iso) {
+  const d = iso ? new Date(iso) : null;
+  return d && !isNaN(d) ? ' title="' + inicioEsc(d.toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })) + '"' : '';
+}
+
 // ── VÍDEO EMBUTIDO — extrai ID do YouTube/TikTok pra tocar no site ──
 function inicioYoutubeId(url) {
   if (!url) return null;
@@ -91,7 +110,12 @@ function inicioVideoEmbedHtml(platform, url, title) {
   if (platform === 'youtube') {
     const yid = inicioYoutubeId(url);
     if (yid) {
-      return '<div class="inicio-video-embed"><iframe src="https://www.youtube-nocookie.com/embed/' + yid + '" title="' + inicioEsc(title || 'Vídeo') + '" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>';
+      // 17/10/2026: o iframe só nasce no clique. Antes cada vídeo do feed carregava o player inteiro do YouTube na
+      // abertura (6 iframes nos 12 primeiros itens); agora é uma miniatura (~20 KB) com botão de play.
+      return '<div class="inicio-video-embed inicio-yt-facade" data-yid="' + yid + '" data-title="' + inicioEsc(title || 'Vídeo') + '" role="button" tabindex="0" ' +
+        'aria-label="Reproduzir vídeo: ' + inicioEsc(title || 'Vídeo') + '" onclick="event.stopPropagation();inicioPlayYoutube(this)" ' +
+        'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();event.stopPropagation();inicioPlayYoutube(this)}">' +
+        '<img src="https://i.ytimg.com/vi/' + yid + '/hqdefault.jpg" alt="" loading="lazy" decoding="async"><span class="inicio-yt-play" aria-hidden="true">▶</span></div>';
     }
   } else if (platform === 'tiktok') {
     const tid = inicioTiktokId(url);
@@ -102,6 +126,17 @@ function inicioVideoEmbedHtml(platform, url, title) {
   const label = platform === 'tiktok' ? 'TikTok' : platform === 'youtube' ? 'YouTube' : 'vídeo';
   return '<a class="inicio-video-fallback" href="' + safeUrl + '" target="_blank" rel="noopener">▶ Assistir no ' + label + '</a>';
 }
+function inicioPlayYoutube(el) {
+  const yid = el.getAttribute('data-yid');
+  if (!yid || !/^[A-Za-z0-9_-]{6,}$/.test(yid)) return;
+  el.classList.remove('inicio-yt-facade');
+  el.removeAttribute('role'); el.removeAttribute('tabindex'); el.removeAttribute('onclick'); el.removeAttribute('onkeydown');
+  el.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + yid + '?autoplay=1" title="' + inicioEsc(el.getAttribute('data-title') || 'Vídeo') +
+    '" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+  const f = el.querySelector('iframe'); if (f) f.focus();
+}
+window.inicioPlayYoutube = inicioPlayYoutube;
+
 // O embed.js do TikTok processa <blockquote class="tiktok-embed"> presentes
 // no DOM no momento em que ele carrega/roda. Como os cards são inseridos
 // via innerHTML depois (SPA), precisa recarregar o script toda vez que
@@ -116,6 +151,13 @@ function inicioReloadTiktokEmbed() {
   document.body.appendChild(s);
 }
 
+// 17/10/2026 (bug "Início vazia pra visitante"): quem chamava renderInicio() na abertura era só o gancho em
+// _updateUserChip (fim deste arquivo), disparado pelo evento INITIAL_SESSION do Supabase. Sem sessão salva esse
+// evento sai quase na hora — antes deste script instalar o gancho — e a Início ficava só com os títulos. Agora
+// também renderiza no DOMContentLoaded; INICIO_LAST evita refazer tudo quando os dois caminhos disparam juntos
+// (mesmo usuário, menos de 2,5 s). Troca de conta (uid diferente) sempre re-renderiza.
+let INICIO_LAST = { t: 0, uid: undefined };
+
 async function renderInicio() {
   // 29/08/2026 (Opção 1 — Início pública): antes exigia currentUser; agora
   // qualquer visitante (logado ou não) vê o feed. Login só é pedido pra
@@ -123,6 +165,17 @@ async function renderInicio() {
   // go()/app.js e as policies de leitura pública em
   // inicio_publico_setup.sql.
   if (!sbClient) return;
+  const me = (typeof uid === 'function' && uid()) || null;
+  // 17/10/2026 (cache): voltar pra Início refazia ~10 consultas e jogava a rolagem pro topo. Mesmo usuário e
+  // feed já carregado com sucesso (ok) => reaproveita a tela por 3 min (20 s pra quem publica conteúdo, pra ver
+  // a própria postagem logo). Dentro de 2,5 s (os dois gatilhos da abertura) pula sempre, carregado ou não.
+  const age = Date.now() - INICIO_LAST.t;
+  const ttl = (typeof hasPerm === 'function' && hasPerm('inicio')) ? 20000 : 180000;
+  if (INICIO_LAST.uid === me && (age < 2500 || (INICIO_LAST.ok && age < ttl))) return;
+  INICIO_LAST = { t: Date.now(), uid: me, ok: false };
+  closeInicioArticle();
+  if (inicioFeedObserver) { inicioFeedObserver.disconnect(); inicioFeedObserver = null; }
+  renderInicioWelcome(me);
   renderInicioHero();
   loadInicioUpdates();
   loadInicioFeed();
@@ -133,6 +186,47 @@ async function renderInicio() {
 // chamada antiga (disparada por um _updateUserChip anterior) sobrescreva
 // o resultado de uma chamada mais nova quando o app.js chama renderInicio()
 // mais de uma vez em sequência (ex.: INITIAL_SESSION + SIGNED_IN no login).
+// ── BOAS-VINDAS (17/10/2026) — só pra visitante sem login ───────────
+// Quem chega por link (TikTok, WhatsApp, Toybox) não via o que o MyDeck é. Faixa curta com 3 benefícios reais
+// (abas que existem hoje) e o caminho pra criar conta/entrar; some ao logar e pode ser dispensada por 7 dias.
+const INICIO_WELCOME_KEY = 'mydeck_welcome_dismiss';
+function inicioWelcomeDismissed() {
+  try {
+    const t = parseInt(localStorage.getItem(INICIO_WELCOME_KEY) || '0', 10);
+    return !!t && Date.now() - t < 7 * 86400000;
+  } catch (e) { return false; }
+}
+function renderInicioWelcome(me) {
+  const slot = document.getElementById('inicio-welcome-slot');
+  if (!slot) return;
+  if (me || inicioWelcomeDismissed()) { slot.innerHTML = ''; return; }
+  slot.innerHTML =
+    '<section class="inicio-welcome" aria-label="Boas-vindas ao MyDeck">' +
+      '<button type="button" class="inicio-welcome-x" aria-label="Dispensar" onclick="inicioWelcomeDismiss()">✕</button>' +
+      '<div class="inicio-welcome-eyebrow">Bem-vindo ao MyDeck</div>' +
+      '<h2 class="inicio-welcome-title">Sua coleção de Pokémon TCG organizada, com preço de verdade</h2>' +
+      '<ul class="inicio-welcome-list">' +
+        '<li><span>📚</span><b>Fichário e master set</b> — marque cada carta e veja quanto falta para completar.</li>' +
+        '<li><span>📊</span><b>Dashboard e gastos</b> — quanto vale a coleção e quanto você já investiu.</li>' +
+        '<li><span>💰</span><b>Preço justo</b> — compare o preço de uma carta antes de comprar ou vender.</li>' +
+      '</ul>' +
+      '<div class="inicio-welcome-actions">' +
+        '<button type="button" class="inicio-welcome-cta" onclick="inicioWelcomeAuth(\'signup\')">Criar minha conta</button>' +
+        '<button type="button" class="inicio-welcome-sec" onclick="inicioWelcomeAuth(\'login\')">Já tenho conta</button>' +
+      '</div>' +
+    '</section>';
+}
+function inicioWelcomeAuth(tab) {
+  if (typeof _showAuth === 'function') _showAuth(true);
+  if (typeof authSwitchTab === 'function') authSwitchTab(tab);
+}
+function inicioWelcomeDismiss() {
+  try { localStorage.setItem(INICIO_WELCOME_KEY, String(Date.now())); } catch (e) { /* ok */ }
+  const slot = document.getElementById('inicio-welcome-slot');
+  if (slot) slot.innerHTML = '';
+}
+window.inicioWelcomeAuth = inicioWelcomeAuth; window.inicioWelcomeDismiss = inicioWelcomeDismiss;
+
 let INICIO_HERO_REQ = 0;
 
 // ── HERO — puxa o artigo em destaque da Revista ────────────────────
@@ -187,7 +281,7 @@ async function loadInicioUpdates() {
   if (!rows.length) { holder.innerHTML = '<div class="admin-stats-loading">Nenhuma novidade publicada ainda.</div>'; return; }
 
   holder.innerHTML = '<div class="inicio-shelf">' + rows.map(function (u) {
-    const dt = u.created_at ? new Date(u.created_at).toLocaleDateString('pt-BR') : '';
+    const dt = inicioDateLabel(u.created_at);
     return (
       '<div class="inicio-update-card">' +
         '<div class="inicio-update-title">🆕 ' + inicioEsc(u.title) + '</div>' +
@@ -237,7 +331,7 @@ let INICIO_FEED_REQ = 0;
 // geração" do loadInicioFeed()/renderInicioHero() acima, pela mesma razão
 // (renderInicio() pode disparar mais de uma vez em sequência no login).
 let INICIO_MARKET_REQ = 0;
-const INICIO_MARKET_LIMIT = 24;
+const INICIO_MARKET_LIMIT = 16; // 17/10/2026: era 24 — a trilha duplica os cards (loop), então eram ~96 imagens
 
 async function loadInicioMarketFeed() {
   const targets = document.querySelectorAll('.inicio-market-feed-target');
@@ -290,6 +384,10 @@ function inicioMarketRow(items, kind, label) {
   );
 }
 
+// 17/10/2026: carta sem imagem (link quebrado ou sem arte) mostra um verso genérico em vez de sumir — o card
+// mantém o mesmo tamanho e a trilha não "pula".
+const INICIO_CARD_BACK = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="50" height="70" viewBox="0 0 50 70"><rect width="50" height="70" rx="4" fill="#2a2e42"/><rect x="5" y="5" width="40" height="60" rx="3" fill="none" stroke="#6b7194" stroke-width="1.5"/><circle cx="25" cy="35" r="9" fill="none" stroke="#6b7194" stroke-width="1.5"/><path d="M16 35h18" stroke="#6b7194" stroke-width="1.5"/></svg>');
+
 function inicioMarketCardHtml(it, kind) {
   const price = kind === 'sell' ? it.price : it.max_price;
   const priceTxt = 'R$ ' + Number(price || 0).toFixed(2).replace('.', ',');
@@ -310,7 +408,7 @@ function inicioMarketCardHtml(it, kind) {
   } catch (e) { img = ''; }
   return (
     '<button type="button" class="mkt-feed-card" onclick="goToTab(\'cartas\')" title="' + inicioEsc(it.card_name || '') + ' — ' + priceTxt + '">' +
-      (img ? '<img src="' + img + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : '') +
+      '<img src="' + (img || INICIO_CARD_BACK) + '" alt="" width="50" height="70" loading="lazy" decoding="async" onerror="this.onerror=null;this.src=INICIO_CARD_BACK">' +
       '<span class="mkt-feed-name">' + name + '</span>' +
       '<span class="mkt-feed-price">' + priceTxt + '</span>' +
     '</button>'
@@ -321,14 +419,15 @@ async function loadInicioFeed() {
   const holder = document.getElementById('inicio-feed-wrap');
   if (!holder) return;
   const reqId = ++INICIO_FEED_REQ;
+  inicioPriorityImgUsed = false;
   holder.innerHTML = '<div class="admin-stats-loading">Carregando...</div>';
 
   try {
     const [newsRes, videoRes, linkRes, artRes] = await Promise.all([
-      sbClient.from('pokemon_news').select('id,title,subtitle,body,media_type,media_url,author_uid,published_at').order('published_at', { ascending: false }).limit(40),
-      sbClient.from('community_videos').select('id,platform,video_url,title,handle,created_at').order('created_at', { ascending: false }).limit(40),
-      sbClient.from('community_links').select('id,title,url,category,icon,created_at').order('created_at', { ascending: false }).limit(40),
-      sbClient.from('magazine_articles').select('id,title,subtitle,tag,is_featured,published_at').order('published_at', { ascending: false }).limit(40)
+      sbClient.from('pokemon_news').select('id,title,subtitle,body,media_type,media_url,author_uid,published_at').order('published_at', { ascending: false }).limit(30),
+      sbClient.from('community_videos').select('id,platform,video_url,title,handle,created_at').order('created_at', { ascending: false }).limit(15),
+      sbClient.from('community_links').select('id,title,url,category,icon,created_at').order('created_at', { ascending: false }).limit(15),
+      sbClient.from('magazine_articles').select('id,title,subtitle,tag,is_featured,published_at').order('published_at', { ascending: false }).limit(15)
     ]);
     if (reqId !== INICIO_FEED_REQ) return; // uma chamada mais nova já assumiu
 
@@ -359,6 +458,7 @@ async function loadInicioFeed() {
     holder.innerHTML = '<div class="inicio-feed"></div>';
     inicioRenderFeedPage();
     inicioSetupFeedObserver();
+    INICIO_LAST.ok = true; // feed carregado de verdade: liberado pro cache de renderInicio()
   } catch (e) {
     if (reqId !== INICIO_FEED_REQ) return;
     console.error('[inicio] falha ao carregar o feed:', e);
@@ -437,12 +537,22 @@ function inicioNewsVideoEmbed(url, title) {
   return '';
 }
 
+// 17/10/2026: a 1ª imagem do feed é o maior elemento visível da Início (LCP) — carrega já e com prioridade;
+// as demais continuam preguiçosas.
+let inicioPriorityImgUsed = false;
+function inicioImgLoadAttrs() {
+  if (!inicioPriorityImgUsed && INICIO_FEED_RENDERED === 0) { inicioPriorityImgUsed = true; return 'loading="eager" fetchpriority="high"'; }
+  return 'loading="lazy"';
+}
+
 function inicioFeedNewsCard(n) {
-  const dt = n.published_at ? new Date(n.published_at).toLocaleDateString('pt-BR') : '';
-  const mediaTag = INICIO_MEDIA_LABEL[n.media_type] || '';
+  const dt = inicioDateLabel(n.published_at);
   const videoEmbed = n.media_type === 'video' && n.media_url ? inicioNewsVideoEmbed(n.media_url, n.title) : '';
+  // 17/10/2026: a etiqueta "🖼 imagem" não dizia nada ao leitor — só aparece quando é vídeo que não deu pra
+  // embutir (aí o card não mostra o vídeo e a etiqueta explica o que falta).
+  const mediaTag = (n.media_type === 'video' && n.media_url && !videoEmbed) ? (INICIO_MEDIA_LABEL.video || '') : '';
   const thumbBlock = n.media_type === 'image' && n.media_url
-    ? '<img class="inicio-news-media" src="' + inicioSafeUrl(n.media_url) + '" alt="" loading="lazy">'
+    ? '<img class="inicio-news-media" src="' + inicioSafeUrl(n.media_url) + '" alt="' + inicioEsc(n.title || '') + '" ' + inicioImgLoadAttrs() + ' decoding="async">'
     : '';
   const commentN = INICIO_FEED_COMMENT_COUNTS[n.id] || 0;
   const title = n.title ? inicioEsc(n.title) : inicioEsc(inicioTruncate(n.body, 70));
@@ -475,7 +585,7 @@ function inicioFeedNewsCard(n) {
       (n.subtitle ? '<div class="inicio-news-sub">' + inicioEsc(n.subtitle) + '</div>' : '') +
       snippetBlock +
       '<div class="inicio-news-foot">' +
-        '<span class="inicio-news-date">' + dt + '</span>' +
+        '<span class="inicio-news-date"' + inicioDateTitle(n.published_at) + '>' + dt + '</span>' +
         '<span class="inicio-news-comment-toggle">💬 ' + commentN + ' comentário' + (commentN === 1 ? '' : 's') + '</span>' +
       '</div>' +
     '</div>'
@@ -502,7 +612,7 @@ window.inicioToggleNewsExcerpt = function (btn) {
 // coluna só (não mais grid de várias colunas), então o embed 16:9 usa a
 // largura inteira da coluna (até 720px, ver .inicio-feed no style.css).
 function inicioFeedVideoCard(v) {
-  const dt = v.created_at ? new Date(v.created_at).toLocaleDateString('pt-BR') : '';
+  const dt = inicioDateLabel(v.created_at);
   const plat = v.platform === 'tiktok' ? 'TikTok' : 'YouTube';
   return (
     '<div class="inicio-video-card inicio-feed-video-card">' +
@@ -518,7 +628,7 @@ function inicioFeedVideoCard(v) {
 }
 
 function inicioFeedLinkCard(l) {
-  const dt = l.created_at ? new Date(l.created_at).toLocaleDateString('pt-BR') : '';
+  const dt = inicioDateLabel(l.created_at);
   return (
     '<a class="inicio-feed-link-card" href="' + inicioSafeUrl(l.url) + '" target="_blank" rel="noopener">' +
       '<span class="inicio-chip-ic">' + inicioEsc(l.icon || '🔗') + '</span>' +
@@ -532,7 +642,7 @@ function inicioFeedLinkCard(l) {
 }
 
 function inicioFeedArticleCard(a) {
-  const dt = a.published_at ? new Date(a.published_at).toLocaleDateString('pt-BR') : '';
+  const dt = inicioDateLabel(a.published_at);
   return (
     '<div class="inicio-article-row inicio-feed-article-card' + (a.is_featured ? ' inicio-article-featured' : '') + '">' +
       '<div class="inicio-article-tag">📖 ' + inicioEsc(a.tag || 'Revista') + (a.is_featured ? ' · Capa' : '') + '</div>' +
@@ -687,10 +797,15 @@ window.deleteInicioComment = deleteInicioComment;
       // limpava tudo no logout). Fecha modal/observer de uma sessão
       // anterior antes de recarregar, pra não vazar estado (ex.: botão
       // de apagar em comentário que não é mais "meu").
-      closeInicioArticle();
-      if (inicioFeedObserver) { inicioFeedObserver.disconnect(); inicioFeedObserver = null; }
+      // (17/10/2026: o fechamento do modal/observer foi pra dentro de renderInicio, depois da checagem
+      // INICIO_LAST — senão uma chamada descartada deixava o scroll infinito sem observer.)
       renderInicio();
     };
   }
   tryHook();
+  // 17/10/2026: garante a primeira renderização mesmo se o evento de sessão já passou (ver INICIO_LAST).
+  document.addEventListener('DOMContentLoaded', function () {
+    const pane = document.getElementById('inicio');
+    if (pane && pane.classList.contains('active')) renderInicio();
+  });
 })();

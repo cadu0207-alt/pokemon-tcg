@@ -23,7 +23,7 @@ window.__staffPerms = [];
 window.__isStaffMember = false;
 
 const STAFF_AREAS = [
-  { key: 'lojas', label: '🛒 Lojas & Ofertas', hint: 'cadastrar/editar produtos rastreados, cupons, coleção, destaque, atualizar preços (não mexe no link de afiliado)' },
+  { key: 'lojas', label: '🔎 Busca de Promoções ML', hint: 'cadastrar/editar produtos rastreados, cupons, coleção, destaque, atualizar preços (não mexe no link de afiliado)' },
   { key: 'feedback', label: '💬 Feedback', hint: 'responder mensagens de usuários' },
   { key: 'marketplace', label: '🏪 Lojas Confiáveis', hint: 'aprovar/rejeitar cadastro de lojas (não edita CNPJ/comissão)' },
   { key: 'positivo', label: '✅ Cadastro Positivo', hint: 'aprovar/rejeitar indicações de lojas' },
@@ -90,13 +90,13 @@ async function renderStaffAccessPanel() {
     return (
       '<div class="ml-term-card" data-staff-row="' + s.uid + '">' +
         '<div class="ml-term-hdr">' +
-          '<span class="ml-term-name">👤 ' + (s.display_name || s.email) + '</span>' +
+          '<span class="ml-term-name">👤 ' + esc(s.display_name || s.email) + '</span>' +
           '<span class="ml-term-actions">' +
             '<button class="btn-mini" onclick="saveStaffPermissions(\'' + s.uid + '\')">Salvar permissões</button>' +
             '<button class="btn-mini btn-mini-danger" onclick="removeStaffMember(\'' + s.uid + '\')">Remover</button>' +
           '</span>' +
         '</div>' +
-        '<div class="ml-term-sub">' + s.email + ' · vê tudo na aba Admin' + ((s.permissions || []).length ? '' : ' (só visualização — nenhuma permissão marcada)') + '</div>' +
+        '<div class="ml-term-sub">' + esc(s.email) + ' · vê tudo na aba Admin' + ((s.permissions || []).length ? '' : ' (só visualização — nenhuma permissão marcada)') + '</div>' +
         '<div class="staff-perm-grid">' + checks + '</div>' +
       '</div>'
     );

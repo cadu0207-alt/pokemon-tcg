@@ -104,9 +104,10 @@ async function refreshOneTerm(term: TermRow, token: string) {
   const catalogId = term.catalog_product_id;
   if (!catalogId) return { id: term.id, ok: false, error: 'sem catalog_product_id' };
 
+  // 20/10/2026: limite de 15 s por chamada ao ML — uma chamada pendurada não pode travar a rodada inteira (limite da função: 150 s)
   const [productRes, itemsRes] = await Promise.all([
-    fetch(`${ML_API}/products/${catalogId}`, { headers: { Authorization: `Bearer ${token}` } }),
-    fetch(`${ML_API}/products/${catalogId}/items`, { headers: { Authorization: `Bearer ${token}` } }),
+    fetch(`${ML_API}/products/${catalogId}`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000) }),
+    fetch(`${ML_API}/products/${catalogId}/items`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000) }),
   ]);
 
   if (!productRes.ok) return { id: term.id, ok: false, error: `produto ${productRes.status}` };
@@ -135,6 +136,15 @@ async function refreshOneTerm(term: TermRow, token: string) {
   // destacar lá um vendedor diferente do mais barato registrado).
   const bestUrl = sellers[0].permalink || catalogUrl;
 
+  // 20/10/2026: com a atualização de 2 em 2 min (Celebração 30 Anos) o preço quase sempre se repete — não grava linha igual à
+  // anterior se ela tem menos de 10 min. Mantém um registro a cada 10 min mesmo sem mudança (o "atualizado há" e as janelas de
+  // 40 min dos alertas dependem de haver leitura recente).
+  const { data: lastRow } = await sbAdmin.from('ml_price_history').select('price, found_at')
+    .eq('term_id', term.id).order('found_at', { ascending: false }).limit(1).maybeSingle();
+  if (lastRow && Number(lastRow.price) === Number(lowestPrice) && Date.now() - new Date(lastRow.found_at).getTime() < 10 * 60 * 1000) {
+    return { id: term.id, ok: true, lowestPrice, sellersCount: sellers.length, skipped: true };
+  }
+
   await sbAdmin.from('ml_price_history').insert([{
     term_id: term.id,
     ml_item_id: catalogId,
@@ -157,23 +167,41 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS });
 
   try {
-    const { data: terms, error } = await sbAdmin
+    // ?collection=Nome — atualiza só os produtos daquela coleção. Usado
+    // pelo cron extra de 5 em 5 min da "Celebração 30 Anos"
+    // (lojas_ml_update15.sql); o cron geral de 15 min chama sem filtro.
+    const params = new URL(req.url).searchParams;
+    const collection = params.get('collection');
+    // 20/10/2026: ?slow=1 atualiza só os produtos com refresh_minutes > 15 (cron lento de 30 em 30 min); sem parâmetro, o cron
+    // geral de 15 min atualiza só os de refresh_minutes <= 15. Com ?collection=, o filtro de frequência não se aplica (o cron
+    // de 5 min da Celebração 30 Anos continua atualizando a coleção inteira).
+    const slow = params.get('slow') === '1';
+    let query = sbAdmin
       .from('ml_search_terms')
       .select('id, term, label, catalog_product_id, image_url')
       .eq('active', true);
+    if (collection) query = query.eq('collection', collection);
+    else query = slow ? query.gt('refresh_minutes', 15) : query.lte('refresh_minutes', 15);
+    const { data: terms, error } = await query;
 
     if (error) throw new Error('Erro lendo ml_search_terms: ' + error.message);
     if (!terms || !terms.length) return json({ ok: true, refreshed: 0, results: [] });
 
     const token = await getValidAccessToken();
     const results = [];
-    // Sequencial (não paralelo) pra não estourar rate limit da API do ML.
-    for (const term of terms as TermRow[]) {
-      try {
-        results.push(await refreshOneTerm(term, token));
-      } catch (e) {
-        results.push({ id: term.id, ok: false, error: e instanceof Error ? e.message : String(e) });
-      }
+    // 20/10/2026: de 3 em 3 (antes: um por vez). Com ~50-60 produtos por rodada a versão sequencial chegou a levar 135 s, perto do
+    // limite de 150 s da função; 3 em paralelo mantém a carga na API do ML baixa e a rodada bem abaixo do limite.
+    const list = terms as TermRow[];
+    for (let i = 0; i < list.length; i += 3) {
+      const batch = list.slice(i, i + 3);
+      const out = await Promise.all(batch.map(async (term) => {
+        try {
+          return await refreshOneTerm(term, token);
+        } catch (e) {
+          return { id: term.id, ok: false, error: e instanceof Error ? e.message : String(e) };
+        }
+      }));
+      results.push(...out);
     }
 
     return json({ ok: true, refreshed: results.filter(r => r.ok).length, total: terms.length, results });

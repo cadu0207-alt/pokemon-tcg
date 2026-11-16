@@ -29,6 +29,7 @@
     { key: 'all', label: 'Total' },
   ];
   let irkActivePeriod = 'day';
+  const IRK_MIN_BATTLES = { day: 3, week: 10, month: 15, all: 30 }; // espelha wild_ranking_compute (17/10/2026)
 
   function irkHasClient() { return typeof sbClient !== 'undefined' && !!sbClient; }
   function irkUid() { return (typeof currentUser !== 'undefined' && currentUser) ? currentUser.id : null; }
@@ -52,14 +53,34 @@
     return data ? data.display_name : null;
   }
 
+  // 17/10/2026: com menos de IRK_MIN_PLAYERS jogadores no ranking geral o painel parecia site parado (um nome
+  // sozinho). Some (título + painel) até haver gente; a consulta "Total" é guardada por 5 min.
+  const IRK_MIN_PLAYERS = 3;
+  let irkTotalCache = { at: 0, n: null };
+  async function irkEnoughPlayers() {
+    if (!irkHasClient()) return false;
+    if (irkTotalCache.n != null && Date.now() - irkTotalCache.at < 5 * 60 * 1000) return irkTotalCache.n >= IRK_MIN_PLAYERS;
+    const { data, error } = await sbClient.rpc('wild_ranking', { p_period: 'all' });
+    if (error) return irkTotalCache.n != null ? irkTotalCache.n >= IRK_MIN_PLAYERS : true; // na dúvida, mostra
+    irkTotalCache = { at: Date.now(), n: (data || []).length };
+    return irkTotalCache.n >= IRK_MIN_PLAYERS;
+  }
+  function irkSetVisible(show) {
+    const t = document.getElementById('inicio-ranking-title'), w = document.getElementById('inicio-ranking-wrap');
+    if (t) t.style.display = show ? '' : 'none';
+    if (w) w.style.display = show ? '' : 'none';
+  }
+
   async function irkRenderPanel() {
     const holder = document.getElementById('inicio-ranking-wrap');
     if (!holder) return; // aba Início ainda não montou o container
+    if (!(await irkEnoughPlayers())) { irkSetVisible(false); return; }
+    irkSetVisible(true);
 
     holder.innerHTML = `
       <div class="inicio-ranking-panel">
-        <div class="inicio-ranking-tabs">${IRK_PERIODS.map(p =>
-          `<div class="inicio-ranking-tab ${p.key === irkActivePeriod ? 'inicio-ranking-tab-active' : ''}" data-period="${p.key}">${p.label}</div>`
+        <div class="inicio-ranking-tabs" role="tablist" aria-label="Período do ranking">${IRK_PERIODS.map(p =>
+          `<div class="inicio-ranking-tab ${p.key === irkActivePeriod ? 'inicio-ranking-tab-active' : ''}" data-period="${p.key}" role="tab" tabindex="0" aria-selected="${p.key === irkActivePeriod}">${p.label}</div>`
         ).join('')}</div>
         <div class="inicio-ranking-list"><div class="admin-stats-loading">Carregando...</div></div>
         <div class="inicio-ranking-name-form-wrap"></div>
@@ -67,10 +88,10 @@
     `;
 
     holder.querySelectorAll('.inicio-ranking-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        irkActivePeriod = tab.dataset.period;
-        irkRenderPanel();
-      });
+      const pick = () => { irkActivePeriod = tab.dataset.period; irkRenderPanel(); };
+      tab.addEventListener('click', pick);
+      // 17/10/2026: abas do ranking eram <div> só de mouse — agora Enter/Espaço também trocam o período
+      tab.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
     });
 
     irkLoadList(holder.querySelector('.inicio-ranking-list'));
@@ -91,7 +112,7 @@
       return;
     }
     if (!data || !data.length) {
-      listEl.innerHTML = '<div class="inicio-ranking-empty">Ninguém venceu uma batalha neste período ainda.</div>';
+      listEl.innerHTML = `<div class="inicio-ranking-empty">Ninguém chegou a ${IRK_MIN_BATTLES[irkActivePeriod] || 3}+ batalhas neste período ainda. O ranking é por % de vitórias, com mínimo de partidas.</div>`;
       return;
     }
 
@@ -100,7 +121,7 @@
       return `<div class="inicio-ranking-row ${isMe ? 'inicio-ranking-me' : ''}">
         <span class="inicio-ranking-pos">${irkMedal(i + 1)}</span>
         <span class="inicio-ranking-name">${irkEsc(row.display_name)}</span>
-        <span class="inicio-ranking-wins">${row.wins}V</span>
+        <span class="inicio-ranking-wins" title="${row.wins} vitórias e ${row.losses} derrotas">${row.win_rate != null ? Number(row.win_rate).toFixed(0) + '% · ' : ''}${row.wins}V${row.losses != null ? ' ' + row.losses + 'D' : ''}</span>
       </div>`;
     }).join('');
   }
