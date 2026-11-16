@@ -1,6 +1,7 @@
 export type ItemId =
   | 'madeira' | 'pedra' | 'fibra' | 'baga' | 'corda'
-  | 'machado_pedra' | 'picareta_pedra' | 'foice_pedra' | 'fogueira' | 'bancada';
+  | 'machado_pedra' | 'picareta_pedra' | 'foice_pedra'
+  | 'fogueira' | 'bancada' | 'bau' | 'casa' | 'cerca';
 
 export interface DefItem {
   nome: string;
@@ -22,9 +23,13 @@ export const ITENS: Record<ItemId, DefItem> = {
   foice_pedra: { nome: 'Foice de pedra', ferramenta: { alvo: 'arbusto', dano: 3, durabilidade: 40 } },
   fogueira: { nome: 'Fogueira', construivel: true },
   bancada: { nome: 'Bancada', construivel: true },
+  bau: { nome: 'Baú', construivel: true },
+  casa: { nome: 'Casa', construivel: true },
+  cerca: { nome: 'Cerca', construivel: true },
 };
 
-export interface Receita { id: ItemId; qtd: number; custo: Partial<Record<ItemId, number>>; }
+/** `nivel`: nível mínimo da ilha para liberar a receita. */
+export interface Receita { id: ItemId; qtd: number; custo: Partial<Record<ItemId, number>>; nivel?: number; }
 
 export const RECEITAS: Receita[] = [
   { id: 'corda', qtd: 1, custo: { fibra: 3 } },
@@ -33,6 +38,9 @@ export const RECEITAS: Receita[] = [
   { id: 'foice_pedra', qtd: 1, custo: { madeira: 2, pedra: 2, corda: 1 } },
   { id: 'fogueira', qtd: 1, custo: { madeira: 5, pedra: 3 } },
   { id: 'bancada', qtd: 1, custo: { madeira: 8, corda: 2 } },
+  { id: 'cerca', qtd: 2, custo: { madeira: 2 }, nivel: 2 },
+  { id: 'bau', qtd: 1, custo: { madeira: 10, corda: 1 }, nivel: 2 },
+  { id: 'casa', qtd: 1, custo: { madeira: 20, pedra: 10, corda: 4 }, nivel: 2 },
 ];
 
 /** O que cada recurso tem de vida, o que solta ao ser destruído e quanto tempo leva para voltar. */

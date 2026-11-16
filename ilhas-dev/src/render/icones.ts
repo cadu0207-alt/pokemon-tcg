@@ -24,6 +24,12 @@ const MAPAS: Record<ItemId, [string[], Record<string, string>]> = {
     { r: '#e0503c', o: '#ff9a3c', y: '#ffe07a', k: K, t: COR.tronco, p: COR.pedra }],
   bancada: [['..........', 'kkkkkkkkkk', 'kwwwwwwwwk', 'kttttttttk', '.kt....tk.', '.kt....tk.', '.kt....tk.', '.kk....kk.', '..........', '..........'],
     { k: K, w: '#c08a62', t: COR.tronco }],
+  bau: [['..........', '.kkkkkkkk.', 'kwwwwwwwwk', 'kkkkyykkkk', 'kttkyyktt.', 'kttttttttk', 'kttttttttk', 'kkkkkkkkkk', '..........', '..........'],
+    { k: K, w: '#c08a62', t: COR.tronco, y: '#ffd166' }],
+  casa: [['....kk....', '...krrk...', '..krRrrk..', '.krrrrRrk.', 'kkkkkkkkkk', '.kwbwwbwk.', '.kwwkdkwk.', '.kwwkdkwk.', '.kkkkkkkk.', '..........'],
+    { k: K, r: '#e07a8a', R: '#f2a3ae', w: '#f6efe0', b: COR.agua, d: COR.tronco }],
+  cerca: [['..........', '.kk....kk.', '.kt....tk.', 'kktkkkktkk', 'wwtwwwwtww', 'kktkkkktkk', '.kt....tk.', '.kk....kk.', '..........', '..........'],
+    { k: K, w: '#c08a62', t: COR.tronco }],
 };
 
 const cache = new Map<ItemId, string>();

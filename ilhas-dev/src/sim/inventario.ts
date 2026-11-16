@@ -23,11 +23,11 @@ export function remover(inv: Inventario, id: ItemId, n = 1): boolean {
   return true;
 }
 
-export const podeCriar = (inv: Inventario, r: Receita) =>
-  Object.entries(r.custo).every(([id, n]) => qtd(inv, id as ItemId) >= (n ?? 0));
+export const podeCriar = (inv: Inventario, r: Receita, nivelIlha = 1) =>
+  nivelIlha >= (r.nivel ?? 1) && Object.entries(r.custo).every(([id, n]) => qtd(inv, id as ItemId) >= (n ?? 0));
 
-export function criar(inv: Inventario, r: Receita): boolean {
-  if (!podeCriar(inv, r)) return false;
+export function criar(inv: Inventario, r: Receita, nivelIlha = 1): boolean {
+  if (!podeCriar(inv, r, nivelIlha)) return false;
   for (const [id, n] of Object.entries(r.custo)) remover(inv, id as ItemId, n ?? 0);
   adicionar(inv, r.id, r.qtd);
   return true;
