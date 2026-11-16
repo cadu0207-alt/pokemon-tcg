@@ -114,6 +114,15 @@
     body.toque #missao { top: calc(max(12px, env(safe-area-inset-top)) + 96px); width: 46vw; max-width: 220px; font-size: 11px; box-sizing: border-box; }
     #missao.feita { animation: feita .6s; } @keyframes feita { 50% { transform: scale(1.06); background: #6db35ccc; } }
     #status .icones { display: flex; gap: 4px; } #status .icones button { background: none; border: 0; padding: 0 2px; font-size: 13px; color: #f6efe0; opacity: .85; }
+    #cristal { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(360px, calc(100vw - 24px)); max-height: calc(100vh - 40px);
+      overflow: auto; background: #f6efe0; border: 2px solid #3a2f45; border-radius: 12px; padding: 12px; color: #3a2f45; z-index: 9; box-sizing: border-box; }
+    #cristal h3 { margin: 0 0 6px; display: flex; justify-content: space-between; color: #7a4fd0; }
+    #cristal h4 { margin: 10px 0 4px; font-size: 13px; } #cristal p { margin: 4px 0; font-size: 13px; } #cristal .dica { color: #8a7f95; font-size: 12px; }
+    #cristal ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+    #cristal li { display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 4px 6px; border-radius: 6px; background: #fff; }
+    #cristal li img { width: 18px; height: 18px; } #cristal li b { margin-left: auto; } #cristal li.ok { background: #e9fbe0; } #cristal li.falta b { color: #c0392b; }
+    #cristal .expandir { width: 100%; margin-top: 10px; padding: 10px; font-weight: 800; font-size: 15px; border: 2px solid #3a2f45; border-radius: 10px; background: #c39bff; }
+    #cristal .expandir:disabled { opacity: .5; }
     #nivel { position: fixed; top: max(12px, env(safe-area-inset-top)); right: 12px; padding: 8px 10px; font-size: 13px; max-width: 220px; }
     #nivel .req { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 2px; } #nivel .ok { color: #9be38a; } #nivel small { opacity: .75; }
     #avisos { position: fixed; top: 12px; left: 0; right: 0; margin: 0 auto; display: grid; gap: 6px; pointer-events: none; z-index: 6; width: max-content; max-width: 60vw; }
@@ -177,6 +186,7 @@
   <button id="btn-ranking">🏆 Ranking</button>
   <button id="btn-hab">✦ Habilidades</button>
   <div id="habilidades" hidden></div>
+  <div id="cristal" hidden></div>
   <div id="magias"></div>
   <div id="ranking" hidden></div>
   <div id="espectador" class="painel"><span id="espectador-nome"></span><button id="btn-voltar">Voltar para mim</button></div>

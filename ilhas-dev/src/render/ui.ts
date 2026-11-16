@@ -1,6 +1,8 @@
 import { ITENS, RECEITAS, type ItemId } from '../sim/itens';
 import { criar, podeCriar, qtd, type Inventario } from '../sim/inventario';
-import { contar, proximoNivel, type Construcao } from '../sim/construcao';
+import type { Construcao } from '../sim/construcao';
+import type { Requisitos } from '../sim/expansao';
+import { NIVEIS } from '../sim/construcao';
 import { icone } from './icones';
 import { xpParaProximo, type Status } from '../sim/criaturas';
 import { HABILIDADES, MAGIAS, podeAprender, pontosLivres, type Magia, type Ramo } from '../sim/habilidades';
@@ -20,6 +22,8 @@ export interface Ganchos {
   ranking: () => { nome: string; perfil: string; pontos: number }[];
   assistir: (nome: string | null) => void;
   habilidades: () => { status: Status; aprendidas: string[] };
+  requisitos: () => Requisitos | null;
+  expandir: () => void;
   aprender: (id: string) => void;
   lancar: (m: Magia) => void;
   criou: (id: ItemId) => void;
@@ -81,6 +85,30 @@ export class Interface {
     this.aberto = forcar ?? !this.aberto;
     this.craft.hidden = !this.aberto;
     this.atualizar();
+  }
+
+  /** Painel do Cristal: o que falta e o botão de expandir. */
+  abrirCristal() {
+    this.alternarCraft(false); this.alternarRanking(false); this.alternarHabilidades(false);
+    $('cristal').hidden = false;
+    this.desenharCristal();
+  }
+
+  private desenharCristal() {
+    const req = this.g.requisitos();
+    const nivel = this.g.nivel();
+    const linha = ([id, t, p]: [ItemId, number, number]) =>
+      `<li class="${t >= p ? 'ok' : 'falta'}"><img src="${icone(id)}">${ITENS[id].nome}<b>${Math.min(t, p)}/${p}</b></li>`;
+    const libera = req ? NIVEIS.find(n => n.nivel === req.nivel)?.recompensa ?? '' : '';
+    $('cristal').innerHTML = `<h3>Cristal da ilha <button class="fechar">✕</button></h3>` + (req
+      ? `<p>Nível <b>${nivel}</b> → <b>${req.nivel}</b>: a ilha cresce${libera ? ` e ${libera}` : ''}.</p>
+         ${req.construcoes.length ? `<h4>Construções na ilha</h4><ul>${req.construcoes.map(linha).join('')}</ul>` : ''}
+         <h4>Alimentar o Cristal com</h4><ul>${req.itens.map(linha).join('')}</ul>
+         <p class="dica">Cristais só existem fora da sua ilha — pegue a jangada.</p>
+         <button class="expandir" ${req.pronto ? '' : 'disabled'}>Expandir a ilha</button>`
+      : '<p>Sua ilha chegou ao tamanho máximo. Lendária!</p>');
+    $('cristal').querySelector('.fechar')!.addEventListener('click', () => ($('cristal').hidden = true));
+    $('cristal').querySelector('.expandir')?.addEventListener('click', () => { this.g.expandir(); this.desenharCristal(); });
   }
 
   habAberto = false;
@@ -175,14 +203,14 @@ export class Interface {
         }).join('')
       : '<span class="vazio">Mochila vazia: chegue perto de uma árvore e colete</span>';
 
-    // Painel do nível da ilha.
-    const prox = proximoNivel(this.g.construcoes());
-    const tem = contar(this.g.construcoes());
-    $('nivel').innerHTML = `<b>Ilha nível ${nivel}</b>` + (prox
-      ? `<div class="req">Nível ${prox.nivel}: ${Object.entries(prox.requer).map(([id, n]) =>
-          `<span class="${(tem[id as ItemId] ?? 0) >= (n ?? 0) ? 'ok' : ''}"><img src="${icone(id as ItemId)}">${tem[id as ItemId] ?? 0}/${n}</span>`).join('')}</div>
-         <small>${prox.recompensa}</small>`
-      : '<small>nível máximo por enquanto</small>');
+    // Painel do nível da ilha: o que falta para alimentar o Cristal.
+    const req = this.g.requisitos();
+    const item = ([id, t, p]: [ItemId, number, number]) =>
+      `<span class="${t >= p ? 'ok' : ''}"><img src="${icone(id)}">${Math.min(t, p)}/${p}</span>`;
+    $('nivel').innerHTML = `<b>Ilha nível ${nivel}</b>` + (req
+      ? `<div class="req">${[...req.construcoes, ...req.itens].map(item).join('')}</div><small>${req.pronto ? 'Pronto! Vá até o Cristal' : `para o nível ${req.nivel}`}</small>`
+      : '<small>nível máximo</small>');
+    if (!$('cristal').hidden) this.desenharCristal();
 
     if (!this.aberto) return;
     this.craft.innerHTML = '<h3>Criar <small>(C)</small><button class="fechar" aria-label="Fechar">✕</button></h3>' + RECEITAS.map((r, i) => {

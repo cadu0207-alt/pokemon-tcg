@@ -68,6 +68,17 @@ export class MapaEmPedacos {
     }
   }
 
+  /** A terra mudou (expansão da ilha): recria na hora os pedaços carregados que tocam a área. */
+  repintar(area: { x0: number; y0: number; x1: number; y1: number }) {
+    for (const [k, p] of [...this.pedacos]) {
+      const px = k % this.colunas, py = Math.floor(k / this.colunas);
+      if ((px + 1) * CH <= area.x0 || px * CH > area.x1 || (py + 1) * CH <= area.y0 || py * CH > area.y1) continue;
+      for (const img of p.objetos.values()) img.destroy();
+      p.chao.destroy(); this.scene.textures.remove(p.chave);
+      this.pedacos.set(k, this.criar(px, py));
+    }
+  }
+
   /** Atualiza o objeto de um tile (se o pedaço estiver carregado; senão ele lê o estado ao ser criado). */
   definirObjeto(x: number, y: number, nome: string | null) {
     const p = this.pedacos.get(Math.floor(y / CH) * this.colunas + Math.floor(x / CH));

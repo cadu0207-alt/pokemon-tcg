@@ -65,7 +65,8 @@ export const RECEITAS: Receita[] = [
   { id: 'lanca_madeira', qtd: 1, custo: { madeira: 4, corda: 1 } },
   { id: 'espada_pedra', qtd: 1, custo: { madeira: 2, pedra: 4, corda: 1, couro: 1 }, nivel: 2 },
   { id: 'carne_assada', qtd: 1, custo: { carne: 1, madeira: 1 }, nivel: 2 },
-  { id: 'jangada', qtd: 1, custo: { madeira: 12, corda: 4 }, nivel: 2 },
+  // jangada desde o nível 1: sair da ilha é o primeiro objetivo
+  { id: 'jangada', qtd: 1, custo: { madeira: 6, corda: 2 } },
   { id: 'pocao_mana', qtd: 1, custo: { gosma: 2, baga: 2 }, nivel: 2 },
   { id: 'forja', qtd: 1, custo: { pedra: 15, madeira: 6, minerio: 2 }, nivel: 4 },
   { id: 'lingote', qtd: 1, custo: { minerio: 2, madeira: 1 }, nivel: 5 },

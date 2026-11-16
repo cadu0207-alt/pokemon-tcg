@@ -27,7 +27,8 @@ export const CRIATURA_ARTE: Record<string, { arquivo: string; tipo: 'direcional'
 /** Recortes dos objetos do mapa: [folha, x, y, w, h, escala]. Desenhados com a base no pé do tile. */
 export const OBJETOS: Record<string, [string, number, number, number, number, number?]> = {
   arvore0: ['natureza', 0, 0, 32, 32], arvore1: ['natureza', 32, 0, 32, 32], arvore2: ['natureza', 256, 0, 32, 32], arvore3: ['natureza', 224, 0, 32, 32],
-  pedra: ['natureza', 256, 128, 32, 32, 0.75], arbusto: ['natureza', 16, 160, 16, 16],
+  pedra: ['natureza', 256, 128, 32, 32, 0.75],
+  nucleo: ['natureza', 32, 224, 16, 16, 1.6], arbusto: ['natureza', 16, 160, 16, 16],
   minerio: ['natureza', 112, 224, 32, 32, 0.75], cristal: ['natureza', 112, 256, 32, 32, 0.75],
   fogueira: ['acampamento', 192, 80, 32, 32, 0.75], bau: ['acampamento', 64, 128, 16, 16], bancada: ['acampamento', 128, 48, 32, 32, 0.75],
   casa: ['casas', 0, 0, 64, 48, 0.6], forja: ['casas', 464, 176, 32, 32, 0.8], altar: ['casas', 48, 240, 32, 32, 0.8],

@@ -1,6 +1,6 @@
 import { atualizarBot, criarBots, pontuacao, DIFICULDADE, type Bot, type Dificuldade, type MundoBots } from './bots';
 import { iniciarRecursos, atualizarRecursos, type EstadoRecursos } from './coleta';
-import { nivelIlha } from './construcao';
+import { expandirTerreno, tileDoCristal } from './expansao';
 import { DURACAO_DIA, ehNoite } from './criaturas';
 import { gerarMundo, type Mundo } from './mundo';
 
@@ -13,8 +13,10 @@ export class SimulacaoHeadless {
   constructor(seed: number, participantes: number, nBots: number, public dificuldade: Dificuldade = 'dificil') {
     this.mundo = gerarMundo({ seed, participantes });
     this.recursos = iniciarRecursos(this.mundo);
-    for (const r of this.mundo.recursos) if (r.tipo !== 'arbusto') this.bloqueio.add(r.y * this.mundo.largura + r.x);
+    for (const [i, r] of this.recursos.porTile) if (r.tipo !== 'arbusto') this.bloqueio.add(i); // submersos não bloqueiam
     this.bots = criarBots(this.mundo, nBots, seed);
+    // o Cristal ocupa o centro de cada ilha de participante
+    for (const i of this.mundo.ilhas) if (i.dono !== null) { const c = tileDoCristal(i); this.bloqueio.add(c.y * this.mundo.largura + c.x); }
   }
 
   private ctx(): MundoBots {
@@ -26,6 +28,11 @@ export class SimulacaoHeadless {
       bloqueado: (x, y) => this.bloqueio.has(y * L + x),
       aoDestruir: r => this.bloqueio.delete(r.y * L + r.x),
       aoConstruir: (_b, c) => this.bloqueio.add(c.y * L + c.x),
+      aoExpandir: b => {
+        const r = expandirTerreno(this.mundo, this.recursos, b.ilha, b.nivel);
+        for (const x of r.emergiram) if (x.tipo !== 'arbusto' && !this.recursos.renasce.has(x.id)) this.bloqueio.add(x.y * L + x.x);
+        for (const x of r.submergiram) this.bloqueio.delete(x.y * L + x.x);
+      },
     };
   }
 
@@ -45,8 +52,8 @@ export class SimulacaoHeadless {
 
   resumo() {
     return this.bots.map(b => ({
-      nome: b.nome, perfil: b.perfil, nivelIlha: nivelIlha(b.construcoes), construcoes: b.construcoes.length,
-      nivel: b.status.nivel, pontos: pontuacao(b.construcoes, b.status),
+      nome: b.nome, perfil: b.perfil, nivelIlha: b.nivel, construcoes: b.construcoes.length,
+      nivel: b.status.nivel, pontos: pontuacao(b.nivel, b.construcoes, b.status),
     })).sort((a, b) => b.pontos - a.pontos);
   }
 }

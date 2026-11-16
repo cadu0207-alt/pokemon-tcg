@@ -2,7 +2,8 @@ import type { Construcao } from './construcao';
 import type { Inventario } from './inventario';
 import type { Status } from './criaturas';
 
-export const VERSAO_SAVE = 1;
+/** 2 = mundo v2 (ilhas que crescem pelo Cristal): saves antigos não servem mais. */
+export const VERSAO_SAVE = 2;
 
 export interface Save {
   versao: number; seed: number; participantes: number;
@@ -13,9 +14,11 @@ export interface Save {
   status?: Status;
   tempo?: number;
   /** Estado compacto dos bots (fase 4). */
-  bots?: { x: number; y: number; inv: Inventario; construcoes: Construcao[]; status: Status; habilidades?: string[] }[];
+  bots?: { x: number; y: number; inv: Inventario; construcoes: Construcao[]; status: Status; habilidades?: string[]; nivel?: number }[];
   habilidades?: string[];
   mana?: number;
+  /** Nível de expansão da ilha do jogador. */
+  nivel?: number;
   tutorial?: { missao: number; criados: Partial<Record<import('./itens').ItemId, number>>; mortos: number };
 }
 

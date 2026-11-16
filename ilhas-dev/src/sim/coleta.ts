@@ -7,16 +7,21 @@ export interface EstadoRecursos {
   porTile: Map<number, Recurso>;
   vida: Map<number, number>;          // id -> vida atual
   renasce: Map<number, number>;       // id -> instante (ms) em que volta
+  /** Recursos em terra que ainda não apareceu (ilha pequena): índice do tile -> recurso. */
+  submersos: Map<number, Recurso>;
 }
 
 export function iniciarRecursos(m: Mundo): EstadoRecursos {
   const porTile = new Map<number, Recurso>();
   const vida = new Map<number, number>();
+  const submersos = new Map<number, Recurso>();
   for (const r of m.recursos) {
-    porTile.set(r.y * m.largura + r.x, r);
+    const i = r.y * m.largura + r.x;
+    if (m.tiles[i] <= 1) submersos.set(i, r); // água (ilha ainda pequena): acorda quando a terra crescer
+    else porTile.set(i, r);
     vida.set(r.id, DEF_RECURSO[r.tipo].vida);
   }
-  return { porTile, vida, renasce: new Map() };
+  return { porTile, vida, renasce: new Map(), submersos };
 }
 
 export const recursoAtivo = (e: EstadoRecursos, r: Recurso) => !e.renasce.has(r.id);

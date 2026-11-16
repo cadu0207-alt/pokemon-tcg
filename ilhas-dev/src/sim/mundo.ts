@@ -7,13 +7,16 @@ export const TILE_ANDAVEL: Record<Tile, boolean> = {
   [Tile.Grama]: true, [Tile.Floresta]: true, [Tile.Rocha]: false,
 };
 
-export interface Ilha { id: number; cx: number; cy: number; raio: number; dono: number | null; }
+/** `raio` é o raio atual (muda com a expansão); `raioMax` é o tamanho final da ilha. */
+export interface Ilha { id: number; cx: number; cy: number; raio: number; raioMax: number; dono: number | null; }
 export type TipoRecurso = 'arvore' | 'pedra' | 'arbusto' | 'minerio' | 'cristal';
 export interface Recurso { id: number; tipo: TipoRecurso; x: number; y: number; }
 
 export interface Mundo {
   seed: number; largura: number; altura: number;
   tiles: Uint8Array; ilhas: Ilha[]; recursos: Recurso[];
+  /** Terreno completo (todas as ilhas no tamanho máximo). `tiles` é o terreno visível hoje. */
+  tilesMax: Uint8Array;
 }
 
 export interface OpcoesMundo { seed: number; participantes: number; tamanhoCelula?: number; }
@@ -36,16 +39,28 @@ export function gerarMundo({ seed, participantes, tamanhoCelula = 48 }: OpcoesMu
       id: i, dono: i,
       cx: (c + 0.3 + rng() * 0.4) * tamanhoCelula,
       cy: (l + 0.3 + rng() * 0.4) * tamanhoCelula,
-      raio: tamanhoCelula * (0.17 + rng() * 0.05),
+      raio: tamanhoCelula * (0.17 + rng() * 0.05), raioMax: 0,
     });
   }
   const neutras = Math.max(1, Math.floor(participantes / 3));
+  const iniciais = ilhas.slice();
   for (let i = 0; i < neutras; i++) {
-    ilhas.push({
-      id: ilhas.length, dono: null,
-      cx: rng() * largura, cy: rng() * altura,
-      raio: tamanhoCelula * (0.2 + rng() * 0.15),
-    });
+    // Neutras nascem no mar entre as iniciais, sem encostar nelas (senão uma casa começaria com minério de graça).
+    // Busca só nas iniciais da vizinhança (grade de células) para continuar rápido com 1000 participantes.
+    let cx = 0, cy = 0, raio = 0;
+    for (let t = 0; t < 40; t++) {
+      cx = rng() * largura; cy = rng() * altura; raio = tamanhoCelula * (0.2 + rng() * 0.15);
+      const c = Math.floor(cx / tamanhoCelula), l = Math.floor(cy / tamanhoCelula);
+      let longe = true;
+      for (let dl = -1; dl <= 1 && longe; dl++) for (let dc = -1; dc <= 1; dc++) {
+        const vi = (l + dl) * colunas + (c + dc);
+        if (c + dc < 0 || c + dc >= colunas || l + dl < 0 || vi >= iniciais.length) continue;
+        const o = iniciais[vi];
+        if (Math.hypot(o.cx - cx, o.cy - cy) < (o.raio + raio) * 1.25) { longe = false; break; }
+      }
+      if (longe) break;
+    }
+    ilhas.push({ id: ilhas.length, dono: null, cx, cy, raio, raioMax: 0 });
   }
 
   // Grade espacial: cada tile só consulta as ilhas das células vizinhas (antes: todas as ilhas, lento com 1000).
@@ -98,7 +113,8 @@ export function gerarMundo({ seed, participantes, tamanhoCelula = 48 }: OpcoesMu
     if (tipo) recursos.push({ id: recursos.length, tipo, x, y });
   }
   // Garante o mínimo de cada recurso em toda ilha inicial (senão uma ilha sem pedra trava o progresso).
-  const MINIMO: Record<TipoRecurso, number> = { arvore: 8, pedra: 5, arbusto: 4, minerio: 2, cristal: 1 };
+  // Ilhas iniciais: só o básico (minério e cristal só existem fora de casa — é preciso navegar).
+  const MINIMO: Record<TipoRecurso, number> = { arvore: 8, pedra: 4, arbusto: 4, minerio: 0, cristal: 0 };
   const ocupado = new Set(recursos.map(r => r.y * largura + r.x));
   const porPosicao = new Map(recursos.map(r => [r.y * largura + r.x, r]));
   for (const ilha of ilhas) {
@@ -148,11 +164,82 @@ export function gerarMundo({ seed, participantes, tamanhoCelula = 48 }: OpcoesMu
     }
   }
 
-  return { seed, largura, altura, tiles, ilhas, recursos: livres };
+  // Escassez em casa: garante um mínimo dentro da ilha minúscula do começo (nível 1).
+  const MINIMO_INICIAL: [TipoRecurso, number][] = [['arvore', 3], ['pedra', 1], ['arbusto', 2]];
+  const ocupadoIni = new Set(livres.map(r => r.y * largura + r.x));
+  for (const ilha of ilhas) {
+    if (ilha.dono === null) continue;
+    const r0 = raioDoNivel(ilha.raio, 1) * TERRA;
+    for (const [tipo, min] of MINIMO_INICIAL) {
+      let falta = min - livres.filter(r => r.tipo === tipo && Math.hypot(r.x + 0.5 - ilha.cx, r.y + 0.5 - ilha.cy) < r0 - 0.8).length;
+      for (let t = 0; falta > 0 && t < 200; t++) {
+        const a = rng() * Math.PI * 2, d = 1.6 + rng() * (r0 - 2.6);
+        const x = Math.floor(ilha.cx + Math.cos(a) * d), y = Math.floor(ilha.cy + Math.sin(a) * d);
+        if (Math.abs(x - Math.round(ilha.cx)) <= 1 && Math.abs(y - Math.round(ilha.cy)) <= 1) continue;
+        const tt = tiles[y * largura + x] as Tile;
+        if ((tt !== Tile.Grama && tt !== Tile.Floresta && tt !== Tile.Areia) || ocupadoIni.has(y * largura + x)) continue;
+        livres.push({ id: livres.length, tipo, x, y }); ocupadoIni.add(y * largura + x); falta--;
+      }
+    }
+  }
+
+  // Terreno completo guardado; ilhas dos participantes começam no nível 1 (pequenas).
+  const tilesMax = tiles.slice();
+  const mundo: Mundo = { seed, largura, altura, tiles, tilesMax, ilhas, recursos: livres };
+  for (const ilha of ilhas) {
+    ilha.raioMax = ilha.raio;
+    if (ilha.dono !== null) aplicarExpansao(mundo, ilha, 1);
+  }
+  return mundo;
 }
 
 /** Água navegável com jangada (rocha continua bloqueando). */
 export const ehAgua = (t: Tile) => t === Tile.Agua || t === Tile.AguaFunda;
+
+// ---------- Expansão: a terra cresce com o nível da ilha ----------
+
+export const NIVEL_MAX = 10;
+/** Fração do raio em que ainda há terra (o resto é praia rasa no terreno original). */
+const TERRA = 0.87;
+
+/** Raio da ilha num nível de expansão: começa em ~42% e chega a 100% no nível 10. */
+export const raioDoNivel = (raioMax: number, nivel: number) =>
+  raioMax * (0.42 + (0.58 * (Math.min(NIVEL_MAX, Math.max(1, nivel)) - 1)) / (NIVEL_MAX - 1));
+
+function ruidoCosta(x: number, y: number) {
+  let h = (x * 374761393 + y * 668265263) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return (((h ^ (h >>> 16)) >>> 0) / 4294967296 - 0.5) * 0.12;
+}
+
+export interface Retangulo { x0: number; y0: number; x1: number; y1: number; }
+
+/**
+ * Recorta o terreno visível da ilha para o nível dado: dentro do raio fica o terreno original
+ * (com uma faixa de praia na borda); fora dele, a terra vira água rasa. Retorna a área alterada.
+ */
+export function aplicarExpansao(m: Mundo, ilha: Ilha, nivel: number): Retangulo {
+  const r = raioDoNivel(ilha.raioMax, nivel);
+  ilha.raio = r;
+  const R = Math.ceil(ilha.raioMax * 1.6);
+  const area = { x0: Math.max(0, Math.floor(ilha.cx) - R), y0: Math.max(0, Math.floor(ilha.cy) - R),
+    x1: Math.min(m.largura - 1, Math.floor(ilha.cx) + R), y1: Math.min(m.altura - 1, Math.floor(ilha.cy) + R) };
+  // ilhas vizinhas que podem encostar nesta (a terra delas não pode ser recortada)
+  const vizinhas = m.ilhas.filter(o => o !== ilha && Math.hypot(o.cx - ilha.cx, o.cy - ilha.cy) < (o.raioMax || o.raio) * 1.6 + ilha.raioMax * 1.6);
+  for (let y = area.y0; y <= area.y1; y++) for (let x = area.x0; x <= area.x1; x++) {
+    const i = y * m.largura + x;
+    const orig = m.tilesMax[i] as Tile;
+    if (orig <= Tile.Agua) { m.tiles[i] = orig; continue; }
+    const d = Math.hypot(x + 0.5 - ilha.cx, y + 0.5 - ilha.cy);
+    if (d > ilha.raioMax * 1.5) continue;
+    // só mexe nos tiles que pertencem a esta ilha (a mais próxima, proporcional ao tamanho)
+    if (vizinhas.some(o => Math.hypot(x + 0.5 - o.cx, y + 0.5 - o.cy) / (o.raioMax || o.raio) < d / ilha.raioMax)) continue;
+    const limite = r * TERRA * (1 + ruidoCosta(x, y));
+    if (d <= limite) m.tiles[i] = d > limite - 1.1 && orig !== Tile.Rocha ? Tile.Areia : orig;
+    else m.tiles[i] = Tile.Agua;
+  }
+  return area;
+}
 
 export function tileEm(m: Mundo, x: number, y: number): Tile {
   if (x < 0 || y < 0 || x >= m.largura || y >= m.altura) return Tile.AguaFunda;

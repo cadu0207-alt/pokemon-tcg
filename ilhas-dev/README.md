@@ -46,7 +46,8 @@ Foi assim que achamos ilhas sem pedra, bots que se trancavam nas próprias const
 - [x] Arte do Ninja Adventure Asset Pack (CC0): 24 personagens (escolha na tela inicial), criaturas, árvores, pedras, minério, cristal, construções e ícones; terreno com a paleta do pacote
 - [x] Sons e músicas do pacote (13 efeitos + música de dia e de noite, MP3 leve), ícones restantes, câmera mais próxima
 - [x] Bots navegam: constroem jangada e fazem expedições às ilhas neutras atrás de minério e cristal (ida, coleta, volta; rede de segurança de 6 min); checagem de conectividade trata pedras e minérios como paredes permanentes
-- [ ] Próximo — salvamento na nuvem/multiplayer
+- [x] **v2 Fase A — Núcleo de Cristal** (ver `DESIGN-v2.md`): ilha começa minúscula, alimentar o Cristal com cristal (só existe fora) faz a terra crescer; bots com o mesmo ciclo
+- [ ] v2 Fases B–E — baús com guardiões e raridades, saque e defesa, bots rivais, temporada
 
 ## Créditos
 Arte: [Ninja Adventure Asset Pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack), por Pixel-boy e AAA — licença CC0 (`public/ninja/LICENSE.txt`).

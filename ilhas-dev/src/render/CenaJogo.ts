@@ -3,7 +3,8 @@ import { gerarMundo, tileEm, ehAgua, TILE_ANDAVEL, type Mundo, type Recurso } fr
 import { iniciarRecursos, golpear, atualizarRecursos, recursoAtivo, ferramentaPara, type EstadoRecursos } from '../sim/coleta';
 import { CRIATURAS, DURACAO_DIA, bonusDano, ehNoite, ganharXp, novoStatus, type Status } from '../sim/criaturas';
 import { novoInventario, remover, qtd, adicionar, desgastar, type Inventario } from '../sim/inventario';
-import { nivelIlha, validarLocal, type Construcao } from '../sim/construcao';
+import { validarLocal, type Construcao } from '../sim/construcao';
+import { expandirTerreno, pagarExpansao, requisitosExpansao, tileDeNascimento, tileDoCristal } from '../sim/expansao';
 import { carregar, serializar } from '../sim/save';
 import { ITENS, type ItemId } from '../sim/itens';
 import { criarCriaturas, T } from './texturas';
@@ -58,6 +59,11 @@ export class CenaJogo extends Phaser.Scene {
   private eraNoite = false;
   private invulneravelAte = 0;
   private morto = false;
+  /** Tiles dos Cristais (centro de cada ilha de participante). */
+  private cristais = new Set<number>();
+  private brilhoCristal!: Phaser.GameObjects.Image;
+  private cristalAberto = false;
+  private visitouOutra = false;
   private habilidades: string[] = [];
   private ef: Efeitos = efeitos([]);
   private mana = 0;
@@ -100,6 +106,7 @@ export class CenaJogo extends Phaser.Scene {
     const m = this.mundo;
     this.mapa = new MapaEmPedacos(this, m, (x, y) => {
       const i = this.idx(x, y);
+      if (this.cristais.has(i)) return 'nucleo';
       const c = this.construidoEm.get(i);
       if (c) return c in OBJETOS ? c : null;
       const r = this.recursos.porTile.get(i);
@@ -113,19 +120,27 @@ export class CenaJogo extends Phaser.Scene {
       if (save.habilidades) this.habilidades = save.habilidades;
       if (save.mana !== undefined) this.mana = save.mana;
       if (save.tutorial) { this.missao = save.tutorial.missao; this.criados = save.tutorial.criados; this.mortos = save.tutorial.mortos; }
-      else if (nivelIlha(save.construcoes) >= 2) this.missao = MISSOES.length; // jogador veterano: sem tutorial
       if (save.tempo !== undefined) this.tempoMundo = save.tempo;
+      this.nivel = save.nivel ?? 1;
+    } else {
+      // começo: só o necessário para a primeira jangada (2 cordas + madeira)
+      Object.assign(this.inv.itens, { madeira: 6, fibra: 6 });
     }
+    // O Cristal ocupa o centro de cada ilha de participante; ilhas já expandidas no save voltam ao tamanho
+    const iniciais = m.ilhas.filter(i => i.dono !== null);
+    for (const ilha of iniciais) { const c = tileDoCristal(ilha); this.cristais.add(this.idx(c.x, c.y)); this.bloqueio.add(this.idx(c.x, c.y)); }
+    if (this.nivel > 1) expandirTerreno(m, this.recursos, iniciais[0], this.nivel);
+    save?.bots?.forEach((sb, i) => { if ((sb.nivel ?? 1) > 1 && iniciais[i + 1]) expandirTerreno(m, this.recursos, iniciais[i + 1], sb.nivel!); });
     for (const c of this.construcoes) this.removerRecursoSob(c.x, c.y);
     for (const r of m.recursos) if (this.recursos.porTile.get(this.idx(r.x, r.y)) === r) this.mostrarRecurso(r);
     for (const c of this.construcoes) this.mostrarConstrucao(c);
-    this.nivel = nivelIlha(this.construcoes);
 
     // Bots: cada um na sua ilha, decidindo sozinho o que fazer.
     const nBots = Math.max(0, Math.min(participantes - 1, this.cfg.bots));
     this.bots = new BotsVisuais(this, m, nBots, seed,
       r => { this.mapa.definirObjeto(r.x, r.y, null); this.bloqueio.delete(this.idx(r.x, r.y)); },
       c => { this.removerRecursoSob(c.x, c.y); this.mostrarConstrucao(c); },
+      b => this.aplicarExpansao(b.ilha, b.nivel),
       save?.bots);
     for (const c of this.bots.todasConstrucoes()) {
       if (this.recursos.porTile.get(this.idx(c.x, c.y))) this.removerRecursoSob(c.x, c.y);
@@ -133,7 +148,8 @@ export class CenaJogo extends Phaser.Scene {
     }
 
     const casa = m.ilhas[0];
-    const ini = save?.jogador ?? { x: (Math.round(casa.cx) + 0.5) * T, y: (Math.round(casa.cy) + 0.5) * T };
+    const nasce = tileDeNascimento(casa);
+    const ini = save?.jogador ?? { x: (nasce.x + 0.5) * T, y: (nasce.y + 0.5) * T };
     this.jogador = this.add.sprite(ini.x, ini.y, `p-${this.personagem}`, 0);
     this.jogador.setOrigin(0.5, 0.9).setDepth(this.jogador.y);
     this.sombra = this.add.image(0, 0, 'sombra').setAlpha(0.28);
@@ -147,6 +163,9 @@ export class CenaJogo extends Phaser.Scene {
     this.time.addEvent({ delay: 700, loop: true, callback: () => {
       if (!this.morto) this.fauna.tentarNascer(this.jogador.x / T, this.jogador.y / T, ehNoite(this.tempoMundo));
     } });
+    const cc = tileDoCristal(casa);
+    this.brilhoCristal = this.add.image((cc.x + 0.5) * T, (cc.y + 0.4) * T, 'brilho').setTint(0xb48cff).setBlendMode(Phaser.BlendModes.ADD).setDepth(20002).setScale(0.6);
+    this.tweens.add({ targets: this.brilhoCristal, alpha: { from: 0.35, to: 0.8 }, scale: { from: 0.5, to: 0.7 }, duration: 1400, yoyo: true, repeat: -1 });
     this.fantasma = this.add.image(0, 0, 'acampamento', 'fogueira').setOrigin(0.5, 1).setDepth(30000).setAlpha(0.7).setVisible(false);
     this.alvo = this.add.rectangle(0, 0, T, T).setStrokeStyle(1, 0xffffff, 0.9).setOrigin(0).setDepth(5).setVisible(false);
 
@@ -167,7 +186,9 @@ export class CenaJogo extends Phaser.Scene {
       confirmarConstrucao: () => this.construir(),
       zoom: f => cam.setZoom(Phaser.Math.Clamp(cam.zoom * f, 0.5, 5)),
       comer: id => this.comer(id),
-      ranking: () => this.bots.ranking({ construcoes: this.construcoes, status: this.status }),
+      ranking: () => this.bots.ranking({ nivel: this.nivel, construcoes: this.construcoes, status: this.status }),
+      requisitos: () => requisitosExpansao(this.nivel, this.construcoes, this.inv),
+      expandir: () => this.expandir(),
       assistir: nome => this.assistir(nome),
       habilidades: () => ({ status: this.status, aprendidas: this.habilidades }),
       aprender: id => this.aprenderHabilidade(id),
@@ -248,7 +269,7 @@ export class CenaJogo extends Phaser.Scene {
       seed: this.mundo.seed, participantes: this.mundo.ilhas.filter(i => i.dono !== null).length,
       jogador: { x: Math.round(this.jogador.x), y: Math.round(this.jogador.y) },
       inventario: this.inv, construcoes: this.construcoes,
-      status: this.status, tempo: Math.round(this.tempoMundo), habilidades: this.habilidades, mana: Math.floor(this.mana),
+      status: this.status, tempo: Math.round(this.tempoMundo), nivel: this.nivel, habilidades: this.habilidades, mana: Math.floor(this.mana),
       tutorial: { missao: this.missao, criados: this.criados, mortos: this.mortos },
       bots: this.bots.salvar(),
     });
@@ -303,13 +324,6 @@ export class CenaJogo extends Phaser.Scene {
       this.tweens.add({ targets: p, x: cx + Phaser.Math.Between(-12, 12), y: cy + Phaser.Math.Between(-4, 8), alpha: 0, duration: 450, onComplete: () => p.destroy() });
     }
     this.tocar('construir');
-    const novo = nivelIlha(this.construcoes);
-    if (novo > this.nivel) {
-      this.nivel = novo;
-      this.ui.aviso(`Sua ilha subiu para o nível ${novo}!`);
-      this.tocar('nivel');
-      this.cameras.main.flash(300, 255, 240, 200);
-    }
     if (qtd(this.inv, id) === 0) this.selecionarConstrucao(null);
     else this.localEscolhido = null;
     this.mudou();
@@ -412,7 +426,10 @@ export class CenaJogo extends Phaser.Scene {
   /** Avança o tutorial e mostra a missão atual. */
   private atualizarTutorial() {
     const el = document.getElementById('missao')!;
-    const nova = missaoAtual({ inv: this.inv, construcoes: this.construcoes, status: this.status, habilidades: this.habilidades, criados: this.criados, mortos: this.mortos }, this.missao);
+    // pisou em terra de outra ilha?
+    const j = this.jogador, tx = Math.floor(j.x / T), ty = Math.floor(j.y / T);
+    if (!this.visitouOutra && TILE_ANDAVEL[tileEm(this.mundo, tx, ty)] && Math.hypot(tx - this.mundo.ilhas[0].cx, ty - this.mundo.ilhas[0].cy) > this.mundo.ilhas[0].raio * 1.6) this.visitouOutra = true;
+    const nova = missaoAtual({ inv: this.inv, construcoes: this.construcoes, status: this.status, habilidades: this.habilidades, criados: this.criados, mortos: this.mortos, nivel: this.nivel, visitouOutra: this.visitouOutra }, this.missao);
     if (nova !== this.missao) {
       this.missao = nova; this.sujo = true;
       el.classList.remove('feita'); void el.offsetWidth; el.classList.add('feita');
@@ -424,6 +441,32 @@ export class CenaJogo extends Phaser.Scene {
     el.hidden = false;
     const html = `<b>${this.missao + 1}/${MISSOES.length} · ${m.titulo}</b><p>${m.dica}</p><small>toque para recolher</small>`;
     if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; }
+  }
+
+  /** Terreno de uma ilha mudou de nível: atualiza mapa, recursos e bloqueios. */
+  private aplicarExpansao(ilha: import('../sim/mundo').Ilha, nivel: number) {
+    const r = expandirTerreno(this.mundo, this.recursos, ilha, nivel);
+    for (const x of r.submergiram) { this.mapa.definirObjeto(x.x, x.y, null); this.bloqueio.delete(this.idx(x.x, x.y)); }
+    for (const x of r.emergiram) if (recursoAtivo(this.recursos, x) && !this.construidoEm.has(this.idx(x.x, x.y))) this.mostrarRecurso(x);
+    this.mapa.repintar(r.area);
+  }
+
+  /** Alimenta o Cristal e faz a ilha crescer. */
+  private expandir() {
+    const novo = pagarExpansao(this.nivel, this.construcoes, this.inv);
+    if (!novo) { this.ui.aviso('Ainda falta coisa para alimentar o Cristal'); return; }
+    this.nivel = novo;
+    this.aplicarExpansao(this.mundo.ilhas[0], novo);
+    this.ui.aviso(`O Cristal brilhou: sua ilha cresceu para o nível ${novo}!`);
+    this.tocar('nivel');
+    this.cameras.main.flash(400, 200, 180, 255);
+    this.mudou(); this.salvar(true);
+  }
+
+  /** Jogador encostado no Cristal da própria ilha? */
+  private pertoDoCristal() {
+    const c = tileDoCristal(this.mundo.ilhas[0]);
+    return Math.hypot(this.jogador.x / T - (c.x + 0.5), this.jogador.y / T - (c.y + 0.5)) < 1.7;
   }
 
   private aprenderHabilidade(id: string) {
@@ -618,6 +661,13 @@ export class CenaJogo extends Phaser.Scene {
       return;
     }
     const apertou = k.SPACE.isDown || k.E.isDown || toque.acao;
+    if (this.pertoDoCristal()) {
+      this.alvo.setVisible(false);
+      this.ui.rotuloAcao('Cristal');
+      if (Phaser.Input.Keyboard.JustDown(k.SPACE) || Phaser.Input.Keyboard.JustDown(k.E) || (toque.acao && !this.cristalAberto)) { this.cristalAberto = true; this.ui.abrirCristal(); }
+      if (!toque.acao) this.cristalAberto = false;
+      return;
+    }
     const bicho = this.fauna.alvo(j.x / T, j.y / T, VETOR[this.direcao]);
     if (bicho) {
       this.alvo.setVisible(false);

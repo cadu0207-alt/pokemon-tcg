@@ -1,6 +1,7 @@
 import { acharCaminho } from './caminho';
 import { golpear, recursoAtivo, ferramentaPara, type EstadoRecursos } from './coleta';
-import { nivelIlha, proximoNivel, validarLocal, naIlha, type Construcao } from './construcao';
+import { NIVEIS, validarLocal, naIlha, type Construcao } from './construcao';
+import { CUSTO_EXPANSAO, pagarExpansao } from './expansao';
 import { ganharXp, novoStatus, type Status } from './criaturas';
 import { adicionar, criar, novoInventario, podeCriar, qtd, type Inventario } from './inventario';
 import { ITENS, RECEITAS, type ItemId, type Receita } from './itens';
@@ -42,6 +43,8 @@ export interface Bot {
   ilha: Ilha;
   x: number; y: number;              // em tiles (contínuo, centro do tile = .5)
   inv: Inventario; construcoes: Construcao[]; status: Status;
+  /** Nível de expansão da ilha (o Cristal faz a terra crescer). */
+  nivel: number;
   habilidades: string[];
   objetivo: Objetivo | null;
   caminho: [number, number][];
@@ -53,7 +56,7 @@ export interface Bot {
   ignorar: Map<number, number>;
   /** Ilha onde o bot está agindo agora (a dele, ou uma neutra durante uma expedição). */
   ilhaAtual: Ilha | null;
-  expedicao: { destino: Ilha; fase: 'ida' | 'coletar' | 'volta'; ate: number; inicio: number; parado: number } | null;
+  expedicao: { destino: Ilha; fase: 'ida' | 'coletar' | 'volta'; ate: number; inicio: number; parado: number; alvo?: { x: number; y: number } | null; porto?: boolean; rota?: boolean } | null;
 }
 
 export function criarBots(m: Mundo, quantidade: number, seed: number): Bot[] {
@@ -67,8 +70,8 @@ export function criarBots(m: Mundo, quantidade: number, seed: number): Bot[] {
     bots.push({
       id: i, nome: `${NOMES[i % NOMES.length]}${i >= NOMES.length ? ` ${Math.floor(i / NOMES.length) + 1}` : ''}`,
       perfil: perfis[Math.floor(rng() * perfis.length)], cor: Math.floor(rng() * 8),
-      ilha, x: Math.round(ilha.cx) + 0.5, y: Math.round(ilha.cy) + 0.5,
-      inv: novoInventario(), construcoes: [], status: novoStatus(), habilidades: [],
+      ilha, x: Math.round(ilha.cx) + 0.5, y: Math.round(ilha.cy) + 1.5, // ao lado do Cristal
+      inv: novoInventario(), construcoes: [], status: novoStatus(), habilidades: [], nivel: 1,
       objetivo: null, caminho: [], proximaDecisao: rng() * 2000, proximoGolpe: 0,
       dir: [0, 1], andando: false, rng: criarRng(seed + i * 7919), ignorar: new Map(), ilhaAtual: null, expedicao: null,
     });
@@ -93,6 +96,8 @@ export interface MundoBots {
   /** avisos para quem desenha */
   aoDestruir?: (r: Recurso) => void;
   aoConstruir?: (bot: Bot, c: Construcao) => void;
+  /** O bot alimentou o Cristal: quem tem o mundo faz a terra crescer. */
+  aoExpandir?: (bot: Bot) => void;
 }
 
 // ---------- Planejamento: o que falta para o próximo nível ----------
@@ -102,7 +107,7 @@ const META_FERRAMENTAS: ItemId[] = ['machado_pedra', 'picareta_pedra'];
 /** Itens que o bot quer ter agora (construções do próximo nível + ferramentas). */
 export function metas(bot: Bot): ItemId[] {
   const quer: ItemId[] = [];
-  const prox = proximoNivel(bot.construcoes);
+  const prox = NIVEIS.find(n => n.nivel === bot.nivel + 1);
   if (prox) {
     const tem: Partial<Record<ItemId, number>> = {};
     for (const c of bot.construcoes) tem[c.tipo] = (tem[c.tipo] ?? 0) + 1;
@@ -112,9 +117,10 @@ export function metas(bot: Bot): ItemId[] {
     }
   }
   for (const f of META_FERRAMENTAS) if (!qtd(bot.inv, f)) quer.push(f);
-  if (nivelIlha(bot.construcoes) >= 5) for (const f of ['machado_ferro', 'picareta_ferro'] as ItemId[]) if (!qtd(bot.inv, f)) quer.push(f);
+  if (bot.nivel >= 5) for (const f of ['machado_ferro', 'picareta_ferro'] as ItemId[]) if (!qtd(bot.inv, f)) quer.push(f);
   // jangada para buscar minério e cristal nas ilhas neutras (exploradores querem antes)
-  if (!qtd(bot.inv, 'jangada') && nivelIlha(bot.construcoes) >= (bot.perfil === 'explorador' ? 2 : 5)) quer.push('jangada');
+  // jangada desde o começo: cristal (para expandir) só existe fora de casa
+  if (!qtd(bot.inv, 'jangada')) quer.push('jangada');
   if (bot.perfil === 'cacador' && !qtd(bot.inv, 'lanca_madeira') && !qtd(bot.inv, 'espada_pedra')) quer.push('lanca_madeira');
   return quer;
 }
@@ -143,18 +149,22 @@ export function necessidades(bot: Bot): Record<Materia, number> {
     for (const [sub, q] of Object.entries(r.custo)) precisar(sub as ItemId, (q ?? 0) * vezes, prof + 1);
   };
   for (const meta of metas(bot)) { const r = receitaDe(meta); if (r) for (const [id, q] of Object.entries(r.custo)) precisar(id as ItemId, q ?? 0); }
+  // pacote para alimentar o Cristal no próximo nível
+  for (const [id, q] of Object.entries(CUSTO_EXPANSAO[bot.nivel + 1] ?? {})) precisar(id as ItemId, q ?? 0);
   return falta;
 }
 
 /** Cria tudo o que já dá para criar e que ajuda nas metas. Retorna o que criou. */
 export function criarOQueDer(bot: Bot): ItemId[] {
   const criados: ItemId[] = [];
-  const nivel = nivelIlha(bot.construcoes);
+  const nivel = bot.nivel;
   for (let tentativas = 0; tentativas < 10; tentativas++) {
     const ms = metas(bot);
     // corda primeiro se alguma meta pede corda
     // intermediários primeiro, se alguma meta pede mais do que há na mochila
-    const intermediarios = (['corda', 'lingote'] as ItemId[]).filter(i => ms.some(m => (receitaDe(m)?.custo[i] ?? 0) > qtd(bot.inv, i)));
+    const custoCristal = CUSTO_EXPANSAO[bot.nivel + 1] ?? {};
+    const intermediarios = (['corda', 'lingote'] as ItemId[]).filter(i =>
+      ms.some(m => (receitaDe(m)?.custo[i] ?? 0) > qtd(bot.inv, i)) || (custoCristal[i] ?? 0) > qtd(bot.inv, i));
     const ordem: ItemId[] = [...intermediarios, ...ms];
     const r = ordem.map(receitaDe).find(r => r && podeCriar(bot.inv, r, nivel));
     if (!r || !criar(bot.inv, r, nivel)) break;
@@ -189,7 +199,7 @@ function recursoMaisProximo(bot: Bot, ctx: MundoBots, tipo: Recurso['tipo']): Re
 /** Quantos tiles andáveis da ilha são alcançáveis a partir do centro, tratando `sem` como bloqueado. */
 function alcancaveis(bot: Bot, ctx: MundoBots, sem: number | null): number {
   const L = ctx.mundo.largura;
-  const ini = Math.round(bot.ilha.cy) * L + Math.round(bot.ilha.cx);
+  const ini = (Math.round(bot.ilha.cy) + 1) * L + Math.round(bot.ilha.cx); // ao lado do Cristal (o centro é dele)
   // Pedras, minério e cristal renascem no mesmo lugar: contam sempre como parede (mesmo quebrados).
   // Árvores e arbustos contam como passagem: o bot sabe cortá-los para abrir caminho.
   const pode = (i: number) => {
@@ -318,6 +328,20 @@ function ilhaNeutraMaisProxima(bot: Bot, ctx: MundoBots): Ilha | null {
   return melhor;
 }
 
+/** Tile da costa da ilha atual (terra encostada na água) mais perto do destino. */
+function portoDeSaida(bot: Bot, ctx: MundoBots, dx: number, dy: number): { x: number; y: number } | null {
+  const ilha = bot.ilhaAtual ?? bot.ilha;
+  const R = Math.ceil(ilha.raio * 1.4);
+  const costa: { x: number; y: number; d: number }[] = [];
+  for (let y = Math.floor(ilha.cy) - R; y <= ilha.cy + R; y++) for (let x = Math.floor(ilha.cx) - R; x <= ilha.cx + R; x++) {
+    if (!andavelPara(ctx, x, y) || !naIlha(ilha, x, y)) continue;
+    if (![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([vx, vy]) => ehAgua(tileEm(ctx.mundo, x + vx, y + vy)))) continue;
+    costa.push({ x, y, d: Math.hypot(x - dx, y - dy) });
+  }
+  costa.sort((a, b) => a.d - b.d);
+  return costa[0] ?? null;
+}
+
 /**
  * Tile de terra da ilha mais perto de (x, y): onde a jangada encosta.
  * Com `conectado`, só aceita tiles alcançáveis a pé a partir do centro (senão o bot pode
@@ -327,7 +351,7 @@ function pontoDeDesembarque(ilha: Ilha, ctx: MundoBots, x: number, y: number, co
   const L = ctx.mundo.largura;
   let permitido: Set<number> | null = null;
   if (conectado) {
-    const ini = Math.round(ilha.cy) * L + Math.round(ilha.cx);
+    const ini = (Math.round(ilha.cy) + 1) * L + Math.round(ilha.cx); // ao lado do Cristal
     const pode = (i: number) => naIlha(ilha, i % L, Math.floor(i / L)) && andavelPara(ctx, i % L, Math.floor(i / L));
     permitido = new Set(pode(ini) ? [ini] : []);
     const fila = [...permitido];
@@ -366,6 +390,27 @@ function navegar(bot: Bot, ctx: MundoBots, alvoX: number, alvoY: number, dt: num
 
 const DURACAO_COLETA = 120_000, LIMITE_EXPEDICAO = 360_000;
 
+/**
+ * Rota completa (terra livre + água) com A*, calculada uma vez por trecho. Em mar aberto o A*
+ * vai quase reto (barato) e contorna ilhas e florestas com garantia. Retorna true ao chegar.
+ * Se não achar rota, `e.rota` fica false e a expedição usa o plano B (porto + linha reta).
+ */
+function seguirRota(bot: Bot, ctx: MundoBots, e: NonNullable<Bot['expedicao']>, dt: number, vel: number): boolean {
+  if (!e.alvo) return false;
+  if (e.rota === undefined || e.rota === false && !bot.caminho.length && e.porto !== true && !(e as { tentou?: boolean }).tentou) {
+    (e as { tentou?: boolean }).tentou = true;
+    const navegavel = (x: number, y: number) => {
+      const t = tileEm(ctx.mundo, x, y);
+      return x >= 0 && y >= 0 && x < ctx.mundo.largura && y < ctx.mundo.altura && (ehAgua(t) || TILE_ANDAVEL[t]) && !ctx.bloqueado(x, y);
+    };
+    const c = acharCaminho(Math.floor(bot.x), Math.floor(bot.y), e.alvo.x, e.alvo.y, navegavel, { maxNos: 12000 });
+    e.rota = !!c;
+    bot.caminho = c ?? [];
+  }
+  if (!e.rota) return false;
+  return passo(bot, dt, vel) && Math.abs(Math.floor(bot.x) - e.alvo.x) + Math.abs(Math.floor(bot.y) - e.alvo.y) <= 1;
+}
+
 /** Ida, coleta e volta da expedição. Retorna true enquanto a expedição controla o bot neste passo. */
 function atualizarExpedicao(bot: Bot, ctx: MundoBots, dt: number): boolean {
   const e = bot.expedicao;
@@ -378,21 +423,51 @@ function atualizarExpedicao(bot: Bot, ctx: MundoBots, dt: number): boolean {
     return true;
   }
   if (e.fase === 'ida') {
-    const p = pontoDeDesembarque(e.destino, ctx, bot.x, bot.y);
-    if (!p) { e.fase = 'volta'; return true; }
+    if (e.alvo === undefined) e.alvo = pontoDeDesembarque(e.destino, ctx, bot.x, bot.y);
+    if (seguirRota(bot, ctx, e, dt, vel)) {
+      e.fase = 'coletar'; e.ate = ctx.agora + DURACAO_COLETA; e.alvo = undefined; e.porto = false; e.rota = false;
+      bot.ilhaAtual = e.destino; bot.objetivo = null; bot.caminho = [];
+      return true;
+    }
+    if (e.rota) return true;
+    // 1ª etapa: andar pela própria ilha (A*) até a costa virada para o destino; em terra a linha reta trava em árvores
+    if (!e.porto) {
+      if (!bot.caminho.length) {
+        const porto = portoDeSaida(bot, ctx, e.destino.cx, e.destino.cy);
+        if (porto && !(Math.floor(bot.x) === porto.x && Math.floor(bot.y) === porto.y)) {
+          if (!irPara(bot, ctx, porto.x, porto.y, false)) e.porto = true; // sem caminho: tenta direto
+          else return true;
+        } else e.porto = true;
+      } else { if (passo(bot, dt, vel)) e.porto = true; return true; }
+    }
+    if (e.alvo === undefined) e.alvo = pontoDeDesembarque(e.destino, ctx, bot.x, bot.y); // calcula uma vez por trecho
+    const p = e.alvo;
+    if (!p) { e.fase = 'volta'; e.alvo = undefined; return true; }
     if (navegar(bot, ctx, p.x + 0.5, p.y + 0.5, dt, vel)) {
-      e.fase = 'coletar'; e.ate = ctx.agora + DURACAO_COLETA;
+      e.fase = 'coletar'; e.ate = ctx.agora + DURACAO_COLETA; e.alvo = undefined; e.porto = false;
       bot.ilhaAtual = e.destino; bot.objetivo = null; bot.caminho = [];
     }
     return true;
   }
   if (e.fase === 'coletar') {
     const nec = necessidades(bot);
-    if (ctx.agora >= e.ate || (nec.minerio <= 0 && nec.cristal <= 0)) { e.fase = 'volta'; bot.objetivo = null; bot.caminho = []; return true; }
+    if (ctx.agora >= e.ate || (nec.minerio <= 0 && nec.cristal <= 0)) { e.fase = 'volta'; e.alvo = undefined; e.porto = false; e.rota = false; bot.objetivo = null; bot.caminho = []; return true; }
     return false; // a lógica normal coleta na ilha neutra
   }
+  if (e.alvo === undefined) e.alvo = pontoDeDesembarque(bot.ilha, ctx, bot.x, bot.y, true);
+  if (seguirRota(bot, ctx, e, dt, vel)) { bot.expedicao = null; bot.ilhaAtual = null; bot.objetivo = null; bot.caminho = []; return true; }
+  if (e.rota) return true;
+  // volta: primeiro sai da ilha neutra pela costa virada para casa (mesmo esquema da ida)
+  if (!e.porto) {
+    if (!bot.caminho.length) {
+      const porto = portoDeSaida(bot, ctx, bot.ilha.cx, bot.ilha.cy);
+      if (porto && !(Math.floor(bot.x) === porto.x && Math.floor(bot.y) === porto.y) && irPara(bot, ctx, porto.x, porto.y, false)) return true;
+      e.porto = true;
+    } else { if (passo(bot, dt, vel)) e.porto = true; return true; }
+  }
   // volta: desembarca num ponto conectado ao centro da ilha de casa
-  const p = pontoDeDesembarque(bot.ilha, ctx, bot.x, bot.y, true);
+  if (e.alvo === undefined) e.alvo = pontoDeDesembarque(bot.ilha, ctx, bot.x, bot.y, true);
+  const p = e.alvo;
   if (!p) { bot.x = Math.round(bot.ilha.cx) + 0.5; bot.y = Math.round(bot.ilha.cy) + 0.5; } // sem lugar: leva para casa
   if (!p || navegar(bot, ctx, p.x + 0.5, p.y + 0.5, dt, vel)) {
     bot.expedicao = null; bot.ilhaAtual = null; bot.objetivo = null; bot.caminho = [];
@@ -427,6 +502,8 @@ export function atualizarBot(bot: Bot, ctx: MundoBots, dt: number) {
   const reavaliar = bot.objetivo && (bot.objetivo.tipo === 'coletar' || bot.objetivo.tipo === 'construir') && ctx.agora >= bot.proximaDecisao;
   if (!bot.objetivo || reavaliar) {
     criarOQueDer(bot);
+    const novo = pagarExpansao(bot.nivel, bot.construcoes, bot.inv);
+    if (novo) { bot.nivel = novo; ctx.aoExpandir?.(bot); }
     for (let h = escolherHabilidade(bot.status, bot.habilidades, bot.perfil); h; h = escolherHabilidade(bot.status, bot.habilidades, bot.perfil)) aprender(bot.status, bot.habilidades, h);
     // come se estiver machucado
     for (const c of ['carne_assada', 'baga', 'carne'] as ItemId[]) {
@@ -521,5 +598,5 @@ export const DIFICULDADE: Record<Dificuldade, { ritmo: number; velocidade: numbe
   dificil: { ritmo: 1.0, velocidade: 1.0, preguica: 0, nome: 'Difícil' },
 };
 
-export const pontuacao = (construcoes: Construcao[], status: Status) =>
-  nivelIlha(construcoes) * 100 + construcoes.length * 5 + status.nivel * 10;
+export const pontuacao = (nivel: number, construcoes: Construcao[], status: Status) =>
+  nivel * 100 + construcoes.length * 5 + status.nivel * 10;
