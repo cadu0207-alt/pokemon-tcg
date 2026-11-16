@@ -22,11 +22,11 @@
 //      ver nota no topo do arquivo). Marcado como null de propósito.
 // ============================================================
 var PRICE_UPDATED_AT = {
-  me04: '2026-11-03',
-  me03: '2026-11-03',
-  me02: '2026-11-03',
-  meg:  '2026-11-03',
-  me05: '2026-11-03'
+  me04: '2026-11-16',
+  me03: '2026-11-16',
+  me02: '2026-11-16',
+  meg:  '2026-11-16',
+  me05: '2026-11-16'
 };
 
 // Formata pra exibição em pt-BR, ou uma mensagem clara quando não há data
