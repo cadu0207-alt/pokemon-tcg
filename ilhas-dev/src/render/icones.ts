@@ -40,6 +40,8 @@ const MAPAS: Record<ItemId, [string[], Record<string, string>]> = {
     { k: K, g: '#8fd6e8', w: '#e8fbff' }],
   lanca_madeira: [['........kk', '.......kpk', '......kpk.', '.....ktk..', '....ktk...', '...ktk....', '..ktk.....', '.ktk......', 'kk........', '..........'],
     { k: K, p: '#d9c9a0', t: COR.tronco }],
+  jangada: [['..........', '..........', '....kk....', '...kwk....', '..kwwk....', '.kwwwkt...', 'kkkkkkkkkk', 'ktktktktkk', '.kkkkkkkk.', '..........'],
+    { k: K, w: '#fbf6ee', t: COR.tronco }],
   espada_pedra: [['........kk', '.......kwk', '......kpk.', '.....kpk..', '....kpk...', '.k.kpk....', '..kyk.....', '.kykk.....', 'kk..k.....', '..........'],
     { k: K, p: COR.pedra, w: '#fff', y: COR.tronco }],
 };

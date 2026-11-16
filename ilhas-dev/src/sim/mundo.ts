@@ -48,11 +48,21 @@ export function gerarMundo({ seed, participantes, tamanhoCelula = 48 }: OpcoesMu
     });
   }
 
+  // Grade espacial: cada tile só consulta as ilhas das células vizinhas (antes: todas as ilhas, lento com 1000).
+  const grade = new Map<number, Ilha[]>();
+  const celulaDe = (x: number, y: number) => Math.floor(y / tamanhoCelula) * (colunas + 2) + Math.floor(x / tamanhoCelula);
+  for (const ilha of ilhas) {
+    const alcance = ilha.raio * 1.4 + 1; // h = 1 - d*1.15 só supera o piso (-0.6) para d < 1,39
+    for (const [ox, oy] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]]) {
+      const k = celulaDe(Math.max(0, ilha.cx + ox * alcance), Math.max(0, ilha.cy + oy * alcance));
+      const l = grade.get(k) ?? []; if (!l.includes(ilha)) l.push(ilha); grade.set(k, l);
+    }
+  }
   const tiles = new Uint8Array(largura * altura);
   for (let y = 0; y < altura; y++) {
     for (let x = 0; x < largura; x++) {
       let h = -0.6;
-      for (const ilha of ilhas) {
+      for (const ilha of grade.get(celulaDe(x, y)) ?? []) {
         const d = Math.hypot(x - ilha.cx, y - ilha.cy) / ilha.raio;
         h = Math.max(h, 1 - d * 1.15);
       }
@@ -90,9 +100,16 @@ export function gerarMundo({ seed, participantes, tamanhoCelula = 48 }: OpcoesMu
   // Garante o mínimo de cada recurso em toda ilha inicial (senão uma ilha sem pedra trava o progresso).
   const MINIMO: Record<TipoRecurso, number> = { arvore: 8, pedra: 5, arbusto: 4 };
   const ocupado = new Set(recursos.map(r => r.y * largura + r.x));
+  const porPosicao = new Map(recursos.map(r => [r.y * largura + r.x, r]));
   for (const ilha of ilhas) {
     if (ilha.dono === null) continue;
-    const perto = recursos.filter(r => Math.hypot(r.x + 0.5 - ilha.cx, r.y + 0.5 - ilha.cy) < ilha.raio * 1.3);
+    const perto: Recurso[] = [];
+    const R = Math.ceil(ilha.raio * 1.3);
+    for (let y = Math.floor(ilha.cy) - R; y <= ilha.cy + R; y++) for (let x = Math.floor(ilha.cx) - R; x <= ilha.cx + R; x++) {
+      const r = porPosicao.get(y * largura + x);
+      const noNascimento = !!r && Math.abs(r.x - Math.round(ilha.cx)) <= 1 && Math.abs(r.y - Math.round(ilha.cy)) <= 1; // será removido logo abaixo
+      if (r && !noNascimento && Math.hypot(r.x + 0.5 - ilha.cx, r.y + 0.5 - ilha.cy) < ilha.raio * 1.3) perto.push(r);
+    }
     for (const tipo of Object.keys(MINIMO) as TipoRecurso[]) {
       let falta = MINIMO[tipo] - perto.filter(r => r.tipo === tipo).length;
       for (let tentativa = 0; falta > 0 && tentativa < 300; tentativa++) {
@@ -114,6 +131,9 @@ export function gerarMundo({ seed, participantes, tamanhoCelula = 48 }: OpcoesMu
 
   return { seed, largura, altura, tiles, ilhas, recursos: livres };
 }
+
+/** Água navegável com jangada (rocha continua bloqueando). */
+export const ehAgua = (t: Tile) => t === Tile.Agua || t === Tile.AguaFunda;
 
 export function tileEm(m: Mundo, x: number, y: number): Tile {
   if (x < 0 || y < 0 || x >= m.largura || y >= m.altura) return Tile.AguaFunda;

@@ -2,7 +2,7 @@ export type ItemId =
   | 'madeira' | 'pedra' | 'fibra' | 'baga' | 'corda'
   | 'machado_pedra' | 'picareta_pedra' | 'foice_pedra'
   | 'fogueira' | 'bancada' | 'bau' | 'casa' | 'cerca'
-  | 'carne' | 'couro' | 'gosma' | 'carne_assada' | 'espada_pedra' | 'lanca_madeira';
+  | 'carne' | 'couro' | 'gosma' | 'carne_assada' | 'espada_pedra' | 'lanca_madeira' | 'jangada';
 
 export interface DefItem {
   nome: string;
@@ -33,6 +33,8 @@ export const ITENS: Record<ItemId, DefItem> = {
   carne_assada: { nome: 'Carne assada', comida: 12 },
   lanca_madeira: { nome: 'Lança de madeira', ferramenta: { alvo: 'criatura', dano: 3, durabilidade: 30 } },
   espada_pedra: { nome: 'Espada de pedra', ferramenta: { alvo: 'criatura', dano: 5, durabilidade: 50 } },
+  /** Com a jangada na mochila dá para navegar pela água. */
+  jangada: { nome: 'Jangada' },
 };
 
 /** `nivel`: nível mínimo da ilha para liberar a receita. */
@@ -48,6 +50,7 @@ export const RECEITAS: Receita[] = [
   { id: 'lanca_madeira', qtd: 1, custo: { madeira: 4, corda: 1 } },
   { id: 'espada_pedra', qtd: 1, custo: { madeira: 2, pedra: 4, corda: 1, couro: 1 }, nivel: 2 },
   { id: 'carne_assada', qtd: 1, custo: { carne: 1, madeira: 1 }, nivel: 2 },
+  { id: 'jangada', qtd: 1, custo: { madeira: 12, corda: 4 }, nivel: 2 },
   { id: 'cerca', qtd: 2, custo: { madeira: 2 }, nivel: 2 },
   { id: 'bau', qtd: 1, custo: { madeira: 10, corda: 1 }, nivel: 2 },
   { id: 'casa', qtd: 1, custo: { madeira: 20, pedra: 10, corda: 4 }, nivel: 2 },

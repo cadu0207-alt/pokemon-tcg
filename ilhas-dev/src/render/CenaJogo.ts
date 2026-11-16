@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { gerarMundo, tileEm, TILE_ANDAVEL, type Mundo, type Recurso } from '../sim/mundo';
+import { gerarMundo, tileEm, ehAgua, TILE_ANDAVEL, type Mundo, type Recurso } from '../sim/mundo';
 import { iniciarRecursos, golpear, atualizarRecursos, recursoAtivo, ferramentaPara, type EstadoRecursos } from '../sim/coleta';
 import { CRIATURAS, DURACAO_DIA, bonusDano, ehNoite, ganharXp, novoStatus, type Status } from '../sim/criaturas';
 import { novoInventario, remover, qtd, adicionar, desgastar, type Inventario } from '../sim/inventario';
@@ -10,6 +10,7 @@ import { criarCriaturas, criarPersonagem, criarTileset, T, TILE_CONSTRUCAO } fro
 import { Fauna } from './Fauna';
 import { DiaNoite } from './DiaNoite';
 import { BotsVisuais } from './BotsVisuais';
+import { MapaEmPedacos } from './MapaEmPedacos';
 import { Interface, toque } from './ui';
 
 const VELOCIDADE = 5;          // tiles por segundo
@@ -27,7 +28,9 @@ export class CenaJogo extends Phaser.Scene {
   private inv: Inventario = novoInventario();
   private ui!: Interface;
   private jogador!: Phaser.GameObjects.Sprite;
-  private objetos!: Phaser.Tilemaps.TilemapLayer;
+  private mapa!: MapaEmPedacos;
+  /** construções de todos (jogador e bots), por índice do tile */
+  private construidoEm = new Map<number, ItemId>();
   private alvo!: Phaser.GameObjects.Rectangle;
   private teclas!: Record<string, Phaser.Input.Keyboard.Key>;
   private bloqueio = new Set<number>();
@@ -47,6 +50,9 @@ export class CenaJogo extends Phaser.Scene {
   private eraNoite = false;
   private invulneravelAte = 0;
   private morto = false;
+  private barco!: Phaser.GameObjects.Image;
+  private avisouJangada = false;
+  private naAgua = false;
   private bots!: BotsVisuais;
   private assistindo: import('../sim/bots').Bot | null = null;
 
@@ -66,13 +72,13 @@ export class CenaJogo extends Phaser.Scene {
     criarCriaturas(this);
 
     const m = this.mundo;
-    const mapa = this.make.tilemap({ tileWidth: T, tileHeight: T, width: m.largura, height: m.altura });
-    const tileset = mapa.addTilesetImage('tileset', 'tileset', T, T, 1, 2)!;
-    const chao = mapa.createBlankLayer('chao', tileset)!;
-    this.objetos = mapa.createBlankLayer('objetos', tileset)!;
-    const dados: number[][] = [];
-    for (let y = 0; y < m.altura; y++) dados.push(Array.from(m.tiles.subarray(y * m.largura, (y + 1) * m.largura)));
-    chao.putTilesAt(dados, 0, 0);
+    this.mapa = new MapaEmPedacos(this, m, (x, y) => {
+      const i = this.idx(x, y);
+      const c = this.construidoEm.get(i);
+      if (c) return TILE_CONSTRUCAO[c as keyof typeof TILE_CONSTRUCAO];
+      const r = this.recursos.porTile.get(i);
+      return r && recursoAtivo(this.recursos, r) ? RECURSO_TILE[r.tipo] : -1;
+    });
     if (save) {
       Object.assign(this.inv.itens, save.inventario.itens);
       Object.assign(this.inv.durabilidade, save.inventario.durabilidade);
@@ -86,13 +92,13 @@ export class CenaJogo extends Phaser.Scene {
     this.nivel = nivelIlha(this.construcoes);
 
     // Bots: cada um na sua ilha, decidindo sozinho o que fazer.
-    const nBots = Math.max(0, Math.min(participantes - 1, Number(q.get('bots') ?? 30)));
+    const nBots = Math.max(0, Math.min(participantes - 1, Number(q.get('bots') ?? 99)));
     this.bots = new BotsVisuais(this, m, nBots, seed,
-      r => { this.objetos.removeTileAt(r.x, r.y); this.bloqueio.delete(this.idx(r.x, r.y)); },
+      r => { this.mapa.definirObjeto(r.x, r.y, -1); this.bloqueio.delete(this.idx(r.x, r.y)); },
       c => { this.removerRecursoSob(c.x, c.y); this.mostrarConstrucao(c); },
       save?.bots);
     for (const c of this.bots.todasConstrucoes()) {
-      if (this.recursos.porTile.get(this.idx(c.x, c.y))) { this.objetos.removeTileAt(c.x, c.y); this.removerRecursoSob(c.x, c.y); }
+      if (this.recursos.porTile.get(this.idx(c.x, c.y))) this.removerRecursoSob(c.x, c.y);
       this.mostrarConstrucao(c);
     }
 
@@ -100,6 +106,7 @@ export class CenaJogo extends Phaser.Scene {
     const ini = save?.jogador ?? { x: (Math.round(casa.cx) + 0.5) * T, y: (Math.round(casa.cy) + 0.5) * T };
     this.jogador = this.add.sprite(ini.x, ini.y, 'heroi', 0);
     this.jogador.setOrigin(0.5, 0.75).setDepth(this.jogador.y);
+    this.barco = this.add.image(0, 0, 'jangada').setOrigin(0.5, 0).setVisible(false);
     const andavel = (tx: number, ty: number) => TILE_ANDAVEL[tileEm(m, tx, ty)] && !this.bloqueio.has(this.idx(tx, ty));
     this.fauna = new Fauna(this, andavel, m.ilhas[0], () => this.construcoes.filter(c => c.tipo === 'fogueira'), seed);
     this.diaNoite = new DiaNoite(this);
@@ -166,12 +173,13 @@ export class CenaJogo extends Phaser.Scene {
   private idx(x: number, y: number) { return y * this.mundo.largura + x; }
 
   private mostrarRecurso(r: Recurso) {
-    this.objetos.putTileAt(RECURSO_TILE[r.tipo], r.x, r.y);
+    this.mapa.definirObjeto(r.x, r.y, RECURSO_TILE[r.tipo]);
     if (r.tipo !== 'arbusto') this.bloqueio.add(this.idx(r.x, r.y));
   }
 
   private mostrarConstrucao(c: Construcao) {
-    this.objetos.putTileAt(TILE_CONSTRUCAO[c.tipo as keyof typeof TILE_CONSTRUCAO], c.x, c.y);
+    this.construidoEm.set(this.idx(c.x, c.y), c.tipo);
+    this.mapa.definirObjeto(c.x, c.y, TILE_CONSTRUCAO[c.tipo as keyof typeof TILE_CONSTRUCAO]);
     this.bloqueio.add(this.idx(c.x, c.y));
   }
 
@@ -268,9 +276,12 @@ export class CenaJogo extends Phaser.Scene {
   }
 
   private livre(px: number, py: number) {
+    const jangada = qtd(this.inv, 'jangada') > 0;
     for (const [ox, oy] of [[-4, -2], [4, -2], [-4, 2], [4, 2]]) {
       const tx = Math.floor((px + ox) / T), ty = Math.floor((py + oy) / T);
-      if (!TILE_ANDAVEL[tileEm(this.mundo, tx, ty)] || this.bloqueio.has(this.idx(tx, ty))) return false;
+      if (tx < 0 || ty < 0 || tx >= this.mundo.largura || ty >= this.mundo.altura) return false;
+      const t = tileEm(this.mundo, tx, ty);
+      if (!(TILE_ANDAVEL[t] || (jangada && ehAgua(t))) || this.bloqueio.has(this.idx(tx, ty))) return false;
     }
     return true;
   }
@@ -318,7 +329,7 @@ export class CenaJogo extends Phaser.Scene {
     }
     if (res.ferramentaQuebrou && res.ferramenta) this.ui.aviso(`${ITENS[res.ferramenta].nome} quebrou!`);
     if (res.destruido) {
-      this.objetos.removeTileAt(r.x, r.y);
+      this.mapa.definirObjeto(r.x, r.y, -1);
       this.bloqueio.delete(this.idx(r.x, r.y));
       let i = 0;
       for (const [id, n] of Object.entries(res.ganhos)) this.textoFlutuante(cx, cy - 6 - i++ * 7, `+${n} ${ITENS[id as ItemId].nome}`);
@@ -410,6 +421,7 @@ export class CenaJogo extends Phaser.Scene {
   update(t: number, dt: number) {
     const k = this.teclas;
     const j = this.jogador;
+    this.mapa.atualizar(this.cameras.main.worldView);
     // Relógio do mundo, noite e criaturas.
     this.tempoMundo += dt;
     const noite = ehNoite(this.tempoMundo);
@@ -429,6 +441,12 @@ export class CenaJogo extends Phaser.Scene {
       cam.centerOn(Phaser.Math.Linear(cam.midPoint.x, this.assistindo.x * T, 0.15), Phaser.Math.Linear(cam.midPoint.y, this.assistindo.y * T, 0.15));
     }
     j.setDepth(j.y);
+    const agora = ehAgua(tileEm(this.mundo, Math.floor(j.x / T), Math.floor(j.y / T)));
+    if (agora !== this.naAgua) {
+      this.naAgua = agora;
+      if (agora && !this.avisouJangada) { this.avisouJangada = true; this.ui.aviso('Navegando! Explore as ilhas vizinhas'); }
+    }
+    this.barco.setVisible(this.naAgua).setPosition(j.x, j.y - 1 + Math.sin(t / 250) * 0.6).setDepth(j.y - 0.5);
     if (this.morto) return;
     let vx = 0, vy = 0;
     if (k.A.isDown || k.LEFT.isDown) vx -= 1;
@@ -437,7 +455,7 @@ export class CenaJogo extends Phaser.Scene {
     if (k.S.isDown || k.DOWN.isDown) vy += 1;
     if (toque.x || toque.y) { vx = toque.x; vy = toque.y; }
     if ((vx || vy) && !this.golpeando) {
-      const passo = (VELOCIDADE * T * dt) / 1000 / Math.max(1, Math.hypot(vx, vy));
+      const passo = (VELOCIDADE * (this.naAgua ? 0.85 : 1) * T * dt) / 1000 / Math.max(1, Math.hypot(vx, vy));
       const nx = j.x + vx * passo, ny = j.y + vy * passo;
       if (this.livre(nx, j.y)) j.x = nx;
       if (this.livre(j.x, ny)) j.y = ny;

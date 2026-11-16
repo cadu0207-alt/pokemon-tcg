@@ -177,6 +177,13 @@ export function criarCriaturas(scene: Phaser.Scene) {
     tex.add(0, 0, 0, 0, T, T); tex.add(1, 0, T, 0, T, T);
     scene.anims.create({ key: `cri-${nome}`, frameRate: 5, repeat: -1, frames: [0, 1].map(f => ({ key: `cri-${nome}`, frame: f })) });
   }
+  // Jangada sob o personagem quando ele está na água.
+  const j = document.createElement('canvas'); j.width = 18; j.height = 8;
+  desenhar(j.getContext('2d')!, [
+    'kkkkkkkkkkkkkkkkkk', 'kttwttwttwttwttwtk', 'kttwttwttwttwttwtk', 'kkkkkkkkkkkkkkkkkk',
+    '.e..............e.', 'e.e............e.e', '..................', '..................',
+  ], { k: COR.contorno, t: COR.tronco, w: '#a8734f', e: '#d6f0ff' });
+  scene.textures.addCanvas('jangada', j);
   // Brilho da fogueira (gradiente radial) para a noite.
   const g = document.createElement('canvas'); g.width = g.height = 128;
   const gx = g.getContext('2d')!;
