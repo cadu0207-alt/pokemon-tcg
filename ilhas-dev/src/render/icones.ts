@@ -68,9 +68,18 @@ const MAPAS: Record<ItemId, [string[], Record<string, string>]> = {
     { k: K, p: COR.pedra, w: '#fff', y: COR.tronco }],
 };
 
+import { ICONES_PNG } from './assets';
+
+/** Quem consegue recortar ícones das folhas carregadas (a cena registra ao iniciar). */
+let recortar: ((id: ItemId) => string | null) | null = null;
+export const registrarRecorte = (f: (id: ItemId) => string | null) => { recortar = f; cache.clear(); };
+
 const cache = new Map<ItemId, string>();
 export function icone(id: ItemId): string {
   let url = cache.get(id);
+  if (!url && ICONES_PNG[id]) url = ICONES_PNG[id];
+  if (!url && recortar) url = recortar(id) ?? undefined;
+  if (url) cache.set(id, url);
   if (!url) {
     const c = document.createElement('canvas'); c.width = c.height = 10;
     const [linhas, pal] = MAPAS[id];

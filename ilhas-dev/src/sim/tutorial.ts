@@ -24,7 +24,7 @@ export const MISSOES: Missao[] = [
   { titulo: 'Faça um machado', dica: 'Machado de pedra: árvores caem 3× mais rápido.', feita: e => criou(e, 'machado_pedra') },
   { titulo: 'Acenda uma fogueira', dica: 'Crie uma Fogueira, toque nela na mochila e escolha o lugar. À noite ela afasta monstros.', feita: e => construiu(e, 'fogueira') },
   { titulo: 'Monte uma bancada', dica: 'Fogueira + bancada sobem sua ilha para o nível 2.', feita: e => nivelIlha(e.construcoes) >= 2 },
-  { titulo: 'Enfrente uma criatura', dica: 'Coelhos e javalis dão carne e couro. Ataque com Espaço/AÇÃO.', feita: e => e.mortos > 0 },
+  { titulo: 'Enfrente uma criatura', dica: 'Guaxinins e javalis dão carne e couro. Ataque com Espaço/AÇÃO.', feita: e => e.mortos > 0 },
   { titulo: 'Aprenda uma habilidade', dica: 'Ao subir de nível você ganha pontos. Abra Habilidades (K).', feita: e => e.habilidades.length > 0 },
   { titulo: 'Construa uma jangada', dica: 'Com ela você navega até ilhas neutras, ricas em minério e cristal.', feita: e => criou(e, 'jangada') || tem(e, 'jangada') },
 ];

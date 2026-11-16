@@ -6,6 +6,20 @@ import { naIlha } from '../sim/construcao';
 import type { Ilha } from '../sim/mundo';
 import { criarRng } from '../sim/rng';
 import { T } from './texturas';
+import { CRIATURA_ARTE } from './assets';
+
+/** Animação da criatura conforme a direção (folhas direcionais) ou de lado (javali). */
+function animar(s: Phaser.GameObjects.Sprite, tipo: string, dir: [number, number]) {
+  const arte = CRIATURA_ARTE[tipo];
+  if (arte?.tipo === 'direcional') {
+    const [dx, dy] = dir;
+    const d = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'esquerda' : 'direita') : (dy < 0 ? 'cima' : 'baixo');
+    s.anims.play(`cri-${tipo}-${d}`, true);
+  } else {
+    s.anims.play(`cri-${tipo}`, true);
+    if (Math.abs(dir[0]) > 0.1) s.setFlipX(dir[0] > 0);
+  }
+}
 
 export interface Bicho { c: Criatura; s: Phaser.GameObjects.Sprite; barra: Phaser.GameObjects.Graphics; sombra: Phaser.GameObjects.Image; }
 
@@ -62,7 +76,7 @@ export class Fauna {
   adicionar(tipo: TipoCriatura, x: number, y: number) {
     const c = novaCriatura(this.proximoId++, tipo, x, y);
     const s = this.scene.add.sprite(x * T, y * T, `cri-${tipo}`, 0).setOrigin(0.5, 0.85);
-    s.play({ key: `cri-${tipo}`, startFrame: Math.floor(this.rng() * 2) });
+    animar(s, tipo, [0, 1]);
     s.setAlpha(0);
     this.scene.tweens.add({ targets: s, alpha: 1, duration: 400 });
     const barra = this.scene.add.graphics().setDepth(5000);
@@ -91,7 +105,7 @@ export class Fauna {
       dano += atualizarCriatura(c, protegido ? { ...ctx, jogador: { ...ctx.jogador, vivo: false } } : ctx, dt);
       s.setPosition(c.x * T, c.y * T).setDepth(s.y);
       b.sombra.setPosition(s.x, s.y + 1).setDepth(s.y - 1);
-      if (Math.abs(c.dir[0]) > 0.1) s.setFlipX(c.dir[0] > 0);
+      animar(s, c.tipo, c.dir);
       s.anims.timeScale = c.estado === 'parado' ? 0.3 : 1.4;
       b.barra.clear();
       if (c.vida < def.vida) {

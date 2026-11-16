@@ -43,4 +43,9 @@ Foi assim que achamos ilhas sem pedra, bots que se trancavam nas próprias const
 - [x] Fase 7 — tela inicial (mundo Vila/Arquipélago/Gigante, dificuldade, continuar/novo jogo), dificuldade dos bots, tutorial em 9 missões, sons e música gerados com Web Audio, sombras
 - [x] Visual — terreno com costas orgânicas (pintado pixel a pixel, ~13 ms por pedaço), personagens chibi 24×24 gerados com 3 penteados, 4 tons de pele e 4 quadros de caminhada
 - [x] Celular — joystick flutuante, pinça para zoom, mira automática, botão de ação com rótulo (Cortar/Minerar/Atacar/Construir), vibração, botões compactos
-- [ ] Próximos — bots que navegam, salvamento na nuvem/multiplayer
+- [x] Arte do Ninja Adventure Asset Pack (CC0): 24 personagens (escolha na tela inicial), criaturas, árvores, pedras, minério, cristal, construções e ícones; terreno com a paleta do pacote
+- [ ] Próximos — sons do pacote, bots que navegam, salvamento na nuvem/multiplayer
+
+## Créditos
+Arte: [Ninja Adventure Asset Pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack), por Pixel-boy e AAA — licença CC0 (`public/ninja/LICENSE.txt`).
+Só os arquivos usados estão em `public/ninja/` (~424 KB); o mapeamento de recortes fica em `src/render/assets.ts`.

@@ -12,10 +12,10 @@ export interface DefCriatura {
 }
 
 export const CRIATURAS: Record<TipoCriatura, DefCriatura> = {
-  coelho: { nome: 'Coelho', vida: 3, velocidade: 3.2, comportamento: 'passivo', visao: 3, dano: 0, intervaloAtaque: 0, xp: 2, solta: { carne: 1 } },
+  coelho: { nome: 'Guaxinim', vida: 3, velocidade: 3.2, comportamento: 'passivo', visao: 3, dano: 0, intervaloAtaque: 0, xp: 2, solta: { carne: 1 } },
   javali: { nome: 'Javali', vida: 10, velocidade: 2.6, comportamento: 'neutro', visao: 6, dano: 3, intervaloAtaque: 1100, xp: 8, solta: { carne: 2, couro: 1 } },
   slime: { nome: 'Slime', vida: 6, velocidade: 1.4, comportamento: 'hostil', visao: 5, dano: 2, intervaloAtaque: 1200, xp: 5, solta: { gosma: 1 } },
-  lobo: { nome: 'Lobo', vida: 14, velocidade: 3.4, comportamento: 'hostil', visao: 8, dano: 4, intervaloAtaque: 900, xp: 14, solta: { couro: 2, carne: 1 }, noturno: true },
+  lobo: { nome: 'Fera', vida: 14, velocidade: 3.4, comportamento: 'hostil', visao: 8, dano: 4, intervaloAtaque: 900, xp: 14, solta: { couro: 2, carne: 1 }, noturno: true },
 };
 
 export interface Criatura {

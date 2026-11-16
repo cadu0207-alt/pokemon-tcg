@@ -6,8 +6,9 @@ import { novoInventario, remover, qtd, adicionar, desgastar, type Inventario } f
 import { nivelIlha, validarLocal, type Construcao } from '../sim/construcao';
 import { carregar, serializar } from '../sim/save';
 import { ITENS, type ItemId } from '../sim/itens';
-import { criarChibi, quadroParado } from './chibi';
-import { criarCriaturas, criarTileset, T, TILE_CONSTRUCAO, TILE_RECURSO as RECURSO_TILE } from './texturas';
+import { criarCriaturas, T } from './texturas';
+import { registrarRecorte } from './icones';
+import { recorteComoUrl, carregar as carregarArte, preparar, quadroParado, varianteArvore, OBJETOS, PERSONAGENS, type Personagem } from './assets';
 import { Fauna } from './Fauna';
 import { DiaNoite } from './DiaNoite';
 import { BotsVisuais } from './BotsVisuais';
@@ -17,7 +18,7 @@ import { Som, type Efeito } from './Som';
 import { MISSOES, missaoAtual } from '../sim/tutorial';
 import { DIFICULDADE, type Dificuldade } from '../sim/bots';
 
-export interface Config { seed: number; participantes: number; bots: number; dificuldade: Dificuldade; novo: boolean; }
+export interface Config { seed: number; participantes: number; bots: number; dificuldade: Dificuldade; novo: boolean; personagem?: Personagem; }
 import { aprender, efeitos, MAGIAS, podeAprender, type Efeitos, type Magia } from '../sim/habilidades';
 import { Interface, toque } from './ui';
 
@@ -75,6 +76,10 @@ export class CenaJogo extends Phaser.Scene {
 
   constructor() { super('jogo'); }
 
+  preload() { carregarArte(this); }
+
+  private personagem: Personagem = 'Boy';
+
   create() {
     this.cfg = this.registry.get('cfg') as Config;
     const { seed, participantes } = this.cfg;
@@ -87,17 +92,18 @@ export class CenaJogo extends Phaser.Scene {
       lido = localStorage.getItem(this.chaveSave);
     } catch { /* armazenamento bloqueado */ }
     const save = carregar(lido, seed, participantes);
-    criarTileset(this);
-    criarChibi(this, 'heroi', { pele: '#ffe0c8', cabelo: '#ff8fb1', roupa: '#7aa7ff', calca: '#4a5a8a', penteado: 'rabo' });
+    preparar(this);
+    registrarRecorte(id => (ITENS[id].construivel ? recorteComoUrl(this, id) : null));
+    this.personagem = this.cfg.personagem && PERSONAGENS.includes(this.cfg.personagem) ? this.cfg.personagem : 'Boy';
     criarCriaturas(this);
 
     const m = this.mundo;
     this.mapa = new MapaEmPedacos(this, m, (x, y) => {
       const i = this.idx(x, y);
       const c = this.construidoEm.get(i);
-      if (c) return TILE_CONSTRUCAO[c as keyof typeof TILE_CONSTRUCAO];
+      if (c) return c in OBJETOS ? c : null;
       const r = this.recursos.porTile.get(i);
-      return r && recursoAtivo(this.recursos, r) ? RECURSO_TILE[r.tipo] : -1;
+      return r && recursoAtivo(this.recursos, r) ? this.nomeRecurso(r) : null;
     });
     if (save) {
       Object.assign(this.inv.itens, save.inventario.itens);
@@ -118,7 +124,7 @@ export class CenaJogo extends Phaser.Scene {
     // Bots: cada um na sua ilha, decidindo sozinho o que fazer.
     const nBots = Math.max(0, Math.min(participantes - 1, this.cfg.bots));
     this.bots = new BotsVisuais(this, m, nBots, seed,
-      r => { this.mapa.definirObjeto(r.x, r.y, -1); this.bloqueio.delete(this.idx(r.x, r.y)); },
+      r => { this.mapa.definirObjeto(r.x, r.y, null); this.bloqueio.delete(this.idx(r.x, r.y)); },
       c => { this.removerRecursoSob(c.x, c.y); this.mostrarConstrucao(c); },
       save?.bots);
     for (const c of this.bots.todasConstrucoes()) {
@@ -128,8 +134,8 @@ export class CenaJogo extends Phaser.Scene {
 
     const casa = m.ilhas[0];
     const ini = save?.jogador ?? { x: (Math.round(casa.cx) + 0.5) * T, y: (Math.round(casa.cy) + 0.5) * T };
-    this.jogador = this.add.sprite(ini.x, ini.y, 'heroi', 0);
-    this.jogador.setOrigin(0.5, 0.92).setDepth(this.jogador.y);
+    this.jogador = this.add.sprite(ini.x, ini.y, `p-${this.personagem}`, 0);
+    this.jogador.setOrigin(0.5, 0.9).setDepth(this.jogador.y);
     this.sombra = this.add.image(0, 0, 'sombra').setAlpha(0.28);
     const destravar = () => this.som.destravar();
     window.addEventListener('pointerdown', destravar); window.addEventListener('keydown', destravar);
@@ -141,9 +147,7 @@ export class CenaJogo extends Phaser.Scene {
     this.time.addEvent({ delay: 700, loop: true, callback: () => {
       if (!this.morto) this.fauna.tentarNascer(this.jogador.x / T, this.jogador.y / T, ehNoite(this.tempoMundo));
     } });
-    const tex = this.textures.get('tileset');
-    for (const [, i] of Object.entries(TILE_CONSTRUCAO)) tex.add(`t${i}`, 0, 1 + i * (T + 2), 1, T, T);
-    this.fantasma = this.add.image(0, 0, 'tileset', `t${TILE_CONSTRUCAO.fogueira}`).setOrigin(0).setDepth(6).setAlpha(0.75).setVisible(false);
+    this.fantasma = this.add.image(0, 0, 'acampamento', 'fogueira').setOrigin(0.5, 1).setDepth(30000).setAlpha(0.7).setVisible(false);
     this.alvo = this.add.rectangle(0, 0, T, T).setStrokeStyle(1, 0xffffff, 0.9).setOrigin(0).setDepth(5).setVisible(false);
 
     const cam = this.cameras.main;
@@ -217,13 +221,16 @@ export class CenaJogo extends Phaser.Scene {
   private idx(x: number, y: number) { return y * this.mundo.largura + x; }
 
   private mostrarRecurso(r: Recurso) {
-    this.mapa.definirObjeto(r.x, r.y, RECURSO_TILE[r.tipo]);
+    this.mapa.definirObjeto(r.x, r.y, this.nomeRecurso(r));
     if (r.tipo !== 'arbusto') this.bloqueio.add(this.idx(r.x, r.y));
   }
 
+  /** Recorte usado para desenhar um recurso (árvores variam pela posição). */
+  private nomeRecurso(r: Recurso) { return r.tipo === 'arvore' ? varianteArvore(r.x, r.y) : r.tipo; }
+
   private mostrarConstrucao(c: Construcao) {
     this.construidoEm.set(this.idx(c.x, c.y), c.tipo);
-    this.mapa.definirObjeto(c.x, c.y, TILE_CONSTRUCAO[c.tipo as keyof typeof TILE_CONSTRUCAO]);
+    this.mapa.definirObjeto(c.x, c.y, c.tipo in OBJETOS ? c.tipo : null);
     this.bloqueio.add(this.idx(c.x, c.y));
   }
 
@@ -254,7 +261,7 @@ export class CenaJogo extends Phaser.Scene {
     this.ui.alternarCraft(false);
     this.ui.modoConstrucao(id);
     this.fantasma.setVisible(!!id);
-    if (id) this.fantasma.setFrame(`t${TILE_CONSTRUCAO[id as keyof typeof TILE_CONSTRUCAO]}`);
+    if (id && OBJETOS[id]) { const [folha, , , , , esc = 1] = OBJETOS[id]; this.fantasma.setTexture(folha, id).setScale(esc); }
   }
 
   private localConstrucao() {
@@ -378,7 +385,7 @@ export class CenaJogo extends Phaser.Scene {
     if (res.ferramentaQuebrou && res.ferramenta) this.ui.aviso(`${ITENS[res.ferramenta].nome} quebrou!`);
     if (res.destruido) {
       this.tocar('cai');
-      this.mapa.definirObjeto(r.x, r.y, -1);
+      this.mapa.definirObjeto(r.x, r.y, null);
       this.bloqueio.delete(this.idx(r.x, r.y));
       let i = 0;
       for (const [id, n] of Object.entries(res.ganhos)) this.textoFlutuante(cx, cy - 6 - i++ * 7, `+${n} ${ITENS[id as ItemId].nome}`);
@@ -596,7 +603,7 @@ export class CenaJogo extends Phaser.Scene {
       if (this.livre(nx, j.y)) j.x = nx;
       if (this.livre(j.x, ny)) j.y = ny;
       this.direcao = Math.abs(vx) > Math.abs(vy) ? (vx < 0 ? 'esquerda' : 'direita') : (vy < 0 ? 'cima' : 'baixo');
-      j.anims.play(`heroi-${this.direcao}`, true);
+      j.anims.play(`p-${this.personagem}-${this.direcao}`, true);
     } else if (!this.golpeando) {
       j.anims.stop();
       j.setFrame(quadroParado(this.direcao));
@@ -604,7 +611,7 @@ export class CenaJogo extends Phaser.Scene {
 
     if (this.ui.construindo) {
       const { x, y } = this.localConstrucao();
-      this.fantasma.setPosition(x * T, y * T).setTint(this.motivoInvalido(x, y) ? 0xff6666 : 0xffffff);
+      this.fantasma.setPosition((x + 0.5) * T, (y + 1) * T).setTint(this.motivoInvalido(x, y) ? 0xff6666 : 0xffffff);
       this.alvo.setVisible(false);
       this.ui.rotuloAcao('Construir');
       if (Phaser.Input.Keyboard.JustDown(k.SPACE) || Phaser.Input.Keyboard.JustDown(k.E)) this.construir();

@@ -9,15 +9,16 @@ import { Tile, type Mundo } from '../sim/mundo';
 const T = 16;
 
 // paletas: [base, detalhe1, detalhe2]
+// cores amostradas do Ninja Adventure Asset Pack, para o chão combinar com os sprites
 const COR: Record<number, [number, number, number]> = {
-  [Tile.AguaFunda]: [0x3b6ea8, 0x4679b3, 0x35649a],
-  [Tile.Agua]: [0x5fa3d9, 0x6cb0e3, 0x569acf],
-  [Tile.Areia]: [0xf1dca7, 0xe6cd92, 0xf7e7be],
-  [Tile.Grama]: [0x8fd27a, 0x7fc56b, 0xa3df8c],
-  [Tile.Floresta]: [0x5e9e57, 0x528f4c, 0x6aab62],
-  [Tile.Rocha]: [0xa39e9b, 0x8d8784, 0xb6b1ad],
+  [Tile.AguaFunda]: [0x4f9cc4, 0x5aa8cf, 0x4892b9],
+  [Tile.Agua]: [0x71ddee, 0x79cfe6, 0x8fe6f2],
+  [Tile.Areia]: [0xffcb8d, 0xf5bb7c, 0xffd8a4],
+  [Tile.Grama]: [0xadbc3a, 0x9fb034, 0xbcc94c],
+  [Tile.Floresta]: [0x74a334, 0x68952e, 0x82b03c],
+  [Tile.Rocha]: [0x90775e, 0x816855, 0xa3896e],
 };
-const ESPUMA = 0xd6f0ff, BORDA_AREIA = 0xd9bf83, BORDA_GRAMA = 0x6db35c;
+const ESPUMA = 0xd4f5fa, BORDA_AREIA = 0xffad5d, BORDA_GRAMA = 0x8e9c2c;
 
 // ruído determinístico barato por pixel
 function hash(x: number, y: number) {

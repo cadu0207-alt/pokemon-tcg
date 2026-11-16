@@ -48,7 +48,7 @@ export const ITENS: Record<ItemId, DefItem> = {
   pocao_mana: { nome: 'Poção de mana', mana: 15 },
   forja: { nome: 'Forja', construivel: true },
   altar: { nome: 'Altar arcano', construivel: true },
-  torre: { nome: 'Torre', construivel: true },
+  torre: { nome: 'Portal', construivel: true },
   estatua: { nome: 'Estátua do guardião', construivel: true },
 };
 
