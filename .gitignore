@@ -13,3 +13,6 @@ scripts/test_trunc.txt
 # Analises/relatorios internos (ficam so no disco e no historico do git)
 ANALISE_*.md
 LOG_ATUALIZACOES_*.md
+
+# Perfil do Chrome usado pelo robo de precos (cookies do Cloudflare)
+scripts/.liga_browser_profile/

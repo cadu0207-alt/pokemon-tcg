@@ -80,25 +80,79 @@ def update_price_timestamp(repo_root: str, set_key: str) -> None:
 
 # ── Extração via Playwright ──────────────────────────────────────────────────
 
+# ── Navegador compartilhado da Liga (nov/2026) ───────────────────────────────
+# A Liga passou a exibir o desafio "managed" do Cloudflare (Turnstile) até pro
+# IP residencial, e um Chromium headless novo por set nunca passa nele. Agora:
+#   • usa o Google Chrome instalado (channel="chrome"), com JANELA VISÍVEL;
+#   • perfil persistente em scripts/.liga_browser_profile — o cookie
+#     cf_clearance fica salvo e as próximas execuções passam direto;
+#   • UMA janela para todos os sets (antes abria e fechava uma por set).
+# Se o Cloudflare mostrar a caixinha "Confirme que é humano", clique nela uma
+# vez na janela do Chrome — o script espera até 90s.
+# LIGA_HEADLESS=1 volta pro modo invisível (só funciona com cookie já válido).
+_LIGA_PW = None
+_LIGA_CTX = None
+
+
+def _liga_context():
+    global _LIGA_PW, _LIGA_CTX
+    if _LIGA_CTX is not None:
+        return _LIGA_CTX
+    from playwright.sync_api import sync_playwright
+    _LIGA_PW = sync_playwright().start()
+    profile = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".liga_browser_profile")
+    kw = dict(
+        user_data_dir=profile,
+        headless=os.environ.get("LIGA_HEADLESS") == "1",
+        viewport={"width": 1600, "height": 1000},
+        args=["--disable-blink-features=AutomationControlled"],
+    )
+    try:
+        _LIGA_CTX = _LIGA_PW.chromium.launch_persistent_context(channel="chrome", **kw)
+        print("  🌐 Usando Google Chrome instalado (perfil persistente)")
+    except Exception as e:
+        print(f"  ⚠️  Chrome instalado não encontrado ({type(e).__name__}) — usando Chromium do Playwright")
+        _LIGA_CTX = _LIGA_PW.chromium.launch_persistent_context(**kw)
+    return _LIGA_CTX
+
+
+def close_liga_browser():
+    global _LIGA_PW, _LIGA_CTX
+    try:
+        if _LIGA_CTX is not None:
+            _LIGA_CTX.close()
+        if _LIGA_PW is not None:
+            _LIGA_PW.stop()
+    except Exception:
+        pass
+    _LIGA_PW = _LIGA_CTX = None
+
+
 def fetch_liga_prices(url: str, debug_key: str = "") -> dict:
     """
     Abre a página de busca da Liga Pokémon e extrai {numero_3dig: menor_preco}.
     A Liga renderiza a grade via JS e pagina — rola até o fim antes de extrair.
     """
-    from playwright.sync_api import sync_playwright
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page(
-            user_agent=(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/124.0.0.0 Safari/537.36"
-            ),
-            viewport={"width": 1600, "height": 1000},
-        )
+    ctx = _liga_context()
+    page = ctx.new_page()
+    try:
         page.goto(url, wait_until="domcontentloaded", timeout=45000)
         page.wait_for_timeout(3500)
+
+        # Cloudflare (nov/2026): a Liga passou a exibir o desafio "Just a moment..."
+        # também pro IP residencial. O desafio se resolve sozinho em alguns
+        # segundos ("Verification successful. Waiting for ... to respond"), mas
+        # antes o script checava as cartas com 3,5s e desistia. Agora espera até
+        # 90s o título sair do desafio E a grade de cartas aparecer.
+        for _ in range(90):
+            try:
+                title = (page.title() or "").lower()
+            except Exception:
+                title = ""
+            challenge = "just a moment" in title or "um momento" in title
+            if not challenge and page.locator("a[href*='view=cards/card']").count() > 0:
+                break
+            page.wait_for_timeout(1000)
 
         # Fecha banner de cookies/consentimento se existir — pode estar bloqueando
         # cliques/scroll e impedindo o carregamento da grade de cards.
@@ -176,8 +230,12 @@ def fetch_liga_prices(url: str, debug_key: str = "") -> dict:
             }
         """)
 
-        browser.close()
-        return {k: float(v) for k, v in prices.items()}
+    finally:
+        try:
+            page.close()
+        except Exception:
+            pass
+    return {k: float(v) for k, v in prices.items()}
 
 
 # ── Extração via Playwright — MYP Cards (mypcards.com) ───────────────────────
@@ -763,6 +821,7 @@ def _run_liga(repo_root: str, dry: bool) -> tuple:
 
         time.sleep(2)
 
+    close_liga_browser()
     return total, all_ok
 
 
