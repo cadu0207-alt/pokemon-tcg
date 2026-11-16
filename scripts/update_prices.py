@@ -100,6 +100,21 @@ def fetch_liga_prices(url: str, debug_key: str = "") -> dict:
         page.goto(url, wait_until="domcontentloaded", timeout=45000)
         page.wait_for_timeout(3500)
 
+        # Cloudflare (nov/2026): a Liga passou a exibir o desafio "Just a moment..."
+        # também pro IP residencial. O desafio se resolve sozinho em alguns
+        # segundos ("Verification successful. Waiting for ... to respond"), mas
+        # antes o script checava as cartas com 3,5s e desistia. Agora espera até
+        # 45s o título sair do desafio E a grade de cartas aparecer.
+        for _ in range(45):
+            try:
+                title = (page.title() or "").lower()
+            except Exception:
+                title = ""
+            challenge = "just a moment" in title or "um momento" in title
+            if not challenge and page.locator("a[href*='view=cards/card']").count() > 0:
+                break
+            page.wait_for_timeout(1000)
+
         # Fecha banner de cookies/consentimento se existir — pode estar bloqueando
         # cliques/scroll e impedindo o carregamento da grade de cards.
         for txt in ("Aceitar", "Aceitar todos", "Concordo", "OK", "Entendi"):
