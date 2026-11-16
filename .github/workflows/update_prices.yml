@@ -39,6 +39,8 @@ jobs:
 
       - name: Atualizar preços
         run: python scripts/update_prices.py
+        env:
+          LIGA_HEADLESS: '1'   # CI não tem tela pra janela visível
 
       - name: Upload screenshots de debug (se algum set não retornou cards)
         if: always()
