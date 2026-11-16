@@ -81,6 +81,12 @@
     body.toque .magia { padding: 8px 10px 8px 26px; }
     body.espectador #magias { display: none; }
     body.toque #avisos { top: 34%; }
+    /* Construção no celular: o botão de ação confirma; o ✕ fica pequeno acima dele; nada cobre o mapa */
+    body.toque.construindo #btn-ok { display: none; }
+    body.toque.construindo #btn-cancelar { top: auto; left: auto; right: max(34px, env(safe-area-inset-right));
+      bottom: calc(max(8px, env(safe-area-inset-bottom)) + 184px); width: 64px; height: 44px; padding: 0; font-size: 16px; }
+    body.toque.construindo #missao, body.toque.construindo #magias { display: none !important; }
+    body.toque #dica-construcao { top: calc(max(12px, env(safe-area-inset-top)) + 96px); bottom: auto; font-size: 12px; max-width: calc(100vw - 90px); left: 12px; right: auto; margin: 0; }
     #menu { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; box-sizing: border-box; overflow: auto;
       background: radial-gradient(circle at 50% 40%, #5fa3d9, #3b6ea8 60%, #2b4f7e); }
     #menu[hidden] { display: none; }

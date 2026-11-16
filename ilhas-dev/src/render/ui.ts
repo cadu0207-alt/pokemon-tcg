@@ -157,7 +157,7 @@ export class Interface {
     this.construindo = id;
     document.body.classList.toggle('construindo', !!id);
     $('dica-construcao').textContent = id
-      ? `Construindo: ${ITENS[id].nome} — ${toque.ativo ? 'toque no mapa e depois em ✔' : 'clique no mapa ou Espaço · Esc cancela'}`
+      ? `${ITENS[id].nome}: ${toque.ativo ? 'toque no mapa e depois em Construir' : 'clique no mapa ou Espaço · Esc cancela'}`
       : '';
     this.atualizar();
   }
