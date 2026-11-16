@@ -123,6 +123,11 @@
     #cristal li img { width: 18px; height: 18px; } #cristal li b { margin-left: auto; } #cristal li.ok { background: #e9fbe0; } #cristal li.falta b { color: #c0392b; }
     #cristal .expandir { width: 100%; margin-top: 10px; padding: 10px; font-weight: 800; font-size: 15px; border: 2px solid #3a2f45; border-radius: 10px; background: #c39bff; }
     #cristal .expandir:disabled { opacity: .5; }
+    #bau { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, calc(100vw - 24px)); max-height: calc(100vh - 40px);
+      overflow: auto; background: #f6efe0; border: 2px solid #3a2f45; border-radius: 12px; padding: 12px; color: #3a2f45; z-index: 9; box-sizing: border-box; }
+    #bau h3 { margin: 0 0 4px; display: flex; justify-content: space-between; color: #8a5a3c; } #bau h4 { margin: 10px 0 4px; font-size: 13px; } #bau h4 small { color: #8a7f95; font-weight: 400; }
+    #bau .dica { color: #8a7f95; font-size: 12px; margin: 0; } #bau .grade { display: flex; flex-wrap: wrap; gap: 6px; } #bau .vazio { color: #8a7f95; font-size: 12px; }
+    #barra[data-cheia="true"] { box-shadow: 0 0 0 3px #e0503c; }
     #nivel { position: fixed; top: max(12px, env(safe-area-inset-top)); right: 12px; padding: 8px 10px; font-size: 13px; max-width: 220px; }
     #nivel .req { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 2px; } #nivel .ok { color: #9be38a; } #nivel small { opacity: .75; }
     #avisos { position: fixed; top: 12px; left: 0; right: 0; margin: 0 auto; display: grid; gap: 6px; pointer-events: none; z-index: 6; width: max-content; max-width: 60vw; }
@@ -176,7 +181,7 @@
   <div id="menu"></div>
   <div id="jogo"></div>
   <div id="missao" class="painel" hidden></div>
-  <div id="ajuda" class="painel">WASD/setas: andar · Espaço: coletar/atacar · C: criar · R: ranking · K: habilidades · 1–5: magias · clique na comida para comer · roda: zoom</div>
+  <div id="ajuda" class="painel">WASD/setas: andar · Espaço: coletar/atacar/usar (Cristal, baú, plantação, dormir) · C: criar · R: ranking · K: habilidades · 1–5: magias · clique na comida para comer · roda: zoom</div>
   <div id="status" class="painel"></div>
   <div id="nivel" class="painel"></div>
   <div id="avisos"></div>
@@ -187,6 +192,7 @@
   <button id="btn-hab">✦ Habilidades</button>
   <div id="habilidades" hidden></div>
   <div id="cristal" hidden></div>
+  <div id="bau" hidden></div>
   <div id="magias"></div>
   <div id="ranking" hidden></div>
   <div id="espectador" class="painel"><span id="espectador-nome"></span><button id="btn-voltar">Voltar para mim</button></div>

@@ -1,7 +1,8 @@
 import type { ItemId } from './itens';
 import { tileEm, TILE_ANDAVEL, type Ilha, type Mundo } from './mundo';
 
-export interface Construcao { tipo: ItemId; x: number; y: number; }
+/** `plantadoEm`: tempo do mundo (ms) em que a plantação foi semeada; ausente = terra vazia. */
+export interface Construcao { tipo: ItemId; x: number; y: number; plantadoEm?: number; }
 
 /** Tiles que contam como "dentro" da ilha do jogador (área de construção). */
 export function naIlha(ilha: Ilha, x: number, y: number) {

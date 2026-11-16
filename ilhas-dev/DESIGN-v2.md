@@ -65,6 +65,20 @@ e crescer precisa **sair de jangada** atrás de **baús guardados por animais** 
 - **Morte com custo**: parte da mochila cai num túmulo recuperável no lugar da morte.
 - (Opcional por dificuldade) fome leve.
 
+## Função de cada construção (implementado)
+| Construção | Função |
+|---|---|
+| Baú (armazém) | guarda itens; 12 tipos por baú; a mochila só leva 10 tipos ⇒ decidir o que levar |
+| Casa | regenera vida por perto; à noite, **dormir** pula para a manhã; você renasce ao lado dela |
+| Plantação | plante 1 baga; em 2 min colha 3 bagas + 2 fibras |
+| Fogueira | afasta monstros à noite; **cozinha** (carne assada só perto dela) |
+| Bancada | ferramentas e armas só perto dela |
+| Forja | lingote e itens de ferro só perto dela |
+| Altar | mana 3× mais rápida por perto |
+| Portal (torre) | atira sozinho nos monstros que chegam perto (defesa) |
+| Cerca | barreira: criaturas não atravessam |
+| Estátua | +25% de XP |
+
 ## Fases de implementação
 | Fase | Entrega | Status |
 |---|---|---|

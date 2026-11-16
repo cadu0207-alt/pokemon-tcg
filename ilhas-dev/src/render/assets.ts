@@ -31,7 +31,8 @@ export const OBJETOS: Record<string, [string, number, number, number, number, nu
   nucleo: ['natureza', 32, 224, 16, 16, 1.6], arbusto: ['natureza', 16, 160, 16, 16],
   minerio: ['natureza', 112, 224, 32, 32, 0.75], cristal: ['natureza', 112, 256, 32, 32, 0.75],
   fogueira: ['acampamento', 192, 80, 32, 32, 0.75], bau: ['acampamento', 64, 128, 16, 16], bancada: ['acampamento', 128, 48, 32, 32, 0.75],
-  casa: ['casas', 0, 0, 64, 48, 0.6], forja: ['casas', 464, 176, 32, 32, 0.8], altar: ['casas', 48, 240, 32, 32, 0.8],
+  casa: ['casas', 0, 0, 64, 48, 0.6],
+  plantacao: ['acampamento', 0, 128, 16, 16], plantacao_cresce: ['natureza', 48, 160, 16, 16], plantacao_pronta: ['elementos', 192, 64, 16, 32], forja: ['casas', 464, 176, 32, 32, 0.8], altar: ['casas', 48, 240, 32, 32, 0.8],
   torre: ['casas', 4, 80, 40, 32, 0.8], estatua: ['casas', 16, 240, 32, 48, 0.75], cerca: ['casas', 160, 80, 16, 16],
 };
 

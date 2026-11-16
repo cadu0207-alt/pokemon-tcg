@@ -47,6 +47,7 @@ Foi assim que achamos ilhas sem pedra, bots que se trancavam nas próprias const
 - [x] Sons e músicas do pacote (13 efeitos + música de dia e de noite, MP3 leve), ícones restantes, câmera mais próxima
 - [x] Bots navegam: constroem jangada e fazem expedições às ilhas neutras atrás de minério e cristal (ida, coleta, volta; rede de segurança de 6 min); checagem de conectividade trata pedras e minérios como paredes permanentes
 - [x] **v2 Fase A — Núcleo de Cristal** (ver `DESIGN-v2.md`): ilha começa minúscula, alimentar o Cristal com cristal (só existe fora) faz a terra crescer; bots com o mesmo ciclo
+- [x] Cada construção tem função (baú/armazém com mochila limitada, casa, plantação, estações de trabalho, altar, portal que atira, estátua) — ver tabela em `DESIGN-v2.md`
 - [ ] v2 Fases B–E — baús com guardiões e raridades, saque e defesa, bots rivais, temporada
 
 ## Créditos

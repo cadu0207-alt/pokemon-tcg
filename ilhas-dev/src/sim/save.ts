@@ -19,6 +19,8 @@ export interface Save {
   mana?: number;
   /** Nível de expansão da ilha do jogador. */
   nivel?: number;
+  /** Itens guardados nos baús da ilha. */
+  armazem?: Inventario;
   tutorial?: { missao: number; criados: Partial<Record<import('./itens').ItemId, number>>; mortos: number };
 }
 

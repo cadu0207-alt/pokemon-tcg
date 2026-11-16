@@ -3,7 +3,7 @@ import type { ItemId } from '../sim/itens';
 
 /** Ícones 10×10 em pixel art, convertidos para dataURL para a interface HTML. */
 const K = COR.contorno;
-const MAPAS: Record<ItemId, [string[], Record<string, string>]> = {
+const MAPAS: Partial<Record<ItemId, [string[], Record<string, string>]>> = {
   madeira: [['..........', '..kkkkkk..', '.kttttttk.', 'kwttttttkk', 'kwtttttktk', 'kttttttkk.', '.kkkkkkk..', '..........', '..........', '..........'],
     { k: K, t: COR.tronco, w: '#c08a62' }],
   pedra: [['..........', '...kkkk...', '..kppppk..', '.kpwpppdk.', '.kpppppdk.', 'kpppppdddk', '.kkkkkkkk.', '..........', '..........', '..........'],
@@ -82,7 +82,7 @@ export function icone(id: ItemId): string {
   if (url) cache.set(id, url);
   if (!url) {
     const c = document.createElement('canvas'); c.width = c.height = 10;
-    const [linhas, pal] = MAPAS[id];
+    const [linhas, pal] = MAPAS[id] ?? MAPAS.madeira!;
     desenhar(c.getContext('2d')!, linhas, pal);
     url = c.toDataURL(); cache.set(id, url);
   }

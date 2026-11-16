@@ -1,5 +1,5 @@
 import { ITENS, RECEITAS, type ItemId } from '../sim/itens';
-import { criar, podeCriar, qtd, type Inventario } from '../sim/inventario';
+import { cabe, criar, podeCriar, qtd, LIMITE_MOCHILA, type Inventario } from '../sim/inventario';
 import type { Construcao } from '../sim/construcao';
 import type { Requisitos } from '../sim/expansao';
 import { NIVEIS } from '../sim/construcao';
@@ -23,6 +23,12 @@ export interface Ganchos {
   assistir: (nome: string | null) => void;
   habilidades: () => { status: Status; aprendidas: string[] };
   requisitos: () => Requisitos | null;
+  /** há uma construção deste tipo (da sua ilha) perto do jogador? */
+  perto: (estacao: ItemId) => boolean;
+  armazem: () => Inventario;
+  capacidadeArmazem: () => number;
+  moverParaBau: (id: ItemId) => void;
+  moverParaMochila: (id: ItemId) => void;
   expandir: () => void;
   aprender: (id: string) => void;
   lancar: (m: Magia) => void;
@@ -109,6 +115,33 @@ export class Interface {
       : '<p>Sua ilha chegou ao tamanho máximo. Lendária!</p>');
     $('cristal').querySelector('.fechar')!.addEventListener('click', () => ($('cristal').hidden = true));
     $('cristal').querySelector('.expandir')?.addEventListener('click', () => { this.g.expandir(); this.desenharCristal(); });
+  }
+
+  /** Painel do baú: mochila de um lado, armazém da ilha do outro; toque num item para mover a pilha. */
+  abrirBau() {
+    this.alternarCraft(false); this.alternarRanking(false); this.alternarHabilidades(false);
+    $('bau').hidden = false;
+    this.desenharBau();
+  }
+
+  desenharBau() {
+    if ($('bau').hidden) return;
+    const arm = this.g.armazem();
+    const lista = (inv: Inventario, lado: 'mochila' | 'bau') => {
+      const ids = Object.keys(inv.itens) as ItemId[];
+      return ids.length ? ids.map(id => `<button class="slot" data-lado="${lado}" data-id="${id}" title="${ITENS[id].nome}"><img src="${icone(id)}"><b>${qtd(inv, id)}</b></button>`).join('')
+        : '<span class="vazio">vazio</span>';
+    };
+    $('bau').innerHTML = `<h3>Baú da ilha <button class="fechar">✕</button></h3>
+      <p class="dica">Toque num item para mover a pilha. O que fica no baú está seguro na ilha (mas pode ser saqueado se você sair).</p>
+      <h4>Mochila <small>${Object.keys(this.inv.itens).length}/${LIMITE_MOCHILA} tipos</small></h4><div class="grade">${lista(this.inv, 'mochila')}</div>
+      <h4>Baú <small>${Object.keys(arm.itens).length}/${this.g.capacidadeArmazem()} tipos</small></h4><div class="grade">${lista(arm, 'bau')}</div>`;
+    $('bau').querySelector('.fechar')!.addEventListener('click', () => ($('bau').hidden = true));
+    $('bau').querySelectorAll<HTMLElement>('[data-lado]').forEach(b => b.addEventListener('click', () => {
+      const id = b.dataset.id as ItemId;
+      if (b.dataset.lado === 'mochila') this.g.moverParaBau(id); else this.g.moverParaMochila(id);
+      this.desenharBau();
+    }));
   }
 
   habAberto = false;
@@ -202,6 +235,8 @@ export class Interface {
           return `<button class="${cls}" data-id="${id}" title="${def.nome}"><img src="${icone(id)}"><b>${qtd(inv, id)}</b>${dur}</button>`;
         }).join('')
       : '<span class="vazio">Mochila vazia: chegue perto de uma árvore e colete</span>';
+    $('barra').dataset.cheia = String(ids.length >= LIMITE_MOCHILA);
+    this.desenharBau();
 
     // Painel do nível da ilha: o que falta para alimentar o Cristal.
     const req = this.g.requisitos();
@@ -215,8 +250,9 @@ export class Interface {
     if (!this.aberto) return;
     this.craft.innerHTML = '<h3>Criar <small>(C)</small><button class="fechar" aria-label="Fechar">✕</button></h3>' + RECEITAS.map((r, i) => {
       const travada = nivel < (r.nivel ?? 1);
-      const ok = podeCriar(inv, r, nivel);
-      const custo = travada ? `<span class="falta">Requer ilha nível ${r.nivel}</span>` : Object.entries(r.custo).map(([id, n]) => {
+      const semEstacao = !!r.estacao && !this.g.perto(r.estacao);
+      const ok = podeCriar(inv, r, nivel) && !semEstacao;
+      const custo = travada ? `<span class="falta">Requer ilha nível ${r.nivel}</span>` : (semEstacao ? `<span class="falta">Perto de: ${ITENS[r.estacao!].nome}</span>` : '') + Object.entries(r.custo).map(([id, n]) => {
         const tem = qtd(inv, id as ItemId) >= (n ?? 0);
         return `<span class="${tem ? '' : 'falta'}"><img src="${icone(id as ItemId)}">${qtd(inv, id as ItemId)}/${n}</span>`;
       }).join('');
@@ -226,6 +262,8 @@ export class Interface {
     this.craft.querySelector('.fechar')!.addEventListener('click', () => this.alternarCraft(false));
     this.craft.querySelectorAll<HTMLButtonElement>('button[data-r]').forEach(b => b.addEventListener('click', () => {
       const r = RECEITAS[Number(b.dataset.r)];
+      if (r.estacao && !this.g.perto(r.estacao)) { this.aviso(`Precisa estar perto de: ${ITENS[r.estacao].nome}`); return; }
+      if (!cabe(inv, [r.id])) { this.aviso('Mochila cheia! Guarde coisas no baú'); return; }
       if (criar(inv, r, this.g.nivel())) {
         this.g.criou(r.id);
         this.aviso(`Criou: ${ITENS[r.id].nome}${ITENS[r.id].construivel ? ' — toque nele na mochila para construir' : ''}`);
