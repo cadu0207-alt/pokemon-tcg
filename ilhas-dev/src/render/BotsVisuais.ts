@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { atualizarBot, criarBots, pontuacao, type Bot, type MundoBots } from '../sim/bots';
 import type { Construcao } from '../sim/construcao';
-import type { Mundo, Recurso } from '../sim/mundo';
+import { ehAgua, tileEm, type Mundo, type Recurso } from '../sim/mundo';
+import { naIlha } from '../sim/construcao';
 import type { Status } from '../sim/criaturas';
 import { T } from './texturas';
 import { PERSONAGENS, quadroParado } from './assets';
@@ -15,9 +16,10 @@ export class BotsVisuais {
   private sprites: Phaser.GameObjects.Sprite[] = [];
   private nomes: Phaser.GameObjects.Text[] = [];
   private sombras: Phaser.GameObjects.Image[] = [];
+  private barcos: Phaser.GameObjects.Image[] = [];
 
   constructor(
-    private scene: Phaser.Scene, mundo: Mundo, quantidade: number, seed: number,
+    private scene: Phaser.Scene, private mundo: Mundo, quantidade: number, seed: number,
     private aoDestruir: (r: Recurso) => void, private aoConstruir: (c: Construcao) => void,
     save?: SaveBot[],
   ) {
@@ -25,9 +27,13 @@ export class BotsVisuais {
     this.bots = criarBots(mundo, quantidade, seed);
     this.bots.forEach((b, i) => {
       const s = save?.[i];
-      if (s) { b.x = s.x; b.y = s.y; b.inv = s.inv; b.construcoes = s.construcoes; b.status = s.status; b.habilidades = s.habilidades ?? []; }
+      if (s) {
+        // save no meio de uma expedição: o bot volta para casa (a expedição não é salva)
+        const emCasa = naIlha(b.ilha, Math.floor(s.x), Math.floor(s.y));
+        b.x = emCasa ? s.x : Math.round(b.ilha.cx) + 0.5; b.y = emCasa ? s.y : Math.round(b.ilha.cy) + 0.5; b.inv = s.inv; b.construcoes = s.construcoes; b.status = s.status; b.habilidades = s.habilidades ?? []; }
       this.sprites.push(scene.add.sprite(b.x * T, b.y * T, this.arte(b), 0).setOrigin(0.5, 0.9));
       this.sombras.push(scene.add.image(b.x * T, b.y * T, 'sombra').setAlpha(0.28));
+      this.barcos.push(scene.add.image(b.x * T, b.y * T, 'jangada').setOrigin(0.5, 0).setVisible(false));
       this.nomes.push(scene.add.text(b.x * T, b.y * T - 16, b.nome, {
         fontFamily: 'system-ui, sans-serif', fontSize: '28px', color: '#ffffff', stroke: '#3a2f45', strokeThickness: 6,
       }).setOrigin(0.5, 1).setScale(0.18).setDepth(29000));
@@ -54,10 +60,12 @@ export class BotsVisuais {
       const s = this.sprites[i], n = this.nomes[i];
       const px = b.x * T, py = b.y * T;
       const visivel = px > v.x - margem && px < v.right + margem && py > v.y - margem && py < v.bottom + margem;
-      s.setVisible(visivel); n.setVisible(visivel); this.sombras[i].setVisible(visivel);
+      const naAgua = visivel && ehAgua(tileEm(this.mundo, Math.floor(b.x), Math.floor(b.y)));
+      s.setVisible(visivel); n.setVisible(visivel); this.sombras[i].setVisible(visivel && !naAgua); this.barcos[i].setVisible(naAgua);
       if (!visivel) continue;
       s.setPosition(px, py).setDepth(py);
       this.sombras[i].setPosition(px, py + 2).setDepth(py - 1);
+      if (naAgua) this.barcos[i].setPosition(px, py - 1 + Math.sin(this.scene.time.now / 250 + i) * 0.6).setDepth(py - 0.5);
       n.setPosition(px, py - 15);
       const [dx, dy] = b.dir;
       const dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'esquerda' : 'direita') : (dy < 0 ? 'cima' : 'baixo');

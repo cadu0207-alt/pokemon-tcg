@@ -48,9 +48,25 @@ describe('bots não se prendem', () => {
     sim.rodar(40 * 60_000);
     const L = sim.mundo.largura;
     for (const b of sim.bots) {
-      const andavel = (x: number, y: number) => TILE_ANDAVEL[tileEm(sim.mundo, x, y)] && !sim.bloqueio.has(y * L + x) && naIlha(b.ilha, x, y);
+      if (b.expedicao) continue; // em viagem: está fora de casa por escolha
+      // árvores contam como passáveis: renascem em qualquer lugar e o bot sabe cortá-las para abrir caminho
+      const arvore = (x: number, y: number) => sim.recursos.porTile.get(y * L + x)?.tipo === 'arvore';
+      const andavel = (x: number, y: number) => TILE_ANDAVEL[tileEm(sim.mundo, x, y)] && (!sim.bloqueio.has(y * L + x) || arvore(x, y)) && naIlha(b.ilha, x, y);
       const ok = acharCaminho(Math.floor(b.x), Math.floor(b.y), Math.round(b.ilha.cx), Math.round(b.ilha.cy), andavel, { alvoAdjacente: true, maxNos: 5000 });
       expect(ok, b.nome).not.toBeNull();
     }
+  }, 120_000);
+});
+
+describe('expedições', () => {
+  it('bots com jangada viajam às ilhas neutras e voltam para casa', async () => {
+    const { naIlha } = await import('../src/sim/construcao');
+    const sim = new SimulacaoHeadless(2026, 36, 12, 'normal');
+    let visitaram = 0;
+    for (let i = 0; i < 90; i++) { sim.rodar(60_000); visitaram += sim.bots.filter(b => b.expedicao?.fase === 'coletar').length; }
+    expect(visitaram).toBeGreaterThan(0);
+    // depois de parar de pedir expedições, todos terminam em casa
+    for (const b of sim.bots) if (b.expedicao) { sim.rodar(400_000); break; }
+    for (const b of sim.bots) if (!b.expedicao) expect(naIlha(b.ilha, Math.floor(b.x), Math.floor(b.y)), b.nome).toBe(true);
   }, 120_000);
 });

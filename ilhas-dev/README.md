@@ -44,7 +44,9 @@ Foi assim que achamos ilhas sem pedra, bots que se trancavam nas próprias const
 - [x] Visual — terreno com costas orgânicas (pintado pixel a pixel, ~13 ms por pedaço), personagens chibi 24×24 gerados com 3 penteados, 4 tons de pele e 4 quadros de caminhada
 - [x] Celular — joystick flutuante, pinça para zoom, mira automática, botão de ação com rótulo (Cortar/Minerar/Atacar/Construir), vibração, botões compactos
 - [x] Arte do Ninja Adventure Asset Pack (CC0): 24 personagens (escolha na tela inicial), criaturas, árvores, pedras, minério, cristal, construções e ícones; terreno com a paleta do pacote
-- [ ] Próximos — sons do pacote, bots que navegam, salvamento na nuvem/multiplayer
+- [x] Sons e músicas do pacote (13 efeitos + música de dia e de noite, MP3 leve), ícones restantes, câmera mais próxima
+- [x] Bots navegam: constroem jangada e fazem expedições às ilhas neutras atrás de minério e cristal (ida, coleta, volta; rede de segurança de 6 min); checagem de conectividade trata pedras e minérios como paredes permanentes
+- [ ] Próximo — salvamento na nuvem/multiplayer
 
 ## Créditos
 Arte: [Ninja Adventure Asset Pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack), por Pixel-boy e AAA — licença CC0 (`public/ninja/LICENSE.txt`).

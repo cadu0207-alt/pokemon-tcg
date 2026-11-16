@@ -4,7 +4,7 @@ import { nivelIlha, proximoNivel, validarLocal, naIlha, type Construcao } from '
 import { ganharXp, novoStatus, type Status } from './criaturas';
 import { adicionar, criar, novoInventario, podeCriar, qtd, type Inventario } from './inventario';
 import { ITENS, RECEITAS, type ItemId, type Receita } from './itens';
-import { TILE_ANDAVEL, tileEm, type Ilha, type Mundo, type Recurso } from './mundo';
+import { TILE_ANDAVEL, tileEm, ehAgua, type Ilha, type Mundo, type Recurso } from './mundo';
 import { criarRng } from './rng';
 import { aprender, efeitos, escolherHabilidade } from './habilidades';
 
@@ -34,7 +34,8 @@ export type Objetivo =
   | { tipo: 'construir'; item: ItemId; x: number; y: number }
   | { tipo: 'cacar'; ate: number }
   | { tipo: 'descansar'; ate: number }
-  | { tipo: 'vagar'; ate: number };
+  | { tipo: 'vagar'; ate: number }
+  | { tipo: 'expedicao'; destino: Ilha };
 
 export interface Bot {
   id: number; nome: string; perfil: NomePerfil; cor: number;
@@ -50,6 +51,9 @@ export interface Bot {
   rng: () => number;
   /** recursos sem caminho: id -> até quando ignorar */
   ignorar: Map<number, number>;
+  /** Ilha onde o bot está agindo agora (a dele, ou uma neutra durante uma expedição). */
+  ilhaAtual: Ilha | null;
+  expedicao: { destino: Ilha; fase: 'ida' | 'coletar' | 'volta'; ate: number; inicio: number; parado: number } | null;
 }
 
 export function criarBots(m: Mundo, quantidade: number, seed: number): Bot[] {
@@ -66,7 +70,7 @@ export function criarBots(m: Mundo, quantidade: number, seed: number): Bot[] {
       ilha, x: Math.round(ilha.cx) + 0.5, y: Math.round(ilha.cy) + 0.5,
       inv: novoInventario(), construcoes: [], status: novoStatus(), habilidades: [],
       objetivo: null, caminho: [], proximaDecisao: rng() * 2000, proximoGolpe: 0,
-      dir: [0, 1], andando: false, rng: criarRng(seed + i * 7919), ignorar: new Map(),
+      dir: [0, 1], andando: false, rng: criarRng(seed + i * 7919), ignorar: new Map(), ilhaAtual: null, expedicao: null,
     });
   }
   return bots;
@@ -109,6 +113,8 @@ export function metas(bot: Bot): ItemId[] {
   }
   for (const f of META_FERRAMENTAS) if (!qtd(bot.inv, f)) quer.push(f);
   if (nivelIlha(bot.construcoes) >= 5) for (const f of ['machado_ferro', 'picareta_ferro'] as ItemId[]) if (!qtd(bot.inv, f)) quer.push(f);
+  // jangada para buscar minério e cristal nas ilhas neutras (exploradores querem antes)
+  if (!qtd(bot.inv, 'jangada') && nivelIlha(bot.construcoes) >= (bot.perfil === 'explorador' ? 2 : 5)) quer.push('jangada');
   if (bot.perfil === 'cacador' && !qtd(bot.inv, 'lanca_madeira') && !qtd(bot.inv, 'espada_pedra')) quer.push('lanca_madeira');
   return quer;
 }
@@ -168,8 +174,9 @@ const TIPO_DE: Record<Materia, Recurso['tipo']> = { madeira: 'arvore', pedra: 'p
 function recursoMaisProximo(bot: Bot, ctx: MundoBots, tipo: Recurso['tipo']): Recurso | null {
   const ignorado = (r: Recurso) => (bot.ignorar.get(r.id) ?? 0) > ctx.agora;
   let melhor: Recurso | null = null, d = Infinity;
-  const raio = Math.ceil(bot.ilha.raio * 1.6);
-  const cx = Math.round(bot.ilha.cx), cy = Math.round(bot.ilha.cy), L = ctx.mundo.largura;
+  const ilha = bot.ilhaAtual ?? bot.ilha;
+  const raio = Math.ceil(ilha.raio * 1.6);
+  const cx = Math.round(ilha.cx), cy = Math.round(ilha.cy), L = ctx.mundo.largura;
   for (let y = cy - raio; y <= cy + raio; y++) for (let x = cx - raio; x <= cx + raio; x++) {
     const r = ctx.recursos.porTile.get(y * L + x);
     if (!r || r.tipo !== tipo || !recursoAtivo(ctx.recursos, r) || ignorado(r)) continue;
@@ -183,7 +190,16 @@ function recursoMaisProximo(bot: Bot, ctx: MundoBots, tipo: Recurso['tipo']): Re
 function alcancaveis(bot: Bot, ctx: MundoBots, sem: number | null): number {
   const L = ctx.mundo.largura;
   const ini = Math.round(bot.ilha.cy) * L + Math.round(bot.ilha.cx);
-  const pode = (i: number) => i !== sem && naIlha(bot.ilha, i % L, Math.floor(i / L)) && andavelPara(ctx, i % L, Math.floor(i / L));
+  // Pedras, minério e cristal renascem no mesmo lugar: contam sempre como parede (mesmo quebrados).
+  // Árvores e arbustos contam como passagem: o bot sabe cortá-los para abrir caminho.
+  const pode = (i: number) => {
+    if (i === sem) return false;
+    const x = i % L, y = Math.floor(i / L);
+    if (!naIlha(bot.ilha, x, y) || !TILE_ANDAVEL[tileEm(ctx.mundo, x, y)]) return false;
+    const r = ctx.recursos.porTile.get(i);
+    if (r) return r.tipo === 'arvore' || r.tipo === 'arbusto';
+    return !ctx.bloqueado(x, y);
+  };
   if (!pode(ini)) return 0;
   const visto = new Set([ini]); const fila = [ini];
   while (fila.length) {
@@ -231,23 +247,32 @@ export function avaliar(bot: Bot, ctx: MundoBots): Opcao[] {
   const ruido = () => 1 + (bot.rng() - 0.5) * 2 * p.erro;
   const temFogueira = bot.construcoes.some(c => c.tipo === 'fogueira');
 
-  // Construir o que já está na mochila
+  const emExpedicao = bot.expedicao?.fase === 'coletar';
+  // Construir o que já está na mochila (só na ilha de casa)
   for (const id of Object.keys(bot.inv.itens) as ItemId[]) {
-    if (!ITENS[id].construivel) continue;
+    if (emExpedicao || !ITENS[id].construivel) continue;
     const lugar = lugarParaConstruir(bot, ctx);
     if (lugar) ops.push({ objetivo: { tipo: 'construir', item: id, ...lugar }, nota: 1.0 * p.construir * ruido() });
     break;
   }
   // Coletar o que falta
   const nec = necessidades(bot);
+  const faltaRaro = { minerio: false, cristal: false };
   for (const mat of MATERIAS) {
     const n = nec[mat];
     if (n <= 0) continue;
+    if (emExpedicao && mat !== 'minerio' && mat !== 'cristal') continue;
     const r = recursoMaisProximo(bot, ctx, TIPO_DE[mat]);
-    if (!r) continue;
+    if (!r) { if (mat === 'minerio' || mat === 'cristal') faltaRaro[mat] = true; continue; }
     const dist = Math.abs(r.x - bot.x) + Math.abs(r.y - bot.y);
     ops.push({ objetivo: { tipo: 'coletar', recurso: r }, nota: (n / (n + 4)) * p.coletar * (1 / (1 + dist / 20)) * ruido() });
   }
+  // Expedição: falta minério/cristal em casa e o bot tem jangada → ilha neutra mais próxima
+  if (!bot.expedicao && qtd(bot.inv, 'jangada') && (faltaRaro.minerio || faltaRaro.cristal)) {
+    const destino = ilhaNeutraMaisProxima(bot, ctx);
+    if (destino) ops.push({ objetivo: { tipo: 'expedicao', destino }, nota: 0.45 * (0.6 + p.explorar * 0.5) * (ctx.noite ? 0.4 : 1) * ruido() });
+  }
+  if (emExpedicao) return ops.sort((a, b) => b.nota - a.nota).concat([{ objetivo: { tipo: 'vagar', ate: ctx.agora + 2000 }, nota: 0 }]);
   // Caçar (abstrato: anda pela ilha e volta com carne/couro/XP)
   const fome = bot.status.vida < bot.status.vidaMax * 0.5 && !qtd(bot.inv, 'carne') ? 0.4 : 0;
   // Com construção pendente, caçar perde prioridade (senão o caçador nunca termina a ilha).
@@ -264,7 +289,7 @@ export function avaliar(bot: Bot, ctx: MundoBots): Opcao[] {
 
 function irPara(bot: Bot, ctx: MundoBots, x: number, y: number, adjacente: boolean) {
   const c = acharCaminho(Math.floor(bot.x), Math.floor(bot.y), x, y, (tx, ty) => andavelPara(ctx, tx, ty) &&
-    naIlha(bot.ilha, tx, ty), { alvoAdjacente: adjacente, maxNos: 1500 });
+    naIlha(bot.ilhaAtual ?? bot.ilha, tx, ty), { alvoAdjacente: adjacente, maxNos: 1500 });
   bot.caminho = c ?? [];
   return c !== null;
 }
@@ -276,11 +301,103 @@ function arvoreNoCaminho(bot: Bot, ctx: MundoBots, x: number, y: number): Recurs
     const r = ctx.recursos.porTile.get(ty * L + tx);
     return r && r.tipo === 'arvore' && recursoAtivo(ctx.recursos, r) ? r : null;
   };
-  const c = acharCaminho(Math.floor(bot.x), Math.floor(bot.y), x, y, (tx, ty) => naIlha(bot.ilha, tx, ty) &&
+  const c = acharCaminho(Math.floor(bot.x), Math.floor(bot.y), x, y, (tx, ty) => naIlha(bot.ilhaAtual ?? bot.ilha, tx, ty) &&
     TILE_ANDAVEL[tileEm(ctx.mundo, tx, ty)] && (!ctx.bloqueado(tx, ty) || !!arvoreEm(tx, ty)), { alvoAdjacente: true, maxNos: 2000 });
   if (!c) return null;
   for (const [tx, ty] of c) { const a = arvoreEm(tx, ty); if (a) return a; }
   return null;
+}
+
+function ilhaNeutraMaisProxima(bot: Bot, ctx: MundoBots): Ilha | null {
+  let melhor: Ilha | null = null, d = Infinity;
+  for (const i of ctx.mundo.ilhas) {
+    if (i.dono !== null) continue;
+    const dist = Math.hypot(i.cx - bot.x, i.cy - bot.y);
+    if (dist < d) { d = dist; melhor = i; }
+  }
+  return melhor;
+}
+
+/**
+ * Tile de terra da ilha mais perto de (x, y): onde a jangada encosta.
+ * Com `conectado`, só aceita tiles alcançáveis a pé a partir do centro (senão o bot pode
+ * desembarcar numa praia isolada por árvores e pedras e ficar preso).
+ */
+function pontoDeDesembarque(ilha: Ilha, ctx: MundoBots, x: number, y: number, conectado = false): { x: number; y: number } | null {
+  const L = ctx.mundo.largura;
+  let permitido: Set<number> | null = null;
+  if (conectado) {
+    const ini = Math.round(ilha.cy) * L + Math.round(ilha.cx);
+    const pode = (i: number) => naIlha(ilha, i % L, Math.floor(i / L)) && andavelPara(ctx, i % L, Math.floor(i / L));
+    permitido = new Set(pode(ini) ? [ini] : []);
+    const fila = [...permitido];
+    while (fila.length) {
+      const i = fila.pop()!;
+      for (const v of [i + 1, i - 1, i + L, i - L]) if (!permitido.has(v) && pode(v)) { permitido.add(v); fila.push(v); }
+    }
+  }
+  let melhor: { x: number; y: number } | null = null, d = Infinity;
+  const R = Math.ceil(ilha.raio * 1.4);
+  for (let ty = Math.floor(ilha.cy) - R; ty <= ilha.cy + R; ty++) for (let tx = Math.floor(ilha.cx) - R; tx <= ilha.cx + R; tx++) {
+    if (permitido ? !permitido.has(ty * L + tx) : !(andavelPara(ctx, tx, ty) && naIlha(ilha, tx, ty))) continue;
+    const dist = Math.hypot(tx + 0.5 - x, ty + 0.5 - y);
+    if (dist < d) { d = dist; melhor = { x: tx, y: ty }; }
+  }
+  return melhor;
+}
+
+/** Navega em linha reta (água ou terra), desviando de obstáculos. Retorna true ao chegar. */
+function navegar(bot: Bot, ctx: MundoBots, alvoX: number, alvoY: number, dt: number, fatorVel: number): boolean {
+  const dx = alvoX - bot.x, dy = alvoY - bot.y, dist = Math.hypot(dx, dy);
+  if (dist < 0.4) { bot.andando = false; return true; }
+  const passoT = Math.min(dist, (PERFIS[bot.perfil].velocidade * 0.8 * fatorVel * dt) / 1000);
+  const livre = (x: number, y: number) => {
+    const tx = Math.floor(x), ty = Math.floor(y), t = tileEm(ctx.mundo, tx, ty);
+    return tx >= 0 && ty >= 0 && tx < ctx.mundo.largura && ty < ctx.mundo.altura && (ehAgua(t) || TILE_ANDAVEL[t]) && !ctx.bloqueado(tx, ty);
+  };
+  const base = Math.atan2(dy, dx);
+  for (const desvio of [0, 0.6, -0.6, 1.2, -1.2, 1.9, -1.9]) {
+    const a = base + desvio, nx = bot.x + Math.cos(a) * passoT, ny = bot.y + Math.sin(a) * passoT;
+    if (livre(nx, ny)) { bot.x = nx; bot.y = ny; bot.dir = [Math.cos(a), Math.sin(a)]; bot.andando = true; return false; }
+  }
+  bot.andando = false;
+  return false;
+}
+
+const DURACAO_COLETA = 120_000, LIMITE_EXPEDICAO = 360_000;
+
+/** Ida, coleta e volta da expedição. Retorna true enquanto a expedição controla o bot neste passo. */
+function atualizarExpedicao(bot: Bot, ctx: MundoBots, dt: number): boolean {
+  const e = bot.expedicao;
+  if (!e) return false;
+  const vel = ctx.velocidade ?? 1;
+  // rede de segurança: expedição longa demais volta para casa
+  if (ctx.agora - e.inicio > LIMITE_EXPEDICAO) {
+    bot.x = Math.round(bot.ilha.cx) + 0.5; bot.y = Math.round(bot.ilha.cy) + 0.5;
+    bot.expedicao = null; bot.ilhaAtual = null; bot.objetivo = null; bot.caminho = [];
+    return true;
+  }
+  if (e.fase === 'ida') {
+    const p = pontoDeDesembarque(e.destino, ctx, bot.x, bot.y);
+    if (!p) { e.fase = 'volta'; return true; }
+    if (navegar(bot, ctx, p.x + 0.5, p.y + 0.5, dt, vel)) {
+      e.fase = 'coletar'; e.ate = ctx.agora + DURACAO_COLETA;
+      bot.ilhaAtual = e.destino; bot.objetivo = null; bot.caminho = [];
+    }
+    return true;
+  }
+  if (e.fase === 'coletar') {
+    const nec = necessidades(bot);
+    if (ctx.agora >= e.ate || (nec.minerio <= 0 && nec.cristal <= 0)) { e.fase = 'volta'; bot.objetivo = null; bot.caminho = []; return true; }
+    return false; // a lógica normal coleta na ilha neutra
+  }
+  // volta: desembarca num ponto conectado ao centro da ilha de casa
+  const p = pontoDeDesembarque(bot.ilha, ctx, bot.x, bot.y, true);
+  if (!p) { bot.x = Math.round(bot.ilha.cx) + 0.5; bot.y = Math.round(bot.ilha.cy) + 0.5; } // sem lugar: leva para casa
+  if (!p || navegar(bot, ctx, p.x + 0.5, p.y + 0.5, dt, vel)) {
+    bot.expedicao = null; bot.ilhaAtual = null; bot.objetivo = null; bot.caminho = [];
+  }
+  return true;
 }
 
 function passo(bot: Bot, dt: number, fatorVel = 1): boolean {
@@ -296,7 +413,8 @@ function passo(bot: Bot, dt: number, fatorVel = 1): boolean {
 
 function pontoAleatorio(bot: Bot, ctx: MundoBots, raio: number) {
   for (let i = 0; i < 8; i++) {
-    const x = Math.floor(bot.ilha.cx + (bot.rng() - 0.5) * 2 * raio), y = Math.floor(bot.ilha.cy + (bot.rng() - 0.5) * 2 * raio);
+    const ilha = bot.ilhaAtual ?? bot.ilha;
+    const x = Math.floor(ilha.cx + (bot.rng() - 0.5) * 2 * raio), y = Math.floor(ilha.cy + (bot.rng() - 0.5) * 2 * raio);
     if (andavelPara(ctx, x, y)) return { x, y };
   }
   return null;
@@ -304,6 +422,7 @@ function pontoAleatorio(bot: Bot, ctx: MundoBots, raio: number) {
 
 /** Um passo de simulação do bot. Chamado a cada quadro (ou em lotes, numa simulação sem tela). */
 export function atualizarBot(bot: Bot, ctx: MundoBots, dt: number) {
+  if (atualizarExpedicao(bot, ctx, dt)) return;
   // Objetivos com tempo (caçar, vagar, descansar) terminam sozinhos; coletar/construir são reavaliados de tempos em tempos.
   const reavaliar = bot.objetivo && (bot.objetivo.tipo === 'coletar' || bot.objetivo.tipo === 'construir') && ctx.agora >= bot.proximaDecisao;
   if (!bot.objetivo || reavaliar) {
@@ -325,6 +444,11 @@ export function atualizarBot(bot: Bot, ctx: MundoBots, dt: number) {
       const arvore = arvoreNoCaminho(bot, ctx, escolha.recurso.x, escolha.recurso.y);
       if (arvore && irPara(bot, ctx, arvore.x, arvore.y, true)) bot.objetivo = { tipo: 'coletar', recurso: arvore };
       else { bot.ignorar.set(escolha.recurso.id, ctx.agora + 60_000); bot.objetivo = null; }
+    }
+    else if (escolha.tipo === 'expedicao') {
+      bot.expedicao = { destino: escolha.destino, fase: 'ida', ate: 0, inicio: ctx.agora, parado: 0 };
+      bot.objetivo = null;
+      return;
     }
     else if (escolha.tipo === 'construir' && !irPara(bot, ctx, escolha.x, escolha.y, true)) {
       bot.ignorar.set(-(escolha.y * ctx.mundo.largura + escolha.x) - 1, Infinity); // chave negativa = lugar
