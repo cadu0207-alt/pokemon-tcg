@@ -25,6 +25,8 @@ export interface Ganchos {
   rebelar: () => void;
   /** anda até um tile (toque no mapa-múndi) */
   viajar: (x: number, y: number) => boolean;
+  /** cartão compartilhável da sua ilha */
+  cartao: () => Promise<{ blob: Blob; texto: string; url: string }>;
   libertar: (id: number) => void;
   assistir: (nome: string | null) => void;
   habilidades: () => { status: Status; aprendidas: string[] };
@@ -158,8 +160,9 @@ export class Interface {
       <div class="recarga"><button data-rec="cristal" ${qtd(this.inv, 'cristal') ? '' : 'disabled'}><img src="${icone('cristal')}">+50%</button>
       <button data-rec="gosma" ${qtd(this.inv, 'gosma') ? '' : 'disabled'}><img src="${icone('gosma')}">+10%</button></div>`;
     const diario = this.g.diario();
+    const compartilhar = '<button class="compartilhar">📸 Compartilhar minha ilha</button>';
     const diarioHtml = diario.length ? `<h4>Diário da ilha</h4><ul class="diario">${diario.map(l => `<li>${l}</li>`).join('')}</ul>` : '';
-    $('cristal').innerHTML = `<h3>Cristal da ilha <button class="fechar">✕</button></h3>` + energia + this.htmlReino() + (req
+    $('cristal').innerHTML = `<h3>Cristal da ilha <button class="fechar">✕</button></h3>` + energia + this.htmlReino() + compartilhar + (req
       ? `<p>Nível <b>${nivel}</b> → <b>${req.nivel}</b>: a ilha cresce${libera ? ` e ${libera}` : ''}.</p>
          ${req.construcoes.length ? `<h4>Construções na ilha</h4><ul>${req.construcoes.map(linha).join('')}</ul>` : ''}
          <h4>Alimentar o Cristal com</h4><ul>${req.itens.map(linha).join('')}</ul>
@@ -168,6 +171,7 @@ export class Interface {
       : '<p>Sua ilha chegou ao tamanho máximo. Lendária!</p>') + diarioHtml;
     $('cristal').querySelector('.fechar')!.addEventListener('click', () => ($('cristal').hidden = true));
     $('cristal').querySelector('.expandir')?.addEventListener('click', () => { this.g.expandir(); this.desenharCristal(); });
+    $('cristal').querySelector('.compartilhar')?.addEventListener('click', () => { $('cristal').hidden = true; void this.abrirCartao(); });
     $('cristal').querySelector('.rebelar')?.addEventListener('click', () => { this.g.rebelar(); this.desenharCristal(); });
     $('cristal').querySelectorAll<HTMLElement>('[data-libertar]').forEach(b => b.addEventListener('click', () => {
       if (confirm('Libertar este vassalo? Ele deixa de pagar tributo.')) { this.g.libertar(Number(b.dataset.libertar)); this.desenharCristal(); }
@@ -291,6 +295,41 @@ export class Interface {
       const m = b.dataset.m as Magia, p = pronta(m);
       b.classList.toggle('sem-mana', mana < MAGIAS[m].custo);
       (b.querySelector('i') as HTMLElement).style.width = `${(1 - p) * 100}%`;
+    });
+  }
+
+  /** Conquista: oferece um botão de compartilhar por alguns segundos. */
+  conquista(texto: string) {
+    document.getElementById('conquista')?.remove();
+    const el = document.createElement('button');
+    el.id = 'conquista'; el.innerHTML = `🏆 ${texto}<small>📸 Toque para compartilhar</small>`;
+    el.addEventListener('click', () => { el.remove(); void this.abrirCartao(); });
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 12_000);
+  }
+
+  /** Mostra o cartão pronto com Compartilhar / Baixar / Copiar link. */
+  async abrirCartao() {
+    document.getElementById('cartao')?.remove();
+    const el = document.createElement('div');
+    el.id = 'cartao'; el.className = 'painel';
+    el.innerHTML = '<p>Preparando o cartão…</p>';
+    document.body.appendChild(el);
+    const { blob, texto, url } = await this.g.cartao();
+    const src = URL.createObjectURL(blob);
+    const arquivo = new File([blob], 'minha-ilha.png', { type: 'image/png' });
+    const podeArquivo = !!navigator.canShare?.({ files: [arquivo] });
+    el.innerHTML = `<h3>Compartilhe sua ilha <button class="fechar">✕</button></h3><img src="${src}" alt="Cartão da sua ilha">
+      <div class="botoes">${'share' in navigator ? '<button class="share">📤 Compartilhar</button>' : ''}
+      <a class="baixar" href="${src}" download="minha-ilha.png">⬇ Baixar imagem</a><button class="copiar">🔗 Copiar link</button></div>
+      <p class="dica">Quem entrar pelo seu link começa com 1 cristal de presente.</p>`;
+    const fechar = () => { el.remove(); URL.revokeObjectURL(src); };
+    el.querySelector('.fechar')!.addEventListener('click', fechar);
+    el.querySelector('.share')?.addEventListener('click', async () => {
+      try { await navigator.share(podeArquivo ? { files: [arquivo], text: `${texto} ${url}` } : { text: texto, url }); } catch { /* cancelou */ }
+    });
+    el.querySelector('.copiar')!.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(`${texto} ${url}`); this.aviso('Link copiado!'); } catch { prompt('Copie o link:', url); }
     });
   }
 

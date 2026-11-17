@@ -34,6 +34,8 @@ export interface Config {
   /** Multijogador: minha ilha na temporada, nome público, nuvem e save vindo dela. */
   slot?: number; nome?: string; nuvem?: import('../rede/nuvem').Nuvem; saveNuvem?: string | null;
   outros?: import('../rede/nuvem').PerfilPublico[];
+  /** chegou por um link de desafio de alguém (nome de quem convidou) */
+  convite?: string;
 }
 import { aprender, efeitos, MAGIAS, podeAprender, type Efeitos, type Magia } from '../sim/habilidades';
 import { Interface, toque } from './ui';
@@ -178,6 +180,8 @@ export class CenaJogo extends Phaser.Scene {
     } else {
       // começo: só o necessário para a primeira jangada (2 cordas + madeira)
       Object.assign(this.inv.itens, { madeira: 6, fibra: 6 });
+      // presente de quem chegou por convite: um cristal para a primeira expansão
+      if (this.cfg.convite) { this.inv.itens.cristal = 1; this.time.delayedCall(2500, () => this.ui.aviso(`🎁 Presente do desafio de ${this.cfg.convite}: 1 cristal`)); }
     }
     // O Cristal ocupa o centro de cada ilha de participante; ilhas já expandidas no save voltam ao tamanho
     const iniciais = m.ilhas.filter(i => i.dono !== null);
@@ -256,6 +260,7 @@ export class CenaJogo extends Phaser.Scene {
       ranking: () => this.rankingComReinos(),
       reino: () => this.infoReino(),
       rebelar: () => this.rebelar(),
+      cartao: () => this.gerarCartao(),
       viajar: (x, y) => { if (!this.nevoa.vistoEm(x, y)) { this.ui.aviso('Você ainda não conhece esse lugar'); return false; } return this.irPara(x, y, true); },
       libertar: id => { libertar(this.reinos, id, this.tempoJogado); this.registrar(`Você libertou ${this.nomeDe(id)}`); this.mudou(); },
       requisitos: () => requisitosExpansao(this.nivel, this.construcoes, this.inv),
@@ -572,6 +577,7 @@ export class CenaJogo extends Phaser.Scene {
     this.nivel = novo;
     this.aplicarExpansao(this.minhaIlha, novo);
     this.ui.aviso(`O Cristal brilhou: sua ilha cresceu para o nível ${novo}!`);
+    this.conquista(`Minha ilha cresceu para o nível ${novo}!`);
     this.darXp(25);
     this.tocar('nivel');
     this.cameras.main.flash(400, 200, 180, 255);
@@ -750,6 +756,55 @@ export class CenaJogo extends Phaser.Scene {
     this.tocar('nivel'); this.ui.aviso(`Você subiu para o nível ${this.status.nivel}!`); this.cameras.main.flash(250, 255, 230, 150);
   }
 
+  // ---------- Cartão compartilhável ----------
+  private ultimaConquista = '';
+  /** Momento bom para compartilhar: guarda o texto e oferece o botão. */
+  private conquista(texto: string) { this.ultimaConquista = texto; this.ui.conquista(texto); }
+
+  /** Foto da sua ilha vista de cima + nome, nível, reino e posição, pronta para compartilhar (PNG). */
+  async gerarCartao(): Promise<{ blob: Blob; texto: string; url: string }> {
+    const cam = this.cameras.main;
+    const antes = { zoom: cam.zoom, x: cam.scrollX, y: cam.scrollY };
+    const cc = tileDoCristal(this.minhaIlha);
+    const raio = this.minhaIlha.raio + 2;
+    cam.stopFollow();
+    const lado = Math.min(this.scale.width, this.scale.height);
+    cam.setZoom(Phaser.Math.Clamp(lado / (raio * 2 * T), 1, 6)).centerOn((cc.x + 0.5) * T, (cc.y + 0.5) * T);
+    const foto = await new Promise<HTMLImageElement>(ok => {
+      this.time.delayedCall(60, () => this.game.renderer.snapshotArea(
+        Math.round((this.scale.width - lado) / 2), Math.round((this.scale.height - lado) / 2), lado, lado, img => ok(img as HTMLImageElement)));
+    });
+    cam.setZoom(antes.zoom).setScroll(antes.x, antes.y).startFollow(this.jogador, true, 0.15, 0.15);
+
+    const nome = this.cfg.nome || 'Ilhéu';
+    const r = this.rankingComReinos();
+    const pos = r.filter(l => l.pontos > r.find(x => x.perfil === 'jogador')!.pontos).length + 1;
+    const info = this.infoReino();
+    const reino = info.situacao === 'rei' ? `👑 Rei de ${info.vassalos.length}` : info.situacao === 'vassalo' ? `Vassalo de ${info.rei}` : 'Ilha livre';
+    const url = `${location.origin}${location.pathname}?de=${encodeURIComponent(nome)}&nv=${this.nivel}`;
+
+    const W = 1080, H = 1350, cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const g = cv.getContext('2d')!;
+    const fundo = g.createLinearGradient(0, 0, 0, H); fundo.addColorStop(0, '#2b6cb0'); fundo.addColorStop(1, '#1d2a52');
+    g.fillStyle = fundo; g.fillRect(0, 0, W, H);
+    g.textAlign = 'center'; g.fillStyle = '#ff8fb1'; g.font = '900 96px system-ui, sans-serif'; g.fillText('Ilhas', W / 2, 120);
+    g.fillStyle = '#ffe9a8'; g.font = '700 40px system-ui, sans-serif'; g.fillText(this.ultimaConquista || `A ilha de ${nome}`, W / 2, 185);
+    // foto redonda com moldura
+    g.save(); g.beginPath(); g.arc(W / 2, 600, 380, 0, Math.PI * 2); g.clip();
+    g.imageSmoothingEnabled = false; g.drawImage(foto, W / 2 - 380, 220, 760, 760); g.restore();
+    g.lineWidth = 14; g.strokeStyle = '#f6efe0'; g.beginPath(); g.arc(W / 2, 600, 380, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = '#f6efe0'; g.font = '800 64px system-ui, sans-serif'; g.fillText(nome, W / 2, 1060);
+    g.font = '600 40px system-ui, sans-serif'; g.fillStyle = '#c9d8ff';
+    g.fillText(`Ilha nível ${this.nivel} · ${reino} · ${pos}º de ${r.length}`, W / 2, 1120);
+    g.fillStyle = '#8fd37c'; g.beginPath(); g.roundRect(140, 1170, W - 280, 110, 28); g.fill();
+    g.fillStyle = '#1d2a52'; g.font = '800 36px system-ui, sans-serif'; g.fillText('Consegue me passar?', W / 2, 1215);
+    g.font = '600 32px system-ui, sans-serif'; g.fillText('mydecktcg.com.br/ilhas', W / 2, 1258);
+    const blob = await new Promise<Blob>(ok => cv.toBlob(b => ok(b!), 'image/png'));
+    const texto = `${this.ultimaConquista || `Minha ilha está no nível ${this.nivel}`} — ${reino}, ${pos}º lugar. Consegue me passar?`;
+    return { blob, texto, url };
+  }
+
   // ---------- Andar até um ponto ----------
   private podePisar(tx: number, ty: number) {
     if (tx < 0 || ty < 0 || tx >= this.mundo.largura || ty >= this.mundo.altura) return false;
@@ -795,7 +850,7 @@ export class CenaJogo extends Phaser.Scene {
           () => { submeter(this.reinos, ev.rei, eu, this.tempoJogado); this.registrar(`Você jurou lealdade a ${this.nomeDe(ev.rei)}`); this.ui.aviso(`Agora você é vassalo de ${this.nomeDe(ev.rei)}`); this.mudou(); },
           () => { resistir(this.reinos, eu, ev.rei, this.tempoJogado); this.registrar(`Você recusou o domínio de ${this.nomeDe(ev.rei)}`); this.ui.aviso(`⚔ Você resistiu! ${this.nomeDe(ev.rei)} vai atacar sua ilha`); this.mudou(); });
       } else if (ev.tipo === 'dominou') {
-        if (ev.rei === eu) { this.registrar(`${this.nomeDe(ev.alvo)} virou seu vassalo`); this.ui.aviso(`👑 ${this.nomeDe(ev.alvo)} agora é seu vassalo!`); this.tocar('nivel'); }
+        if (ev.rei === eu) { this.registrar(`${this.nomeDe(ev.alvo)} virou seu vassalo`); this.ui.aviso(`👑 ${this.nomeDe(ev.alvo)} agora é seu vassalo!`); this.tocar('nivel'); this.conquista(`Virei rei de ${vassalosDe(this.reinos, eu).length} ${vassalosDe(this.reinos, eu).length === 1 ? 'ilha' : 'ilhas'}!`); }
         else if (ev.rei === reiDe(this.reinos, eu)) this.registrar(`Seu reino cresceu: ${this.nomeDe(ev.alvo)} se submeteu a ${this.nomeDe(ev.rei)}`);
       } else if (ev.tipo === 'rebeliao') {
         if (ev.rei === eu && ev.sucesso) { this.registrar(`${this.nomeDe(ev.vassalo)} se rebelou e se libertou`); this.ui.aviso(`⚔ ${this.nomeDe(ev.vassalo)} se rebelou contra você!`); }
@@ -841,6 +896,7 @@ export class CenaJogo extends Phaser.Scene {
       this.registrar(`Você se rebelou contra ${this.nomeDe(rei)} e venceu!`);
       this.ui.aviso(`⚔ Rebelião vitoriosa! Sua ilha está livre (${Math.round(r.forca)} × ${Math.round(r.forcaRei)})`);
       this.tocar('nivel'); this.cameras.main.flash(300, 255, 210, 120);
+      this.conquista(`Me rebelei contra ${this.nomeDe(rei)} e venci!`);
     } else {
       this.energia = Math.max(0, this.energia - 30);
       this.registrar(`Rebelião contra ${this.nomeDe(rei)} fracassou`);
@@ -934,6 +990,7 @@ export class CenaJogo extends Phaser.Scene {
     itens.forEach(([id, n], i) => this.textoFlutuante((bau.x + 0.5) * T, bau.y * T - i * 7, `+${n} ${ITENS[id as ItemId].nome}`, RARIDADES[bau.raridade].corCss));
     this.ui.aviso(bau.aberto ? `Baú ${RARIDADES[bau.raridade].nome.toLowerCase()} aberto!` : 'Mochila cheia: parte ficou no baú');
     if (bau.aberto) this.darXp({ comum: 5, raro: 10, epico: 20, lendario: 40 }[bau.raridade]);
+    if (bau.aberto && (bau.raridade === 'lendario' || bau.raridade === 'epico')) this.conquista(`Abri um baú ${RARIDADES[bau.raridade].nome.toLowerCase()}!`);
     this.tocar(bau.raridade === 'lendario' || bau.raridade === 'epico' ? 'nivel' : 'criar');
     this.mudou();
   }

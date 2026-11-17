@@ -44,11 +44,13 @@ if (q.has('n') || q.has('bots') || q.has('seed')) {
   let mundo: Mundo = ultimo.mundo in MUNDOS ? ultimo.mundo : 'arquipelago';
   let dificuldade: Dificuldade = ultimo.dificuldade;
   const menu = document.getElementById('menu')!;
+  // link de desafio: ?de=Nome&nv=5
+  const desafio = q.get('de') ? { nome: q.get('de')!.replace(/[<>&"]/g, '').slice(0, 16), nv: Number(q.get('nv')) || 0 } : null;
   const desenhar = () => {
     const salvo = temSave(MUNDOS[mundo].n);
     menu.innerHTML = `
       <div class="cartao">
-        <h1>Ilhas</h1><p class="sub">Você começa numa ilha minúscula com um Cristal no centro. <b>Objetivo: alimente o Cristal até o nível 10</b> —
+        <h1>Ilhas</h1>${desafio ? `<p class="desafio">⚔ <b>${desafio.nome}</b>${desafio.nv ? ` (ilha nível ${desafio.nv})` : ''} te desafiou! Comece sua ilha e tente passar — você ganha <b>1 cristal</b> de presente.</p>` : ''}<p class="sub">Você começa numa ilha minúscula com um Cristal no centro. <b>Objetivo: alimente o Cristal até o nível 10</b> —
           a ilha cresce de verdade — e chegue ao topo do ranking. Saia de jangada atrás de baús, mas cuidado: sua ilha fica desprotegida.</p>
         <h2>Seu nome</h2><input id="apelido-local" maxlength="16" placeholder="Seu nome na ilha" value="${apelido.replace(/"/g, '')}">
         <h2>Seu personagem</h2><div class="personagens">${ESCOLHAS.map(p =>
@@ -128,7 +130,8 @@ if (q.has('n') || q.has('bots') || q.has('seed')) {
       const m = MUNDOS[mundo];
       apelido = ((document.getElementById('apelido-local') as HTMLInputElement)?.value || apelido).trim().slice(0, 16);
       if (apelido) gravar('ilhas-apelido', apelido);
-      iniciar({ seed: 2026, participantes: m.n, bots: m.bots, dificuldade, personagem, novo: b.id === 'novo', nome: apelido || undefined });
+      iniciar({ seed: 2026, participantes: m.n, bots: m.bots, dificuldade, personagem, novo: b.id === 'novo', nome: apelido || undefined,
+        convite: b.id === 'novo' || !temSave(m.n) ? desafio?.nome : undefined });
     }
   });
 }
