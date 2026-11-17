@@ -56,7 +56,7 @@ button{cursor:pointer}
 .fn-pct{font-family:var(--f-head);font-weight:800;font-size:30px;line-height:1;color:var(--teal)}
 .fn-pct small{font-size:14px}
 .fn-progress{height:10px;background:var(--surface2);border:1px solid var(--border);border-radius:999px;overflow:hidden;margin:14px 0 10px}
-.fn-progress>i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),#4fd1b0);border-radius:999px;transition:width .35s}
+.fn-progress>i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),#4fd1b0);border-radius:99px;transition:width .35s}
 .fn-stats{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px;color:var(--text2)}
 .fn-stats b{color:var(--text);font-weight:700}
 .fn-stats .fn-miss{color:var(--accent)}
@@ -64,27 +64,43 @@ button{cursor:pointer}
 .fn-hero-links a{color:var(--blue);font-weight:600;text-decoration:none}
 .fn-hero-links a:hover{text-decoration:underline}
 
-/* ── barra de controles (fica visível ao rolar) ───── */
-.fn-bar{position:sticky;top:var(--top-h);z-index:30;margin:12px -14px 0;padding:10px 14px;display:flex;flex-direction:column;gap:10px;
+/* ── barra de controles (2 linhas, espaçamento e busca comprida) ───── */
+.fn-bar{position:sticky;top:var(--top-h);z-index:30;margin:12px -14px 0;padding:12px 16px;display:flex;flex-direction:column;gap:12px;
   background:color-mix(in srgb,var(--bg) 94%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid transparent;transition:transform .22s ease}
 .fn-bar.is-stuck{border-bottom-color:var(--border)}
-.fn-bar-top,.fn-bar-bottom{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;width:100%}
-.fn-bar-top .fn-search{flex:1 1 260px;min-width:200px}
+
+.fn-bar-top,
+.fn-bar-bottom{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 16px;width:100%}
+
+/* Linha 1: Barra de busca mais comprida para a direita */
+.fn-bar-top .fn-search{flex:2 1 380px;min-width:280px}
+.fn-bar-top .fn-chips{flex:1 1 auto;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+.fn-bar-top .fn-chips::-webkit-scrollbar{display:none}
+
 .fn-search input{width:100%;height:42px;padding:0 14px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);outline:none}
 .fn-search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-.fn-chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
-.fn-chips::-webkit-scrollbar{display:none}
+
 .fn-chip{flex:0 0 auto;height:34px;padding:0 14px;border:1px solid var(--border);background:var(--surface);border-radius:999px;font-weight:600;font-size:13.5px;color:var(--text2)}
 .fn-chip.is-on{background:var(--text);border-color:var(--text);color:var(--bg)}
+
+/* Linha 2: Ferramentas e visualizações à esquerda, resto empurrado para a direita com espaçamento */
+.fn-bar-left-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.fn-bar-right{margin-left:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+
 .fn-sel{flex:0 0 auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
 .fn-sel select{height:36px;padding:0 8px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text)}
+
 .fn-seg{display:inline-flex;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;background:var(--surface)}
 .fn-seg button{height:36px;padding:0 12px;border:0;background:transparent;font-weight:600;font-size:13px;color:var(--text2)}
 .fn-seg button.is-on{background:var(--accent);color:#fff}
-.fn-bar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+
 .fn-step{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);overflow:hidden}
 .fn-step button{width:34px;height:36px;border:0;background:transparent;font-size:18px;font-weight:700}
 .fn-step span{min-width:26px;text-align:center;font-size:13px;font-weight:700;color:var(--text2)}
+
+/* Botão de engrenagem */
+#fn-more.fn-gear{width:36px;height:36px;padding:0;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);display:inline-flex;align-items:center;justify-content:center}
+#fn-more.fn-gear:hover{border-color:var(--border2);color:var(--text)}
 
 /* ── seções e grade ───────────────────────────────── */
 .fn-body{margin-top:12px}
@@ -183,7 +199,7 @@ button{cursor:pointer}
 @media (min-width:700px){
   :root{--top-h:58px}
   .fn-main{padding:20px 22px 80px}
-  .fn-bar{margin:14px -22px 0;padding:12px 22px}
+  .fn-bar{margin:14px -22px 0;padding:14px 22px}
   .fn-hero{padding:20px 22px}
   .fn-hero h1{font-size:28px}
   .fn-pct{font-size:40px}
@@ -211,7 +227,7 @@ button{cursor:pointer}
   .fn-progress{margin:10px 0 8px;height:8px}
   .fn-stats{gap:4px 14px;font-size:12.5px}
   .fn-hero-links{margin-top:6px;font-size:12.5px}
-  .fn-bar{margin:8px -10px 0;padding:8px 10px;gap:8px}
+  .fn-bar{margin:8px -10px 0;padding:10px;gap:8px}
   .fn-bar.is-hidden{transform:translateY(calc(-100% - var(--top-h) - 6px))}
   .fn-bar-top .fn-search{flex:1 1 100%}
   .fn-bar-right{margin-left:0}
@@ -344,22 +360,13 @@ button{cursor:pointer}
 @media (min-width:700px){.fn-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:699px){.fn-more span{display:none}.fn-rrow{grid-template-columns:1fr 1fr auto}}
 
-/* Ferramentas (engrenagem) e compartilhar */
-#fn-more.fn-gear{width:36px;height:36px;padding:0;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);color:var(--text2);display:inline-flex;align-items:center;justify-content:center}
-#fn-more.fn-gear:hover{border-color:var(--border2);color:var(--text)}
-.fn-note{margin:0;font-size:13px;line-height:1.5;color:var(--text2)}
-#fn-share-out{display:grid;gap:10px;justify-items:center}
-#fn-share-out input{width:100%;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text);padding:10px;font-size:13px}
-#fn-share-out .fn-btn{width:100%}
-#fn-share-qr{border-radius:8px;background:#fff}
-
-/* ── Modo foco: fichário inteiro na tela (só ≥700px, só no modo Fichário) ── */
+/* ── Modo foco: fichário inteiro na tela ── */
 @media (min-width:700px){
   body.fn-focus{--top-h:46px}
   .fn-focus .fn-banner,.fn-focus .fn-hero,.fn-focus .fn-side,.fn-focus .fn-bar-top,.fn-focus .fn-page-lbl,.fn-focus .fn-user,.fn-focus #fn-cols-wrap{display:none}
   .fn-focus .fn-layout{display:block;max-width:none}
   .fn-focus .fn-main{padding:6px 14px 10px;max-width:none}
-  .fn-focus .fn-bar{position:static;margin:0 -14px;padding:6px 14px;transform:none}
+  .fn-focus .fn-bar{position:static;margin:0 -14px;padding:8px 16px;transform:none}
   .fn-focus .fn-bar-bottom{justify-content:center}
   .fn-focus .fn-bar-right{margin-left:0}
   .fn-focus .fn-binder-nav{margin:2px 0 8px;gap:10px}
