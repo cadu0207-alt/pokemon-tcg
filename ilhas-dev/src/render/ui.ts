@@ -1,4 +1,4 @@
-import { GRUPOS, ITENS, RECEITAS, grupoDe, type Grupo, type ItemId } from '../sim/itens';
+import { GRUPOS, ITENS, RECEITAS, grupoDe, nivelJogadorDe, type Grupo, type ItemId } from '../sim/itens';
 import { cabe, criar, podeCriar, qtd, LIMITE_MOCHILA, type Inventario } from '../sim/inventario';
 import type { Construcao } from '../sim/construcao';
 import type { Requisitos } from '../sim/expansao';
@@ -25,6 +25,10 @@ export interface Ganchos {
   requisitos: () => Requisitos | null;
   /** há uma construção deste tipo (da sua ilha) perto do jogador? */
   perto: (estacao: ItemId) => boolean;
+  /** nível do personagem (libera receitas aos poucos) */
+  nivelJogador: () => number;
+  /** larga no chão `n` unidades (Infinity = a pilha toda) */
+  largar: (id: ItemId, n: number) => void;
   armazem: () => Inventario;
   capacidadeArmazem: () => number;
   moverParaBau: (id: ItemId) => void;
@@ -83,11 +87,33 @@ export class Interface {
       const slot = (e.target as HTMLElement).closest<HTMLElement>('[data-id]');
       if (!slot) return;
       const id = slot.dataset.id as ItemId;
-      if (ITENS[id].construivel) g.selecionarConstrucao(this.construindo === id ? null : id);
-      else if (ITENS[id].comida) g.comer(id);
-      else this.aviso(ITENS[id].nome);
+      // com uma construção selecionada, tocar nela de novo cancela (atalho de sempre)
+      if (this.construindo === id) { g.selecionarConstrucao(null); return; }
+      this.abrirMenuItem(id, slot);
+    });
+    $('item-menu').addEventListener('click', e => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>('[data-acao]');
+      const id = $('item-menu').dataset.id as ItemId;
+      $('item-menu').hidden = true;
+      if (!b || !id) return;
+      const acao = b.dataset.acao;
+      if (acao === 'construir') g.selecionarConstrucao(id);
+      else if (acao === 'comer') g.comer(id);
+      else if (acao === 'largar1') g.largar(id, 1);
+      else if (acao === 'largar') g.largar(id, Infinity);
     });
     this.iniciarToque();
+    // tocar fora de um painel (no fundo escurecido) ou apertar Esc fecha tudo
+    $('fundo').addEventListener('click', () => this.fecharPaineis());
+    window.addEventListener('keydown', e => { if (e.key === 'Escape') this.fecharPaineis(); });
+    // marca no <body> quando algum painel está aberto (mostra o fundo)
+    const observar = () => document.body.classList.toggle('painel-aberto', ['craft', 'habilidades', 'cristal', 'bau', 'ranking'].some(id => !$(id).hidden));
+    new MutationObserver(observar).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['hidden'] });
+  }
+
+  fecharPaineis() {
+    this.alternarCraft(false); this.alternarHabilidades(false); this.alternarRanking(false);
+    $('cristal').hidden = true; $('bau').hidden = true;
   }
 
   alternarCraft(forcar?: boolean) {
@@ -157,6 +183,24 @@ export class Interface {
 
   /** Aba aberta no menu de criação (lembrada entre sessões). */
   private grupo: Grupo | null = (() => { try { return localStorage.getItem('ilhas-grupo') as Grupo | null; } catch { return null; } })();
+
+  /** Menu do item da mochila: construir/comer, largar 1, largar tudo. */
+  private abrirMenuItem(id: ItemId, slot: HTMLElement) {
+    const def = ITENS[id], n = qtd(this.inv, id);
+    const menu = $('item-menu');
+    menu.dataset.id = id;
+    menu.innerHTML = `<b><img src="${icone(id)}">${def.nome} <small>×${n}</small></b>
+      ${def.construivel ? '<button data-acao="construir">🔨 Construir</button>' : ''}
+      ${def.comida || def.mana ? `<button data-acao="comer">${def.mana ? '✨ Usar' : '🍖 Comer'}</button>` : ''}
+      <button data-acao="largar1">⬇ Largar 1</button>
+      ${n > 1 ? `<button data-acao="largar">⬇ Largar tudo (${n})</button>` : ''}
+      <button data-acao="fechar" class="fechar-menu">✕</button>`;
+    menu.hidden = false;
+    const r = slot.getBoundingClientRect();
+    const larg = menu.offsetWidth;
+    menu.style.left = `${Math.max(8, Math.min(window.innerWidth - larg - 8, r.left + r.width / 2 - larg / 2))}px`;
+    menu.style.bottom = `${window.innerHeight - r.top + 8}px`;
+  }
 
   habAberto = false;
   alternarHabilidades(forcar?: boolean) {
@@ -264,20 +308,23 @@ export class Interface {
 
     if (!this.aberto) return;
     // abas por grupo, com quantas receitas dá para criar agora em cada uma
-    const prontas = (g: Grupo) => RECEITAS.filter(r => grupoDe(r.id) === g && podeCriar(inv, r, nivel) && (!r.estacao || this.g.perto(r.estacao))).length;
+    const nj = this.g.nivelJogador();
+    const liberada = (r: (typeof RECEITAS)[number]) => nj >= nivelJogadorDe(r.id);
+    const prontas = (g: Grupo) => RECEITAS.filter(r => grupoDe(r.id) === g && liberada(r) && podeCriar(inv, r, nivel) && (!r.estacao || this.g.perto(r.estacao))).length;
     if (!this.grupo) this.grupo = GRUPOS.find(g => prontas(g.id) > 0)?.id ?? 'extracao';
     const abas = `<div class="abas">${GRUPOS.map(g => {
       const n = prontas(g.id);
       return `<button class="aba ${g.id === this.grupo ? 'sel' : ''}" data-g="${g.id}" title="${g.nome}"><img src="${icone(g.icone)}"><span>${g.nome}</span>${n ? `<i>${n}</i>` : ''}</button>`;
     }).join('')}</div>`;
     // dentro da aba: o que dá para criar agora, depois o que falta material, por último o travado por nível
-    const ordem = (r: (typeof RECEITAS)[number]) => (podeCriar(inv, r, nivel) && (!r.estacao || this.g.perto(r.estacao)) ? 0 : nivel >= (r.nivel ?? 1) ? 1 : 2) * 100 + (r.nivel ?? 1);
+    const ordem = (r: (typeof RECEITAS)[number]) => (liberada(r) && podeCriar(inv, r, nivel) && (!r.estacao || this.g.perto(r.estacao)) ? 0 : liberada(r) && nivel >= (r.nivel ?? 1) ? 1 : 2) * 100 + nivelJogadorDe(r.id) * 10 + (r.nivel ?? 1);
     const daAba = RECEITAS.map((r, i) => ({ r, i })).filter(({ r }) => grupoDe(r.id) === this.grupo).sort((a, b) => ordem(a.r) - ordem(b.r));
     this.craft.innerHTML = '<h3>Criar <small>(C)</small><button class="fechar" aria-label="Fechar">✕</button></h3>' + abas + daAba.map(({ r, i }) => {
-      const travada = nivel < (r.nivel ?? 1);
+      const travadaJogador = !liberada(r);
+      const travada = travadaJogador || nivel < (r.nivel ?? 1);
       const semEstacao = !!r.estacao && !this.g.perto(r.estacao);
-      const ok = podeCriar(inv, r, nivel) && !semEstacao;
-      const custo = travada ? `<span class="falta">Requer ilha nível ${r.nivel}</span>` : (semEstacao ? `<span class="falta">Perto de: ${ITENS[r.estacao!].nome}</span>` : '') + Object.entries(r.custo).map(([id, n]) => {
+      const ok = !travada && podeCriar(inv, r, nivel) && !semEstacao;
+      const custo = travadaJogador ? `<span class="falta">🔒 Você nível ${nivelJogadorDe(r.id)}</span>` : travada ? `<span class="falta">Requer ilha nível ${r.nivel}</span>` : (semEstacao ? `<span class="falta">Perto de: ${ITENS[r.estacao!].nome}</span>` : '') + Object.entries(r.custo).map(([id, n]) => {
         const tem = qtd(inv, id as ItemId) >= (n ?? 0);
         return `<span class="${tem ? '' : 'falta'}"><img src="${icone(id as ItemId)}">${qtd(inv, id as ItemId)}/${n}</span>`;
       }).join('');
@@ -292,6 +339,7 @@ export class Interface {
     }));
     this.craft.querySelectorAll<HTMLButtonElement>('button[data-r]').forEach(b => b.addEventListener('click', () => {
       const r = RECEITAS[Number(b.dataset.r)];
+      if (this.g.nivelJogador() < nivelJogadorDe(r.id)) { this.aviso(`Libera no nível ${nivelJogadorDe(r.id)} do personagem`); return; }
       if (r.estacao && !this.g.perto(r.estacao)) { this.aviso(`Precisa estar perto de: ${ITENS[r.estacao].nome}`); return; }
       if (!cabe(inv, [r.id])) { this.aviso('Mochila cheia! Guarde coisas no baú'); return; }
       if (criar(inv, r, this.g.nivel())) {

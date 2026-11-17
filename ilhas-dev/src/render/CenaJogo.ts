@@ -3,13 +3,13 @@ import { gerarMundo, tileEm, ehAgua, TILE_ANDAVEL, type Mundo, type Recurso } fr
 import { iniciarRecursos, golpear, atualizarRecursos, recursoAtivo, ferramentaPara, type EstadoRecursos } from '../sim/coleta';
 import { CRIATURAS, DURACAO_DIA, bonusDano, ehNoite, ganharXp, novoStatus, type Status } from '../sim/criaturas';
 import { novoInventario, remover, qtd, adicionar, desgastar, cabe, moverPilha, type Inventario } from '../sim/inventario';
-import { DEF_RECURSO } from '../sim/itens';
+import { DEF_RECURSO, liberadasNoNivel } from '../sim/itens';
 import { validarLocal, type Construcao } from '../sim/construcao';
 import { expandirTerreno, pagarExpansao, requisitosExpansao, tileDeNascimento, tileDoCristal } from '../sim/expansao';
 import { carregar, serializar } from '../sim/save';
 import { ITENS, type ItemId } from '../sim/itens';
 import { criarCriaturas, T } from './texturas';
-import { registrarRecorte } from './icones';
+import { registrarRecorte, icone } from './icones';
 import { recorteComoUrl, carregar as carregarArte, preparar, quadroParado, varianteArvore, OBJETOS, PERSONAGENS, type Personagem } from './assets';
 import { Fauna } from './Fauna';
 import { DiaNoite } from './DiaNoite';
@@ -81,6 +81,8 @@ export class CenaJogo extends Phaser.Scene {
   /** Armazém da ilha (baús): guarda o que não cabe na mochila. */
   private armazem: Inventario = novoInventario();
   private interagiu = false;
+  /** Itens largados no chão: pilhas por tile, com o desenho do ícone. */
+  private chao: { x: number; y: number; itens: Inventario; img?: Phaser.GameObjects.Image }[] = [];
   /** Energia do Cristal (0–100): saques drenam; zerada, a ilha perde um nível. */
   private energia = 100;
   private diario: string[] = [];
@@ -153,6 +155,7 @@ export class CenaJogo extends Phaser.Scene {
       if (save.energia !== undefined) this.energia = save.energia;
       if (save.diario) this.diario = save.diario;
       if (save.tumulo) this.tumulo = save.tumulo;
+      if (save.chao) this.chao = save.chao.map(c => ({ x: c.x, y: c.y, itens: c.itens }));
     } else {
       // começo: só o necessário para a primeira jangada (2 cordas + madeira)
       Object.assign(this.inv.itens, { madeira: 6, fibra: 6 });
@@ -235,6 +238,8 @@ export class CenaJogo extends Phaser.Scene {
       diario: () => this.diario,
       recarregar: id => this.recarregar(id),
       perto: estacao => !!this.minhaConstrucaoPerto([estacao], 2.6),
+      nivelJogador: () => this.status.nivel,
+      largar: (id, n) => this.largar(id, n),
       armazem: () => this.armazem,
       capacidadeArmazem: () => this.capacidadeArmazem(),
       moverParaBau: id => { if (!moverPilha(this.inv, this.armazem, id, this.capacidadeArmazem())) this.ui.aviso('Baú cheio: construa mais baús'); this.mudou(); },
@@ -243,7 +248,7 @@ export class CenaJogo extends Phaser.Scene {
       habilidades: () => ({ status: this.status, aprendidas: this.habilidades }),
       aprender: id => this.aprenderHabilidade(id),
       lancar: m => this.lancar(m),
-      criou: id => { this.criados[id] = (this.criados[id] ?? 0) + 1; this.tocar('criar'); },
+      criou: id => { this.criados[id] = (this.criados[id] ?? 0) + 1; this.tocar('criar'); this.darXp(2); },
       alternarSom: () => this.som.alternarSom(),
       alternarMusica: () => this.som.alternarMusica(),
       tocar: e => this.tocar(e),
@@ -286,6 +291,7 @@ export class CenaJogo extends Phaser.Scene {
     this.time.addEvent({ delay: 20_000, loop: true, callback: () => this.checarSaque() });
     if (this.cfg.nuvem) this.time.addEvent({ delay: 30_000, loop: true, callback: () => void this.atualizarOutros() });
     this.mostrarTumulo();
+    for (const c of this.chao) this.desenharPilha(c);
     this.time.addEvent({ delay: 1000, loop: true, callback: () => this.atualizarPlantacoes() });
     document.getElementById('missao')!.addEventListener('click', e => (e.currentTarget as HTMLElement).classList.toggle('fechada'));
     this.time.addEvent({ delay: 500, loop: true, callback: () => this.atualizarTutorial() });
@@ -326,7 +332,8 @@ export class CenaJogo extends Phaser.Scene {
       jogador: { x: Math.round(this.jogador.x), y: Math.round(this.jogador.y) },
       inventario: this.inv, construcoes: this.construcoes,
       status: this.status, tempo: Math.round(this.tempoMundo), nivel: this.nivel, armazem: this.armazem, bausMundo: this.bausMundo.salvar(),
-      energia: Math.round(this.energia), diario: this.diario, tumulo: this.tumulo, habilidades: this.habilidades, mana: Math.floor(this.mana),
+      energia: Math.round(this.energia), diario: this.diario, tumulo: this.tumulo,
+      chao: this.chao.map(c => ({ x: c.x, y: c.y, itens: c.itens })), habilidades: this.habilidades, mana: Math.floor(this.mana),
       tutorial: { missao: this.missao, criados: this.criados, mortos: this.mortos },
       bots: this.bots.salvar(),
     });
@@ -388,6 +395,7 @@ export class CenaJogo extends Phaser.Scene {
       this.tweens.add({ targets: p, x: cx + Phaser.Math.Between(-12, 12), y: cy + Phaser.Math.Between(-4, 8), alpha: 0, duration: 450, onComplete: () => p.destroy() });
     }
     this.tocar('construir');
+    this.darXp(4);
     if (qtd(this.inv, id) === 0) this.selecionarConstrucao(null);
     else this.localEscolhido = null;
     this.mudou();
@@ -464,6 +472,7 @@ export class CenaJogo extends Phaser.Scene {
     if (res.ferramentaQuebrou && res.ferramenta) this.ui.aviso(`${ITENS[res.ferramenta].nome} quebrou!`);
     if (res.destruido) {
       this.tocar('cai');
+      this.darXp(1, false);
       this.mapa.definirObjeto(r.x, r.y, null);
       this.bloqueio.delete(this.idx(r.x, r.y));
       let i = 0;
@@ -523,6 +532,7 @@ export class CenaJogo extends Phaser.Scene {
     this.nivel = novo;
     this.aplicarExpansao(this.minhaIlha, novo);
     this.ui.aviso(`O Cristal brilhou: sua ilha cresceu para o nível ${novo}!`);
+    this.darXp(25);
     this.tocar('nivel');
     this.cameras.main.flash(400, 200, 180, 255);
     this.mudou(); this.salvar(true);
@@ -561,6 +571,8 @@ export class CenaJogo extends Phaser.Scene {
   private interacaoPerto(noite: boolean): { c: { x: number; y: number }; rotulo: string; fazer: () => void } | null {
     const j = this.jogador;
     if (this.tumulo && Math.hypot(this.tumulo.x + 0.5 - j.x / T, this.tumulo.y + 0.5 - j.y / T) < 1.6) return { c: this.tumulo, rotulo: 'Recuperar', fazer: () => this.recuperarTumulo() };
+    const pilha = this.chao.find(c => Math.hypot(c.x + 0.5 - j.x / T, c.y + 0.5 - j.y / T) < 1.3);
+    if (pilha) return { c: pilha, rotulo: 'Pegar', fazer: () => this.pegarDoChao(pilha) };
     const bau = this.bausMundo.perto(j.x / T, j.y / T);
     if (bau) return { c: bau, rotulo: `Abrir baú ${RARIDADES[bau.raridade].nome.toLowerCase()}`, fazer: () => this.abrirBauMundo(bau) };
     const c = this.minhaConstrucaoPerto(['bau', 'casa', 'plantacao'], 1.6);
@@ -661,6 +673,60 @@ export class CenaJogo extends Phaser.Scene {
     this.tocar('criar'); this.mudou();
   }
 
+  /** Todo ganho de XP passa por aqui: texto, subida de nível e aviso das receitas liberadas. */
+  private darXp(xp: number, mostrar = true) {
+    if (xp <= 0) return;
+    const j = this.jogador;
+    const subiu = ganharXp(this.status, xp);
+    if (mostrar) this.textoFlutuante(j.x, j.y - 26, `+${xp} XP`, '#ffd166');
+    if (!subiu) return;
+    const novas = liberadasNoNivel(this.status.nivel).map(id => ITENS[id].nome);
+    if (novas.length) this.time.delayedCall(900, () => this.ui.aviso(`🔓 Novas receitas: ${novas.join(', ')}`));
+    this.tocar('nivel'); this.ui.aviso(`Você subiu para o nível ${this.status.nivel}!`); this.cameras.main.flash(250, 255, 230, 150);
+  }
+
+  /** Larga itens no chão, no tile onde o jogador está (junta com a pilha que já estiver lá). */
+  private largar(id: ItemId, n: number) {
+    const j = this.jogador, x = Math.floor(j.x / T), y = Math.floor(j.y / T);
+    const tem = qtd(this.inv, id);
+    const quanto = Math.min(tem, n);
+    if (!quanto) return;
+    if (this.ui.construindo === id && quanto === tem) this.selecionarConstrucao(null);
+    const dur = this.inv.durabilidade[id];
+    remover(this.inv, id, quanto);
+    let pilha = this.chao.find(c => c.x === x && c.y === y);
+    if (!pilha) { pilha = { x, y, itens: novoInventario() }; this.chao.push(pilha); }
+    adicionar(pilha.itens, id, quanto);
+    if (dur !== undefined) pilha.itens.durabilidade[id] = dur;
+    this.desenharPilha(pilha);
+    this.ui.aviso(`Largou ${quanto} ${ITENS[id].nome}`);
+    this.mudou();
+  }
+
+  private desenharPilha(p: (typeof this.chao)[number]) {
+    p.img?.destroy();
+    const ids = Object.keys(p.itens.itens) as ItemId[];
+    if (!ids.length) { this.chao = this.chao.filter(c => c !== p); return; }
+    // o ícone do item (ou um saquinho, se forem vários tipos)
+    const chave = `chao-${ids.length > 1 ? 'couro' : ids[0]}`;
+    const desenhar = () => {
+      p.img = this.add.image((p.x + 0.5) * T, (p.y + 0.8) * T, chave).setOrigin(0.5, 1).setDisplaySize(10, 10).setDepth((p.y + 0.8) * T);
+      this.tweens.add({ targets: p.img, y: p.img.y - 1.5, duration: 700, yoyo: true, repeat: -1 });
+    };
+    if (this.textures.exists(chave)) { desenhar(); return; }
+    const img = new Image();
+    img.onload = () => { if (!this.textures.exists(chave)) this.textures.addImage(chave, img); if (this.chao.includes(p)) desenhar(); };
+    img.src = icone(ids.length > 1 ? 'couro' : ids[0]);
+  }
+
+  private pegarDoChao(p: (typeof this.chao)[number]) {
+    let pegou = 0;
+    for (const id of Object.keys(p.itens.itens) as ItemId[]) if (moverPilha(p.itens, this.inv, id)) pegou++;
+    if (!pegou) { this.ui.aviso('Mochila cheia!'); return; }
+    this.desenharPilha(p);
+    this.tocar('criar'); this.mudou();
+  }
+
   private abrirBauMundo(bau: import('../sim/baus').Bau) {
     const r = this.bausMundo.abrir(bau, this.inv);
     if ('motivo' in r) { this.ui.aviso(r.motivo === 'guardioes' ? `Derrote os guardiões primeiro (${bau.guardioes})` : 'Vazio'); return; }
@@ -668,6 +734,7 @@ export class CenaJogo extends Phaser.Scene {
     if (!itens.length) { this.ui.aviso('Mochila cheia! Guarde coisas no baú da ilha'); return; }
     itens.forEach(([id, n], i) => this.textoFlutuante((bau.x + 0.5) * T, bau.y * T - i * 7, `+${n} ${ITENS[id as ItemId].nome}`, RARIDADES[bau.raridade].corCss));
     this.ui.aviso(bau.aberto ? `Baú ${RARIDADES[bau.raridade].nome.toLowerCase()} aberto!` : 'Mochila cheia: parte ficou no baú');
+    if (bau.aberto) this.darXp({ comum: 5, raro: 10, epico: 20, lendario: 40 }[bau.raridade]);
     this.tocar(bau.raridade === 'lendario' || bau.raridade === 'epico' ? 'nivel' : 'criar');
     this.mudou();
   }
@@ -828,10 +895,8 @@ export class CenaJogo extends Phaser.Scene {
         this.textoFlutuante(b.c.x * T, b.c.y * T - 20 - i++ * 7, `+${qn} ${ITENS[id as ItemId].nome}`);
       }
       const xp = Math.round(def.xp * multR * (this.construcoes.some(c => c.tipo === 'estatua') ? 1.25 : 1)); // raridade e estátua aumentam o XP
-      const subiu = ganharXp(this.status, xp);
-      this.textoFlutuante(j.x, j.y - 26, `+${xp} XP`, '#ffd166');
+      this.darXp(xp);
       this.mortos++;
-      if (subiu) { this.tocar('nivel'); this.ui.aviso(`Você subiu para o nível ${this.status.nivel}!`); this.cameras.main.flash(250, 255, 230, 150); }
     }
     this.mudou();
   }

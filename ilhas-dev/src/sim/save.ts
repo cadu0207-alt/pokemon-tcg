@@ -26,6 +26,8 @@ export interface Save {
   energia?: number;
   diario?: string[];
   tumulo?: import('./saque').Tumulo | null;
+  /** Itens largados no chão. */
+  chao?: { x: number; y: number; itens: Inventario }[];
   tutorial?: { missao: number; criados: Partial<Record<import('./itens').ItemId, number>>; mortos: number };
 }
 

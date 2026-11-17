@@ -59,6 +59,28 @@ export const ITENS: Record<ItemId, DefItem> = {
  */
 export interface Receita { id: ItemId; qtd: number; custo: Partial<Record<ItemId, number>>; nivel?: number; estacao?: ItemId; }
 
+/**
+ * Curva de liberação pelo nível do PERSONAGEM (além do nível da ilha): o jogador melhora aos poucos.
+ * Bots não usam esta trava (quase não ganham XP; seguem só o nível da ilha).
+ */
+export const NIVEL_JOGADOR: Partial<Record<ItemId, number>> = {
+  corda: 1, jangada: 1, fogueira: 1,
+  bancada: 2, machado_pedra: 2, lanca_madeira: 2, carne_assada: 2,
+  picareta_pedra: 3, foice_pedra: 3, plantacao: 3, cerca: 3,
+  bau: 4, casa: 4, espada_pedra: 4,
+  pocao_mana: 5,
+  forja: 6, lingote: 6,
+  machado_ferro: 7, picareta_ferro: 7,
+  espada_ferro: 8, altar: 8,
+  torre: 9,
+  estatua: 10,
+};
+
+export const nivelJogadorDe = (id: ItemId) => NIVEL_JOGADOR[id] ?? 1;
+
+/** Receitas que passam a valer exatamente neste nível do personagem. */
+export const liberadasNoNivel = (n: number): ItemId[] => (Object.entries(NIVEL_JOGADOR) as [ItemId, number][]).filter(([, v]) => v === n).map(([k]) => k);
+
 export const RECEITAS: Receita[] = [
   { id: 'corda', qtd: 1, custo: { fibra: 3 } },
   { id: 'machado_pedra', qtd: 1, custo: { madeira: 3, pedra: 2, corda: 1 }, estacao: 'bancada' },
