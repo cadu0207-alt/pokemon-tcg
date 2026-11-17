@@ -13,6 +13,7 @@ import { registrarRecorte, icone } from './icones';
 import { Nevoa, desenharMapaMundi, type Marca } from './Nevoa';
 import { forcaIlha, forcaReino, membroDe, novoEstadoReinos, pagarTributo, passoReinos, raioInfluencia, rebelar, reiDe, resistir, submeter, libertar, vassalosDe, TRIBUTO_MS, type EstadoReinos, type Membro } from '../sim/reinos';
 import type { InfoReino } from './ui';
+import { acharCaminho } from '../sim/caminho';
 import { recorteComoUrl, carregar as carregarArte, preparar, quadroParado, varianteArvore, OBJETOS, PERSONAGENS, type Personagem } from './assets';
 import { Fauna } from './Fauna';
 import { DiaNoite } from './DiaNoite';
@@ -89,6 +90,10 @@ export class CenaJogo extends Phaser.Scene {
   private estavaFora = false;
   private salvoEm?: number;
   private reinos: EstadoReinos = novoEstadoReinos();
+  /** andar até um ponto tocado: tiles que faltam e a marca no chão */
+  private rota: [number, number][] | null = null;
+  private marcaRota?: Phaser.GameObjects.Image;
+  private rotaParado = 0;
   private nevoa!: Nevoa;
   private nevoaSalva?: string;
   /** Itens largados no chão: pilhas por tile, com o desenho do ícone. */
@@ -251,6 +256,7 @@ export class CenaJogo extends Phaser.Scene {
       ranking: () => this.rankingComReinos(),
       reino: () => this.infoReino(),
       rebelar: () => this.rebelar(),
+      viajar: (x, y) => { if (!this.nevoa.vistoEm(x, y)) { this.ui.aviso('Você ainda não conhece esse lugar'); return false; } return this.irPara(x, y, true); },
       libertar: id => { libertar(this.reinos, id, this.tempoJogado); this.registrar(`Você libertou ${this.nomeDe(id)}`); this.mudou(); },
       requisitos: () => requisitosExpansao(this.nivel, this.construcoes, this.inv),
       expandir: () => this.expandir(),
@@ -298,7 +304,11 @@ export class CenaJogo extends Phaser.Scene {
       if (this.ui.construindo && !toque.ativo) this.localEscolhido = tilePonteiro(p);
     });
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      if (!this.ui.construindo) return;
+      if (!this.ui.construindo) {
+        // tocar/clicar no mundo: o personagem anda sozinho até lá
+        if (p.button === 0 && !this.morto && !this.assistindo) { const t = tilePonteiro(p); this.irPara(t.x, t.y); }
+        return;
+      }
       this.localEscolhido = tilePonteiro(p);
       if (!toque.ativo) this.construir();
     });
@@ -740,6 +750,33 @@ export class CenaJogo extends Phaser.Scene {
     this.tocar('nivel'); this.ui.aviso(`Você subiu para o nível ${this.status.nivel}!`); this.cameras.main.flash(250, 255, 230, 150);
   }
 
+  // ---------- Andar até um ponto ----------
+  private podePisar(tx: number, ty: number) {
+    if (tx < 0 || ty < 0 || tx >= this.mundo.largura || ty >= this.mundo.altura) return false;
+    const t = tileEm(this.mundo, tx, ty);
+    return (TILE_ANDAVEL[t] || (qtd(this.inv, 'jangada') > 0 && ehAgua(t))) && !this.bloqueio.has(this.idx(tx, ty));
+  }
+
+  /** Calcula o caminho até o tile e começa a andar. `longe`: viagem pelo mapa-múndi. */
+  irPara(tx: number, ty: number, longe = false) {
+    const j = this.jogador, ox = Math.floor(j.x / T), oy = Math.floor(j.y / T);
+    const t = tileEm(this.mundo, tx, ty);
+    if (ehAgua(t) && !qtd(this.inv, 'jangada')) { this.ui.aviso('Para ir pela água você precisa de uma Jangada'); return false; }
+    // destino ocupado (árvore, pedra, construção, bicho): para do lado dele
+    const adj = !this.podePisar(tx, ty);
+    const c = acharCaminho(ox, oy, tx, ty, (x, y) => this.podePisar(x, y), { alvoAdjacente: adj, maxNos: longe ? 120_000 : 6000 });
+    if (!c) { if (longe) this.ui.aviso('Não achei caminho até lá'); this.pararRota(); return false; }
+    if (!c.length) { this.pararRota(); return true; }
+    this.rota = c; this.rotaParado = 0;
+    if (!this.marcaRota) this.marcaRota = this.add.image(0, 0, 'brilho').setTint(0xffffff).setBlendMode(Phaser.BlendModes.ADD).setScale(0.35).setDepth(4);
+    const [fx, fy] = c[c.length - 1];
+    this.marcaRota.setPosition(((adj ? tx : fx) + 0.5) * T, ((adj ? ty : fy) + 0.5) * T).setVisible(true).setAlpha(0.9);
+    if (longe) this.ui.aviso(`A caminho (${c.length} passos)…`);
+    return true;
+  }
+
+  private pararRota() { this.rota = null; this.marcaRota?.setVisible(false); }
+
   // ---------- Reinos ----------
   private meuMembro(): Membro {
     return { id: this.minhaIlha.id, nome: this.cfg.nome || 'Você', ilha: this.minhaIlha, nivel: this.nivel, nivelJogador: this.status.nivel, construcoes: this.construcoes, humano: true };
@@ -1168,12 +1205,25 @@ export class CenaJogo extends Phaser.Scene {
     if (k.W.isDown || k.UP.isDown) vy -= 1;
     if (k.S.isDown || k.DOWN.isDown) vy += 1;
     if (toque.x || toque.y) { vx = toque.x; vy = toque.y; }
+    if (vx || vy || this.ui.construindo) { if (this.rota) this.pararRota(); }
+    else if (this.rota && !this.golpeando) {
+      // seguindo o caminho tocado: vai de centro em centro de tile
+      const [nx, ny] = this.rota[0];
+      const ax = (nx + 0.5) * T - j.x, ay = (ny + 0.5) * T - j.y;
+      if (Math.hypot(ax, ay) < 2.5) { this.rota.shift(); if (!this.rota.length) this.pararRota(); }
+      else { vx = ax / Math.hypot(ax, ay); vy = ay / Math.hypot(ax, ay); }
+    }
+    const antesX = j.x, antesY = j.y;
     if ((vx || vy) && !this.golpeando) {
       const vel = VELOCIDADE * (this.naAgua ? 0.85 : 1) * (1 + this.ef.velocidade) * (t < this.magias.ventoAte ? 1.8 : 1);
       const passo = (vel * T * dt) / 1000 / Math.max(1, Math.hypot(vx, vy));
       const nx = j.x + vx * passo, ny = j.y + vy * passo;
       if (this.livre(nx, j.y)) j.x = nx;
       if (this.livre(j.x, ny)) j.y = ny;
+      if (this.rota) { // preso (bicho no caminho, recurso que nasceu): desiste depois de um tempo
+        this.rotaParado = Math.hypot(j.x - antesX, j.y - antesY) < 0.05 ? this.rotaParado + dt : 0;
+        if (this.rotaParado > 700) this.pararRota();
+      }
       this.direcao = Math.abs(vx) > Math.abs(vy) ? (vx < 0 ? 'esquerda' : 'direita') : (vy < 0 ? 'cima' : 'baixo');
       j.anims.play(`p-${this.personagem}-${this.direcao}`, true);
     } else if (!this.golpeando) {

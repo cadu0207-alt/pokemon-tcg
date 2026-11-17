@@ -23,6 +23,8 @@ export interface Ganchos {
   /** situação no jogo de reinos */
   reino: () => InfoReino;
   rebelar: () => void;
+  /** anda até um tile (toque no mapa-múndi) */
+  viajar: (x: number, y: number) => boolean;
   libertar: (id: number) => void;
   assistir: (nome: string | null) => void;
   habilidades: () => { status: Status; aprendidas: string[] };
@@ -317,7 +319,13 @@ export class Interface {
         <i style="background:#e8607a"></i>rival <i style="background:#5fb3ff"></i>jogador <span>◯ influência do reino</span></p><p class="explorado"></p>`;
     const cv = $('mapa').querySelector('canvas')!;
     const r = this.g.mapaMundi(cv);
-    $('mapa').querySelector('.explorado')!.textContent = `Terra explorada: ${(r.explorado * 100).toFixed(1)}%`;
+    // tocar num lugar conhecido do mapa: o personagem vai até lá sozinho
+    cv.addEventListener('click', e => {
+      const b = cv.getBoundingClientRect();
+      const x = Math.floor((e.clientX - b.left) * (cv.width / b.width)), y = Math.floor((e.clientY - b.top) * (cv.height / b.height));
+      if (this.g.viajar(x, y)) this.alternarMapa(false);
+    });
+    $('mapa').querySelector('.explorado')!.textContent = `Terra explorada: ${(r.explorado * 100).toFixed(1)}% · toque num lugar para ir até lá`;
     // abre centrado em você
     const mol = $('mapa').querySelector<HTMLElement>('.moldura')!;
     requestAnimationFrame(() => { mol.scrollLeft = r.jx * mol.scrollWidth - mol.clientWidth / 2; mol.scrollTop = r.jy * mol.scrollHeight - mol.clientHeight / 2; });
