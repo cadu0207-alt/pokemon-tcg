@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import {
-  CRIATURAS, atualizarCriatura, ferirCriatura, novaCriatura, type Criatura, type TipoCriatura,
+  CRIATURAS, atualizarCriatura, ferirCriatura, novaCriatura, vidaMaxima, type Criatura, type TipoCriatura,
 } from '../sim/criaturas';
+import { RARIDADES, type Raridade } from '../sim/baus';
 import { naIlha } from '../sim/construcao';
 import type { Ilha } from '../sim/mundo';
 import { criarRng } from '../sim/rng';
@@ -70,13 +71,19 @@ export class Fauna {
       if (this.pertoDoFogo(x, y)) return;
       if (emCasa && !noite) tipo = 'coelho'; // de dia sua ilha é tranquila
     }
-    this.adicionar(tipo, x, y);
+    // longe de casa aparecem criaturas raras de vez em quando
+    const r = this.rng();
+    const raridade: Raridade = emCasa ? 'comum' : r < 0.03 + (noite ? 0.02 : 0) ? 'epico' : r < 0.13 ? 'raro' : 'comum';
+    this.adicionar(tipo, x, y, raridade);
   }
 
-  adicionar(tipo: TipoCriatura, x: number, y: number) {
-    const c = novaCriatura(this.proximoId++, tipo, x, y);
+  adicionar(tipo: TipoCriatura, x: number, y: number, raridade: Raridade = 'comum', ancora?: Criatura['ancora']) {
+    const c = novaCriatura(this.proximoId++, tipo, x, y, raridade);
+    if (ancora) c.ancora = ancora;
     const s = this.scene.add.sprite(x * T, y * T, `cri-${tipo}`, 0).setOrigin(0.5, 0.85);
     animar(s, tipo, [0, 1]);
+    // raridade: maior e colorida (comum fica como é)
+    if (raridade !== 'comum') s.setTint(RARIDADES[raridade].cor).setScale(raridade === 'raro' ? 1.15 : raridade === 'epico' ? 1.3 : 1.5);
     s.setAlpha(0);
     this.scene.tweens.add({ targets: s, alpha: 1, duration: 400 });
     const barra = this.scene.add.graphics().setDepth(5000);
@@ -85,6 +92,9 @@ export class Fauna {
     this.lista.push(b);
     return b;
   }
+
+  /** Um ponto (em tiles) onde uma criatura pode ficar. */
+  livre(x: number, y: number) { return this.andavel(Math.floor(x), Math.floor(y)); }
 
   remover(b: Bicho) {
     b.s.destroy(); b.barra.destroy(); b.sombra.destroy();
@@ -108,10 +118,11 @@ export class Fauna {
       animar(s, c.tipo, c.dir);
       s.anims.timeScale = c.estado === 'parado' ? 0.3 : 1.4;
       b.barra.clear();
-      if (c.vida < def.vida) {
+      const vmax = vidaMaxima(c);
+      if (c.vida < vmax) {
         const w = 12, x = s.x - w / 2, y = s.y - 15;
         b.barra.fillStyle(0x3a2f45).fillRect(x - 1, y - 1, w + 2, 4);
-        b.barra.fillStyle(0xe0503c).fillRect(x, y, (w * Math.max(0, c.vida)) / def.vida, 2);
+        b.barra.fillStyle(0xe0503c).fillRect(x, y, (w * Math.max(0, c.vida)) / vmax, 2);
       }
     }
     return dano;
@@ -135,7 +146,10 @@ export class Fauna {
   ferir(b: Bicho, dano: number, deX: number, deY: number): boolean {
     const morreu = ferirCriatura(b.c, dano);
     b.s.setTintFill(0xffffff);
-    this.scene.time.delayedCall(80, () => b.s.active && b.s.clearTint());
+    this.scene.time.delayedCall(80, () => {
+      if (!b.s.active) return;
+      if (b.c.raridade === 'comum') b.s.clearTint(); else b.s.setTint(RARIDADES[b.c.raridade].cor); // volta a cor da raridade
+    });
     const dx = b.c.x - deX, dy = b.c.y - deY, d = Math.hypot(dx, dy) || 1;
     const nx = b.c.x + (dx / d) * 0.35, ny = b.c.y + (dy / d) * 0.35;
     if (this.andavel(Math.floor(nx), Math.floor(ny))) { b.c.x = nx; b.c.y = ny; }

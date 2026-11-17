@@ -21,6 +21,8 @@ export interface Save {
   nivel?: number;
   /** Itens guardados nos baús da ilha. */
   armazem?: Inventario;
+  /** Baús do mundo (fase B). */
+  bausMundo?: { baus: import('./baus').Bau[]; proximoId: number };
   tutorial?: { missao: number; criados: Partial<Record<import('./itens').ItemId, number>>; mortos: number };
 }
 

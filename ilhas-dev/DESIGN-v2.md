@@ -83,7 +83,7 @@ e crescer precisa **sair de jangada** atrás de **baús guardados por animais** 
 | Fase | Entrega | Status |
 |---|---|---|
 | **A — Núcleo e expansão** | ilha inicial minúscula; Cristal no centro; alimentar o Cristal faz a terra crescer (níveis 1→10); escassez em casa (sem minério/cristal); jangada desde o início; tutorial novo; bots no mesmo ciclo | ✅ pronta (a energia que drena entra na Fase C) |
-| **B — Baús e raridades** | baús aleatórios com guardiões; tabelas de loot por raridade; criaturas com raridade; reaparecimento | |
+| **B — Baús e raridades** | baús aleatórios com guardiões; tabelas de loot por raridade; criaturas com raridade; reaparecimento | ✅ pronta |
 | **C — Saque e defesa** | mochila limitada; baú guarda itens; invasões quando você está fora; drenagem do Cristal; defesa com torre/cerca; morte derruba itens | |
 | **D — Bots rivais** | bots com o mesmo ciclo (expandir, caçar baús, saquear ilhas desprotegidas, inclusive a sua); feed de eventos ("Kai saqueou sua ilha!") | |
 | **E — Temporada** | relógio de temporada, pódio, reinício com recompensa cosmética | |

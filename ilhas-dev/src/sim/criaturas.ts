@@ -1,4 +1,10 @@
 import type { ItemId } from './itens';
+import type { Raridade } from './baus';
+
+/** Multiplicadores por raridade da criatura: [vida, dano, xp/itens]. */
+export const MULT_RARIDADE: Record<Raridade, [number, number, number]> = {
+  comum: [1, 1, 1], raro: [1.6, 1.3, 2], epico: [2.5, 1.6, 3.5], lendario: [4, 2, 6],
+};
 
 export type TipoCriatura = 'coelho' | 'javali' | 'slime' | 'lobo';
 export type Comportamento = 'passivo' | 'neutro' | 'hostil';
@@ -27,6 +33,9 @@ export interface Criatura {
   tempoEstado: number;            // ms restantes no estado de vagar/parado
   recarga: number;                // ms até poder atacar de novo
   provocado: boolean;
+  raridade: Raridade;
+  /** Guardião de baú: fica perto deste ponto e não persegue para longe dele. */
+  ancora?: { x: number; y: number; raio: number; bau: number };
 }
 
 export interface Contexto {
@@ -35,9 +44,12 @@ export interface Contexto {
   rng: () => number;
 }
 
-export function novaCriatura(id: number, tipo: TipoCriatura, x: number, y: number): Criatura {
-  return { id, tipo, x, y, vida: CRIATURAS[tipo].vida, estado: 'parado', dir: [0, 0], tempoEstado: 500, recarga: 0, provocado: false };
+export function novaCriatura(id: number, tipo: TipoCriatura, x: number, y: number, raridade: Raridade = 'comum'): Criatura {
+  return { id, tipo, x, y, vida: CRIATURAS[tipo].vida * MULT_RARIDADE[raridade][0], estado: 'parado', dir: [0, 0], tempoEstado: 500, recarga: 0, provocado: false, raridade };
 }
+
+/** Vida máxima desta criatura (com a raridade). */
+export const vidaMaxima = (c: Criatura) => CRIATURAS[c.tipo].vida * MULT_RARIDADE[c.raridade][0];
 
 const RAIO = 0.3; // meia largura da criatura em tiles
 
@@ -61,7 +73,11 @@ export function atualizarCriatura(c: Criatura, ctx: Contexto, dt: number): numbe
   const j = ctx.jogador;
   const dx = j.x - c.x, dy = j.y - c.y;
   const dist = Math.hypot(dx, dy);
-  const vePlayer = j.vivo && dist <= def.visao;
+  // guardião: não persegue para longe do baú; volta quando se afasta demais
+  const longeDaAncora = c.ancora ? Math.hypot(c.x - c.ancora.x, c.y - c.ancora.y) : 0;
+  const jogadorPertoDaAncora = !c.ancora || Math.hypot(j.x - c.ancora.x, j.y - c.ancora.y) <= c.ancora.raio * 1.8;
+  const vePlayer = j.vivo && dist <= def.visao && jogadorPertoDaAncora;
+  if (c.ancora) c.provocado = vePlayer;
 
   if (def.comportamento === 'passivo' && vePlayer) c.estado = 'fugir';
   else if ((def.comportamento === 'hostil' || c.provocado) && vePlayer) c.estado = 'perseguir';
@@ -82,7 +98,7 @@ export function atualizarCriatura(c: Criatura, ctx: Contexto, dt: number): numbe
   if (c.estado === 'perseguir') {
     c.dir = dist > 0 ? [dx / dist, dy / dist] : c.dir;
     if (dist > 0.8) { mover(c, (dx / dist) * passo, (dy / dist) * passo, ctx); return 0; }
-    if (c.recarga === 0 && def.dano > 0) { c.recarga = def.intervaloAtaque; return def.dano; }
+    if (c.recarga === 0 && def.dano > 0) { c.recarga = def.intervaloAtaque; return Math.round(def.dano * MULT_RARIDADE[c.raridade][1]); }
     return 0;
   }
   // vagar / parado
@@ -93,6 +109,12 @@ export function atualizarCriatura(c: Criatura, ctx: Contexto, dt: number): numbe
       const a = ctx.rng() * Math.PI * 2;
       c.estado = 'vagar'; c.dir = [Math.cos(a), Math.sin(a)]; c.tempoEstado = 600 + ctx.rng() * 1400;
     }
+  }
+  if (c.ancora && longeDaAncora > c.ancora.raio) {
+    // volta para perto do baú
+    const ax = c.ancora.x - c.x, ay = c.ancora.y - c.y, ad = Math.hypot(ax, ay) || 1;
+    c.dir = [ax / ad, ay / ad]; mover(c, (ax / ad) * passo * 0.6, (ay / ad) * passo * 0.6, ctx);
+    return 0;
   }
   if (c.estado === 'vagar' && !mover(c, c.dir[0] * passo * 0.5, c.dir[1] * passo * 0.5, ctx)) c.tempoEstado = 0;
   return 0;

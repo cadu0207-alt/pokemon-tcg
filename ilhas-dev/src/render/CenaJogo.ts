@@ -14,6 +14,9 @@ import { recorteComoUrl, carregar as carregarArte, preparar, quadroParado, varia
 import { Fauna } from './Fauna';
 import { DiaNoite } from './DiaNoite';
 import { BotsVisuais } from './BotsVisuais';
+import { BausVisuais } from './BausVisuais';
+import { MULT_RARIDADE } from '../sim/criaturas';
+import { RARIDADES } from '../sim/baus';
 import { MapaEmPedacos } from './MapaEmPedacos';
 import { Magias } from './Magias';
 import { Som, type Efeito } from './Som';
@@ -84,6 +87,7 @@ export class CenaJogo extends Phaser.Scene {
   private avisouJangada = false;
   private naAgua = false;
   private bots!: BotsVisuais;
+  private bausMundo!: BausVisuais;
   private assistindo: import('../sim/bots').Bot | null = null;
 
   constructor() { super('jogo'); }
@@ -166,6 +170,10 @@ export class CenaJogo extends Phaser.Scene {
     const andavel = (tx: number, ty: number) => TILE_ANDAVEL[tileEm(m, tx, ty)] && !this.bloqueio.has(this.idx(tx, ty));
     this.fauna = new Fauna(this, andavel, m.ilhas[0], () => this.construcoes.filter(c => c.tipo === 'fogueira'), seed);
     this.diaNoite = new DiaNoite(this);
+    this.bausMundo = new BausVisuais(this, m, seed, this.fauna,
+      (x, y, sim) => { if (sim) this.bloqueio.add(this.idx(x, y)); else this.bloqueio.delete(this.idx(x, y)); },
+      (x, y) => this.bloqueio.has(this.idx(x, y)) || !!this.recursos.porTile.get(this.idx(x, y)),
+      save?.bausMundo);
     this.eraNoite = ehNoite(this.tempoMundo);
     this.time.addEvent({ delay: 700, loop: true, callback: () => {
       if (!this.morto) this.fauna.tentarNascer(this.jogador.x / T, this.jogador.y / T, ehNoite(this.tempoMundo));
@@ -284,7 +292,7 @@ export class CenaJogo extends Phaser.Scene {
       seed: this.mundo.seed, participantes: this.mundo.ilhas.filter(i => i.dono !== null).length,
       jogador: { x: Math.round(this.jogador.x), y: Math.round(this.jogador.y) },
       inventario: this.inv, construcoes: this.construcoes,
-      status: this.status, tempo: Math.round(this.tempoMundo), nivel: this.nivel, armazem: this.armazem, habilidades: this.habilidades, mana: Math.floor(this.mana),
+      status: this.status, tempo: Math.round(this.tempoMundo), nivel: this.nivel, armazem: this.armazem, bausMundo: this.bausMundo.salvar(), habilidades: this.habilidades, mana: Math.floor(this.mana),
       tutorial: { missao: this.missao, criados: this.criados, mortos: this.mortos },
       bots: this.bots.salvar(),
     });
@@ -509,7 +517,10 @@ export class CenaJogo extends Phaser.Scene {
   }
 
   /** O que o botão de ação faz perto de uma construção sua (baú, casa à noite, plantação). */
-  private interacaoPerto(noite: boolean): { c: Construcao; rotulo: string; fazer: () => void } | null {
+  private interacaoPerto(noite: boolean): { c: { x: number; y: number }; rotulo: string; fazer: () => void } | null {
+    const j = this.jogador;
+    const bau = this.bausMundo.perto(j.x / T, j.y / T);
+    if (bau) return { c: bau, rotulo: `Abrir baú ${RARIDADES[bau.raridade].nome.toLowerCase()}`, fazer: () => this.abrirBauMundo(bau) };
     const c = this.minhaConstrucaoPerto(['bau', 'casa', 'plantacao'], 1.6);
     if (!c) return null;
     if (c.tipo === 'bau') return { c, rotulo: 'Baú', fazer: () => this.ui.abrirBau() };
@@ -529,6 +540,17 @@ export class CenaJogo extends Phaser.Scene {
       c.plantadoEm = undefined; this.mostrarConstrucao(c); this.tocar('criar');
       this.textoFlutuante((c.x + 0.5) * T, c.y * T, '+3 Baga +2 Fibra'); this.mudou();
     } };
+  }
+
+  private abrirBauMundo(bau: import('../sim/baus').Bau) {
+    const r = this.bausMundo.abrir(bau, this.inv);
+    if ('motivo' in r) { this.ui.aviso(r.motivo === 'guardioes' ? `Derrote os guardiões primeiro (${bau.guardioes})` : 'Vazio'); return; }
+    const itens = Object.entries(r.pegou);
+    if (!itens.length) { this.ui.aviso('Mochila cheia! Guarde coisas no baú da ilha'); return; }
+    itens.forEach(([id, n], i) => this.textoFlutuante((bau.x + 0.5) * T, bau.y * T - i * 7, `+${n} ${ITENS[id as ItemId].nome}`, RARIDADES[bau.raridade].corCss));
+    this.ui.aviso(bau.aberto ? `Baú ${RARIDADES[bau.raridade].nome.toLowerCase()} aberto!` : 'Mochila cheia: parte ficou no baú');
+    this.tocar(bau.raridade === 'lendario' || bau.raridade === 'epico' ? 'nivel' : 'criar');
+    this.mudou();
   }
 
   /** Casa à noite: dorme até o amanhecer (se não houver monstro por perto). */
@@ -639,13 +661,16 @@ export class CenaJogo extends Phaser.Scene {
     this.textoFlutuante(b.c.x * T, b.c.y * T - 14, critico ? `${dano}!` : `${dano}`, critico ? '#ff8a3c' : '#ffd166');
     const def = CRIATURAS[b.c.tipo];
     if (this.fauna.ferir(b, dano, j.x / T, j.y / T)) {
+      if (b.c.ancora) this.bausMundo.guardiaoMorreu(b.c.ancora.bau);
+      const multR = MULT_RARIDADE[b.c.raridade][2];
       let i = 0;
       for (const [id, n] of Object.entries(def.solta)) {
         if (!cabe(this.inv, [id as ItemId])) { this.ui.aviso(`Mochila cheia: perdeu ${ITENS[id as ItemId].nome}`); continue; }
-        adicionar(this.inv, id as ItemId, n ?? 0);
-        this.textoFlutuante(b.c.x * T, b.c.y * T - 20 - i++ * 7, `+${n} ${ITENS[id as ItemId].nome}`);
+        const qn = Math.ceil((n ?? 0) * multR);
+        adicionar(this.inv, id as ItemId, qn);
+        this.textoFlutuante(b.c.x * T, b.c.y * T - 20 - i++ * 7, `+${qn} ${ITENS[id as ItemId].nome}`);
       }
-      const xp = Math.round(def.xp * (this.construcoes.some(c => c.tipo === 'estatua') ? 1.25 : 1)); // estátua: +25% XP
+      const xp = Math.round(def.xp * multR * (this.construcoes.some(c => c.tipo === 'estatua') ? 1.25 : 1)); // raridade e estátua aumentam o XP
       const subiu = ganharXp(this.status, xp);
       this.textoFlutuante(j.x, j.y - 26, `+${xp} XP`, '#ffd166');
       this.mortos++;
@@ -709,6 +734,7 @@ export class CenaJogo extends Phaser.Scene {
       if (noite) this.tocar('noite');
     }
     this.diaNoite.atualizar(this.tempoMundo, this.construcoes.filter(c => c.tipo === 'fogueira'), t);
+    this.bausMundo.atualizar(j.x / T, j.y / T, this.cameras.main.worldView, t);
     this.levarDano(this.fauna.atualizar(dt, j.x / T, j.y / T, !this.morto, noite), t);
     if (!this.morto) {
       // altar: mana 3× mais rápida por perto; casa: vida regenera por perto

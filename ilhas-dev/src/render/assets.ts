@@ -51,6 +51,8 @@ export function carregar(scene: Phaser.Scene) {
   for (const p of PERSONAGENS) scene.load.spritesheet(`p-${p}`, `chars/${p}.png`, { frameWidth: 16, frameHeight: 16 });
   for (const [tipo, a] of Object.entries(CRIATURA_ARTE)) scene.load.spritesheet(`cri-${tipo}`, a.arquivo, { frameWidth: a.w, frameHeight: a.h });
   for (const f of ['natureza', 'elementos', 'casas', 'acampamento']) scene.load.image(f, `cenario/${f}.png`);
+  scene.load.spritesheet('bau-pequeno', 'cenario/bau-pequeno.png', { frameWidth: 16, frameHeight: 16 });
+  scene.load.spritesheet('bau-grande', 'cenario/bau-grande.png', { frameWidth: 16, frameHeight: 14 });
   scene.load.setPath('');
 }
 
