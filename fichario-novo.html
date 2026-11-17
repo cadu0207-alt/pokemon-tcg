@@ -44,14 +44,37 @@
   <section class="fn-hero" id="fn-hero" aria-live="polite"></section>
 
   <section class="fn-bar" id="fn-bar">
-    <div class="fn-search">
-      <input id="fn-q" type="search" placeholder="Buscar por nome ou número…" autocomplete="off" aria-label="Buscar carta">
+    <!-- Linha 1: Busca à esquerda + Status e Foco/Importantes à direita -->
+    <div class="fn-bar-top">
+      <div class="fn-search">
+        <input id="fn-q" type="search" placeholder="Buscar por nome ou número…" autocomplete="off" aria-label="Buscar carta">
+      </div>
+      <div class="fn-chips" role="group" aria-label="Mostrar">
+        <button class="fn-chip is-on" data-status="all" type="button">Todas</button>
+        <button class="fn-chip" data-status="miss" type="button">Faltantes</button>
+        <button class="fn-chip" data-status="have" type="button">Coletadas</button>
+        <button class="fn-chip" id="fn-imp" type="button" hidden>★ Importantes</button>
+        <button class="fn-chip" id="fn-focus" type="button" hidden title="Esconde o cabeçalho e ajusta o fichário para caber inteiro na tela">⛶ Foco</button>
+      </div>
+      <label class="fn-sel" id="fn-artist-wrap" hidden><span>Artista</span>
+        <select id="fn-artist" aria-label="Filtrar por artista"><option value="">Todos</option></select>
+      </label>
     </div>
-    <div class="fn-chips" role="group" aria-label="Mostrar">
-      <button class="fn-chip is-on" data-status="all" type="button">Todas</button>
-      <button class="fn-chip" data-status="miss" type="button">Faltantes</button>
-      <button class="fn-chip" data-status="have" type="button">Coletadas</button>
-      <button class="fn-chip fn-tool" id="fn-more" type="button" aria-haspopup="dialog">🛠 Ferramentas</button>
+
+    <!-- Linha 2: Visualização, Idioma e Ordenar à esquerda | Tamanho e Engrenagem à direita -->
+    <div class="fn-bar-bottom">
+      <div class="fn-seg" id="fn-view" role="group" aria-label="Modo de visualização">
+        <button data-view="grid" type="button" class="is-on">Grade</button>
+        <button data-view="binder" type="button">Fichário</button>
+        <button data-view="table" type="button">Tabela</button>
+        <button data-view="dash" type="button">Dashboard</button>
+      </div>
+      <div class="fn-seg" id="fn-lang" role="group" aria-label="Idioma da arte" hidden>
+        <button data-lang="pt" type="button">PT</button>
+        <button data-lang="en" type="button">EN</button>
+        <button data-lang="jp" type="button">JP</button>
+        <button data-lang="cn" type="button">CN</button>
+      </div>
       <label class="fn-sel"><span>Ordenar</span>
         <select id="fn-sort" aria-label="Ordenar por">
           <option value="num">Número</option>
@@ -61,29 +84,19 @@
           <option value="dex">Pokédex</option>
         </select>
       </label>
-    </div>
-    <div class="fn-tools">
-      <button class="fn-chip" id="fn-imp" type="button" hidden>★ Importantes</button>
-      <button class="fn-chip" id="fn-focus" type="button" hidden title="Esconde o cabeçalho e ajusta o fichário para caber inteiro na tela">⛶ Foco</button>
-      <label class="fn-sel" id="fn-artist-wrap" hidden><span>Artista</span>
-        <select id="fn-artist" aria-label="Filtrar por artista"><option value="">Todos</option></select>
-      </label>
-      <div class="fn-seg" id="fn-lang" role="group" aria-label="Idioma da arte" hidden>
-        <button data-lang="pt" type="button">PT</button>
-        <button data-lang="en" type="button">EN</button>
-        <button data-lang="jp" type="button">JP</button>
-        <button data-lang="cn" type="button">CN</button>
-      </div>
-      <div class="fn-seg" id="fn-view" role="group" aria-label="Modo de visualização">
-        <button data-view="grid" type="button" class="is-on">Grade</button>
-        <button data-view="binder" type="button">Fichário</button>
-        <button data-view="table" type="button">Tabela</button>
-        <button data-view="dash" type="button">Dashboard</button>
-      </div>
-      <div class="fn-step" id="fn-cols-wrap" title="Tamanho das cartas">
-        <button id="fn-cols-minus" type="button" aria-label="Cartas maiores">–</button>
-        <span id="fn-cols-val">4</span>
-        <button id="fn-cols-plus" type="button" aria-label="Cartas menores">+</button>
+
+      <div class="fn-bar-right">
+        <div class="fn-step" id="fn-cols-wrap" title="Tamanho das cartas">
+          <button id="fn-cols-minus" type="button" aria-label="Cartas maiores">–</button>
+          <span id="fn-cols-val">4</span>
+          <button id="fn-cols-plus" type="button" aria-label="Cartas menores">+</button>
+        </div>
+        <button class="fn-chip fn-tool fn-gear" id="fn-more" type="button" aria-haspopup="dialog" aria-label="Ferramentas" title="Ferramentas">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
       </div>
     </div>
   </section>
