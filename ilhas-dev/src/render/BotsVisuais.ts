@@ -81,7 +81,8 @@ export class BotsVisuais {
     const linhas = this.bots.map(b => ({ nome: b.nome, perfil: b.perfil as string, pontos: pontuacao(b.nivel, b.construcoes, b.status), bot: b as Bot | null }));
     for (const p of pessoas) linhas.push({ nome: p.nome, perfil: 'pessoa', pontos: p.pontos, bot: null });
     linhas.push({ nome: 'Você', perfil: 'jogador', pontos: pontuacao(jogador.nivel, jogador.construcoes, jogador.status), bot: null });
-    return linhas.sort((a, b) => b.pontos - a.pontos || (a.bot ? 1 : 0) - (b.bot ? 1 : 0));
+    // empate: quem já tinha os pontos fica na frente; você só passa alguém quando tem MAIS pontos
+    return linhas.sort((a, b) => b.pontos - a.pontos || (a.perfil === 'jogador' ? 1 : 0) - (b.perfil === 'jogador' ? 1 : 0));
   }
 
   salvar(): SaveBot[] {

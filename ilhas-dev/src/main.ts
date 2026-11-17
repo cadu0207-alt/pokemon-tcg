@@ -48,7 +48,9 @@ if (q.has('n') || q.has('bots') || q.has('seed')) {
     const salvo = temSave(MUNDOS[mundo].n);
     menu.innerHTML = `
       <div class="cartao">
-        <h1>Ilhas</h1><p class="sub">Colete, construa e faça sua ilha crescer num arquipélago cheio de vizinhos.</p>
+        <h1>Ilhas</h1><p class="sub">Você começa numa ilha minúscula com um Cristal no centro. <b>Objetivo: alimente o Cristal até o nível 10</b> —
+          a ilha cresce de verdade — e chegue ao topo do ranking. Saia de jangada atrás de baús, mas cuidado: sua ilha fica desprotegida.</p>
+        <h2>Seu nome</h2><input id="apelido-local" maxlength="16" placeholder="Seu nome na ilha" value="${apelido.replace(/"/g, '')}">
         <h2>Seu personagem</h2><div class="personagens">${ESCOLHAS.map(p =>
           `<button data-p="${p}" class="${p === personagem ? 'sel' : ''}" title="${p}" style="background-image:url(${BASE}chars/${p}.png)"></button>`).join('')}</div>
         <h2>Mundo</h2><div class="opcoes">${Object.entries(MUNDOS).map(([k, m]) =>
@@ -124,7 +126,9 @@ if (q.has('n') || q.has('bots') || q.has('seed')) {
     if (b.id === 'continuar' || b.id === 'novo') {
       gravar('ilhas-ultimo', { mundo, dificuldade, personagem });
       const m = MUNDOS[mundo];
-      iniciar({ seed: 2026, participantes: m.n, bots: m.bots, dificuldade, personagem, novo: b.id === 'novo' });
+      apelido = ((document.getElementById('apelido-local') as HTMLInputElement)?.value || apelido).trim().slice(0, 16);
+      if (apelido) gravar('ilhas-apelido', apelido);
+      iniciar({ seed: 2026, participantes: m.n, bots: m.bots, dificuldade, personagem, novo: b.id === 'novo', nome: apelido || undefined });
     }
   });
 }

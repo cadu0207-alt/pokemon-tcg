@@ -79,9 +79,30 @@ e crescer precisa **sair de jangada** atrás de **baús guardados por animais** 
 | Cerca | barreira: criaturas não atravessam |
 | Estátua | +25% de XP |
 
+## Primeira impressão e retenção (implementado após a avaliação de 17/11)
+- Menu com nome e o objetivo da temporada (Cristal nível 10 + topo do ranking).
+- Textos do tutorial conforme o aparelho (celular fala dos botões, PC das teclas); missão recolhida no celular; ajuda de teclas some após 60 s no PC.
+- **Escudo de novato**: sem saque nos primeiros 10 min de jogo ou até a ilha chegar ao nível 2 (avisado ao sair da ilha).
+- Ranking: empatados dividem a posição; mostra "faltam X pts para passar Fulano".
+- **Bem-vindo de volta**: ao voltar depois de 2+ min, resumo do tempo fora e dos últimos acontecimentos; plantações crescem enquanto você está fora (até 8 h).
+
 ## Exploração (implementado)
 - **Névoa**: o mundo começa coberto; abre num raio de 7 tiles em volta de você e fica aberto (salvo no save). Sua ilha inteira já começa conhecida.
 - **Mapa-múndi** (botão 🗺 ou tecla M): terreno só onde você já viu, você, sua ilha, baús, ilhas rivais e de outros jogadores que você já encontrou, e o % de terra explorada.
+
+## Reinos (ideia do dono, 17/11/2026 — a desenhar e implementar)
+Crescer não é só ter mais terra: cada Cristal projeta um **círculo de influência** que aumenta com o nível da ilha.
+- **Choque de fronteiras**: quando o círculo de uma ilha alcança a ilha vizinha (ou as ilhas crescem até se encostar),
+  abre-se uma **disputa**. A ilha mais forte (nível + defesa + força do dono) pressiona a mais fraca.
+- **O lado que perde escolhe**:
+  1. **Mudar-se**: leva parte do que tem e recomeça numa ilha livre (sem perder tudo);
+  2. **Entrar no reino** do vencedor como **vassalo**: continua jogando a própria ilha, mas paga **tributo** de tempos em
+     tempos (uma % da produção vai para o rei). Em troca ganha **proteção**: as torres do reino ajudam a defender.
+- **Reinos** = grupos de pessoas e bots com um rei; aparecem no mapa-múndi com a mesma cor e no ranking como reino.
+- **Rebelião**: um vassalo que cresce pode se rebelar (sozinho ou junto com outros vassalos). Se a força dos rebeldes
+  passar a do rei, a ilha se liberta (ou o rebelde vira o novo rei).
+- Perguntas em aberto: a disputa é automática (cálculo de força) ou exige um ataque/combate jogado? quanto é o tributo
+  (sugestão: 10–20% de madeira/pedra/minério a cada hora de jogo)? o rei pode libertar/expulsar vassalos?
 
 ## Fases de implementação
 | Fase | Entrega | Status |

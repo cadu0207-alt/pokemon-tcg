@@ -29,6 +29,8 @@ export interface Save {
   /** Itens largados no chão. */
   /** Névoa: células já vistas, bits em base64. */
   nevoa?: string;
+  /** ms de jogo acumulados (escudo de novato) e quando foi salvo (resumo ao voltar) */
+  tempoJogado?: number; salvoEm?: number;
   chao?: { x: number; y: number; itens: Inventario }[];
   tutorial?: { missao: number; criados: Partial<Record<import('./itens').ItemId, number>>; mortos: number };
 }

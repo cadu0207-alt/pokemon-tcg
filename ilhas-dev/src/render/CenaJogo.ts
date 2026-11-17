@@ -82,6 +82,10 @@ export class CenaJogo extends Phaser.Scene {
   /** Armazém da ilha (baús): guarda o que não cabe na mochila. */
   private armazem: Inventario = novoInventario();
   private interagiu = false;
+  /** ms de jogo acumulados (escudo de novato: sem saque nos primeiros 10 min ou até a ilha nível 2) */
+  private tempoJogado = 0;
+  private estavaFora = false;
+  private salvoEm?: number;
   private nevoa!: Nevoa;
   private nevoaSalva?: string;
   /** Itens largados no chão: pilhas por tile, com o desenho do ícone. */
@@ -159,6 +163,8 @@ export class CenaJogo extends Phaser.Scene {
       if (save.diario) this.diario = save.diario;
       if (save.tumulo) this.tumulo = save.tumulo;
       if (save.nevoa) this.nevoaSalva = save.nevoa;
+      if (save.tempoJogado) this.tempoJogado = save.tempoJogado;
+      this.salvoEm = save.salvoEm;
       if (save.chao) this.chao = save.chao.map(c => ({ x: c.x, y: c.y, itens: c.itens }));
     } else {
       // começo: só o necessário para a primeira jangada (2 cordas + madeira)
@@ -213,7 +219,7 @@ export class CenaJogo extends Phaser.Scene {
       if (!this.morto) this.fauna.tentarNascer(this.jogador.x / T, this.jogador.y / T, ehNoite(this.tempoMundo));
     } });
     const cc = tileDoCristal(casa);
-    this.brilhoCristal = this.add.image((cc.x + 0.5) * T, (cc.y + 0.4) * T, 'brilho').setTint(0xb48cff).setBlendMode(Phaser.BlendModes.ADD).setDepth(20002).setScale(0.6);
+    this.brilhoCristal = this.add.image((cc.x + 0.5) * T, (cc.y + 0.4) * T, 'brilho').setTint(0xb48cff).setBlendMode(Phaser.BlendModes.ADD).setDepth((cc.y + 1) * T - 2).setScale(0.6);
     this.tweens.add({ targets: this.brilhoCristal, alpha: { from: 0.35, to: 0.8 }, scale: { from: 0.5, to: 0.7 }, duration: 1400, yoyo: true, repeat: -1 });
     this.fantasma = this.add.image(0, 0, 'acampamento', 'fogueira').setOrigin(0.5, 1).setDepth(30000).setAlpha(0.7).setVisible(false);
     this.alvo = this.add.rectangle(0, 0, T, T).setStrokeStyle(1, 0xffffff, 0.9).setOrigin(0).setDepth(5).setVisible(false);
@@ -301,6 +307,11 @@ export class CenaJogo extends Phaser.Scene {
     this.mostrarTumulo();
     for (const c of this.chao) this.desenharPilha(c);
     this.time.addEvent({ delay: 1000, loop: true, callback: () => this.atualizarPlantacoes() });
+    // no celular a missão começa recolhida (só o título), para não cobrir a ilha
+    if (document.body.classList.contains('toque')) document.getElementById('missao')!.classList.add('fechada');
+    this.time.delayedCall(1500, () => this.boasVindas());
+    // no PC a ajuda de teclas some depois de 60 s (passar o mouse em cima mostra de novo)
+    this.time.delayedCall(60_000, () => document.getElementById('ajuda')?.classList.add('discreta'));
     document.getElementById('missao')!.addEventListener('click', e => (e.currentTarget as HTMLElement).classList.toggle('fechada'));
     this.time.addEvent({ delay: 500, loop: true, callback: () => this.atualizarTutorial() });
 
@@ -341,7 +352,7 @@ export class CenaJogo extends Phaser.Scene {
       inventario: this.inv, construcoes: this.construcoes,
       status: this.status, tempo: Math.round(this.tempoMundo), nivel: this.nivel, armazem: this.armazem, bausMundo: this.bausMundo.salvar(),
       energia: Math.round(this.energia), diario: this.diario, tumulo: this.tumulo,
-      nevoa: this.nevoa?.salvar(),
+      nevoa: this.nevoa?.salvar(), tempoJogado: Math.round(this.tempoJogado), salvoEm: Date.now(),
       chao: this.chao.map(c => ({ x: c.x, y: c.y, itens: c.itens })), habilidades: this.habilidades, mana: Math.floor(this.mana),
       tutorial: { missao: this.missao, criados: this.criados, mortos: this.mortos },
       bots: this.bots.salvar(),
@@ -522,7 +533,9 @@ export class CenaJogo extends Phaser.Scene {
     if (this.missao >= MISSOES.length || this.assistindo) { el.hidden = true; return; }
     const m = MISSOES[this.missao];
     el.hidden = false;
-    const html = `<b>${this.missao + 1}/${MISSOES.length} · ${m.titulo}</b><p>${m.dica}</p><small>toque para recolher</small>`;
+    const celular = document.body.classList.contains('toque');
+    const dica = celular ? m.dica.replace('Criar (C)', 'Criar (🛠)').replace('Habilidades (K)', 'Habilidades (✦)').replace(/Espaço\/AÇÃO/g, 'o botão de ação') : m.dica.replace(/Espaço\/AÇÃO/g, 'Espaço');
+    const html = `<b>${this.missao + 1}/${MISSOES.length} · ${m.titulo}</b><p>${dica}</p><small>${celular ? 'toque para abrir/fechar' : 'clique para recolher'}</small>`;
     if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; }
   }
 
@@ -605,6 +618,25 @@ export class CenaJogo extends Phaser.Scene {
     } };
   }
 
+  static ESCUDO_MS = 10 * 60_000;
+  /** ms restantes do escudo de novato (0 = sem escudo) */
+  private escudo() { return this.nivel >= 2 ? 0 : Math.max(0, CenaJogo.ESCUDO_MS - this.tempoJogado); }
+
+  /** Volta ao jogo: plantações cresceram enquanto você esteve fora; resumo do que aconteceu. */
+  private boasVindas() {
+    if (!this.salvoEm) return;
+    const fora = Math.min(8 * 3600_000, Date.now() - this.salvoEm);
+    if (fora < 2 * 60_000) return;
+    let prontas = 0;
+    for (const c of this.construcoes) if (c.tipo === 'plantacao' && c.plantadoEm !== undefined) {
+      c.plantadoEm -= fora; prontas++; this.mostrarConstrucao(c);
+    }
+    const h = Math.floor(fora / 3600_000), min = Math.round((fora % 3600_000) / 60_000);
+    const tempo = h ? `${h}h${min ? ` ${min}min` : ''}` : `${min} min`;
+    const eventos = this.diario.slice(-3);
+    this.ui.boasVindas(tempo, prontas, eventos);
+  }
+
   /** Está fora da própria ilha? (então ela fica desprotegida) */
   private foraDeCasa() {
     const j = this.jogador;
@@ -620,6 +652,7 @@ export class CenaJogo extends Phaser.Scene {
   /** A cada 20 s, com você fora de casa, um rival pode tentar saquear a ilha. */
   private checarSaque() {
     if (this.morto || !this.foraDeCasa() || this.construcoes.length === 0) return;
+    if (this.escudo() > 0) return;
     if (Math.random() > chanceDeSaque(this.nivel)) return;
     const rivais = this.bots.bots;
     const rival = rivais.length ? rivais[Math.floor(Math.random() * rivais.length)].nome : 'Um pirata';
@@ -1008,7 +1041,14 @@ export class CenaJogo extends Phaser.Scene {
     j.setDepth(j.y);
     this.sombra.setPosition(j.x, j.y + 2).setDepth(j.y - 1).setVisible(!this.naAgua);
     this.som.atualizarMusica(noite);
-    document.body.classList.toggle('fora', this.foraDeCasa() && this.construcoes.length > 0);
+    const fora = this.foraDeCasa();
+    document.body.classList.toggle('fora', fora && this.construcoes.length > 0);
+    if (!this.morto) this.tempoJogado += dt;
+    if (fora !== this.estavaFora) {
+      this.estavaFora = fora;
+      const e = this.escudo();
+      if (fora && this.construcoes.length) this.ui.aviso(e > 0 ? `🛡 Escudo de novato: sua ilha está protegida por mais ${Math.ceil(e / 60_000)} min` : '⚠ Sua ilha está desprotegida enquanto você está fora');
+    }
     const agora = ehAgua(tileEm(this.mundo, Math.floor(j.x / T), Math.floor(j.y / T)));
     if (agora !== this.naAgua) {
       this.naAgua = agora;

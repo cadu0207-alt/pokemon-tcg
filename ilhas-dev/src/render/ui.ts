@@ -242,6 +242,19 @@ export class Interface {
     });
   }
 
+  /** Resumo ao voltar ao jogo depois de um tempo fora. */
+  boasVindas(tempo: string, plantacoes: number, eventos: string[]) {
+    const el = document.createElement('div');
+    el.id = 'boas-vindas'; el.className = 'painel';
+    el.innerHTML = `<h3>Bem-vindo de volta!</h3><p>Você ficou fora <b>${tempo}</b>.</p>
+      ${plantacoes ? `<p>🌾 ${plantacoes} plantaç${plantacoes > 1 ? 'ões estão prontas' : 'ão está pronta'} para colher.</p>` : ''}
+      ${eventos.length ? `<p class="ev">Últimos acontecimentos:</p><ul>${eventos.map(e => `<li>${e}</li>`).join('')}</ul>` : ''}
+      <button>Bora!</button>`;
+    el.querySelector('button')!.addEventListener('click', () => el.remove());
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 15_000);
+  }
+
   mapaAberto = false;
   alternarMapa(forcar?: boolean) {
     this.mapaAberto = forcar ?? !this.mapaAberto;
@@ -273,11 +286,16 @@ export class Interface {
     if (!this.rankingAberto) return;
     const r = this.g.ranking();
     const minha = r.findIndex(l => l.perfil === 'jogador');
+    // posição de verdade: empatados dividem a posição; o alvo é quem está logo acima com MAIS pontos
+    const eu = r[minha];
+    const pos = r.filter(l => l.pontos > eu.pontos).length + 1;
+    const empatados = r.filter(l => l !== eu && l.pontos === eu.pontos).length;
+    const acima = [...r].reverse().find(l => l.pontos > eu.pontos);
     const mostrar = r.slice(0, 8);
     const linha = (l: (typeof r)[number], i: number) =>
       `<li data-nome="${l.nome}" class="${l.perfil === 'jogador' ? 'eu' : l.perfil === 'pessoa' ? 'pessoa' : ''}"><span>${i + 1}º</span><b>${l.nome}</b><small>${Interface.ROTULO[l.perfil]}</small><em>${l.pontos}</em></li>`;
     $('ranking').innerHTML = `<h3>Ranking <button class="fechar">✕</button></h3>
-      <p class="sua">Sua posição: <b>${minha + 1}º de ${r.length}</b><small>Toque num nome para assistir</small></p><ol>${
+      <p class="sua">Sua posição: <b>${pos}º de ${r.length}</b>${empatados ? ` <small class="emp">empatado com ${empatados}</small>` : ''}${acima ? `<span class="alvo">Faltam <b>${acima.pontos - eu.pontos + 1}</b> pts para passar ${acima.nome}</span>` : r.length > 1 && !empatados ? `<span class="alvo">Você lidera por ${eu.pontos - r.find(l => l !== eu)!.pontos} pts</span>` : ''}<small>Toque num nome para assistir</small></p><ol>${
       mostrar.map(linha).join('')}${minha >= 8 ? linha(r[minha], minha) : ''}</ol>`;
     $('ranking').querySelector('.fechar')!.addEventListener('click', () => this.alternarRanking(false));
   }
