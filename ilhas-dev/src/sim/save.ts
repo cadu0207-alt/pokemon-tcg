@@ -14,7 +14,7 @@ export interface Save {
   status?: Status;
   tempo?: number;
   /** Estado compacto dos bots (fase 4). */
-  bots?: { x: number; y: number; inv: Inventario; construcoes: Construcao[]; status: Status; habilidades?: string[]; nivel?: number }[];
+  bots?: { ilha?: number; x: number; y: number; inv: Inventario; construcoes: Construcao[]; status: Status; habilidades?: string[]; nivel?: number }[];
   habilidades?: string[];
   mana?: number;
   /** Nível de expansão da ilha do jogador. */

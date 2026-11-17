@@ -8,7 +8,7 @@ import { T } from './texturas';
 import { PERSONAGENS, quadroParado } from './assets';
 
 
-export interface SaveBot { x: number; y: number; inv: Bot['inv']; construcoes: Construcao[]; status: Status; habilidades?: string[]; nivel?: number; }
+export interface SaveBot { ilha?: number; x: number; y: number; inv: Bot['inv']; construcoes: Construcao[]; status: Status; habilidades?: string[]; nivel?: number; }
 
 /** Liga a simulação dos bots ao mundo desenhado: sprites, nomes e efeitos no mapa. */
 export class BotsVisuais {
@@ -19,15 +19,16 @@ export class BotsVisuais {
   private barcos: Phaser.GameObjects.Image[] = [];
 
   constructor(
-    private scene: Phaser.Scene, private mundo: Mundo, quantidade: number, seed: number,
+    private scene: Phaser.Scene, private mundo: Mundo, quantidade: number, seed: number, ocupadas: Set<number>,
     private aoDestruir: (r: Recurso) => void, private aoConstruir: (c: Construcao) => void,
     private aoExpandir: (b: Bot) => void,
     save?: SaveBot[],
   ) {
 
-    this.bots = criarBots(mundo, quantidade, seed);
+    this.bots = criarBots(mundo, quantidade, seed, ocupadas);
     this.bots.forEach((b, i) => {
-      const s = save?.[i];
+      // o save do bot é achado pela ilha (no multijogador as ilhas livres mudam quando alguém entra)
+      const s = save?.find(x => x.ilha === b.ilha.id) ?? (save?.[i]?.ilha === undefined ? save?.[i] : undefined);
       if (s) {
         // save no meio de uma expedição: o bot volta para casa (a expedição não é salva)
         const emCasa = naIlha(b.ilha, Math.floor(s.x), Math.floor(s.y));
@@ -76,13 +77,14 @@ export class BotsVisuais {
     }
   }
 
-  ranking(jogador: { nivel: number; construcoes: Construcao[]; status: Status }) {
+  ranking(jogador: { nivel: number; construcoes: Construcao[]; status: Status }, pessoas: { nome: string; pontos: number }[] = []) {
     const linhas = this.bots.map(b => ({ nome: b.nome, perfil: b.perfil as string, pontos: pontuacao(b.nivel, b.construcoes, b.status), bot: b as Bot | null }));
+    for (const p of pessoas) linhas.push({ nome: p.nome, perfil: 'pessoa', pontos: p.pontos, bot: null });
     linhas.push({ nome: 'Você', perfil: 'jogador', pontos: pontuacao(jogador.nivel, jogador.construcoes, jogador.status), bot: null });
     return linhas.sort((a, b) => b.pontos - a.pontos || (a.bot ? 1 : 0) - (b.bot ? 1 : 0));
   }
 
   salvar(): SaveBot[] {
-    return this.bots.map(b => ({ x: +b.x.toFixed(2), y: +b.y.toFixed(2), inv: b.inv, construcoes: b.construcoes, status: b.status, habilidades: b.habilidades, nivel: b.nivel }));
+    return this.bots.map(b => ({ ilha: b.ilha.id, x: +b.x.toFixed(2), y: +b.y.toFixed(2), inv: b.inv, construcoes: b.construcoes, status: b.status, habilidades: b.habilidades, nivel: b.nivel }));
   }
 }

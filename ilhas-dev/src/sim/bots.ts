@@ -59,14 +59,17 @@ export interface Bot {
   expedicao: { destino: Ilha; fase: 'ida' | 'coletar' | 'volta'; ate: number; inicio: number; parado: number; alvo?: { x: number; y: number } | null; porto?: boolean; rota?: boolean } | null;
 }
 
-export function criarBots(m: Mundo, quantidade: number, seed: number): Bot[] {
+/**
+ * Cria os bots nas ilhas iniciais livres. `ocupadas` são os índices (slots) de ilhas com dono humano
+ * — por padrão só a 0, do jogador solo; no multijogador, as de todas as pessoas da temporada.
+ */
+export function criarBots(m: Mundo, quantidade: number, seed: number, ocupadas: Set<number> = new Set([0])): Bot[] {
   const perfis = Object.keys(PERFIS) as NomePerfil[];
   const rng = criarRng(seed ^ 0xb075);
-  const iniciais = m.ilhas.filter(i => i.dono !== null);
+  const livres = m.ilhas.filter(i => i.dono !== null).filter((_, slot) => !ocupadas.has(slot));
   const bots: Bot[] = [];
-  // a ilha 0 é do jogador; bots ficam com as próximas
-  for (let i = 0; i < Math.min(quantidade, iniciais.length - 1); i++) {
-    const ilha = iniciais[i + 1];
+  for (let i = 0; i < Math.min(quantidade, livres.length); i++) {
+    const ilha = livres[i];
     bots.push({
       id: i, nome: `${NOMES[i % NOMES.length]}${i >= NOMES.length ? ` ${Math.floor(i / NOMES.length) + 1}` : ''}`,
       perfil: perfis[Math.floor(rng() * perfis.length)], cor: Math.floor(rng() * 8),

@@ -50,6 +50,8 @@ Foi assim que achamos ilhas sem pedra, bots que se trancavam nas próprias const
 - [x] Cada construção tem função (baú/armazém com mochila limitada, casa, plantação, estações de trabalho, altar, portal que atira, estátua) — ver tabela em `DESIGN-v2.md`
 - [x] **v2 Fase B — Baús e raridades**: ~2 baús por ilha neutra (comum/raro/épico/lendário) com guardiões que só deixam abrir depois de derrotados; criaturas com raridade (mais vida, dano, XP e itens); baú aberto reaparece em outro lugar
 - [x] **v2 Fase C — Saque e defesa**: fora de casa a ilha fica desprotegida; rivais tentam saquear (força cresce com o nível); defesa por portal, cercas, fogueiras, casas e estátua; saque leva parte do baú e drena a energia do Cristal; energia zerada = a ilha encolhe 1 nível; recarga com cristal/gosma; diário da ilha; morte deixa metade da mochila num túmulo recuperável
+- [x] **Multijogador etapa 1** (Supabase + login do MyDeck): temporadas com a mesma semente para todos; cada pessoa ocupa uma ilha (função `ilhas_entrar`), os bots ficam com as livres; progresso privado na nuvem (`ilhas_saves`) e perfil público (`ilhas_jogadores`) com nível, pontos e construções, que aparecem na ilha da pessoa e no ranking. SQL em `../sql/ilhas_multijogador_17nov2026.sql` (testado num Postgres local: RLS, slot único, sem acesso ao save alheio)
+- [ ] Multijogador etapas 2 (saque entre pessoas no servidor) e 3 (tempo real)
 - [ ] v2 Fases D–E — baús com guardiões e raridades, saque e defesa, bots rivais, temporada
 
 ## Créditos

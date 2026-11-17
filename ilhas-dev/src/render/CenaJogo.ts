@@ -23,9 +23,14 @@ import { MapaEmPedacos } from './MapaEmPedacos';
 import { Magias } from './Magias';
 import { Som, type Efeito } from './Som';
 import { MISSOES, missaoAtual } from '../sim/tutorial';
-import { DIFICULDADE, type Dificuldade } from '../sim/bots';
+import { DIFICULDADE, pontuacao, type Dificuldade } from '../sim/bots';
 
-export interface Config { seed: number; participantes: number; bots: number; dificuldade: Dificuldade; novo: boolean; personagem?: Personagem; }
+export interface Config {
+  seed: number; participantes: number; bots: number; dificuldade: Dificuldade; novo: boolean; personagem?: Personagem;
+  /** Multijogador: minha ilha na temporada, nome público, nuvem e save vindo dela. */
+  slot?: number; nome?: string; nuvem?: import('../rede/nuvem').Nuvem; saveNuvem?: string | null;
+  outros?: import('../rede/nuvem').PerfilPublico[];
+}
 import { aprender, efeitos, MAGIAS, podeAprender, type Efeitos, type Magia } from '../sim/habilidades';
 import { Interface, toque } from './ui';
 
@@ -65,6 +70,10 @@ export class CenaJogo extends Phaser.Scene {
   private eraNoite = false;
   private invulneravelAte = 0;
   private morto = false;
+  private minhaIlha!: import('../sim/mundo').Ilha;
+  /** Pessoas reais da temporada (perfil público) e o que já foi desenhado de cada uma. */
+  private outros = new Map<string, { perfil: import('../rede/nuvem').PerfilPublico; nome: Phaser.GameObjects.Text }>();
+  private ultimaNuvem = 0;
   /** Tiles dos Cristais (centro de cada ilha de participante). */
   private cristais = new Set<number>();
   private brilhoCristal!: Phaser.GameObjects.Image;
@@ -108,13 +117,14 @@ export class CenaJogo extends Phaser.Scene {
     const { seed, participantes } = this.cfg;
     this.mundo = gerarMundo({ seed, participantes });
     this.recursos = iniciarRecursos(this.mundo);
-    this.chaveSave = `ilhas-save-${seed}-${participantes}`;
+    this.chaveSave = this.cfg.nuvem ? `ilhas-online-${this.cfg.nuvem.temporada.id}-${this.cfg.nuvem.userId}` : `ilhas-save-${seed}-${participantes}`;
     let lido: string | null = null;
     try {
       if (this.cfg.novo) localStorage.removeItem(this.chaveSave);
       lido = localStorage.getItem(this.chaveSave);
     } catch { /* armazenamento bloqueado */ }
-    const save = carregar(lido, seed, participantes);
+    // online: a nuvem é a fonte da verdade (o navegador é só cópia)
+    const save = carregar(this.cfg.saveNuvem ?? lido, seed, participantes) ?? carregar(lido, seed, participantes);
     preparar(this);
     registrarRecorte(id => (ITENS[id].construivel || id === 'minerio' ? recorteComoUrl(this, id) : null));
     this.personagem = this.cfg.personagem && PERSONAGENS.includes(this.cfg.personagem) ? this.cfg.personagem : 'Boy';
@@ -149,16 +159,23 @@ export class CenaJogo extends Phaser.Scene {
     }
     // O Cristal ocupa o centro de cada ilha de participante; ilhas já expandidas no save voltam ao tamanho
     const iniciais = m.ilhas.filter(i => i.dono !== null);
+    this.minhaIlha = iniciais[this.cfg.slot ?? 0] ?? iniciais[0];
     for (const ilha of iniciais) { const c = tileDoCristal(ilha); this.cristais.add(this.idx(c.x, c.y)); this.bloqueio.add(this.idx(c.x, c.y)); }
-    if (this.nivel > 1) expandirTerreno(m, this.recursos, iniciais[0], this.nivel);
-    save?.bots?.forEach((sb, i) => { if ((sb.nivel ?? 1) > 1 && iniciais[i + 1]) expandirTerreno(m, this.recursos, iniciais[i + 1], sb.nivel!); });
+    if (this.nivel > 1) expandirTerreno(m, this.recursos, this.minhaIlha, this.nivel);
+    // ilhas com dono humano: a minha e a das outras pessoas da temporada
+    const ocupadas = new Set<number>([this.cfg.slot ?? 0, ...(this.cfg.outros ?? []).map(o => o.slot)]);
+    for (const o of this.cfg.outros ?? []) if (o.slot !== this.cfg.slot && iniciais[o.slot]) this.mostrarOutro(o);
+    save?.bots?.forEach((sb, i) => {
+      const ilha = sb.ilha !== undefined ? m.ilhas[sb.ilha] : iniciais[i + 1];
+      if ((sb.nivel ?? 1) > 1 && ilha && !ocupadas.has(iniciais.indexOf(ilha))) expandirTerreno(m, this.recursos, ilha, sb.nivel!);
+    });
     for (const c of this.construcoes) this.removerRecursoSob(c.x, c.y);
     for (const r of m.recursos) if (this.recursos.porTile.get(this.idx(r.x, r.y)) === r) this.mostrarRecurso(r);
     for (const c of this.construcoes) this.mostrarConstrucao(c);
 
     // Bots: cada um na sua ilha, decidindo sozinho o que fazer.
     const nBots = Math.max(0, Math.min(participantes - 1, this.cfg.bots));
-    this.bots = new BotsVisuais(this, m, nBots, seed,
+    this.bots = new BotsVisuais(this, m, nBots, seed, ocupadas,
       r => { this.mapa.definirObjeto(r.x, r.y, null); this.bloqueio.delete(this.idx(r.x, r.y)); },
       c => { this.removerRecursoSob(c.x, c.y); this.mostrarConstrucao(c); },
       b => this.aplicarExpansao(b.ilha, b.nivel),
@@ -168,7 +185,7 @@ export class CenaJogo extends Phaser.Scene {
       this.mostrarConstrucao(c);
     }
 
-    const casa = m.ilhas[0];
+    const casa = this.minhaIlha;
     const nasce = tileDeNascimento(casa);
     const ini = save?.jogador ?? { x: (nasce.x + 0.5) * T, y: (nasce.y + 0.5) * T };
     this.jogador = this.add.sprite(ini.x, ini.y, `p-${this.personagem}`, 0);
@@ -178,7 +195,7 @@ export class CenaJogo extends Phaser.Scene {
     window.addEventListener('pointerdown', destravar); window.addEventListener('keydown', destravar);
     this.barco = this.add.image(0, 0, 'jangada').setOrigin(0.5, 0).setVisible(false);
     const andavel = (tx: number, ty: number) => TILE_ANDAVEL[tileEm(m, tx, ty)] && !this.bloqueio.has(this.idx(tx, ty));
-    this.fauna = new Fauna(this, andavel, m.ilhas[0], () => this.construcoes.filter(c => c.tipo === 'fogueira'), seed);
+    this.fauna = new Fauna(this, andavel, this.minhaIlha, () => this.construcoes.filter(c => c.tipo === 'fogueira'), seed);
     this.diaNoite = new DiaNoite(this);
     this.bausMundo = new BausVisuais(this, m, seed, this.fauna,
       (x, y, sim) => { if (sim) this.bloqueio.add(this.idx(x, y)); else this.bloqueio.delete(this.idx(x, y)); },
@@ -211,7 +228,7 @@ export class CenaJogo extends Phaser.Scene {
       confirmarConstrucao: () => this.construir(),
       zoom: f => cam.setZoom(Phaser.Math.Clamp(cam.zoom * f, 0.5, 5)),
       comer: id => this.comer(id),
-      ranking: () => this.bots.ranking({ nivel: this.nivel, construcoes: this.construcoes, status: this.status }),
+      ranking: () => this.bots.ranking({ nivel: this.nivel, construcoes: this.construcoes, status: this.status }, this.outrosNoRanking()),
       requisitos: () => requisitosExpansao(this.nivel, this.construcoes, this.inv),
       expandir: () => this.expandir(),
       energia: () => this.energia,
@@ -267,6 +284,7 @@ export class CenaJogo extends Phaser.Scene {
     if (save) this.ui.aviso('Progresso carregado');
     this.time.addEvent({ delay: 1200, loop: true, callback: () => this.defenderComTorres() });
     this.time.addEvent({ delay: 20_000, loop: true, callback: () => this.checarSaque() });
+    if (this.cfg.nuvem) this.time.addEvent({ delay: 30_000, loop: true, callback: () => void this.atualizarOutros() });
     this.mostrarTumulo();
     this.time.addEvent({ delay: 1000, loop: true, callback: () => this.atualizarPlantacoes() });
     document.getElementById('missao')!.addEventListener('click', e => (e.currentTarget as HTMLElement).classList.toggle('fechada'));
@@ -313,6 +331,13 @@ export class CenaJogo extends Phaser.Scene {
       bots: this.bots.salvar(),
     });
     try { localStorage.setItem(this.chaveSave, texto); this.sujo = false; } catch { /* sem armazenamento: segue sem salvar */ }
+    // nuvem: no máximo a cada 15 s (ou ao forçar), com o perfil público junto
+    const nuvem = this.cfg.nuvem;
+    if (nuvem && (forcar || Date.now() - this.ultimaNuvem > 15_000)) {
+      this.ultimaNuvem = Date.now();
+      void nuvem.salvar(texto, { nome: this.cfg.nome ?? 'Ilhéu', personagem: this.personagem, nivel: this.nivel,
+        pontos: pontuacao(this.nivel, this.construcoes, this.status), construcoes: this.construcoes });
+    }
   }
 
   private selecionarConstrucao(id: ItemId | null) {
@@ -335,7 +360,7 @@ export class CenaJogo extends Phaser.Scene {
       const r = this.recursos.porTile.get(this.idx(tx, ty));
       return !!r && recursoAtivo(this.recursos, r);
     };
-    const motivo = validarLocal(this.mundo, this.mundo.ilhas[0], this.construcoes, ocupado, x, y);
+    const motivo = validarLocal(this.mundo, this.minhaIlha, this.construcoes, ocupado, x, y);
     if (motivo) return motivo;
     // Não pode construir em cima do personagem.
     const j = this.jogador;
@@ -468,7 +493,7 @@ export class CenaJogo extends Phaser.Scene {
     const el = document.getElementById('missao')!;
     // pisou em terra de outra ilha?
     const j = this.jogador, tx = Math.floor(j.x / T), ty = Math.floor(j.y / T);
-    if (!this.visitouOutra && TILE_ANDAVEL[tileEm(this.mundo, tx, ty)] && Math.hypot(tx - this.mundo.ilhas[0].cx, ty - this.mundo.ilhas[0].cy) > this.mundo.ilhas[0].raio * 1.6) this.visitouOutra = true;
+    if (!this.visitouOutra && TILE_ANDAVEL[tileEm(this.mundo, tx, ty)] && Math.hypot(tx - this.minhaIlha.cx, ty - this.minhaIlha.cy) > this.minhaIlha.raio * 1.6) this.visitouOutra = true;
     const nova = missaoAtual({ inv: this.inv, construcoes: this.construcoes, status: this.status, habilidades: this.habilidades, criados: this.criados, mortos: this.mortos, nivel: this.nivel, visitouOutra: this.visitouOutra }, this.missao);
     if (nova !== this.missao) {
       this.missao = nova; this.sujo = true;
@@ -496,7 +521,7 @@ export class CenaJogo extends Phaser.Scene {
     const novo = pagarExpansao(this.nivel, this.construcoes, this.inv);
     if (!novo) { this.ui.aviso('Ainda falta coisa para alimentar o Cristal'); return; }
     this.nivel = novo;
-    this.aplicarExpansao(this.mundo.ilhas[0], novo);
+    this.aplicarExpansao(this.minhaIlha, novo);
     this.ui.aviso(`O Cristal brilhou: sua ilha cresceu para o nível ${novo}!`);
     this.tocar('nivel');
     this.cameras.main.flash(400, 200, 180, 255);
@@ -505,7 +530,7 @@ export class CenaJogo extends Phaser.Scene {
 
   /** Jogador encostado no Cristal da própria ilha? */
   private pertoDoCristal() {
-    const c = tileDoCristal(this.mundo.ilhas[0]);
+    const c = tileDoCristal(this.minhaIlha);
     return Math.hypot(this.jogador.x / T - (c.x + 0.5), this.jogador.y / T - (c.y + 0.5)) < 1.7;
   }
 
@@ -562,7 +587,7 @@ export class CenaJogo extends Phaser.Scene {
   /** Está fora da própria ilha? (então ela fica desprotegida) */
   private foraDeCasa() {
     const j = this.jogador;
-    return !naIlha(this.mundo.ilhas[0], Math.floor(j.x / T), Math.floor(j.y / T));
+    return !naIlha(this.minhaIlha, Math.floor(j.x / T), Math.floor(j.y / T));
   }
 
   private registrar(msg: string) {
@@ -596,7 +621,7 @@ export class CenaJogo extends Phaser.Scene {
   private perderNivel() {
     if (this.nivel <= 1) { this.energia = 30; return; }
     this.nivel--;
-    this.aplicarExpansao(this.mundo.ilhas[0], this.nivel);
+    this.aplicarExpansao(this.minhaIlha, this.nivel);
     const afundou = this.construcoes.filter(c => !TILE_ANDAVEL[tileEm(this.mundo, c.x, c.y)]);
     for (const c of afundou) {
       this.construcoes.splice(this.construcoes.indexOf(c), 1);
@@ -682,6 +707,44 @@ export class CenaJogo extends Phaser.Scene {
       const k = this.idx(c.x, c.y), est = this.nomeConstrucao(c);
       if (this.estagioPlantacao.get(k) !== est) { this.estagioPlantacao.set(k, est); this.mostrarConstrucao(c); }
     }
+  }
+
+  /** Desenha a ilha de outra pessoa da temporada: tamanho, construções e o nome sobre o Cristal. */
+  private mostrarOutro(o: import('../rede/nuvem').PerfilPublico) {
+    const iniciais = this.mundo.ilhas.filter(i => i.dono !== null);
+    const ilha = iniciais[o.slot]; if (!ilha) return;
+    const antes = this.outros.get(o.user_id);
+    if (!antes || antes.perfil.nivel !== o.nivel) this.aplicarExpansaoDeOutro(ilha, o.nivel);
+    for (const c of antes?.perfil.construcoes ?? []) { this.construidoEm.delete(this.idx(c.x, c.y)); this.bloqueio.delete(this.idx(c.x, c.y)); this.mapa?.definirObjeto(c.x, c.y, null); }
+    for (const c of o.construcoes ?? []) {
+      if (!TILE_ANDAVEL[tileEm(this.mundo, c.x, c.y)]) continue;
+      this.removerRecursoSob(c.x, c.y);
+      this.construidoEm.set(this.idx(c.x, c.y), c.tipo); this.bloqueio.add(this.idx(c.x, c.y));
+      this.mapa?.definirObjeto(c.x, c.y, c.tipo in OBJETOS ? c.tipo : null);
+    }
+    const cc = tileDoCristal(ilha);
+    const nome = antes?.nome ?? this.add.text((cc.x + 0.5) * T, cc.y * T - 10, '', {
+      fontFamily: 'system-ui, sans-serif', fontSize: '30px', color: '#ffe9a8', stroke: '#3a2f45', strokeThickness: 6,
+    }).setOrigin(0.5, 1).setScale(0.2).setDepth(29000);
+    nome.setText(`${o.nome} · nv ${o.nivel}`);
+    this.outros.set(o.user_id, { perfil: o, nome });
+  }
+
+  private aplicarExpansaoDeOutro(ilha: import('../sim/mundo').Ilha, nivel: number) {
+    if (this.mapa) this.aplicarExpansao(ilha, nivel);
+    else expandirTerreno(this.mundo, this.recursos, ilha, nivel);
+  }
+
+  /** Atualiza as ilhas das outras pessoas (a cada 30 s). */
+  private async atualizarOutros() {
+    const nuvem = this.cfg.nuvem; if (!nuvem) return;
+    try {
+      for (const o of await nuvem.jogadores()) if (o.user_id !== nuvem.userId) this.mostrarOutro(o);
+    } catch (e) { console.warn('Ilhas: não deu para atualizar os outros jogadores', e); }
+  }
+
+  private outrosNoRanking() {
+    return [...this.outros.values()].map(({ perfil }) => ({ nome: perfil.nome, pontos: perfil.pontos }));
   }
 
   private aprenderHabilidade(id: string) {
@@ -801,7 +864,7 @@ export class CenaJogo extends Phaser.Scene {
     this.time.delayedCall(900, () => {
       // renasce ao lado da casa (se tiver) ou do Cristal
       const casaC = this.construcoes.find(c => c.tipo === 'casa');
-      const p = casaC ? { x: casaC.x, y: casaC.y + 1 } : tileDeNascimento(this.mundo.ilhas[0]);
+      const p = casaC ? { x: casaC.x, y: casaC.y + 1 } : tileDeNascimento(this.minhaIlha);
       this.jogador.setPosition((p.x + 0.5) * T, (p.y + 0.5) * T);
       for (const b of [...this.fauna.lista]) this.fauna.remover(b);
       this.status.vida = this.status.vidaMax;
@@ -894,7 +957,7 @@ export class CenaJogo extends Phaser.Scene {
     const apertou = k.SPACE.isDown || k.E.isDown || toque.acao;
     // objeto mais perto ganha o botão de ação (baú ao lado do Cristal precisa abrir)
     const interPrevia = this.interacaoPerto(noite);
-    const cc = tileDoCristal(this.mundo.ilhas[0]);
+    const cc = tileDoCristal(this.minhaIlha);
     const dCristal = Math.hypot(j.x / T - (cc.x + 0.5), j.y / T - (cc.y + 0.5));
     const dInter = interPrevia ? Math.hypot(j.x / T - (interPrevia.c.x + 0.5), j.y / T - (interPrevia.c.y + 0.5)) : Infinity;
     if (this.pertoDoCristal() && dCristal < dInter) {

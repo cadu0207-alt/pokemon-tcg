@@ -77,7 +77,7 @@ export class Interface {
     $('btn-voltar').addEventListener('click', () => g.assistir(null));
     $('ranking').addEventListener('click', e => {
       const li = (e.target as HTMLElement).closest<HTMLElement>('[data-nome]');
-      if (li && li.dataset.nome !== 'Você') { g.assistir(li.dataset.nome!); this.alternarRanking(false); }
+      if (li && li.dataset.nome !== 'Você' && !li.classList.contains('pessoa')) { g.assistir(li.dataset.nome!); this.alternarRanking(false); }
     });
     this.barra.addEventListener('click', e => {
       const slot = (e.target as HTMLElement).closest<HTMLElement>('[data-id]');
@@ -201,14 +201,14 @@ export class Interface {
     if (this.rankingAberto) { this.alternarCraft(false); this.atualizarRanking(); }
   }
 
-  private static ROTULO: Record<string, string> = { coletor: 'coletor', construtor: 'construtor', cacador: 'caçador', explorador: 'explorador', jogador: 'você' };
+  private static ROTULO: Record<string, string> = { coletor: 'coletor', construtor: 'construtor', cacador: 'caçador', explorador: 'explorador', jogador: 'você', pessoa: 'jogador' };
   atualizarRanking() {
     if (!this.rankingAberto) return;
     const r = this.g.ranking();
     const minha = r.findIndex(l => l.perfil === 'jogador');
     const mostrar = r.slice(0, 8);
     const linha = (l: (typeof r)[number], i: number) =>
-      `<li data-nome="${l.nome}" class="${l.perfil === 'jogador' ? 'eu' : ''}"><span>${i + 1}º</span><b>${l.nome}</b><small>${Interface.ROTULO[l.perfil]}</small><em>${l.pontos}</em></li>`;
+      `<li data-nome="${l.nome}" class="${l.perfil === 'jogador' ? 'eu' : l.perfil === 'pessoa' ? 'pessoa' : ''}"><span>${i + 1}º</span><b>${l.nome}</b><small>${Interface.ROTULO[l.perfil]}</small><em>${l.pontos}</em></li>`;
     $('ranking').innerHTML = `<h3>Ranking <button class="fechar">✕</button></h3>
       <p class="sua">Sua posição: <b>${minha + 1}º de ${r.length}</b><small>Toque num nome para assistir</small></p><ol>${
       mostrar.map(linha).join('')}${minha >= 8 ? linha(r[minha], minha) : ''}</ol>`;
