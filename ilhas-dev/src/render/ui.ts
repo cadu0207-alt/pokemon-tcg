@@ -392,7 +392,7 @@ export class Interface {
     const acima = [...r].reverse().find(l => l.pontos > eu.pontos);
     const mostrar = r.slice(0, 8);
     const linha = (l: (typeof r)[number], i: number) =>
-      `<li data-nome="${l.nome}" class="${l.perfil === 'jogador' ? 'eu' : l.perfil === 'pessoa' ? 'pessoa' : ''}"><span>${i + 1}º</span><b>${l.nome}</b><small>${l.tag ?? Interface.ROTULO[l.perfil]}</small><em>${l.pontos}</em></li>`;
+      `<li data-nome="${l.nome}" class="${l.perfil === 'jogador' ? 'eu' : l.perfil === 'pessoa' ? 'pessoa' : ''}"><span>${r.filter(o => o.pontos > l.pontos).length + 1}º</span><b>${l.nome}</b><small>${l.tag ?? Interface.ROTULO[l.perfil]}</small><em>${l.pontos}</em></li>`;
     $('ranking').innerHTML = `<h3>Ranking <button class="fechar">✕</button></h3>
       <p class="sua">Sua posição: <b>${pos}º de ${r.length}</b>${empatados ? ` <small class="emp">empatado com ${empatados}</small>` : ''}${acima ? `<span class="alvo">Faltam <b>${acima.pontos - eu.pontos + 1}</b> pts para passar ${acima.nome}</span>` : r.length > 1 && !empatados ? `<span class="alvo">Você lidera por ${eu.pontos - r.find(l => l !== eu)!.pontos} pts</span>` : ''}<small>Toque num nome para assistir</small></p><ol>${
       mostrar.map(linha).join('')}${minha >= 8 ? linha(r[minha], minha) : ''}</ol>`;

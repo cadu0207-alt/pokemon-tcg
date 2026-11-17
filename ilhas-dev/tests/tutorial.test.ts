@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { MISSOES, missaoAtual, type EstadoTutorial } from '../src/sim/tutorial';
+import { MISSOES, TUTORIAL_BASE, missaoAtual, type EstadoTutorial } from '../src/sim/tutorial';
 import { novoInventario, adicionar } from '../src/sim/inventario';
 import { novoStatus } from '../src/sim/criaturas';
 
@@ -20,6 +20,8 @@ describe('tutorial', () => {
     e.construcoes.push({ tipo: 'fogueira', x: 0, y: 0 });
     expect(missaoAtual(e)).toBe(5);
     e.nivel = 2; e.mortos = 1; e.habilidades.push('c1');
+    expect(missaoAtual(e)).toBe(TUTORIAL_BASE);
+    e.bausAbertos = 1; e.construcoes.push({ tipo: 'cerca', x: 1, y: 0 }, { tipo: 'bau', x: 2, y: 0 }); e.nivel = 3;
     expect(missaoAtual(e)).toBe(MISSOES.length);
   });
   it('não volta atrás quando o inventário é gasto', () => {

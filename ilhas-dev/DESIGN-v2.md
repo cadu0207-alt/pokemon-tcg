@@ -99,6 +99,14 @@ e crescer precisa **sair de jangada** atrás de **baús guardados por animais** 
 - Vitória: abrir 30% de vantagem (ou estar na frente no fim da semana) = +1 cristal no baú, XP e cartão para compartilhar; vem um novo rival.
 - Se você lidera, o rival é o mais perto abaixo e a regra vira "segurar a frente até o fim da semana" (sem vitória instantânea).
 
+## Ajustes da 2ª avaliação (17/11)
+- Morte justa: cristal e jangada nunca caem; morrer de novo junta o túmulo antigo ao novo (nada se perde).
+- Saque que não leva nada não drena o Cristal; escudo de novato até a ilha nível 3 ou 20 min de jogo.
+- Baús mostram raridade e nível recomendado (verde ✓ / amarelo ⚠ / vermelho ☠): comum 3, raro 5, épico 7, lendário 9.
+- Missões 9–12: abrir baú do mundo, cerca/torre, baú da ilha, ilha nível 3. Metas do dia só contam depois das 8 primeiras.
+- Bugs: "zumbi" com 0 de vida ao recarregar, preso dentro de recurso ao recarregar, posição do ranking diferente no cabeçalho e na lista,
+  painéis abertos durante viagem pelo mapa.
+
 ## Metas do dia (implementado)
 - 3 metas curtas por dia (as mesmas para todos no mesmo dia), ajustadas ao nível da ilha: coletar, criar, derrotar criaturas,
   abrir baús, construir, colher, explorar. Aparecem no card de missão depois do tutorial.

@@ -37,7 +37,7 @@ export interface Save {
   /** rival da semana: chave ('Nome' de bot ou 'pessoa:Nome'), até quando vale (Date.now) e quem estava na frente */
   rival?: { chave: string; nome: string; ate: number; frente: boolean; defender?: boolean } | null;
   chao?: { x: number; y: number; itens: Inventario }[];
-  tutorial?: { missao: number; criados: Partial<Record<import('./itens').ItemId, number>>; mortos: number };
+  tutorial?: { missao: number; criados: Partial<Record<import('./itens').ItemId, number>>; mortos: number; bausAbertos?: number };
 }
 
 export function serializar(s: Omit<Save, 'versao'>): string {

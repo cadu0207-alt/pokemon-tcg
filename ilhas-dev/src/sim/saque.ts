@@ -38,7 +38,9 @@ export function resolverSaque(nivel: number, construcoes: Construcao[], armazem:
     const n = Math.ceil(qtd(armazem, id) * fracao);
     if (n > 0 && remover(armazem, id, n)) roubado[id] = n;
   }
-  return { repelido: false, forca: f, defesa: d, roubado, energiaPerdida: Math.round(20 + 25 * vantagem) };
+  // baú vazio: o invasor vai embora sem drenar o Cristal (não pune quem ainda não tem nada)
+  const levou = Object.keys(roubado).length > 0;
+  return { repelido: false, forca: f, defesa: d, roubado, energiaPerdida: levou ? Math.round(20 + 25 * vantagem) : 0 };
 }
 
 /** Recarga do Cristal: o que cada item dá de energia. */
@@ -49,10 +51,13 @@ export const ENERGIA_POR_ITEM: Partial<Record<ItemId, number>> = { cristal: 50, 
 export interface Tumulo { x: number; y: number; itens: Inventario; }
 
 /** Na morte, metade de cada pilha cai no túmulo (a jangada nunca: sem ela não dá para voltar). */
+/** Itens que nunca caem no túmulo (os mais difíceis de conseguir). */
+export const NAO_CAEM: ItemId[] = ['jangada', 'cristal'];
+
 export function criarTumulo(mochila: Inventario, x: number, y: number): Tumulo | null {
   const itens: Inventario = { itens: {}, durabilidade: {} };
   for (const id of Object.keys(mochila.itens) as ItemId[]) {
-    if (id === 'jangada') continue;
+    if (NAO_CAEM.includes(id)) continue;
     const n = Math.ceil(qtd(mochila, id) / 2);
     const dur = mochila.durabilidade[id];
     if (n > 0 && remover(mochila, id, n)) { adicionar(itens, id, n); if (dur !== undefined) itens.durabilidade[id] = dur; }

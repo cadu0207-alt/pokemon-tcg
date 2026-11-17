@@ -133,7 +133,8 @@
     #menu .aviso-novo { font-size: 11px; color: #8a7f95; text-align: center; margin: 8px 0 0; }
     #missao { position: fixed; left: 12px; top: calc(max(12px, env(safe-area-inset-top)) + 96px); width: 200px; padding: 8px 10px; font-size: 12px; cursor: pointer; }
     #missao b { display: block; font-size: 13px; color: #ffd166; } #missao small { opacity: .7; }
-    #missao.fechada p, #missao.fechada .metas { display: none; }
+    #missao.fechada p, #missao.fechada .metas, #missao.fechada .linha-metas { display: none; }
+    #missao .linha-metas { display: block; margin: 4px 0; color: #ffd166; opacity: 1 !important; }
     body.toque #missao { top: calc(max(12px, env(safe-area-inset-top)) + 96px); width: auto; max-width: 60vw; font-size: 11px; box-sizing: border-box; padding: 6px 10px; }
     #missao.fechada small { display: none; }
     #missao.feita { animation: feita .6s; } @keyframes feita { 50% { transform: scale(1.06); background: #6db35ccc; } }

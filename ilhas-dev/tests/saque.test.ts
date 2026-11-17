@@ -24,11 +24,15 @@ describe('saque', () => {
   it('ilhas mais evoluídas atraem mais saques', () => {
     expect(chanceDeSaque(8)).toBeGreaterThan(chanceDeSaque(2));
   });
-  it('morte deixa metade da mochila no túmulo, mas nunca a jangada', () => {
+  it('morte deixa metade da mochila no túmulo, mas nunca a jangada nem o cristal', () => {
     const m = novoInventario(); adicionar(m, 'madeira', 9); adicionar(m, 'jangada', 1); adicionar(m, 'cristal', 1);
     const t = criarTumulo(m, 5, 5)!;
     expect(qtd(t.itens, 'madeira')).toBe(5); expect(qtd(m, 'madeira')).toBe(4);
-    expect(qtd(t.itens, 'cristal')).toBe(1); expect(qtd(m, 'cristal')).toBe(0);
+    expect(qtd(t.itens, 'cristal')).toBe(0); expect(qtd(m, 'cristal')).toBe(1);
     expect(qtd(m, 'jangada')).toBe(1); expect(qtd(t.itens, 'jangada')).toBe(0);
+  });
+  it('saque num baú vazio não drena o Cristal', () => {
+    const r = resolverSaque(3, [], novoInventario(), criarRng(1));
+    expect(r.repelido).toBe(false); expect(r.energiaPerdida).toBe(0);
   });
 });

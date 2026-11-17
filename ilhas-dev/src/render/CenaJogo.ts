@@ -27,7 +27,7 @@ import { RARIDADES } from '../sim/baus';
 import { MapaEmPedacos } from './MapaEmPedacos';
 import { Magias } from './Magias';
 import { Som, type Efeito } from './Som';
-import { MISSOES, missaoAtual } from '../sim/tutorial';
+import { MISSOES, TUTORIAL_BASE, missaoAtual } from '../sim/tutorial';
 import { DIFICULDADE, pontuacao, type Dificuldade } from '../sim/bots';
 
 export interface Config {
@@ -95,6 +95,8 @@ export class CenaJogo extends Phaser.Scene {
   private reinos: EstadoReinos = novoEstadoReinos();
   private metas: EstadoMetas | null = null;
   /** `defender`: o rival foi escolhido abaixo de você (você lidera): vence quem estiver na frente no fim da semana */
+  private renascerAoCarregar = false;
+  private bausAbertos = 0;
   private rival: { chave: string; nome: string; ate: number; frente: boolean; defender?: boolean } | null = null;
   /** andar até um ponto tocado: tiles que faltam e a marca no chão */
   private rota: [number, number][] | null = null;
@@ -167,9 +169,10 @@ export class CenaJogo extends Phaser.Scene {
       Object.assign(this.inv.durabilidade, save.inventario.durabilidade);
       this.construcoes = save.construcoes;
       if (save.status) this.status = save.status;
+      if (this.status.vida <= 0) { this.status.vida = this.status.vidaMax; this.renascerAoCarregar = true; }
       if (save.habilidades) this.habilidades = save.habilidades;
       if (save.mana !== undefined) this.mana = save.mana;
-      if (save.tutorial) { this.missao = save.tutorial.missao; this.criados = save.tutorial.criados; this.mortos = save.tutorial.mortos; }
+      if (save.tutorial) { this.missao = save.tutorial.missao; this.criados = save.tutorial.criados; this.mortos = save.tutorial.mortos; this.bausAbertos = save.tutorial.bausAbertos ?? 0; }
       if (save.tempo !== undefined) this.tempoMundo = save.tempo;
       this.nivel = save.nivel ?? 1;
       if (save.armazem) Object.assign(this.armazem, save.armazem);
@@ -233,6 +236,7 @@ export class CenaJogo extends Phaser.Scene {
       (x, y, sim) => { if (sim) this.bloqueio.add(this.idx(x, y)); else this.bloqueio.delete(this.idx(x, y)); },
       (x, y) => this.bloqueio.has(this.idx(x, y)) || !!this.recursos.porTile.get(this.idx(x, y)),
       save?.bausMundo);
+    this.bausMundo.nivelJogador = () => this.status.nivel;
     this.eraNoite = ehNoite(this.tempoMundo);
     this.time.addEvent({ delay: 700, loop: true, callback: () => {
       if (!this.morto) this.fauna.tentarNascer(this.jogador.x / T, this.jogador.y / T, ehNoite(this.tempoMundo));
@@ -334,6 +338,8 @@ export class CenaJogo extends Phaser.Scene {
     this.time.addEvent({ delay: 30_000, loop: true, callback: () => this.passoReinos() });
     this.time.addEvent({ delay: 10_000, loop: true, callback: () => this.atualizarRival() });
     this.time.delayedCall(5000, () => this.atualizarRival());
+    // save gravado no meio de um desmaio, ou o personagem preso num recurso que renasceu: põe num lugar livre
+    this.time.delayedCall(50, () => this.desencalhar());
     if (this.cfg.nuvem) this.time.addEvent({ delay: 30_000, loop: true, callback: () => void this.atualizarOutros() });
     // convites: confere ao entrar e a cada 2 min
     if (this.cfg.nuvem) { this.time.delayedCall(4000, () => void this.resgatarConvites()); this.time.addEvent({ delay: 120_000, loop: true, callback: () => void this.resgatarConvites() }); }
@@ -387,7 +393,7 @@ export class CenaJogo extends Phaser.Scene {
       energia: Math.round(this.energia), diario: this.diario, tumulo: this.tumulo,
       nevoa: this.nevoa?.salvar(), tempoJogado: Math.round(this.tempoJogado), salvoEm: Date.now(), reinos: this.reinos, metas: this.metas ?? undefined, rival: this.rival,
       chao: this.chao.map(c => ({ x: c.x, y: c.y, itens: c.itens })), habilidades: this.habilidades, mana: Math.floor(this.mana),
-      tutorial: { missao: this.missao, criados: this.criados, mortos: this.mortos },
+      tutorial: { missao: this.missao, criados: this.criados, mortos: this.mortos, bausAbertos: this.bausAbertos },
       bots: this.bots.salvar(),
     });
     try { localStorage.setItem(this.chaveSave, texto); this.sujo = false; } catch { /* sem armazenamento: segue sem salvar */ }
@@ -577,7 +583,7 @@ export class CenaJogo extends Phaser.Scene {
     // pisou em terra de outra ilha?
     const j = this.jogador, tx = Math.floor(j.x / T), ty = Math.floor(j.y / T);
     if (!this.visitouOutra && TILE_ANDAVEL[tileEm(this.mundo, tx, ty)] && Math.hypot(tx - this.minhaIlha.cx, ty - this.minhaIlha.cy) > this.minhaIlha.raio * 1.6) this.visitouOutra = true;
-    const nova = missaoAtual({ inv: this.inv, construcoes: this.construcoes, status: this.status, habilidades: this.habilidades, criados: this.criados, mortos: this.mortos, nivel: this.nivel, visitouOutra: this.visitouOutra }, this.missao);
+    const nova = missaoAtual({ inv: this.inv, construcoes: this.construcoes, status: this.status, habilidades: this.habilidades, criados: this.criados, mortos: this.mortos, nivel: this.nivel, visitouOutra: this.visitouOutra, bausAbertos: this.bausAbertos }, this.missao);
     if (nova !== this.missao) {
       this.missao = nova; this.sujo = true;
       el.classList.remove('feita'); void el.offsetWidth; el.classList.add('feita');
@@ -590,7 +596,9 @@ export class CenaJogo extends Phaser.Scene {
     el.hidden = false;
     const celular = document.body.classList.contains('toque');
     const dica = celular ? m.dica.replace('Criar (C)', 'Criar (🛠)').replace('Habilidades (K)', 'Habilidades (✦)').replace(/Espaço\/AÇÃO/g, 'o botão de ação') : m.dica.replace(/Espaço\/AÇÃO/g, 'Espaço');
-    const html = `<b>${this.missao + 1}/${MISSOES.length} · ${m.titulo}</b><p>${dica}</p><small>${celular ? 'toque para abrir/fechar' : 'clique para recolher'}</small>`;
+    const mt = this.missao >= TUTORIAL_BASE ? this.estadoMetas() : null;
+    const linhaMetas = mt ? `<small class="linha-metas">📅 Metas do dia ${mt.metas.filter(x => x.feito >= x.alvo).length}/3: ${mt.metas.map(x => `${DEF_METAS[x.tipo].texto(x.alvo)} (${x.feito}/${x.alvo})`).join(' · ')}</small>` : '';
+    const html = `<b>${this.missao + 1}/${MISSOES.length} · ${m.titulo}</b><p>${dica}</p>${linhaMetas}<small>${celular ? 'toque para abrir/fechar' : 'clique para recolher'}</small>`;
     if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; }
   }
 
@@ -674,9 +682,9 @@ export class CenaJogo extends Phaser.Scene {
     } };
   }
 
-  static ESCUDO_MS = 10 * 60_000;
+  static ESCUDO_MS = 20 * 60_000;
   /** ms restantes do escudo de novato (0 = sem escudo) */
-  private escudo() { return this.nivel >= 2 ? 0 : Math.max(0, CenaJogo.ESCUDO_MS - this.tempoJogado); }
+  private escudo() { return this.nivel >= 3 ? 0 : Math.max(0, CenaJogo.ESCUDO_MS - this.tempoJogado); }
 
   /** Volta ao jogo: plantações cresceram enquanto você esteve fora; resumo do que aconteceu. */
   private boasVindas() {
@@ -725,8 +733,13 @@ export class CenaJogo extends Phaser.Scene {
     } else {
       const levou = Object.entries(r.roubado).map(([id, n]) => `${n} ${ITENS[id as ItemId].nome}`).join(', ');
       this.energia = Math.max(0, this.energia - r.energiaPerdida);
-      this.registrar(`${rival} saqueou ${levou || 'nada (baú vazio)'} e drenou ${r.energiaPerdida}% do Cristal`);
-      this.ui.aviso(`⚠ ${rival} saqueou sua ilha! −${r.energiaPerdida}% de energia`);
+      if (!levou) {
+        this.registrar(`${rival} invadiu, não achou nada no baú e foi embora`);
+        this.ui.aviso(`${rival} invadiu sua ilha, mas não achou nada`);
+      } else {
+        this.registrar(`${rival} saqueou ${levou} e drenou ${r.energiaPerdida}% do Cristal`);
+        this.ui.aviso(`⚠ ${rival} saqueou sua ilha! −${r.energiaPerdida}% de energia`);
+      }
       this.tocar('dano');
       if (this.energia <= 0) this.perderNivel();
     }
@@ -795,6 +808,24 @@ export class CenaJogo extends Phaser.Scene {
     else adicionar(this.armazem, id, n);
   }
 
+  /** Ao carregar: se o personagem estiver morto ou dentro de algo sólido, leva ao lugar livre mais próximo. */
+  private desencalhar() {
+    const j = this.jogador;
+    if (this.renascerAoCarregar) {
+      this.renascerAoCarregar = false;
+      const casaC = this.construcoes.find(c => c.tipo === 'casa');
+      const p = casaC ? { x: casaC.x, y: casaC.y + 1 } : tileDeNascimento(this.minhaIlha);
+      j.setPosition((p.x + 0.5) * T, (p.y + 0.5) * T);
+    }
+    if (this.livre(j.x, j.y)) return;
+    const ox = Math.floor(j.x / T), oy = Math.floor(j.y / T);
+    for (let r = 1; r <= 8; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+      const px = (ox + dx + 0.5) * T, py = (oy + dy + 0.5) * T;
+      if (this.livre(px, py)) { j.setPosition(px, py); return; }
+    }
+  }
+
   // ---------- Metas do dia ----------
   private estadoMetas() {
     if (!this.metas) this.metas = novoEstadoMetas(this.nivel);
@@ -804,6 +835,7 @@ export class CenaJogo extends Phaser.Scene {
 
   /** Progresso numa meta; recompensas ao concluir cada uma e as 3. */
   private meta(tipo: TipoMeta, n = 1) {
+    if (this.missao < TUTORIAL_BASE) return; // durante o tutorial básico as metas ainda não contam
     const e = this.estadoMetas();
     const r = progredir(e, tipo, n);
     for (const m of r.concluida) {
@@ -950,7 +982,7 @@ export class CenaJogo extends Phaser.Scene {
     if (!this.marcaRota) this.marcaRota = this.add.image(0, 0, 'brilho').setTint(0xffffff).setBlendMode(Phaser.BlendModes.ADD).setScale(0.35).setDepth(4);
     const [fx, fy] = c[c.length - 1];
     this.marcaRota.setPosition(((adj ? tx : fx) + 0.5) * T, ((adj ? ty : fy) + 0.5) * T).setVisible(true).setAlpha(0.9);
-    if (longe) this.ui.aviso(`A caminho (${c.length} passos)…`);
+    if (longe) { this.ui.fecharPaineis(); this.ui.aviso(`A caminho (${c.length} passos)…`); }
     return true;
   }
 
@@ -1113,7 +1145,7 @@ export class CenaJogo extends Phaser.Scene {
     if (!itens.length) { this.ui.aviso('Mochila cheia! Guarde coisas no baú da ilha'); return; }
     itens.forEach(([id, n], i) => this.textoFlutuante((bau.x + 0.5) * T, bau.y * T - i * 7, `+${n} ${ITENS[id as ItemId].nome}`, RARIDADES[bau.raridade].corCss));
     this.ui.aviso(bau.aberto ? `Baú ${RARIDADES[bau.raridade].nome.toLowerCase()} aberto!` : 'Mochila cheia: parte ficou no baú');
-    if (bau.aberto) this.meta('bau');
+    if (bau.aberto) { this.meta('bau'); this.bausAbertos++; }
     if (bau.aberto) this.darXp({ comum: 5, raro: 10, epico: 20, lendario: 40 }[bau.raridade]);
     if (bau.aberto && (bau.raridade === 'lendario' || bau.raridade === 'epico')) this.conquista(`Abri um baú ${RARIDADES[bau.raridade].nome.toLowerCase()}!`);
     this.tocar(bau.raridade === 'lendario' || bau.raridade === 'epico' ? 'nivel' : 'criar');
@@ -1304,8 +1336,10 @@ export class CenaJogo extends Phaser.Scene {
     this.status.vida = 0;
     // metade da mochila fica no túmulo onde caiu (a jangada não)
     const j = this.jogador;
-    if (this.tumulo) this.ui.aviso('O túmulo antigo se perdeu');
-    this.tumulo = criarTumulo(this.inv, Math.floor(j.x / T), Math.floor(j.y / T));
+    const novo = criarTumulo(this.inv, Math.floor(j.x / T), Math.floor(j.y / T));
+    // já havia um túmulo: o conteúdo dele vem para o novo (nada se perde)
+    if (this.tumulo && novo) for (const [id, n] of Object.entries(this.tumulo.itens.itens)) adicionar(novo.itens, id as ItemId, n!);
+    this.tumulo = novo ?? this.tumulo;
     this.mostrarTumulo();
     this.cameras.main.fadeOut(700, 20, 16, 40);
     this.time.delayedCall(900, () => {

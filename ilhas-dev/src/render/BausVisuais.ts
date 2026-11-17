@@ -7,11 +7,16 @@ import { criarRng } from '../sim/rng';
 import type { Fauna } from './Fauna';
 import { T } from './texturas';
 
-interface Visual { bau: Phaser.GameObjects.Image; brilho: Phaser.GameObjects.Image; }
+interface Visual { bau: Phaser.GameObjects.Image; brilho: Phaser.GameObjects.Image; rotulo?: Phaser.GameObjects.Text; }
 
 /** Baús espalhados pelas ilhas neutras: desenho, guardiões, abertura e reaparecimento. */
+/** Nível do personagem recomendado para encarar os guardiões de cada raridade. */
+export const NIVEL_RECOMENDADO: Record<import('../sim/baus').Raridade, number> = { comum: 3, raro: 5, epico: 7, lendario: 9 };
+
 export class BausVisuais {
   baus: Bau[];
+  /** nível do jogador (para colorir o aviso de perigo do baú) */
+  nivelJogador: () => number = () => 1;
   private visuais = new Map<number, Visual>();
   private reaparecer: number[] = [];     // instantes em que um baú novo deve surgir
   private proximoId: number;
@@ -71,7 +76,7 @@ export class BausVisuais {
 
   private removerVisual(id: number) {
     const v = this.visuais.get(id);
-    if (v) { v.bau.destroy(); v.brilho.destroy(); this.visuais.delete(id); }
+    if (v) { v.bau.destroy(); v.brilho.destroy(); v.rotulo?.destroy(); this.visuais.delete(id); }
   }
 
   atualizar(jx: number, jy: number, vista: Phaser.Geom.Rectangle, agora: number) {
@@ -96,8 +101,19 @@ export class BausVisuais {
         const brilho = this.scene.add.image(px, py - 6, 'brilho').setBlendMode(Phaser.BlendModes.ADD).setDepth(20003)
           .setTint(RARIDADES[b.raridade].cor).setScale(b.raridade === 'lendario' ? 0.6 : 0.4);
         this.scene.tweens.add({ targets: brilho, alpha: { from: 0.25, to: 0.7 }, duration: 900 + this.rng() * 400, yoyo: true, repeat: -1 });
-        v = { bau: img, brilho }; this.visuais.set(b.id, v);
-      } else if (!visivel && v) this.removerVisual(b.id);
+        const rotulo = this.scene.add.text(px, py - 20, ' ', { fontFamily: 'system-ui, sans-serif', fontSize: '24px', fontStyle: 'bold', stroke: '#2b2238', strokeThickness: 5 })
+          .setOrigin(0.5, 1).setScale(0.22).setDepth(20004);
+        v = { bau: img, brilho, rotulo }; this.visuais.set(b.id, v);
+      } else if (!visivel && v) { this.removerVisual(b.id); v = undefined; }
+      if (v?.rotulo) {
+        // nível recomendado e cor: verde = dá, amarelo = arriscado, vermelho = perigoso
+        const rec = NIVEL_RECOMENDADO[b.raridade], nv = this.nivelJogador();
+        const cor = b.aberto ? '#cccccc' : nv >= rec ? '#8fd37c' : nv >= rec - 1 ? '#ffd166' : '#ff7b6b';
+        const txt = b.aberto ? '' : `${RARIDADES[b.raridade].nome} · Nv ${rec}${nv >= rec ? ' ✓' : nv >= rec - 1 ? ' ⚠' : ' ☠'}`;
+        v.rotulo.setVisible(!!txt);
+        if (txt && v.rotulo.text !== txt) v.rotulo.setText(txt);
+        v.rotulo.setColor(cor);
+      }
       // guardiões nascem quando o jogador chega perto (e voltam se ele tiver ido embora)
       if (b.aberto) continue;
       const dist = Math.hypot(b.x + 0.5 - jx, b.y + 0.5 - jy);
