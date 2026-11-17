@@ -107,6 +107,11 @@ e crescer precisa **sair de jangada** atrás de **baús guardados por animais** 
 - Bugs: "zumbi" com 0 de vida ao recarregar, preso dentro de recurso ao recarregar, posição do ranking diferente no cabeçalho e na lista,
   painéis abertos durante viagem pelo mapa.
 
+## Vingança (implementado)
+- Saqueado por um bot (que levou algo): aviso com **📍 Ir até lá** (rota automática até o Cristal dele) e **📸 Pedir ajuda** (cartão
+  "Kai saqueou minha ilha! Me ajuda a revidar?" com o link de convite). Marca vermelha no mapa-múndi.
+- Em até 15 min de jogo, no Cristal do invasor: **Vingar** = recupera o que ele levou +50% (o bot perde o que tiver), XP e cartão "Me vinguei".
+
 ## Metas do dia (implementado)
 - 3 metas curtas por dia (as mesmas para todos no mesmo dia), ajustadas ao nível da ilha: coletar, criar, derrotar criaturas,
   abrir baús, construir, colher, explorar. Aparecem no card de missão depois do tutorial.

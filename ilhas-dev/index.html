@@ -190,9 +190,9 @@
     #proposta h3 { margin: 0 0 6px; } #proposta p { margin: 6px 0; } #proposta .botoes { display: flex; gap: 8px; margin-top: 10px; }
     #proposta button { flex: 1; padding: 10px; font-weight: 700; border: 2px solid #3a2f45; border-radius: 8px; }
     #proposta .aceitar { background: #ffe08a; } #proposta .resistir { background: #ffb3a7; }
-    #conquista { position: fixed; z-index: 9; left: 50%; transform: translateX(-50%); top: calc(max(12px, env(safe-area-inset-top)) + 70px); padding: 10px 16px;
+    #conquista { position: fixed; z-index: 9; left: 12px; right: 12px; margin: 0 auto; width: fit-content; top: calc(max(12px, env(safe-area-inset-top)) + 70px); padding: 10px 16px;
       background: #ffe08a; color: #3a2f45; border: 2px solid #3a2f45; border-radius: 12px; box-shadow: 0 4px 0 #2b2238; font-weight: 800; font-size: 14px;
-      animation: feita .6s; max-width: calc(100vw - 32px); }
+      animation: surgir .4s; max-width: calc(100vw - 32px); }
     #conquista small { display: block; font-weight: 600; font-size: 12px; }
     #cartao { position: fixed; z-index: 11; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(400px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: auto;
       padding: 12px; background: #f6efe0; color: #3a2f45; border: 2px solid #3a2f45; border-radius: 12px; box-shadow: 0 6px 0 #2b2238; }
@@ -208,6 +208,12 @@
     #status .rival .frente { color: #8fd37c; } #status .rival .atras { color: #ff9b8a; } #status .rival small { opacity: .6; }
     #missao .metas { list-style: none; margin: 4px 0; padding: 0; } #missao .metas li { margin: 2px 0; } #missao .metas li b { color: #ffd166; }
     #missao .metas li.ok { opacity: .65; text-decoration: line-through; }
+    #vinganca { position: fixed; z-index: 10; left: 12px; right: 12px; margin: 0 auto; top: calc(max(12px, env(safe-area-inset-top)) + 70px);
+      max-width: 360px; box-sizing: border-box; padding: 10px 12px; background: #ffd9d3; color: #3a2f45; border: 2px solid #3a2f45; border-radius: 12px; box-shadow: 0 4px 0 #2b2238; animation: surgir .4s; }
+    @keyframes surgir { from { opacity: 0; translate: 0 -10px; } }
+    #vinganca b { display: block; font-size: 15px; } #vinganca small { display: block; margin: 4px 0 8px; font-size: 12px; }
+    #vinganca .botoes { display: flex; gap: 6px; } #vinganca button { flex: 1; padding: 8px; font-weight: 700; border: 2px solid #3a2f45; border-radius: 8px; background: #fff; }
+    #vinganca .ir { background: #ff9b8a; } #vinganca .fechar { flex: 0 0 40px; }
     #item-menu { position: fixed; z-index: 9; display: flex; flex-direction: column; gap: 4px; min-width: 150px; padding: 8px; background: #f6efe0;
       border: 2px solid #3a2f45; border-radius: 10px; color: #3a2f45; box-shadow: 0 4px 0 #2b2238; }
     #item-menu[hidden] { display: none; }

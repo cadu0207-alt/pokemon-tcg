@@ -27,6 +27,8 @@ export interface Ganchos {
   viajar: (x: number, y: number) => boolean;
   /** cartão compartilhável da sua ilha */
   cartao: () => Promise<{ blob: Blob; texto: string; url: string }>;
+  irVingar: () => void;
+  pedirAjuda: () => void;
   libertar: (id: number) => void;
   assistir: (nome: string | null) => void;
   habilidades: () => { status: Status; aprendidas: string[] };
@@ -301,6 +303,20 @@ export class Interface {
   }
 
   /** Conquista: oferece um botão de compartilhar por alguns segundos. */
+  /** Fui saqueado: ir se vingar (rota automática) ou pedir ajuda (cartão com link). */
+  vinganca(nome: string, levou: string) {
+    document.getElementById('vinganca')?.remove();
+    const el = document.createElement('div');
+    el.id = 'vinganca'; el.className = 'painel';
+    el.innerHTML = `<b>⚔ ${nome} saqueou sua ilha!</b><small>Levou ${levou}. Vá até o Cristal de ${nome} em 15 min e recupere tudo com 50% a mais.</small>
+      <div class="botoes"><button class="ir">📍 Ir até lá</button><button class="ajuda">📸 Pedir ajuda</button><button class="fechar">✕</button></div>`;
+    el.querySelector('.ir')!.addEventListener('click', () => { el.remove(); this.g.irVingar(); });
+    el.querySelector('.ajuda')!.addEventListener('click', () => { el.remove(); this.g.pedirAjuda(); void this.abrirCartao(); });
+    el.querySelector('.fechar')!.addEventListener('click', () => el.remove());
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 20_000);
+  }
+
   conquista(texto: string) {
     document.getElementById('conquista')?.remove();
     const el = document.createElement('button');
@@ -357,7 +373,7 @@ export class Interface {
     $('mapa').innerHTML = `<h3>Mapa-múndi <button class="fechar">✕</button></h3>
       <div class="moldura"><canvas></canvas></div>
       <p class="legenda"><i style="background:#fff"></i>você <i style="background:#b48cff"></i>sua ilha <i style="background:#ffcf4a"></i>baú
-        <i style="background:#e8607a"></i>rival <i style="background:#5fb3ff"></i>jogador <span>◯ influência do reino</span></p><p class="explorado"></p>`;
+        <i style="background:#e8607a"></i>rival <i style="background:#5fb3ff"></i>jogador <i style="background:#ff3b3b"></i>vingança <span>◯ influência do reino</span></p><p class="explorado"></p>`;
     const cv = $('mapa').querySelector('canvas')!;
     const r = this.g.mapaMundi(cv);
     // tocar num lugar conhecido do mapa: o personagem vai até lá sozinho
