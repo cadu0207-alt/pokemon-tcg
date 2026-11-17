@@ -72,3 +72,18 @@ describe('mochila limitada e baú', () => {
     expect(moverPilha(bau, mochila, 'pedra')).toBe(0); // não tem
   });
 });
+
+describe('grupos de criação', () => {
+  it('toda receita cai num grupo coerente', async () => {
+    const { RECEITAS, grupoDe } = await import('../src/sim/itens');
+    expect(grupoDe('machado_ferro')).toBe('extracao');
+    expect(grupoDe('espada_ferro')).toBe('equipamentos');
+    expect(grupoDe('jangada')).toBe('equipamentos');
+    expect(grupoDe('plantacao')).toBe('construcao');
+    expect(grupoDe('lingote')).toBe('materiais');
+    expect(grupoDe('pocao_mana')).toBe('consumiveis');
+    const porGrupo = new Map<string, number>();
+    for (const r of RECEITAS) porGrupo.set(grupoDe(r.id), (porGrupo.get(grupoDe(r.id)) ?? 0) + 1);
+    expect(porGrupo.size).toBe(5); // nenhum grupo vazio
+  });
+});

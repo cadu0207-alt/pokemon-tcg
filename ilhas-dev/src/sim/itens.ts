@@ -94,3 +94,25 @@ export const DEF_RECURSO = {
   minerio: { vida: 10, solta: { minerio: 2 } as Partial<Record<ItemId, number>>, renasceMs: 300_000 },
   cristal: { vida: 12, solta: { cristal: 1 } as Partial<Record<ItemId, number>>, renasceMs: 420_000 },
 };
+
+// ---------- Grupos do menu de criação ----------
+
+export type Grupo = 'extracao' | 'equipamentos' | 'construcao' | 'materiais' | 'consumiveis';
+
+export const GRUPOS: { id: Grupo; nome: string; icone: ItemId }[] = [
+  { id: 'extracao', nome: 'Extração', icone: 'machado_pedra' },
+  { id: 'equipamentos', nome: 'Equipamentos', icone: 'espada_pedra' },
+  { id: 'construcao', nome: 'Construção', icone: 'casa' },
+  { id: 'materiais', nome: 'Materiais', icone: 'corda' },
+  { id: 'consumiveis', nome: 'Consumíveis', icone: 'carne_assada' },
+];
+
+/** Grupo de uma receita: ferramentas de coleta, armas/jangada, construções, materiais intermediários ou consumíveis. */
+export function grupoDe(id: ItemId): Grupo {
+  const d = ITENS[id];
+  if (d.construivel) return 'construcao';
+  if (d.comida || d.mana) return 'consumiveis';
+  if (d.ferramenta && d.ferramenta.alvo !== 'criatura') return 'extracao';
+  if (d.ferramenta || id === 'jangada') return 'equipamentos';
+  return 'materiais';
+}

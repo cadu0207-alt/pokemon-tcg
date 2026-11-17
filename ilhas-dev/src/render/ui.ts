@@ -1,4 +1,4 @@
-import { ITENS, RECEITAS, type ItemId } from '../sim/itens';
+import { GRUPOS, ITENS, RECEITAS, grupoDe, type Grupo, type ItemId } from '../sim/itens';
 import { cabe, criar, podeCriar, qtd, LIMITE_MOCHILA, type Inventario } from '../sim/inventario';
 import type { Construcao } from '../sim/construcao';
 import type { Requisitos } from '../sim/expansao';
@@ -144,6 +144,9 @@ export class Interface {
     }));
   }
 
+  /** Aba aberta no menu de criação (lembrada entre sessões). */
+  private grupo: Grupo | null = (() => { try { return localStorage.getItem('ilhas-grupo') as Grupo | null; } catch { return null; } })();
+
   habAberto = false;
   alternarHabilidades(forcar?: boolean) {
     this.habAberto = forcar ?? !this.habAberto;
@@ -248,7 +251,17 @@ export class Interface {
     if (!$('cristal').hidden) this.desenharCristal();
 
     if (!this.aberto) return;
-    this.craft.innerHTML = '<h3>Criar <small>(C)</small><button class="fechar" aria-label="Fechar">✕</button></h3>' + RECEITAS.map((r, i) => {
+    // abas por grupo, com quantas receitas dá para criar agora em cada uma
+    const prontas = (g: Grupo) => RECEITAS.filter(r => grupoDe(r.id) === g && podeCriar(inv, r, nivel) && (!r.estacao || this.g.perto(r.estacao))).length;
+    if (!this.grupo) this.grupo = GRUPOS.find(g => prontas(g.id) > 0)?.id ?? 'extracao';
+    const abas = `<div class="abas">${GRUPOS.map(g => {
+      const n = prontas(g.id);
+      return `<button class="aba ${g.id === this.grupo ? 'sel' : ''}" data-g="${g.id}" title="${g.nome}"><img src="${icone(g.icone)}"><span>${g.nome}</span>${n ? `<i>${n}</i>` : ''}</button>`;
+    }).join('')}</div>`;
+    // dentro da aba: o que dá para criar agora, depois o que falta material, por último o travado por nível
+    const ordem = (r: (typeof RECEITAS)[number]) => (podeCriar(inv, r, nivel) && (!r.estacao || this.g.perto(r.estacao)) ? 0 : nivel >= (r.nivel ?? 1) ? 1 : 2) * 100 + (r.nivel ?? 1);
+    const daAba = RECEITAS.map((r, i) => ({ r, i })).filter(({ r }) => grupoDe(r.id) === this.grupo).sort((a, b) => ordem(a.r) - ordem(b.r));
+    this.craft.innerHTML = '<h3>Criar <small>(C)</small><button class="fechar" aria-label="Fechar">✕</button></h3>' + abas + daAba.map(({ r, i }) => {
       const travada = nivel < (r.nivel ?? 1);
       const semEstacao = !!r.estacao && !this.g.perto(r.estacao);
       const ok = podeCriar(inv, r, nivel) && !semEstacao;
@@ -260,6 +273,11 @@ export class Interface {
         <div><b>${ITENS[r.id].nome}${r.qtd > 1 ? ` ×${r.qtd}` : ''}</b><div class="custo">${custo}</div></div></button>`;
     }).join('');
     this.craft.querySelector('.fechar')!.addEventListener('click', () => this.alternarCraft(false));
+    this.craft.querySelectorAll<HTMLElement>('[data-g]').forEach(b => b.addEventListener('click', () => {
+      this.grupo = b.dataset.g as Grupo;
+      try { localStorage.setItem('ilhas-grupo', this.grupo); } catch { /* ok */ }
+      this.atualizar();
+    }));
     this.craft.querySelectorAll<HTMLButtonElement>('button[data-r]').forEach(b => b.addEventListener('click', () => {
       const r = RECEITAS[Number(b.dataset.r)];
       if (r.estacao && !this.g.perto(r.estacao)) { this.aviso(`Precisa estar perto de: ${ITENS[r.estacao].nome}`); return; }
