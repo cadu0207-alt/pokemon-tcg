@@ -11,7 +11,7 @@ import { ITENS, type ItemId } from '../sim/itens';
 import { criarCriaturas, T } from './texturas';
 import { registrarRecorte, icone } from './icones';
 import { Nevoa, desenharMapaMundi, type Marca } from './Nevoa';
-import { forcaIlha, forcaReino, membroDe, novoEstadoReinos, pagarTributo, passoReinos, raioInfluencia, rebelar, reiDe, resistir, submeter, libertar, vassalosDe, TRIBUTO_MS, type EstadoReinos, type Membro } from '../sim/reinos';
+import { emContato, forcaIlha, forcaReino, membroDe, novoEstadoReinos, pagarTributo, passoReinos, raioInfluencia, rebelar, reiDe, resistir, submeter, libertar, vassalosDe, TRIBUTO_MS, type EstadoReinos, type Membro } from '../sim/reinos';
 import type { InfoReino } from './ui';
 import { DEF_METAS, MARCOS_SEQUENCIA, novoEstadoMetas, progredir, virarDia, type EstadoMetas, type TipoMeta } from '../sim/metas';
 import { acharCaminho } from '../sim/caminho';
@@ -97,6 +97,7 @@ export class CenaJogo extends Phaser.Scene {
   /** `defender`: o rival foi escolhido abaixo de você (você lidera): vence quem estiver na frente no fim da semana */
   private renascerAoCarregar = false;
   private bausAbertos = 0;
+  private avisouContato = false;
   private vinganca: { ilha: number; nome: string; itens: Partial<Record<ItemId, number>>; ate: number } | null = null;
   static VINGANCA_MS = 15 * 60_000;
   /** invasor a caminho do seu Cristal (visível no mapa); some ao ser expulso ou ao saquear */
@@ -190,6 +191,7 @@ export class CenaJogo extends Phaser.Scene {
       this.salvoEm = save.salvoEm;
       if (save.rival) this.rival = save.rival;
       if (save.metas) this.metas = save.metas;
+      if (save.contato) this.avisouContato = true;
       if (save.vinganca) this.vinganca = save.vinganca;
       if (save.reinos) this.reinos = { ...novoEstadoReinos(), ...save.reinos };
       if (save.chao) this.chao = save.chao.map(c => ({ x: c.x, y: c.y, itens: c.itens }));
@@ -401,7 +403,7 @@ export class CenaJogo extends Phaser.Scene {
       inventario: this.inv, construcoes: this.construcoes,
       status: this.status, tempo: Math.round(this.tempoMundo), nivel: this.nivel, armazem: this.armazem, bausMundo: this.bausMundo.salvar(),
       energia: Math.round(this.energia), diario: this.diario, tumulo: this.tumulo,
-      nevoa: this.nevoa?.salvar(), tempoJogado: Math.round(this.tempoJogado), salvoEm: Date.now(), reinos: this.reinos, metas: this.metas ?? undefined, vinganca: this.vinganca, rival: this.rival,
+      nevoa: this.nevoa?.salvar(), tempoJogado: Math.round(this.tempoJogado), salvoEm: Date.now(), reinos: this.reinos, metas: this.metas ?? undefined, contato: this.avisouContato, vinganca: this.vinganca, rival: this.rival,
       chao: this.chao.map(c => ({ x: c.x, y: c.y, itens: c.itens })), habilidades: this.habilidades, mana: Math.floor(this.mana),
       tutorial: { missao: this.missao, criados: this.criados, mortos: this.mortos, bausAbertos: this.bausAbertos },
       bots: this.bots.salvar(),
@@ -1112,7 +1114,21 @@ export class CenaJogo extends Phaser.Scene {
   private passoReinos() {
     if (this.morto) return;
     const eu = this.minhaIlha.id, agora = this.tempoJogado;
-    for (const ev of passoReinos(this.reinos, this.membros(), agora)) {
+    const membros = this.membros();
+    // primeiro contato: seu círculo de influência tocou o de um vizinho de outro reino
+    if (!this.avisouContato) {
+      const meu = membros[0];
+      const viz = membros.find(m => m !== meu && reiDe(this.reinos, m.id) !== reiDe(this.reinos, eu) && emContato(meu, m));
+      if (viz) {
+        this.avisouContato = true;
+        const porId = new Map(membros.map(m => [m.id, m]));
+        const fv = forcaReino(this.reinos, porId, reiDe(this.reinos, viz.id)), fm = forcaReino(this.reinos, porId, reiDe(this.reinos, eu));
+        const quem = this.nomeDe(reiDe(this.reinos, viz.id));
+        this.registrar(`Fronteira: sua influência tocou a de ${viz.nome}`);
+        this.ui.contato(viz.nome, quem, Math.round(fm), Math.round(fv));
+      }
+    }
+    for (const ev of passoReinos(this.reinos, membros, agora)) {
       if (ev.tipo === 'proposta') {
         this.tocar('noite');
         this.ui.proposta(this.nomeDe(ev.rei), ev.forcaRei, ev.forcaAlvo,

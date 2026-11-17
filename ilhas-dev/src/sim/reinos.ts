@@ -44,8 +44,8 @@ const PESO_VASSALO = 0.5;
 /** materiais que entram no tributo (cristal e comida ficam com o vassalo) */
 export const ITENS_TRIBUTO: ItemId[] = ['madeira', 'pedra', 'fibra', 'minerio', 'lingote', 'couro'];
 
-/** Raio de influência em tiles: o raio da ilha mais 2,2 tiles por nível. */
-export const raioInfluencia = (ilha: Ilha, nivel: number) => raioDoNivel(ilha.raioMax || ilha.raio, nivel) + 2.2 * nivel;
+/** Raio de influência em tiles: o raio da ilha mais 3 tiles por nível. */
+export const raioInfluencia = (ilha: Ilha, nivel: number) => raioDoNivel(ilha.raioMax || ilha.raio, nivel) + 3 * nivel;
 
 export const emContato = (a: Membro, b: Membro) =>
   Math.hypot(a.ilha.cx - b.ilha.cx, a.ilha.cy - b.ilha.cy) <= raioInfluencia(a.ilha, a.nivel) + raioInfluencia(b.ilha, b.nivel);

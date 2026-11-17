@@ -320,6 +320,21 @@ export class Interface {
   private relogioInvasao = 0;
   fimInvasao() { document.getElementById('invasao')?.remove(); window.clearInterval(this.relogioInvasao); }
 
+  /** Primeiro contato de fronteira: explica o jogo de reinos na hora certa. */
+  contato(vizinho: string, rei: string, minha: number, dele: number) {
+    document.getElementById('proposta')?.remove();
+    const el = document.createElement('div');
+    el.id = 'proposta'; el.className = 'painel';
+    const situacao = dele >= minha * 1.25 ? `O reino de <b>${rei}</b> é bem mais forte (${dele} × ${minha}): ele pode exigir que você vire vassalo. Cresça e construa defesas!`
+      : minha >= dele * 1.25 ? `Você é bem mais forte (${minha} × ${dele}): em breve ${vizinho} pode virar seu vassalo e pagar tributo.`
+      : `Forças parecidas (${minha} × ${dele}): quem crescer primeiro domina o outro.`;
+    el.innerHTML = `<h3>🗺 Fronteira com ${vizinho}</h3><p>Sua ilha cresceu e o seu <b>círculo de influência</b> tocou o de ${vizinho}${rei !== vizinho ? ` (reino de ${rei})` : ''}.</p>
+      <p>${situacao}</p><p class="dica">Reino mais forte (25% a mais) domina o vizinho: vassalos pagam tributo e ganham proteção; podem se rebelar depois. Veja os círculos no 🗺 Mapa e sua força no Cristal.</p>
+      <div class="botoes"><button class="aceitar">Entendi</button></div>`;
+    el.querySelector('.aceitar')!.addEventListener('click', () => el.remove());
+    document.body.appendChild(el);
+  }
+
   /** Fui saqueado: ir se vingar (rota automática) ou pedir ajuda (cartão com link). */
   vinganca(nome: string, levou: string) {
     document.getElementById('vinganca')?.remove();

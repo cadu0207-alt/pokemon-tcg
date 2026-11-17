@@ -38,6 +38,21 @@ export type Objetivo =
   | { tipo: 'vagar'; ate: number }
   | { tipo: 'expedicao'; destino: Ilha };
 
+/** Apelidos para nomes repetidos ("Shin do Recife" em vez de "Shin 2"). Curtos para caber no ranking. */
+const APELIDOS = ['do Mar', 'da Brisa', 'das Pedras', 'Pé-Leve', 'da Lua', 'do Sol', 'Raio', 'da Névoa', 'Coral', 'da Maré',
+  'Faísca', 'do Vale', 'Trovão', 'da Areia', 'Estrela', 'do Norte', 'do Sul', 'da Ilha', 'Cometa', 'Âncora', 'do Farol', 'da Onda',
+  'Tufão', 'Pérola', 'do Cais', 'da Serra', 'Corsário', 'Gaivota', 'da Aurora', 'do Bosque', 'Relâmpago', 'Pirata', 'do Porto',
+  'da Rocha', 'Vento', 'Lírio', 'do Recife', 'da Baía', 'Ciclone', 'Brasa', 'do Cabo', 'Orvalho', 'da Duna', 'Granizo', 'Tritão',
+  'da Lagoa', 'Sereia', 'do Abismo', 'Garoa', 'Arpão'];
+
+/** Nome único: primeiro o nome puro, depois com apelido; só em mundos enormes volta a numerar. */
+export function nomeDoBot(i: number): string {
+  const base = NOMES[i % NOMES.length], volta = Math.floor(i / NOMES.length);
+  if (volta === 0) return base;
+  if (volta <= APELIDOS.length) return `${base} ${APELIDOS[(volta - 1 + i) % APELIDOS.length]}`;
+  return `${base} ${volta + 1}`;
+}
+
 export interface Bot {
   id: number; nome: string; perfil: NomePerfil; cor: number;
   ilha: Ilha;
@@ -71,7 +86,7 @@ export function criarBots(m: Mundo, quantidade: number, seed: number, ocupadas: 
   for (let i = 0; i < Math.min(quantidade, livres.length); i++) {
     const ilha = livres[i];
     bots.push({
-      id: i, nome: `${NOMES[i % NOMES.length]}${i >= NOMES.length ? ` ${Math.floor(i / NOMES.length) + 1}` : ''}`,
+      id: i, nome: nomeDoBot(i),
       perfil: perfis[Math.floor(rng() * perfis.length)], cor: Math.floor(rng() * 8),
       ilha, x: Math.round(ilha.cx) + 0.5, y: Math.round(ilha.cy) + 1.5, // ao lado do Cristal
       inv: novoInventario(), construcoes: [], status: novoStatus(), habilidades: [], nivel: 1,

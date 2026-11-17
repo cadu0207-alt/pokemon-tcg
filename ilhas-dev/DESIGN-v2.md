@@ -107,6 +107,10 @@ e crescer precisa **sair de jangada** atrás de **baús guardados por animais** 
 - Bugs: "zumbi" com 0 de vida ao recarregar, preso dentro de recurso ao recarregar, posição do ranking diferente no cabeçalho e na lista,
   painéis abertos durante viagem pelo mapa.
 
+## Mundo mais vivo (implementado)
+- Bots com nomes únicos sem número ("Shin Granizo", "Bruno do Porto"); 30 nomes × 50 apelidos (até 1.500 sem repetir).
+- Primeiro contato de fronteira: quando seu círculo toca o de um vizinho, um painel explica a disputa de reinos e compara as forças.
+
 ## Invasão visível (implementado)
 - O saque não é mais só texto: o invasor desembarca de jangada na sua ilha e caminha até o Cristal (~45 s), com barra de vida.
 - Alerta com contagem regressiva e **🏠 Voltar para casa** (rota automática). Perto dele, o botão de ação vira **Expulsar**;
@@ -140,7 +144,7 @@ Crescer não é só ter mais terra: cada Cristal projeta um **círculo de influ�
 - **Rebelião**: um vassalo que cresce pode se rebelar (sozinho ou junto com outros vassalos). Se a força dos rebeldes
   passar a do rei, a ilha se liberta (ou o rebelde vira o novo rei).
 - **Decidido e implementado (src/sim/reinos.ts)**:
-  - influência = raio da ilha + 2,2 tiles por nível; força = nível×10 + defesa das construções + nível do dono×2;
+  - influência = raio da ilha + 3 tiles por nível (antes 2,2: reinos só aos ~40 min; agora ~20 min); força = nível×10 + defesa das construções + nível do dono×2;
     reino = força do rei + metade da força dos vassalos;
   - disputa **automática** a cada 30 s: domina quem tem ≥ 25% a mais; quem é dominado leva os próprios vassalos junto;
   - pessoa recebe **proposta** (aceitar vassalagem ou resistir: livre, mas o rei saqueia o dobro por 15 min);

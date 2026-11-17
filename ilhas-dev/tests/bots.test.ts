@@ -70,3 +70,15 @@ describe('expedições', () => {
     for (const b of sim.bots) if (!b.expedicao) expect(naIlha(b.ilha, Math.floor(b.x), Math.floor(b.y)), b.nome).toBe(true);
   }, 120_000);
 });
+
+import { nomeDoBot } from '../src/sim/bots';
+describe('nomes dos bots', () => {
+  it('99 bots com nomes únicos, sem número', () => {
+    const n = Array.from({ length: 99 }, (_, i) => nomeDoBot(i));
+    expect(new Set(n).size).toBe(99);
+    expect(n.some(x => /\d/.test(x))).toBe(false);
+  });
+  it('999 bots continuam únicos', () => {
+    expect(new Set(Array.from({ length: 999 }, (_, i) => nomeDoBot(i))).size).toBe(999);
+  });
+});
