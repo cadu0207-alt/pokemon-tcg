@@ -99,6 +99,13 @@ e crescer precisa **sair de jangada** atrás de **baús guardados por animais** 
 - Vitória: abrir 30% de vantagem (ou estar na frente no fim da semana) = +1 cristal no baú, XP e cartão para compartilhar; vem um novo rival.
 - Se você lidera, o rival é o mais perto abaixo e a regra vira "segurar a frente até o fim da semana" (sem vitória instantânea).
 
+## Metas do dia (implementado)
+- 3 metas curtas por dia (as mesmas para todos no mesmo dia), ajustadas ao nível da ilha: coletar, criar, derrotar criaturas,
+  abrir baús, construir, colher, explorar. Aparecem no card de missão depois do tutorial.
+- Cada meta: +5 madeira, +3 pedra, XP. As 3: +1 cristal e +1 na sequência de dias; marcos 3/7/14/30 dias dão cristais extras e cartão.
+- Faltar um dia **não zera** a sequência (só pausa) — retenção sem punição.
+- Presentes (metas, rival, convites) vão para o baú se houver um; senão para a mochila.
+
 ## Exploração (implementado)
 - **Névoa**: o mundo começa coberto; abre num raio de 7 tiles em volta de você e fica aberto (salvo no save). Sua ilha inteira já começa conhecida.
 - **Mapa-múndi** (botão 🗺 ou tecla M): terreno só onde você já viu, você, sua ilha, baús, ilhas rivais e de outros jogadores que você já encontrou, e o % de terra explorada.

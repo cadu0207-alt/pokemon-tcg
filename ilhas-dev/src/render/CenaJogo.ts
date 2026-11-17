@@ -13,6 +13,7 @@ import { registrarRecorte, icone } from './icones';
 import { Nevoa, desenharMapaMundi, type Marca } from './Nevoa';
 import { forcaIlha, forcaReino, membroDe, novoEstadoReinos, pagarTributo, passoReinos, raioInfluencia, rebelar, reiDe, resistir, submeter, libertar, vassalosDe, TRIBUTO_MS, type EstadoReinos, type Membro } from '../sim/reinos';
 import type { InfoReino } from './ui';
+import { DEF_METAS, MARCOS_SEQUENCIA, novoEstadoMetas, progredir, virarDia, type EstadoMetas, type TipoMeta } from '../sim/metas';
 import { acharCaminho } from '../sim/caminho';
 import { recorteComoUrl, carregar as carregarArte, preparar, quadroParado, varianteArvore, OBJETOS, PERSONAGENS, type Personagem } from './assets';
 import { Fauna } from './Fauna';
@@ -92,6 +93,7 @@ export class CenaJogo extends Phaser.Scene {
   private estavaFora = false;
   private salvoEm?: number;
   private reinos: EstadoReinos = novoEstadoReinos();
+  private metas: EstadoMetas | null = null;
   /** `defender`: o rival foi escolhido abaixo de você (você lidera): vence quem estiver na frente no fim da semana */
   private rival: { chave: string; nome: string; ate: number; frente: boolean; defender?: boolean } | null = null;
   /** andar até um ponto tocado: tiles que faltam e a marca no chão */
@@ -178,6 +180,7 @@ export class CenaJogo extends Phaser.Scene {
       if (save.tempoJogado) this.tempoJogado = save.tempoJogado;
       this.salvoEm = save.salvoEm;
       if (save.rival) this.rival = save.rival;
+      if (save.metas) this.metas = save.metas;
       if (save.reinos) this.reinos = { ...novoEstadoReinos(), ...save.reinos };
       if (save.chao) this.chao = save.chao.map(c => ({ x: c.x, y: c.y, itens: c.itens }));
     } else {
@@ -283,7 +286,7 @@ export class CenaJogo extends Phaser.Scene {
       habilidades: () => ({ status: this.status, aprendidas: this.habilidades }),
       aprender: id => this.aprenderHabilidade(id),
       lancar: m => this.lancar(m),
-      criou: id => { this.criados[id] = (this.criados[id] ?? 0) + 1; this.tocar('criar'); this.darXp(2); },
+      criou: id => { this.criados[id] = (this.criados[id] ?? 0) + 1; this.tocar('criar'); this.darXp(2); this.meta('criar'); },
       alternarSom: () => this.som.alternarSom(),
       alternarMusica: () => this.som.alternarMusica(),
       tocar: e => this.tocar(e),
@@ -382,7 +385,7 @@ export class CenaJogo extends Phaser.Scene {
       inventario: this.inv, construcoes: this.construcoes,
       status: this.status, tempo: Math.round(this.tempoMundo), nivel: this.nivel, armazem: this.armazem, bausMundo: this.bausMundo.salvar(),
       energia: Math.round(this.energia), diario: this.diario, tumulo: this.tumulo,
-      nevoa: this.nevoa?.salvar(), tempoJogado: Math.round(this.tempoJogado), salvoEm: Date.now(), reinos: this.reinos, rival: this.rival,
+      nevoa: this.nevoa?.salvar(), tempoJogado: Math.round(this.tempoJogado), salvoEm: Date.now(), reinos: this.reinos, metas: this.metas ?? undefined, rival: this.rival,
       chao: this.chao.map(c => ({ x: c.x, y: c.y, itens: c.itens })), habilidades: this.habilidades, mana: Math.floor(this.mana),
       tutorial: { missao: this.missao, criados: this.criados, mortos: this.mortos },
       bots: this.bots.salvar(),
@@ -446,6 +449,7 @@ export class CenaJogo extends Phaser.Scene {
     }
     this.tocar('construir');
     this.darXp(4);
+    this.meta('construir');
     if (qtd(this.inv, id) === 0) this.selecionarConstrucao(null);
     else this.localEscolhido = null;
     this.mudou();
@@ -523,6 +527,7 @@ export class CenaJogo extends Phaser.Scene {
     if (res.destruido) {
       this.tocar('cai');
       this.darXp(1, false);
+      this.meta('quebrar');
       this.mapa.definirObjeto(r.x, r.y, null);
       this.bloqueio.delete(this.idx(r.x, r.y));
       let i = 0;
@@ -552,10 +557,10 @@ export class CenaJogo extends Phaser.Scene {
     const nomes = await this.cfg.nuvem?.resgatarConvites();
     if (!nomes?.length) return;
     for (const n of nomes) {
-      adicionar(this.armazem, 'cristal', 1); adicionar(this.armazem, 'madeira', 10); adicionar(this.armazem, 'pedra', 5);
-      this.registrar(`${n} entrou pelo seu convite: +1 cristal, +10 madeira, +5 pedra no baú`);
+      this.presente('cristal', 1); this.presente('madeira', 10); this.presente('pedra', 5);
+      this.registrar(`${n} entrou pelo seu convite: +1 cristal, +10 madeira, +5 pedra`);
     }
-    this.ui.aviso(`🎁 ${nomes.length === 1 ? `${nomes[0]} entrou` : `${nomes.length} amigos entraram`} pelo seu convite! Presentes no baú da ilha`);
+    this.ui.aviso(`🎁 ${nomes.length === 1 ? `${nomes[0]} entrou` : `${nomes.length} amigos entraram`} pelo seu convite! Presentes recebidos`);
     this.tocar('nivel'); this.mudou(); this.salvar(true);
   }
 
@@ -579,7 +584,8 @@ export class CenaJogo extends Phaser.Scene {
       this.tocar('criar');
       if (nova >= MISSOES.length) this.ui.aviso('Tutorial completo! Agora é com você');
     }
-    if (this.missao >= MISSOES.length || this.assistindo) { el.hidden = true; return; }
+    if (this.assistindo) { el.hidden = true; return; }
+    if (this.missao >= MISSOES.length) { this.mostrarMetas(el); return; }
     const m = MISSOES[this.missao];
     el.hidden = false;
     const celular = document.body.classList.contains('toque');
@@ -663,7 +669,7 @@ export class CenaJogo extends Phaser.Scene {
     return { c, rotulo: 'Colher', fazer: () => {
       if (!cabe(this.inv, ['baga', 'fibra'])) { this.ui.aviso('Mochila cheia! Guarde coisas no baú'); return; }
       adicionar(this.inv, 'baga', 3); adicionar(this.inv, 'fibra', 2);
-      c.plantadoEm = undefined; this.mostrarConstrucao(c); this.tocar('criar');
+      c.plantadoEm = undefined; this.mostrarConstrucao(c); this.tocar('criar'); this.meta('colher');
       this.textoFlutuante((c.x + 0.5) * T, c.y * T, '+3 Baga +2 Fibra'); this.mudou();
     } };
   }
@@ -783,6 +789,50 @@ export class CenaJogo extends Phaser.Scene {
     this.tocar('nivel'); this.ui.aviso(`Você subiu para o nível ${this.status.nivel}!`); this.cameras.main.flash(250, 255, 230, 150);
   }
 
+  /** Recompensa: vai para o baú da ilha se houver um construído; senão para a mochila (ou o baú, se não couber). */
+  private presente(id: ItemId, n: number) {
+    if (!this.construcoes.some(c => c.tipo === 'bau') && cabe(this.inv, [id])) adicionar(this.inv, id, n);
+    else adicionar(this.armazem, id, n);
+  }
+
+  // ---------- Metas do dia ----------
+  private estadoMetas() {
+    if (!this.metas) this.metas = novoEstadoMetas(this.nivel);
+    if (virarDia(this.metas, this.nivel)) { this.ui.aviso('📅 Novas metas do dia!'); this.sujo = true; }
+    return this.metas;
+  }
+
+  /** Progresso numa meta; recompensas ao concluir cada uma e as 3. */
+  private meta(tipo: TipoMeta, n = 1) {
+    const e = this.estadoMetas();
+    const r = progredir(e, tipo, n);
+    for (const m of r.concluida) {
+      this.presente('madeira', 5); this.presente('pedra', 3); this.darXp(15);
+      this.ui.aviso(`✅ Meta do dia: ${DEF_METAS[m.tipo].texto(m.alvo)} (+5 madeira, +3 pedra no baú)`.replace(' no baú', this.construcoes.some(c => c.tipo === 'bau') ? ' no baú' : ''));
+      this.tocar('criar');
+    }
+    if (r.todas) {
+      const extra = { 3: 1, 7: 2, 14: 3, 30: 5 }[e.sequencia] ?? 0;
+      this.presente('cristal', 1 + extra);
+      this.registrar(`Metas do dia completas! Sequência: ${e.sequencia} ${e.sequencia === 1 ? 'dia' : 'dias'} (+${1 + extra} cristal)`);
+      this.ui.aviso(`🔥 3 metas completas! +${1 + extra} cristal · sequência de ${e.sequencia} ${e.sequencia === 1 ? 'dia' : 'dias'}`);
+      this.tocar('nivel');
+      if (MARCOS_SEQUENCIA.includes(e.sequencia)) this.conquista(`${e.sequencia} dias seguidos de metas completas!`);
+    }
+    if (r.concluida.length || r.todas) this.mudou();
+  }
+
+  /** Card das metas (no lugar do tutorial, depois que ele termina). */
+  private mostrarMetas(el: HTMLElement) {
+    const e = this.estadoMetas();
+    const feitas = e.metas.filter(m => m.feito >= m.alvo).length;
+    el.hidden = false;
+    const linhas = e.metas.map(m => `<li class="${m.feito >= m.alvo ? 'ok' : ''}">${m.feito >= m.alvo ? '✅' : '▫️'} ${DEF_METAS[m.tipo].texto(m.alvo)} <b>${m.feito}/${m.alvo}</b></li>`).join('');
+    const html = `<b>📅 Metas do dia ${feitas}/3${e.sequencia ? ` · 🔥 ${e.sequencia}` : ''}</b><ul class="metas">${linhas}</ul><p>${
+      e.completouHoje ? 'Tudo feito hoje! Volte amanhã para novas metas.' : 'As 3 completas valem 1 cristal. Faltar um dia não zera sua sequência.'}</p><small>toque para abrir/fechar</small>`;
+    if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; }
+  }
+
   // ---------- Rival da semana ----------
   static SEMANA_MS = 7 * 24 * 3600_000;
   /** Escolhe um rival logo acima de você (ou o mais perto abaixo, se você lidera); avisa quando um passa o outro. */
@@ -810,9 +860,9 @@ export class CenaJogo extends Phaser.Scene {
       const venceu = !this.rival.defender && atual.pontos > 0 && eu.pontos >= atual.pontos * 1.3;
       const acabou = Date.now() > this.rival.ate;
       if (venceu || (acabou && frente)) {
-        adicionar(this.armazem, 'cristal', 1); this.darXp(30);
+        this.presente('cristal', 1); this.darXp(30);
         this.registrar(`Você derrotou seu rival ${atual.nome}! +1 cristal no baú`);
-        this.ui.aviso(`🏆 Você derrotou ${atual.nome}! +1 cristal no baú`);
+        this.ui.aviso(`🏆 Você derrotou ${atual.nome}! +1 cristal`);
         this.conquista(`Derrotei meu rival ${atual.nome}!`);
         escolher(this.rival.chave);
       } else if (acabou) {
@@ -1063,6 +1113,7 @@ export class CenaJogo extends Phaser.Scene {
     if (!itens.length) { this.ui.aviso('Mochila cheia! Guarde coisas no baú da ilha'); return; }
     itens.forEach(([id, n], i) => this.textoFlutuante((bau.x + 0.5) * T, bau.y * T - i * 7, `+${n} ${ITENS[id as ItemId].nome}`, RARIDADES[bau.raridade].corCss));
     this.ui.aviso(bau.aberto ? `Baú ${RARIDADES[bau.raridade].nome.toLowerCase()} aberto!` : 'Mochila cheia: parte ficou no baú');
+    if (bau.aberto) this.meta('bau');
     if (bau.aberto) this.darXp({ comum: 5, raro: 10, epico: 20, lendario: 40 }[bau.raridade]);
     if (bau.aberto && (bau.raridade === 'lendario' || bau.raridade === 'epico')) this.conquista(`Abri um baú ${RARIDADES[bau.raridade].nome.toLowerCase()}!`);
     this.tocar(bau.raridade === 'lendario' || bau.raridade === 'epico' ? 'nivel' : 'criar');
@@ -1227,6 +1278,7 @@ export class CenaJogo extends Phaser.Scene {
       const xp = Math.round(def.xp * multR * (this.construcoes.some(c => c.tipo === 'estatua') ? 1.25 : 1)); // raridade e estátua aumentam o XP
       this.darXp(xp);
       this.mortos++;
+      this.meta('bicho');
     }
     this.mudou();
   }
@@ -1282,7 +1334,8 @@ export class CenaJogo extends Phaser.Scene {
     const k = this.teclas;
     const j = this.jogador;
     this.mapa.atualizar(this.cameras.main.worldView);
-    this.nevoa.atualizar(this.jogador.x, this.jogador.y);
+    const descobriu = this.nevoa.atualizar(this.jogador.x, this.jogador.y);
+    if (descobriu && this.tempoJogado > 3000) this.meta('explorar', descobriu);
     // Relógio do mundo, noite e criaturas.
     this.tempoMundo += dt;
     const noite = ehNoite(this.tempoMundo);

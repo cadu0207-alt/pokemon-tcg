@@ -133,7 +133,7 @@
     #menu .aviso-novo { font-size: 11px; color: #8a7f95; text-align: center; margin: 8px 0 0; }
     #missao { position: fixed; left: 12px; top: calc(max(12px, env(safe-area-inset-top)) + 96px); width: 200px; padding: 8px 10px; font-size: 12px; cursor: pointer; }
     #missao b { display: block; font-size: 13px; color: #ffd166; } #missao small { opacity: .7; }
-    #missao.fechada p { display: none; }
+    #missao.fechada p, #missao.fechada .metas { display: none; }
     body.toque #missao { top: calc(max(12px, env(safe-area-inset-top)) + 96px); width: auto; max-width: 60vw; font-size: 11px; box-sizing: border-box; padding: 6px 10px; }
     #missao.fechada small { display: none; }
     #missao.feita { animation: feita .6s; } @keyframes feita { 50% { transform: scale(1.06); background: #6db35ccc; } }
@@ -205,6 +205,8 @@
       background: #00000033; color: #f6efe0; font-size: 11px; text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; }
     #status .rival b { overflow: hidden; text-overflow: ellipsis; } #status .rival em { font-style: normal; font-weight: 700; margin-left: auto; }
     #status .rival .frente { color: #8fd37c; } #status .rival .atras { color: #ff9b8a; } #status .rival small { opacity: .6; }
+    #missao .metas { list-style: none; margin: 4px 0; padding: 0; } #missao .metas li { margin: 2px 0; } #missao .metas li b { color: #ffd166; }
+    #missao .metas li.ok { opacity: .65; text-decoration: line-through; }
     #item-menu { position: fixed; z-index: 9; display: flex; flex-direction: column; gap: 4px; min-width: 150px; padding: 8px; background: #f6efe0;
       border: 2px solid #3a2f45; border-radius: 10px; color: #3a2f45; box-shadow: 0 4px 0 #2b2238; }
     #item-menu[hidden] { display: none; }

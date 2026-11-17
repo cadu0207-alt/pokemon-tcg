@@ -63,11 +63,14 @@ export class Nevoa {
   }
 
   /** Chamado a cada quadro: só recalcula quando o jogador muda de célula. */
+  /** Devolve quantas células novas foram reveladas neste quadro. */
   atualizar(px: number, py: number) {
     const tx = px / T, ty = py / T;
     const c = Math.floor(ty / R) * this.larg + Math.floor(tx / R);
-    if (c !== this.ultima) { this.ultima = c; this.revelar(tx, ty); }
+    let novas = 0;
+    if (c !== this.ultima) { this.ultima = c; novas = this.revelar(tx, ty); }
     if (this.sujo) { this.sujo = false; this.redesenhar(); }
+    return novas;
   }
 
   private redesenhar() {
