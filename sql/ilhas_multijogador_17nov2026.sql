@@ -1,6 +1,6 @@
 -- Jogo "Ilhas" (mydecktcg.com.br/ilhas): multijogador por temporadas — etapa 1.
 -- Cria SÓ tabelas novas do jogo (prefixo ilhas_); não mexe em nada da loja/fichário.
--- Ainda NÃO aplicado: rodar no SQL Editor do Supabase (projeto do MyDeck). Pode ser rodado de novo sem erro.
+-- APLICADO em 17/11/2026 (migrações ilhas_multijogador_etapa1 e ilhas_entrar_so_logados). Pode ser rodado de novo sem erro.
 --
 -- Modelo:
 --   ilhas_temporadas  → um mundo por temporada (mesma semente para todos)
@@ -114,5 +114,5 @@ begin
   return v_slot;
 end;
 $$;
-revoke all on function public.ilhas_entrar(integer, text, text) from public;
+revoke execute on function public.ilhas_entrar(integer, text, text) from public, anon;
 grant execute on function public.ilhas_entrar(integer, text, text) to authenticated;
