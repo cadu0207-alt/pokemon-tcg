@@ -379,3 +379,23 @@ button{cursor:pointer}
 .fn-op:hover{border-color:var(--border2)}
 @media (max-width:520px){.fn-op span{display:none}.fn-op{padding:0 10px}}
 .fn-focus .fn-op{display:none}
+
+/* ── Pokédex (vagas por espécie) ─────────────────────────── */
+.fn-dexn{position:absolute;left:6px;top:6px;z-index:2;font-size:10.5px;font-weight:800;color:#fff;background:rgba(0,0,0,.62);padding:1px 6px;border-radius:99px;border:1px solid rgba(255,255,255,.25)}
+.fn-ph .fn-img{border:1px dashed var(--border2);background:var(--surface2);box-shadow:none}
+.fn-ph .fn-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:14% 8% 22%;opacity:.62;filter:grayscale(.45)}
+.fn-pocket.fn-ph img{object-fit:contain;padding:14% 8% 22%;opacity:.62;filter:grayscale(.45)}
+.fn-pocket.fn-ph{cursor:pointer}
+.fn-more{display:flex;justify-content:center;margin:18px 0 8px}
+.fn-more .fn-btn{padding:0 22px}
+.fn-dexact{margin-top:14px;display:grid;gap:8px}
+.fn-dp{display:grid;gap:8px;margin-top:10px}
+.fn-dp-item{display:flex;align-items:center;gap:10px;width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);text-align:left;cursor:pointer}
+.fn-dp-item img{width:44px;border-radius:3px;flex:none}
+.fn-dp-item .tx{flex:1;min-width:0;line-height:1.25}
+.fn-dp-item .tx b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fn-dp-item .tx small{color:var(--muted);font-size:12px}
+.fn-dp-item .pr{font-weight:800;color:var(--accent);font-size:13.5px}
+.fn-dp-item.is-on{border-color:var(--teal);box-shadow:0 0 0 1px var(--teal) inset}
+.fn-dp-item.is-clear{border-style:dashed}
+.fn-act:disabled{opacity:.5;cursor:default}
