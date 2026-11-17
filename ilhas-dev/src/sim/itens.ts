@@ -4,7 +4,7 @@ export type ItemId =
   | 'fogueira' | 'bancada' | 'bau' | 'casa' | 'cerca'
   | 'carne' | 'couro' | 'gosma' | 'carne_assada' | 'espada_pedra' | 'lanca_madeira' | 'jangada'
   | 'minerio' | 'cristal' | 'lingote' | 'machado_ferro' | 'picareta_ferro' | 'espada_ferro' | 'pocao_mana'
-  | 'forja' | 'altar' | 'torre' | 'estatua';
+  | 'forja' | 'altar' | 'torre' | 'estatua' | 'plantacao';
 
 export interface DefItem {
   nome: string;
@@ -50,28 +50,56 @@ export const ITENS: Record<ItemId, DefItem> = {
   altar: { nome: 'Altar arcano', construivel: true },
   torre: { nome: 'Portal', construivel: true },
   estatua: { nome: 'Estátua do guardião', construivel: true },
+  plantacao: { nome: 'Plantação', construivel: true },
 };
 
-/** `nivel`: nível mínimo da ilha para liberar a receita. */
-export interface Receita { id: ItemId; qtd: number; custo: Partial<Record<ItemId, number>>; nivel?: number; }
+/**
+ * `nivel`: nível mínimo da ilha para liberar a receita.
+ * `estacao`: construção que precisa estar perto para criar (bancada, forja, fogueira).
+ */
+export interface Receita { id: ItemId; qtd: number; custo: Partial<Record<ItemId, number>>; nivel?: number; estacao?: ItemId; }
+
+/**
+ * Curva de liberação pelo nível do PERSONAGEM (além do nível da ilha): o jogador melhora aos poucos.
+ * Bots não usam esta trava (quase não ganham XP; seguem só o nível da ilha).
+ */
+export const NIVEL_JOGADOR: Partial<Record<ItemId, number>> = {
+  corda: 1, jangada: 1, fogueira: 1,
+  bancada: 2, machado_pedra: 2, lanca_madeira: 2, carne_assada: 2,
+  picareta_pedra: 3, foice_pedra: 3, plantacao: 3, cerca: 3,
+  bau: 4, casa: 4, espada_pedra: 4,
+  pocao_mana: 5,
+  forja: 6, lingote: 6,
+  machado_ferro: 7, picareta_ferro: 7,
+  espada_ferro: 8, altar: 8,
+  torre: 9,
+  estatua: 10,
+};
+
+export const nivelJogadorDe = (id: ItemId) => NIVEL_JOGADOR[id] ?? 1;
+
+/** Receitas que passam a valer exatamente neste nível do personagem. */
+export const liberadasNoNivel = (n: number): ItemId[] => (Object.entries(NIVEL_JOGADOR) as [ItemId, number][]).filter(([, v]) => v === n).map(([k]) => k);
 
 export const RECEITAS: Receita[] = [
   { id: 'corda', qtd: 1, custo: { fibra: 3 } },
-  { id: 'machado_pedra', qtd: 1, custo: { madeira: 3, pedra: 2, corda: 1 } },
-  { id: 'picareta_pedra', qtd: 1, custo: { madeira: 3, pedra: 3, corda: 1 } },
-  { id: 'foice_pedra', qtd: 1, custo: { madeira: 2, pedra: 2, corda: 1 } },
+  { id: 'machado_pedra', qtd: 1, custo: { madeira: 3, pedra: 2, corda: 1 }, estacao: 'bancada' },
+  { id: 'picareta_pedra', qtd: 1, custo: { madeira: 3, pedra: 3, corda: 1 }, estacao: 'bancada' },
+  { id: 'foice_pedra', qtd: 1, custo: { madeira: 2, pedra: 2, corda: 1 }, estacao: 'bancada' },
   { id: 'fogueira', qtd: 1, custo: { madeira: 5, pedra: 3 } },
   { id: 'bancada', qtd: 1, custo: { madeira: 8, corda: 2 } },
-  { id: 'lanca_madeira', qtd: 1, custo: { madeira: 4, corda: 1 } },
-  { id: 'espada_pedra', qtd: 1, custo: { madeira: 2, pedra: 4, corda: 1, couro: 1 }, nivel: 2 },
-  { id: 'carne_assada', qtd: 1, custo: { carne: 1, madeira: 1 }, nivel: 2 },
-  { id: 'jangada', qtd: 1, custo: { madeira: 12, corda: 4 }, nivel: 2 },
+  { id: 'lanca_madeira', qtd: 1, custo: { madeira: 4, corda: 1 }, estacao: 'bancada' },
+  { id: 'espada_pedra', qtd: 1, custo: { madeira: 2, pedra: 4, corda: 1, couro: 1 }, nivel: 2, estacao: 'bancada' },
+  { id: 'carne_assada', qtd: 1, custo: { carne: 1, madeira: 1 }, estacao: 'fogueira' },
+  { id: 'plantacao', qtd: 1, custo: { madeira: 3, fibra: 2 }, nivel: 2 },
+  // jangada desde o nível 1: sair da ilha é o primeiro objetivo
+  { id: 'jangada', qtd: 1, custo: { madeira: 6, corda: 2 } },
   { id: 'pocao_mana', qtd: 1, custo: { gosma: 2, baga: 2 }, nivel: 2 },
   { id: 'forja', qtd: 1, custo: { pedra: 15, madeira: 6, minerio: 2 }, nivel: 4 },
-  { id: 'lingote', qtd: 1, custo: { minerio: 2, madeira: 1 }, nivel: 5 },
-  { id: 'machado_ferro', qtd: 1, custo: { lingote: 2, madeira: 2 }, nivel: 5 },
-  { id: 'picareta_ferro', qtd: 1, custo: { lingote: 2, madeira: 2 }, nivel: 5 },
-  { id: 'espada_ferro', qtd: 1, custo: { lingote: 3, couro: 1 }, nivel: 5 },
+  { id: 'lingote', qtd: 1, custo: { minerio: 2, madeira: 1 }, nivel: 5, estacao: 'forja' },
+  { id: 'machado_ferro', qtd: 1, custo: { lingote: 2, madeira: 2 }, nivel: 5, estacao: 'forja' },
+  { id: 'picareta_ferro', qtd: 1, custo: { lingote: 2, madeira: 2 }, nivel: 5, estacao: 'forja' },
+  { id: 'espada_ferro', qtd: 1, custo: { lingote: 3, couro: 1 }, nivel: 5, estacao: 'forja' },
   { id: 'altar', qtd: 1, custo: { pedra: 10, cristal: 3, lingote: 1 }, nivel: 6 },
   { id: 'torre', qtd: 1, custo: { pedra: 20, madeira: 10, lingote: 4 }, nivel: 7 },
   { id: 'estatua', qtd: 1, custo: { pedra: 12, cristal: 6, lingote: 6 }, nivel: 9 },
@@ -88,3 +116,25 @@ export const DEF_RECURSO = {
   minerio: { vida: 10, solta: { minerio: 2 } as Partial<Record<ItemId, number>>, renasceMs: 300_000 },
   cristal: { vida: 12, solta: { cristal: 1 } as Partial<Record<ItemId, number>>, renasceMs: 420_000 },
 };
+
+// ---------- Grupos do menu de criação ----------
+
+export type Grupo = 'extracao' | 'equipamentos' | 'construcao' | 'materiais' | 'consumiveis';
+
+export const GRUPOS: { id: Grupo; nome: string; icone: ItemId }[] = [
+  { id: 'extracao', nome: 'Extração', icone: 'machado_pedra' },
+  { id: 'equipamentos', nome: 'Equipamentos', icone: 'espada_pedra' },
+  { id: 'construcao', nome: 'Construção', icone: 'casa' },
+  { id: 'materiais', nome: 'Materiais', icone: 'corda' },
+  { id: 'consumiveis', nome: 'Consumíveis', icone: 'carne_assada' },
+];
+
+/** Grupo de uma receita: ferramentas de coleta, armas/jangada, construções, materiais intermediários ou consumíveis. */
+export function grupoDe(id: ItemId): Grupo {
+  const d = ITENS[id];
+  if (d.construivel) return 'construcao';
+  if (d.comida || d.mana) return 'consumiveis';
+  if (d.ferramenta && d.ferramenta.alvo !== 'criatura') return 'extracao';
+  if (d.ferramenta || id === 'jangada') return 'equipamentos';
+  return 'materiais';
+}

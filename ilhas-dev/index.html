@@ -32,6 +32,11 @@
       background: #fff; border: 2px solid #3a2f45; border-radius: 8px; }
     #craft button:disabled { opacity: .55; cursor: default; }
     #craft button[data-r]:not(:disabled):hover { background: #e9fbe0; }
+    #craft .abas { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin: 0 0 8px; }
+    #craft .aba { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 2px; font-size: 10px; font-weight: 700;
+      background: #fff; border: 2px solid #3a2f45; border-radius: 8px; }
+    #craft .aba img { width: 22px; height: 22px; } #craft .aba.sel { background: #ffd166; box-shadow: inset 0 -3px 0 #e0a83a; }
+    #craft .aba i { position: absolute; top: -6px; right: -4px; min-width: 16px; padding: 0 3px; border-radius: 8px; background: #6db35c; color: #fff; font-style: normal; font-size: 10px; line-height: 16px; }
     .grande { width: 32px; height: 32px; } .custo { display: flex; gap: 8px; font-size: 12px; margin-top: 2px; flex-wrap: wrap; }
     .custo img, .req img { width: 14px; height: 14px; vertical-align: -3px; margin-right: 2px; } .falta { color: #c0392b; }
 
@@ -81,6 +86,24 @@
     body.toque .magia { padding: 8px 10px 8px 26px; }
     body.espectador #magias { display: none; }
     body.toque #avisos { top: 34%; }
+    /* Painéis: rolam com o dedo (a página bloqueia gestos para o joystick), cabem na área visível de verdade
+       (100dvh desconta a barra do navegador) e o cabeçalho com o ✕ fica sempre visível */
+    #craft, #habilidades, #cristal, #bau, #ranking { touch-action: pan-y; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+    #habilidades, #cristal, #bau { max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); }
+    #craft h3, #habilidades h3, #cristal h3, #bau h3, #ranking h3 { position: sticky; top: -12px; z-index: 2; margin-top: -12px; padding: 12px 0 6px; background: #f6efe0; }
+    #craft h3 .fechar, #habilidades h3 .fechar, #cristal h3 .fechar, #bau h3 .fechar, #ranking h3 .fechar { font-size: 22px; padding: 2px 8px; margin-left: auto; }
+    #fundo { display: none; position: fixed; inset: 0; z-index: 4; background: #1a183066; }
+    body.painel-aberto #fundo { display: block; }
+    body.toque #craft, body.toque #ranking { top: calc(max(8px, env(safe-area-inset-top))); bottom: calc(max(8px, env(safe-area-inset-bottom)) + 70px);
+      max-height: none; left: 8px; right: 8px; width: auto; z-index: 8; }
+    body.toque #habilidades, body.toque #cristal, body.toque #bau { top: calc(max(8px, env(safe-area-inset-top))); left: 8px; right: 8px; width: auto;
+      transform: none; bottom: calc(max(8px, env(safe-area-inset-bottom))); max-height: none; }
+    /* Construção no celular: o botão de ação confirma; o ✕ fica pequeno acima dele; nada cobre o mapa */
+    body.toque.construindo #btn-ok { display: none; }
+    body.toque.construindo #btn-cancelar { top: auto; left: auto; right: max(34px, env(safe-area-inset-right));
+      bottom: calc(max(8px, env(safe-area-inset-bottom)) + 184px); width: 64px; height: 44px; padding: 0; font-size: 16px; }
+    body.toque.construindo #missao, body.toque.construindo #magias { display: none !important; }
+    body.toque #dica-construcao { top: calc(max(12px, env(safe-area-inset-top)) + 96px); bottom: auto; font-size: 12px; max-width: calc(100vw - 90px); left: 12px; right: auto; margin: 0; }
     #menu { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; box-sizing: border-box; overflow: auto;
       background: radial-gradient(circle at 50% 40%, #5fa3d9, #3b6ea8 60%, #2b4f7e); }
     #menu[hidden] { display: none; }
@@ -96,6 +119,12 @@
     #menu .personagens button { aspect-ratio: 1; border: 2px solid #3a2f45; border-radius: 8px; background-color: #fff;
       background-size: 400% 700%; background-position: 0 0; image-rendering: pixelated; padding: 0; }
     #menu .personagens button.sel { background-color: #ffd166; box-shadow: inset 0 -3px 0 #e0a83a; }
+    #menu .online { margin: 14px 0 0; padding: 10px; border: 2px dashed #a98bff; border-radius: 10px; background: #f3edff; }
+    #menu .online h2 { margin: 0 0 4px; color: #6a3fd0; } #menu .online p { margin: 2px 0 6px; font-size: 12px; color: #6a5f75; }
+    #menu .desafio { background: #ffe08a; border: 2px solid #3a2f45; border-radius: 10px; padding: 8px 10px; font-size: 14px; }
+    #menu .online input, #menu #apelido-local { width: 100%; box-sizing: border-box; padding: 8px; border: 2px solid #3a2f45; border-radius: 8px; font: inherit; margin-bottom: 6px; }
+    #menu .online button { width: 100%; padding: 10px; font-weight: 800; border: 2px solid #3a2f45; border-radius: 10px; background: #c39bff; }
+    #menu .online a { color: #6a3fd0; font-weight: 700; }
     #menu .creditos { font-size: 10px; color: #8a7f95; text-align: center; margin: 10px 0 0; }
     #menu .creditos a { color: inherit; }
     #menu .acoes { display: flex; gap: 8px; margin-top: 16px; }
@@ -104,10 +133,97 @@
     #menu .aviso-novo { font-size: 11px; color: #8a7f95; text-align: center; margin: 8px 0 0; }
     #missao { position: fixed; left: 12px; top: calc(max(12px, env(safe-area-inset-top)) + 96px); width: 200px; padding: 8px 10px; font-size: 12px; cursor: pointer; }
     #missao b { display: block; font-size: 13px; color: #ffd166; } #missao small { opacity: .7; }
-    #missao.fechada p { display: none; }
-    body.toque #missao { top: calc(max(12px, env(safe-area-inset-top)) + 96px); width: 46vw; max-width: 220px; font-size: 11px; box-sizing: border-box; }
+    #missao.fechada p, #missao.fechada .metas, #missao.fechada .linha-metas { display: none; }
+    #missao .linha-metas { display: block; margin: 4px 0; color: #ffd166; opacity: 1 !important; }
+    body.toque #missao { top: calc(max(12px, env(safe-area-inset-top)) + 96px); width: auto; max-width: 60vw; font-size: 11px; box-sizing: border-box; padding: 6px 10px; }
+    #missao.fechada small { display: none; }
     #missao.feita { animation: feita .6s; } @keyframes feita { 50% { transform: scale(1.06); background: #6db35ccc; } }
     #status .icones { display: flex; gap: 4px; } #status .icones button { background: none; border: 0; padding: 0 2px; font-size: 13px; color: #f6efe0; opacity: .85; }
+    #cristal { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(360px, calc(100vw - 24px)); max-height: calc(100vh - 40px);
+      overflow: auto; background: #f6efe0; border: 2px solid #3a2f45; border-radius: 12px; padding: 12px; color: #3a2f45; z-index: 9; box-sizing: border-box; }
+    #cristal h3 { margin: 0 0 6px; display: flex; justify-content: space-between; color: #7a4fd0; }
+    #cristal h4 { margin: 10px 0 4px; font-size: 13px; } #cristal p { margin: 4px 0; font-size: 13px; } #cristal .dica { color: #8a7f95; font-size: 12px; }
+    #cristal ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+    #cristal li { display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 4px 6px; border-radius: 6px; background: #fff; }
+    #cristal li img { width: 18px; height: 18px; } #cristal li b { margin-left: auto; } #cristal li.ok { background: #e9fbe0; } #cristal li.falta b { color: #c0392b; }
+    #cristal .expandir { width: 100%; margin-top: 10px; padding: 10px; font-weight: 800; font-size: 15px; border: 2px solid #3a2f45; border-radius: 10px; background: #c39bff; }
+    #cristal .expandir:disabled { opacity: .5; }
+    #bau { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, calc(100vw - 24px)); max-height: calc(100vh - 40px);
+      overflow: auto; background: #f6efe0; border: 2px solid #3a2f45; border-radius: 12px; padding: 12px; color: #3a2f45; z-index: 9; box-sizing: border-box; }
+    #bau h3 { margin: 0 0 4px; display: flex; justify-content: space-between; color: #8a5a3c; } #bau h4 { margin: 10px 0 4px; font-size: 13px; } #bau h4 small { color: #8a7f95; font-weight: 400; }
+    #bau .dica { color: #8a7f95; font-size: 12px; margin: 0; } #bau .grade { display: flex; flex-wrap: wrap; gap: 6px; } #bau .vazio { color: #8a7f95; font-size: 12px; }
+    #barra[data-cheia="true"] { box-shadow: 0 0 0 3px #e0503c; }
+    .energia { font-size: 12px; color: #c3a6ff; } .energia.baixa { color: #ff8080; animation: pisca 1s infinite; } @keyframes pisca { 50% { opacity: .4 } }
+    .bar.energia i { background: #a98bff; } #cristal .bar.energia { height: 16px; } #cristal .bar.energia span { line-height: 16px; font-size: 11px; color: #fff; }
+    #cristal .recarga { display: flex; gap: 6px; margin: 4px 0; } #cristal .recarga button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 6px;
+      border: 2px solid #3a2f45; border-radius: 8px; background: #fff; font-weight: 700; } #cristal .recarga button:disabled { opacity: .45; } #cristal .recarga img { width: 18px; height: 18px; }
+    #cristal .diario { font-size: 12px; } #cristal .diario li { background: #fff4e0; }
+    #alerta-fora { display: none; position: fixed; left: 0; right: 0; margin: 0 auto; width: max-content; max-width: calc(100vw - 24px); top: calc(max(12px, env(safe-area-inset-top)) + 54px);
+      padding: 5px 12px; font-size: 12px; font-weight: 700; color: #fff; background: #c0392bdd; border: 2px solid #3a2f45; border-radius: 10px; z-index: 6; pointer-events: none; }
+    body.fora #alerta-fora { display: block; }
+    #btn-mapa { position: fixed; right: 12px; top: calc(max(12px, env(safe-area-inset-top)) + 196px); padding: 8px 12px; font-weight: 700; }
+    #mapa { position: fixed; z-index: 8; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 24px);
+      display: flex; flex-direction: column; padding: 12px; background: #f6efe0; border: 2px solid #3a2f45; border-radius: 12px; color: #3a2f45; box-shadow: 0 6px 0 #2b2238; }
+    #mapa[hidden] { display: none; }
+    #mapa h3 { margin: 0 0 8px; display: flex; align-items: center; } #mapa h3 .fechar { margin-left: auto; font-size: 22px; padding: 2px 8px; }
+    #mapa .moldura { overflow: auto; touch-action: pan-x pan-y; overscroll-behavior: contain; border: 2px solid #3a2f45; border-radius: 8px; background: #22263f; min-height: 0; flex: 1; }
+    #mapa canvas { display: block; width: 1200px; height: 1200px; image-rendering: pixelated; }
+    #mapa .legenda { margin: 8px 0 0; font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+    #mapa .legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid #2b2238; margin-right: -6px; }
+    #mapa .explorado { margin: 4px 0 0; font-size: 12px; color: #8a7f95; }
+    body.toque #btn-mapa { left: auto; right: 12px; bottom: auto; width: 48px; height: 48px; padding: 0; font-size: 0; top: calc(max(12px, env(safe-area-inset-top)) + 264px); }
+    body.toque #btn-mapa::before { content: '🗺'; font-size: 22px; }
+    #ranking .sua .alvo { display: block; font-size: 12px; color: #c0446a; margin-top: 2px; }
+    #ajuda { transition: opacity .4s; } #ajuda.discreta { opacity: .12; } #ajuda.discreta:hover { opacity: 1; }
+    #boas-vindas { position: fixed; z-index: 9; left: 50%; top: 22%; transform: translateX(-50%); width: min(340px, calc(100vw - 32px)); padding: 14px 16px;
+      background: #f6efe0; color: #3a2f45; border: 2px solid #3a2f45; border-radius: 12px; box-shadow: 0 6px 0 #2b2238; font-size: 14px; }
+    #boas-vindas h3 { margin: 0 0 6px; } #boas-vindas p { margin: 4px 0; } #boas-vindas .ev { font-weight: 700; margin-top: 8px; }
+    #boas-vindas ul { margin: 2px 0 8px; padding-left: 18px; font-size: 12px; }
+    #boas-vindas button { width: 100%; padding: 10px; font-weight: 700; border: 2px solid #3a2f45; border-radius: 8px; background: #8fd37c; }
+    #cristal .reino { background: #fff8ea; border: 2px solid #e5d6b8; border-radius: 8px; padding: 6px 8px; font-size: 13px; }
+    #cristal .reino p { margin: 4px 0; } #cristal .reino small { color: #8a7f95; }
+    #cristal .reino .rebelar { width: 100%; padding: 8px; font-weight: 700; border: 2px solid #3a2f45; border-radius: 8px; background: #ffb3a7; }
+    #cristal .vassalos { list-style: none; padding: 0; margin: 4px 0; } #cristal .vassalos li { display: flex; gap: 6px; align-items: center; padding: 2px 0; }
+    #cristal .vassalos button { margin-left: auto; font-size: 11px; padding: 2px 6px; }
+    #proposta { position: fixed; z-index: 10; left: 50%; top: 18%; transform: translateX(-50%); width: min(360px, calc(100vw - 32px)); padding: 14px 16px;
+      background: #f6efe0; color: #3a2f45; border: 2px solid #3a2f45; border-radius: 12px; box-shadow: 0 6px 0 #2b2238; font-size: 14px; }
+    #proposta h3 { margin: 0 0 6px; } #proposta p { margin: 6px 0; } #proposta .botoes { display: flex; gap: 8px; margin-top: 10px; }
+    #proposta button { flex: 1; padding: 10px; font-weight: 700; border: 2px solid #3a2f45; border-radius: 8px; }
+    #proposta .aceitar { background: #ffe08a; } #proposta .resistir { background: #ffb3a7; }
+    #conquista { position: fixed; z-index: 9; left: 12px; right: 12px; margin: 0 auto; width: fit-content; top: calc(max(12px, env(safe-area-inset-top)) + 70px); padding: 10px 16px;
+      background: #ffe08a; color: #3a2f45; border: 2px solid #3a2f45; border-radius: 12px; box-shadow: 0 4px 0 #2b2238; font-weight: 800; font-size: 14px;
+      animation: surgir .4s; max-width: calc(100vw - 32px); }
+    #conquista small { display: block; font-weight: 600; font-size: 12px; }
+    #cartao { position: fixed; z-index: 11; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(400px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: auto;
+      padding: 12px; background: #f6efe0; color: #3a2f45; border: 2px solid #3a2f45; border-radius: 12px; box-shadow: 0 6px 0 #2b2238; }
+    #cartao h3 { margin: 0 0 8px; display: flex; align-items: center; } #cartao h3 .fechar { margin-left: auto; font-size: 22px; padding: 2px 8px; }
+    #cartao img { width: 100%; border-radius: 8px; display: block; }
+    #cartao .botoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    #cartao .botoes > * { flex: 1 1 45%; padding: 10px; text-align: center; font-weight: 700; font-size: 14px; border: 2px solid #3a2f45; border-radius: 8px; background: #fff; color: #3a2f45; text-decoration: none; }
+    #cartao .share { background: #8fd37c !important; }
+    #cristal .compartilhar { width: 100%; margin: 8px 0 4px; padding: 9px; font-weight: 700; border: 2px solid #3a2f45; border-radius: 8px; background: #ffe08a; }
+    #status .rival { display: flex; gap: 4px; align-items: baseline; width: 100%; margin-top: 4px; padding: 3px 6px; border: 1px solid #ffffff33; border-radius: 6px;
+      background: #00000033; color: #f6efe0; font-size: 11px; text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; }
+    #status .rival b { overflow: hidden; text-overflow: ellipsis; } #status .rival em { font-style: normal; font-weight: 700; margin-left: auto; }
+    #status .rival .frente { color: #8fd37c; } #status .rival .atras { color: #ff9b8a; } #status .rival small { opacity: .6; }
+    #missao .metas { list-style: none; margin: 4px 0; padding: 0; } #missao .metas li { margin: 2px 0; } #missao .metas li b { color: #ffd166; }
+    #missao .metas li.ok { opacity: .65; text-decoration: line-through; }
+    #invasao { position: fixed; z-index: 10; left: 12px; right: 12px; margin: 0 auto; top: calc(max(12px, env(safe-area-inset-top)) + 70px); max-width: 360px; box-sizing: border-box;
+      padding: 10px 12px; background: #ffb3a7; color: #3a2f45; border: 2px solid #3a2f45; border-radius: 12px; box-shadow: 0 4px 0 #2b2238; animation: surgir .4s; }
+    #invasao b { display: block; font-size: 15px; } #invasao small { display: block; margin: 4px 0 8px; font-size: 12px; }
+    #invasao .botoes { display: flex; gap: 6px; } #invasao button { flex: 1; padding: 8px; font-weight: 700; border: 2px solid #3a2f45; border-radius: 8px; background: #fff; } #invasao .fechar { flex: 0 0 40px; }
+    #vinganca { position: fixed; z-index: 10; left: 12px; right: 12px; margin: 0 auto; top: calc(max(12px, env(safe-area-inset-top)) + 70px);
+      max-width: 360px; box-sizing: border-box; padding: 10px 12px; background: #ffd9d3; color: #3a2f45; border: 2px solid #3a2f45; border-radius: 12px; box-shadow: 0 4px 0 #2b2238; animation: surgir .4s; }
+    @keyframes surgir { from { opacity: 0; translate: 0 -10px; } }
+    #vinganca b { display: block; font-size: 15px; } #vinganca small { display: block; margin: 4px 0 8px; font-size: 12px; }
+    #vinganca .botoes { display: flex; gap: 6px; } #vinganca button { flex: 1; padding: 8px; font-weight: 700; border: 2px solid #3a2f45; border-radius: 8px; background: #fff; }
+    #vinganca .ir { background: #ff9b8a; } #vinganca .fechar { flex: 0 0 40px; }
+    #item-menu { position: fixed; z-index: 9; display: flex; flex-direction: column; gap: 4px; min-width: 150px; padding: 8px; background: #f6efe0;
+      border: 2px solid #3a2f45; border-radius: 10px; color: #3a2f45; box-shadow: 0 4px 0 #2b2238; }
+    #item-menu[hidden] { display: none; }
+    #item-menu b { display: flex; align-items: center; gap: 6px; font-size: 13px; } #item-menu b img { width: 20px; height: 20px; } #item-menu small { color: #8a7f95; }
+    #item-menu button { padding: 8px 10px; text-align: left; font-weight: 700; border: 2px solid #3a2f45; border-radius: 8px; background: #fff; }
+    #item-menu .fechar-menu { text-align: center; background: #eee; }
     #nivel { position: fixed; top: max(12px, env(safe-area-inset-top)); right: 12px; padding: 8px 10px; font-size: 13px; max-width: 220px; }
     #nivel .req { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 2px; } #nivel .ok { color: #9be38a; } #nivel small { opacity: .75; }
     #avisos { position: fixed; top: 12px; left: 0; right: 0; margin: 0 auto; display: grid; gap: 6px; pointer-events: none; z-index: 6; width: max-content; max-width: 60vw; }
@@ -131,7 +247,7 @@
       border: 2px solid #3a2f45; border-radius: 10px; }
     body.construindo #btn-ok { right: 12px; background: #8fd27a; } body.construindo #btn-cancelar { left: 12px; background: #f6efe0; }
     body.toque #zoom { display: flex; gap: 6px; position: fixed; right: 12px; top: calc(max(12px, env(safe-area-inset-top)) + 104px); }
-    body.toque #btn-ranking, body.toque #btn-hab, body.toque #btn-craft { left: auto; right: 12px; bottom: auto; width: 48px; height: 48px; padding: 0;
+    body.toque #btn-ranking, body.toque #btn-hab, body.toque #btn-craft, body.toque #btn-mapa { left: auto; right: 12px; bottom: auto; width: 48px; height: 48px; padding: 0;
       font-size: 0; border-radius: 50%; display: grid; place-items: center; }
     body.toque #btn-craft::before { content: '🛠'; font-size: 22px; } body.toque #btn-ranking::before { content: '🏆'; font-size: 22px; }
     body.toque #btn-hab::before { content: '✦'; font-size: 22px; } body.toque #btn-hab .badge { position: absolute; top: -4px; right: -4px; font-size: 11px; }
@@ -160,17 +276,24 @@
 <body>
   <div id="menu"></div>
   <div id="jogo"></div>
+  <div id="fundo"></div>
   <div id="missao" class="painel" hidden></div>
-  <div id="ajuda" class="painel">WASD/setas: andar · Espaço: coletar/atacar · C: criar · R: ranking · K: habilidades · 1–5: magias · clique na comida para comer · roda: zoom</div>
+  <div id="ajuda" class="painel">WASD/setas ou clique no chão: andar · Espaço: coletar/atacar/usar (Cristal, baú, plantação, dormir) · C: criar · R: ranking · K: habilidades · 1–5: magias · clique na comida para comer · roda: zoom</div>
   <div id="status" class="painel"></div>
   <div id="nivel" class="painel"></div>
   <div id="avisos"></div>
+  <div id="alerta-fora">⚠ Sua ilha está desprotegida</div>
   <div id="barra" class="painel"></div>
   <div id="dica-construcao" class="painel"></div>
   <button id="btn-craft">Criar (C)</button>
   <button id="btn-ranking">🏆 Ranking</button>
   <button id="btn-hab">✦ Habilidades</button>
+  <button id="btn-mapa">🗺 Mapa</button>
+  <div id="mapa" hidden></div>
   <div id="habilidades" hidden></div>
+  <div id="cristal" hidden></div>
+  <div id="bau" hidden></div>
+  <div id="item-menu" hidden></div>
   <div id="magias"></div>
   <div id="ranking" hidden></div>
   <div id="espectador" class="painel"><span id="espectador-nome"></span><button id="btn-voltar">Voltar para mim</button></div>
@@ -180,6 +303,8 @@
   <button id="btn-ok">✔ Construir</button>
   <button id="btn-cancelar">✕</button>
   <div id="zoom"><button id="zoom-mais">+</button><button id="zoom-menos">−</button></div>
+  <!-- supabase-js: login do MyDeck e multijogador (mesma versão usada no RPG do site) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

@@ -2,23 +2,42 @@ import Phaser from 'phaser';
 import { gerarMundo, tileEm, ehAgua, TILE_ANDAVEL, type Mundo, type Recurso } from '../sim/mundo';
 import { iniciarRecursos, golpear, atualizarRecursos, recursoAtivo, ferramentaPara, type EstadoRecursos } from '../sim/coleta';
 import { CRIATURAS, DURACAO_DIA, bonusDano, ehNoite, ganharXp, novoStatus, type Status } from '../sim/criaturas';
-import { novoInventario, remover, qtd, adicionar, desgastar, type Inventario } from '../sim/inventario';
-import { nivelIlha, validarLocal, type Construcao } from '../sim/construcao';
+import { novoInventario, remover, qtd, adicionar, desgastar, cabe, moverPilha, type Inventario } from '../sim/inventario';
+import { DEF_RECURSO, liberadasNoNivel } from '../sim/itens';
+import { validarLocal, type Construcao } from '../sim/construcao';
+import { expandirTerreno, pagarExpansao, requisitosExpansao, tileDeNascimento, tileDoCristal } from '../sim/expansao';
 import { carregar, serializar } from '../sim/save';
 import { ITENS, type ItemId } from '../sim/itens';
 import { criarCriaturas, T } from './texturas';
-import { registrarRecorte } from './icones';
+import { registrarRecorte, icone } from './icones';
+import { Nevoa, desenharMapaMundi, type Marca } from './Nevoa';
+import { emContato, forcaIlha, forcaReino, membroDe, novoEstadoReinos, pagarTributo, passoReinos, raioInfluencia, rebelar, reiDe, resistir, submeter, libertar, vassalosDe, TRIBUTO_MS, type EstadoReinos, type Membro } from '../sim/reinos';
+import type { InfoReino } from './ui';
+import { DEF_METAS, MARCOS_SEQUENCIA, novoEstadoMetas, progredir, virarDia, type EstadoMetas, type TipoMeta } from '../sim/metas';
+import { acharCaminho } from '../sim/caminho';
 import { recorteComoUrl, carregar as carregarArte, preparar, quadroParado, varianteArvore, OBJETOS, PERSONAGENS, type Personagem } from './assets';
 import { Fauna } from './Fauna';
 import { DiaNoite } from './DiaNoite';
 import { BotsVisuais } from './BotsVisuais';
+import { BausVisuais } from './BausVisuais';
+import { MULT_RARIDADE } from '../sim/criaturas';
+import { ENERGIA_POR_ITEM, chanceDeSaque, criarTumulo, resolverSaque, type Tumulo } from '../sim/saque';
+import { naIlha } from '../sim/construcao';
+import { RARIDADES } from '../sim/baus';
 import { MapaEmPedacos } from './MapaEmPedacos';
 import { Magias } from './Magias';
 import { Som, type Efeito } from './Som';
-import { MISSOES, missaoAtual } from '../sim/tutorial';
-import { DIFICULDADE, type Dificuldade } from '../sim/bots';
+import { MISSOES, TUTORIAL_BASE, missaoAtual } from '../sim/tutorial';
+import { DIFICULDADE, pontuacao, type Dificuldade } from '../sim/bots';
 
-export interface Config { seed: number; participantes: number; bots: number; dificuldade: Dificuldade; novo: boolean; personagem?: Personagem; }
+export interface Config {
+  seed: number; participantes: number; bots: number; dificuldade: Dificuldade; novo: boolean; personagem?: Personagem;
+  /** Multijogador: minha ilha na temporada, nome público, nuvem e save vindo dela. */
+  slot?: number; nome?: string; nuvem?: import('../rede/nuvem').Nuvem; saveNuvem?: string | null;
+  outros?: import('../rede/nuvem').PerfilPublico[];
+  /** chegou por um link de desafio de alguém (nome de quem convidou) */
+  convite?: string;
+}
 import { aprender, efeitos, MAGIAS, podeAprender, type Efeitos, type Magia } from '../sim/habilidades';
 import { Interface, toque } from './ui';
 
@@ -58,6 +77,50 @@ export class CenaJogo extends Phaser.Scene {
   private eraNoite = false;
   private invulneravelAte = 0;
   private morto = false;
+  private minhaIlha!: import('../sim/mundo').Ilha;
+  /** Pessoas reais da temporada (perfil público) e o que já foi desenhado de cada uma. */
+  private outros = new Map<string, { perfil: import('../rede/nuvem').PerfilPublico; nome: Phaser.GameObjects.Text }>();
+  private ultimaNuvem = 0;
+  /** Tiles dos Cristais (centro de cada ilha de participante). */
+  private cristais = new Set<number>();
+  private brilhoCristal!: Phaser.GameObjects.Image;
+  private cristalAberto = false;
+  /** Armazém da ilha (baús): guarda o que não cabe na mochila. */
+  private armazem: Inventario = novoInventario();
+  private interagiu = false;
+  /** ms de jogo acumulados (escudo de novato: sem saque nos primeiros 10 min ou até a ilha nível 2) */
+  private tempoJogado = 0;
+  private estavaFora = false;
+  private salvoEm?: number;
+  private reinos: EstadoReinos = novoEstadoReinos();
+  private metas: EstadoMetas | null = null;
+  /** `defender`: o rival foi escolhido abaixo de você (você lidera): vence quem estiver na frente no fim da semana */
+  private renascerAoCarregar = false;
+  private bausAbertos = 0;
+  private avisouContato = false;
+  private vinganca: { ilha: number; nome: string; itens: Partial<Record<ItemId, number>>; ate: number } | null = null;
+  static VINGANCA_MS = 15 * 60_000;
+  /** invasor a caminho do seu Cristal (visível no mapa); some ao ser expulso ou ao saquear */
+  private invasao: { nome: string; x: number; y: number; vida: number; vidaMax: number; chegaEm: number; vel: number; arte: string;
+    sprite: Phaser.GameObjects.Sprite; barco: Phaser.GameObjects.Image; barra: Phaser.GameObjects.Rectangle } | null = null;
+  static INVASAO_MS = 45_000;
+  private rival: { chave: string; nome: string; ate: number; frente: boolean; defender?: boolean } | null = null;
+  /** andar até um ponto tocado: tiles que faltam e a marca no chão */
+  private rota: [number, number][] | null = null;
+  private marcaRota?: Phaser.GameObjects.Image;
+  private rotaParado = 0;
+  private nevoa!: Nevoa;
+  private nevoaSalva?: string;
+  /** Itens largados no chão: pilhas por tile, com o desenho do ícone. */
+  private chao: { x: number; y: number; itens: Inventario; img?: Phaser.GameObjects.Image }[] = [];
+  /** Energia do Cristal (0–100): saques drenam; zerada, a ilha perde um nível. */
+  private energia = 100;
+  private diario: string[] = [];
+  private tumulo: Tumulo | null = null;
+  private imgTumulo: Phaser.GameObjects.Image | null = null;
+  private ultimoAvisoCheia = -9999;
+  private estagioPlantacao = new Map<number, string>();
+  private visitouOutra = false;
   private habilidades: string[] = [];
   private ef: Efeitos = efeitos([]);
   private mana = 0;
@@ -72,7 +135,8 @@ export class CenaJogo extends Phaser.Scene {
   private avisouJangada = false;
   private naAgua = false;
   private bots!: BotsVisuais;
-  private assistindo: import('../sim/bots').Bot | null = null;
+  private bausMundo!: BausVisuais;
+  private assistindo: { x: number; y: number } | null = null;
 
   constructor() { super('jogo'); }
 
@@ -85,13 +149,14 @@ export class CenaJogo extends Phaser.Scene {
     const { seed, participantes } = this.cfg;
     this.mundo = gerarMundo({ seed, participantes });
     this.recursos = iniciarRecursos(this.mundo);
-    this.chaveSave = `ilhas-save-${seed}-${participantes}`;
+    this.chaveSave = this.cfg.nuvem ? `ilhas-online-${this.cfg.nuvem.temporada.id}-${this.cfg.nuvem.userId}` : `ilhas-save-${seed}-${participantes}`;
     let lido: string | null = null;
     try {
       if (this.cfg.novo) localStorage.removeItem(this.chaveSave);
       lido = localStorage.getItem(this.chaveSave);
     } catch { /* armazenamento bloqueado */ }
-    const save = carregar(lido, seed, participantes);
+    // online: a nuvem é a fonte da verdade (o navegador é só cópia)
+    const save = carregar(this.cfg.saveNuvem ?? lido, seed, participantes) ?? carregar(lido, seed, participantes);
     preparar(this);
     registrarRecorte(id => (ITENS[id].construivel || id === 'minerio' ? recorteComoUrl(this, id) : null));
     this.personagem = this.cfg.personagem && PERSONAGENS.includes(this.cfg.personagem) ? this.cfg.personagem : 'Boy';
@@ -100,6 +165,7 @@ export class CenaJogo extends Phaser.Scene {
     const m = this.mundo;
     this.mapa = new MapaEmPedacos(this, m, (x, y) => {
       const i = this.idx(x, y);
+      if (this.cristais.has(i)) return 'nucleo';
       const c = this.construidoEm.get(i);
       if (c) return c in OBJETOS ? c : null;
       const r = this.recursos.porTile.get(i);
@@ -110,30 +176,62 @@ export class CenaJogo extends Phaser.Scene {
       Object.assign(this.inv.durabilidade, save.inventario.durabilidade);
       this.construcoes = save.construcoes;
       if (save.status) this.status = save.status;
+      if (this.status.vida <= 0) { this.status.vida = this.status.vidaMax; this.renascerAoCarregar = true; }
       if (save.habilidades) this.habilidades = save.habilidades;
       if (save.mana !== undefined) this.mana = save.mana;
-      if (save.tutorial) { this.missao = save.tutorial.missao; this.criados = save.tutorial.criados; this.mortos = save.tutorial.mortos; }
-      else if (nivelIlha(save.construcoes) >= 2) this.missao = MISSOES.length; // jogador veterano: sem tutorial
+      if (save.tutorial) { this.missao = save.tutorial.missao; this.criados = save.tutorial.criados; this.mortos = save.tutorial.mortos; this.bausAbertos = save.tutorial.bausAbertos ?? 0; }
       if (save.tempo !== undefined) this.tempoMundo = save.tempo;
+      this.nivel = save.nivel ?? 1;
+      if (save.armazem) Object.assign(this.armazem, save.armazem);
+      if (save.energia !== undefined) this.energia = save.energia;
+      if (save.diario) this.diario = save.diario;
+      if (save.tumulo) this.tumulo = save.tumulo;
+      if (save.nevoa) this.nevoaSalva = save.nevoa;
+      if (save.tempoJogado) this.tempoJogado = save.tempoJogado;
+      this.salvoEm = save.salvoEm;
+      if (save.rival) this.rival = save.rival;
+      if (save.metas) this.metas = save.metas;
+      if (save.contato) this.avisouContato = true;
+      if (save.vinganca) this.vinganca = save.vinganca;
+      if (save.reinos) this.reinos = { ...novoEstadoReinos(), ...save.reinos };
+      if (save.chao) this.chao = save.chao.map(c => ({ x: c.x, y: c.y, itens: c.itens }));
+    } else {
+      // começo: só o necessário para a primeira jangada (2 cordas + madeira)
+      Object.assign(this.inv.itens, { madeira: 6, fibra: 6 });
+      // presente de quem chegou por convite: um cristal para a primeira expansão
+      if (this.cfg.convite) { this.inv.itens.cristal = 1; this.time.delayedCall(2500, () => this.ui.aviso(`🎁 Presente do desafio de ${this.cfg.convite}: 1 cristal`)); }
     }
+    // O Cristal ocupa o centro de cada ilha de participante; ilhas já expandidas no save voltam ao tamanho
+    const iniciais = m.ilhas.filter(i => i.dono !== null);
+    this.minhaIlha = iniciais[this.cfg.slot ?? 0] ?? iniciais[0];
+    for (const ilha of iniciais) { const c = tileDoCristal(ilha); this.cristais.add(this.idx(c.x, c.y)); this.bloqueio.add(this.idx(c.x, c.y)); }
+    if (this.nivel > 1) expandirTerreno(m, this.recursos, this.minhaIlha, this.nivel);
+    // ilhas com dono humano: a minha e a das outras pessoas da temporada
+    const ocupadas = new Set<number>([this.cfg.slot ?? 0, ...(this.cfg.outros ?? []).map(o => o.slot)]);
+    for (const o of this.cfg.outros ?? []) if (o.slot !== this.cfg.slot && iniciais[o.slot]) this.mostrarOutro(o);
+    save?.bots?.forEach((sb, i) => {
+      const ilha = sb.ilha !== undefined ? m.ilhas[sb.ilha] : iniciais[i + 1];
+      if ((sb.nivel ?? 1) > 1 && ilha && !ocupadas.has(iniciais.indexOf(ilha))) expandirTerreno(m, this.recursos, ilha, sb.nivel!);
+    });
     for (const c of this.construcoes) this.removerRecursoSob(c.x, c.y);
     for (const r of m.recursos) if (this.recursos.porTile.get(this.idx(r.x, r.y)) === r) this.mostrarRecurso(r);
     for (const c of this.construcoes) this.mostrarConstrucao(c);
-    this.nivel = nivelIlha(this.construcoes);
 
     // Bots: cada um na sua ilha, decidindo sozinho o que fazer.
     const nBots = Math.max(0, Math.min(participantes - 1, this.cfg.bots));
-    this.bots = new BotsVisuais(this, m, nBots, seed,
+    this.bots = new BotsVisuais(this, m, nBots, seed, ocupadas,
       r => { this.mapa.definirObjeto(r.x, r.y, null); this.bloqueio.delete(this.idx(r.x, r.y)); },
       c => { this.removerRecursoSob(c.x, c.y); this.mostrarConstrucao(c); },
+      b => this.aplicarExpansao(b.ilha, b.nivel),
       save?.bots);
     for (const c of this.bots.todasConstrucoes()) {
       if (this.recursos.porTile.get(this.idx(c.x, c.y))) this.removerRecursoSob(c.x, c.y);
       this.mostrarConstrucao(c);
     }
 
-    const casa = m.ilhas[0];
-    const ini = save?.jogador ?? { x: (Math.round(casa.cx) + 0.5) * T, y: (Math.round(casa.cy) + 0.5) * T };
+    const casa = this.minhaIlha;
+    const nasce = tileDeNascimento(casa);
+    const ini = save?.jogador ?? { x: (nasce.x + 0.5) * T, y: (nasce.y + 0.5) * T };
     this.jogador = this.add.sprite(ini.x, ini.y, `p-${this.personagem}`, 0);
     this.jogador.setOrigin(0.5, 0.9).setDepth(this.jogador.y);
     this.sombra = this.add.image(0, 0, 'sombra').setAlpha(0.28);
@@ -141,15 +239,26 @@ export class CenaJogo extends Phaser.Scene {
     window.addEventListener('pointerdown', destravar); window.addEventListener('keydown', destravar);
     this.barco = this.add.image(0, 0, 'jangada').setOrigin(0.5, 0).setVisible(false);
     const andavel = (tx: number, ty: number) => TILE_ANDAVEL[tileEm(m, tx, ty)] && !this.bloqueio.has(this.idx(tx, ty));
-    this.fauna = new Fauna(this, andavel, m.ilhas[0], () => this.construcoes.filter(c => c.tipo === 'fogueira'), seed);
+    this.fauna = new Fauna(this, andavel, this.minhaIlha, () => this.construcoes.filter(c => c.tipo === 'fogueira'), seed);
     this.diaNoite = new DiaNoite(this);
+    this.bausMundo = new BausVisuais(this, m, seed, this.fauna,
+      (x, y, sim) => { if (sim) this.bloqueio.add(this.idx(x, y)); else this.bloqueio.delete(this.idx(x, y)); },
+      (x, y) => this.bloqueio.has(this.idx(x, y)) || !!this.recursos.porTile.get(this.idx(x, y)),
+      save?.bausMundo);
+    this.bausMundo.nivelJogador = () => this.status.nivel;
     this.eraNoite = ehNoite(this.tempoMundo);
     this.time.addEvent({ delay: 700, loop: true, callback: () => {
       if (!this.morto) this.fauna.tentarNascer(this.jogador.x / T, this.jogador.y / T, ehNoite(this.tempoMundo));
     } });
+    const cc = tileDoCristal(casa);
+    this.brilhoCristal = this.add.image((cc.x + 0.5) * T, (cc.y + 0.4) * T, 'brilho').setTint(0xb48cff).setBlendMode(Phaser.BlendModes.ADD).setDepth((cc.y + 1) * T - 2).setScale(0.6);
+    this.tweens.add({ targets: this.brilhoCristal, alpha: { from: 0.35, to: 0.8 }, scale: { from: 0.5, to: 0.7 }, duration: 1400, yoyo: true, repeat: -1 });
     this.fantasma = this.add.image(0, 0, 'acampamento', 'fogueira').setOrigin(0.5, 1).setDepth(30000).setAlpha(0.7).setVisible(false);
     this.alvo = this.add.rectangle(0, 0, T, T).setStrokeStyle(1, 0xffffff, 0.9).setOrigin(0).setDepth(5).setVisible(false);
 
+    this.nevoa = new Nevoa(this, m, this.nevoaSalva);
+    // sua ilha inteira (no tamanho final) já começa conhecida
+    { const cc = tileDoCristal(this.minhaIlha); this.nevoa.revelar(cc.x, cc.y, this.minhaIlha.raioMax + 3); }
     const cam = this.cameras.main;
     cam.setBounds(0, 0, m.largura * T, m.altura * T);
     // Mostra ~11 tiles no lado menor da tela (os personagens do pacote têm 16 px).
@@ -167,12 +276,33 @@ export class CenaJogo extends Phaser.Scene {
       confirmarConstrucao: () => this.construir(),
       zoom: f => cam.setZoom(Phaser.Math.Clamp(cam.zoom * f, 0.5, 5)),
       comer: id => this.comer(id),
-      ranking: () => this.bots.ranking({ construcoes: this.construcoes, status: this.status }),
+      ranking: () => this.rankingComReinos(),
+      reino: () => this.infoReino(),
+      rebelar: () => this.rebelar(),
+      cartao: () => this.gerarCartao(),
+      irVingar: () => this.irVingar(),
+      voltarParaCasa: () => { const c = tileDoCristal(this.minhaIlha); this.irPara(c.x, c.y, true); },
+      pedirAjuda: () => { if (this.vinganca) this.ultimaConquista = `${this.vinganca.nome} saqueou minha ilha! Me ajuda a revidar?`; },
+      viajar: (x, y) => { if (!this.nevoa.vistoEm(x, y)) { this.ui.aviso('Você ainda não conhece esse lugar'); return false; } return this.irPara(x, y, true); },
+      libertar: id => { libertar(this.reinos, id, this.tempoJogado); this.registrar(`Você libertou ${this.nomeDe(id)}`); this.mudou(); },
+      requisitos: () => requisitosExpansao(this.nivel, this.construcoes, this.inv),
+      expandir: () => this.expandir(),
+      energia: () => this.energia,
+      diario: () => this.diario,
+      recarregar: id => this.recarregar(id),
+      perto: estacao => !!this.minhaConstrucaoPerto([estacao], 2.6),
+      nivelJogador: () => this.status.nivel,
+      largar: (id, n) => this.largar(id, n),
+      mapaMundi: cv => this.desenharMapa(cv),
+      armazem: () => this.armazem,
+      capacidadeArmazem: () => this.capacidadeArmazem(),
+      moverParaBau: id => { if (!moverPilha(this.inv, this.armazem, id, this.capacidadeArmazem())) this.ui.aviso('Baú cheio: construa mais baús'); this.mudou(); },
+      moverParaMochila: id => { if (!moverPilha(this.armazem, this.inv, id)) this.ui.aviso('Mochila cheia'); this.mudou(); },
       assistir: nome => this.assistir(nome),
       habilidades: () => ({ status: this.status, aprendidas: this.habilidades }),
       aprender: id => this.aprenderHabilidade(id),
       lancar: m => this.lancar(m),
-      criou: id => { this.criados[id] = (this.criados[id] ?? 0) + 1; this.tocar('criar'); },
+      criou: id => { this.criados[id] = (this.criados[id] ?? 0) + 1; this.tocar('criar'); this.darXp(2); this.meta('criar'); },
       alternarSom: () => this.som.alternarSom(),
       alternarMusica: () => this.som.alternarMusica(),
       tocar: e => this.tocar(e),
@@ -201,7 +331,11 @@ export class CenaJogo extends Phaser.Scene {
       if (this.ui.construindo && !toque.ativo) this.localEscolhido = tilePonteiro(p);
     });
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
-      if (!this.ui.construindo) return;
+      if (!this.ui.construindo) {
+        // tocar/clicar no mundo: o personagem anda sozinho até lá
+        if (p.button === 0 && !this.morto && !this.assistindo) { const t = tilePonteiro(p); this.irPara(t.x, t.y); }
+        return;
+      }
       this.localEscolhido = tilePonteiro(p);
       if (!toque.ativo) this.construir();
     });
@@ -211,6 +345,24 @@ export class CenaJogo extends Phaser.Scene {
     window.addEventListener('pagehide', () => this.salvar(true));
     document.addEventListener('visibilitychange', () => document.hidden && this.salvar(true));
     if (save) this.ui.aviso('Progresso carregado');
+    this.time.addEvent({ delay: 1200, loop: true, callback: () => this.defenderComTorres() });
+    this.time.addEvent({ delay: 20_000, loop: true, callback: () => this.checarSaque() });
+    this.time.addEvent({ delay: 30_000, loop: true, callback: () => this.passoReinos() });
+    this.time.addEvent({ delay: 10_000, loop: true, callback: () => this.atualizarRival() });
+    this.time.delayedCall(5000, () => this.atualizarRival());
+    // save gravado no meio de um desmaio, ou o personagem preso num recurso que renasceu: põe num lugar livre
+    this.time.delayedCall(50, () => this.desencalhar());
+    if (this.cfg.nuvem) this.time.addEvent({ delay: 30_000, loop: true, callback: () => void this.atualizarOutros() });
+    // convites: confere ao entrar e a cada 2 min
+    if (this.cfg.nuvem) { this.time.delayedCall(4000, () => void this.resgatarConvites()); this.time.addEvent({ delay: 120_000, loop: true, callback: () => void this.resgatarConvites() }); }
+    this.mostrarTumulo();
+    for (const c of this.chao) this.desenharPilha(c);
+    this.time.addEvent({ delay: 1000, loop: true, callback: () => this.atualizarPlantacoes() });
+    // no celular a missão começa recolhida (só o título), para não cobrir a ilha
+    if (document.body.classList.contains('toque')) document.getElementById('missao')!.classList.add('fechada');
+    this.time.delayedCall(1500, () => this.boasVindas());
+    // no PC a ajuda de teclas some depois de 60 s (passar o mouse em cima mostra de novo)
+    this.time.delayedCall(60_000, () => document.getElementById('ajuda')?.classList.add('discreta'));
     document.getElementById('missao')!.addEventListener('click', e => (e.currentTarget as HTMLElement).classList.toggle('fechada'));
     this.time.addEvent({ delay: 500, loop: true, callback: () => this.atualizarTutorial() });
 
@@ -230,7 +382,8 @@ export class CenaJogo extends Phaser.Scene {
 
   private mostrarConstrucao(c: Construcao) {
     this.construidoEm.set(this.idx(c.x, c.y), c.tipo);
-    this.mapa.definirObjeto(c.x, c.y, c.tipo in OBJETOS ? c.tipo : null);
+    const nome = this.nomeConstrucao(c);
+    this.mapa.definirObjeto(c.x, c.y, nome in OBJETOS ? nome : null);
     this.bloqueio.add(this.idx(c.x, c.y));
   }
 
@@ -248,11 +401,21 @@ export class CenaJogo extends Phaser.Scene {
       seed: this.mundo.seed, participantes: this.mundo.ilhas.filter(i => i.dono !== null).length,
       jogador: { x: Math.round(this.jogador.x), y: Math.round(this.jogador.y) },
       inventario: this.inv, construcoes: this.construcoes,
-      status: this.status, tempo: Math.round(this.tempoMundo), habilidades: this.habilidades, mana: Math.floor(this.mana),
-      tutorial: { missao: this.missao, criados: this.criados, mortos: this.mortos },
+      status: this.status, tempo: Math.round(this.tempoMundo), nivel: this.nivel, armazem: this.armazem, bausMundo: this.bausMundo.salvar(),
+      energia: Math.round(this.energia), diario: this.diario, tumulo: this.tumulo,
+      nevoa: this.nevoa?.salvar(), tempoJogado: Math.round(this.tempoJogado), salvoEm: Date.now(), reinos: this.reinos, metas: this.metas ?? undefined, contato: this.avisouContato, vinganca: this.vinganca, rival: this.rival,
+      chao: this.chao.map(c => ({ x: c.x, y: c.y, itens: c.itens })), habilidades: this.habilidades, mana: Math.floor(this.mana),
+      tutorial: { missao: this.missao, criados: this.criados, mortos: this.mortos, bausAbertos: this.bausAbertos },
       bots: this.bots.salvar(),
     });
     try { localStorage.setItem(this.chaveSave, texto); this.sujo = false; } catch { /* sem armazenamento: segue sem salvar */ }
+    // nuvem: no máximo a cada 15 s (ou ao forçar), com o perfil público junto
+    const nuvem = this.cfg.nuvem;
+    if (nuvem && (forcar || Date.now() - this.ultimaNuvem > 15_000)) {
+      this.ultimaNuvem = Date.now();
+      void nuvem.salvar(texto, { nome: this.cfg.nome ?? 'Ilhéu', personagem: this.personagem, nivel: this.nivel,
+        pontos: pontuacao(this.nivel, this.construcoes, this.status), construcoes: this.construcoes });
+    }
   }
 
   private selecionarConstrucao(id: ItemId | null) {
@@ -275,7 +438,7 @@ export class CenaJogo extends Phaser.Scene {
       const r = this.recursos.porTile.get(this.idx(tx, ty));
       return !!r && recursoAtivo(this.recursos, r);
     };
-    const motivo = validarLocal(this.mundo, this.mundo.ilhas[0], this.construcoes, ocupado, x, y);
+    const motivo = validarLocal(this.mundo, this.minhaIlha, this.construcoes, ocupado, x, y);
     if (motivo) return motivo;
     // Não pode construir em cima do personagem.
     const j = this.jogador;
@@ -303,13 +466,8 @@ export class CenaJogo extends Phaser.Scene {
       this.tweens.add({ targets: p, x: cx + Phaser.Math.Between(-12, 12), y: cy + Phaser.Math.Between(-4, 8), alpha: 0, duration: 450, onComplete: () => p.destroy() });
     }
     this.tocar('construir');
-    const novo = nivelIlha(this.construcoes);
-    if (novo > this.nivel) {
-      this.nivel = novo;
-      this.ui.aviso(`Sua ilha subiu para o nível ${novo}!`);
-      this.tocar('nivel');
-      this.cameras.main.flash(300, 255, 240, 200);
-    }
+    this.darXp(4);
+    this.meta('construir');
     if (qtd(this.inv, id) === 0) this.selecionarConstrucao(null);
     else this.localEscolhido = null;
     this.mudou();
@@ -362,6 +520,7 @@ export class CenaJogo extends Phaser.Scene {
   }
 
   private golpe(r: Recurso) {
+    if (!cabe(this.inv, Object.keys(DEF_RECURSO[r.tipo].solta) as ItemId[])) { if (this.time.now - this.ultimoAvisoCheia > 2500) { this.ultimoAvisoCheia = this.time.now; this.ui.aviso('Mochila cheia! Guarde coisas no baú'); } return; }
     const res = golpear(this.recursos, this.inv, r, this.time.now, { bonus: this.ef.coleta, extra: this.ef.extra, poupar: this.ef.poupar });
     if (!res) return;
     const cx = (r.x + 0.5) * T, cy = (r.y + 0.5) * T;
@@ -385,6 +544,8 @@ export class CenaJogo extends Phaser.Scene {
     if (res.ferramentaQuebrou && res.ferramenta) this.ui.aviso(`${ITENS[res.ferramenta].nome} quebrou!`);
     if (res.destruido) {
       this.tocar('cai');
+      this.darXp(1, false);
+      this.meta('quebrar');
       this.mapa.definirObjeto(r.x, r.y, null);
       this.bloqueio.delete(this.idx(r.x, r.y));
       let i = 0;
@@ -395,11 +556,30 @@ export class CenaJogo extends Phaser.Scene {
 
   private assistir(nome: string | null) {
     const cam = this.cameras.main;
-    const bot = nome ? this.bots.bots.find(b => b.nome === nome) ?? null : null;
-    this.assistindo = bot;
-    this.ui.assistindo(bot?.nome ?? null, bot?.perfil);
-    if (!bot) cam.startFollow(this.jogador, true, 0.15, 0.15);
+    // "pessoa:Nome" = jogador de verdade (pode ter o mesmo nome de um bot)
+    const ehPessoa = !!nome?.startsWith('pessoa:');
+    if (ehPessoa) nome = nome!.slice(7);
+    const bot = nome && !ehPessoa ? this.bots.bots.find(b => b.nome === nome) ?? null : null;
+    // pessoa de verdade: a câmera vai até a ilha dela (só para ver)
+    const pessoa = ehPessoa ? [...this.outros.values()].find(o => o.perfil.nome === nome)?.perfil : undefined;
+    const ilha = pessoa ? this.mundo.ilhas.filter(i => i.dono !== null)[pessoa.slot] : undefined;
+    this.assistindo = bot ?? (ilha ? (() => { const c = tileDoCristal(ilha); return { x: c.x + 0.5, y: c.y + 0.5 }; })() : null);
+    if (ilha) this.nevoa.revelar(ilha.cx, ilha.cy, ilha.raio + 4);
+    this.ui.assistindo(this.assistindo ? nome : null, bot ? bot.perfil : 'pessoa');
+    if (!this.assistindo) cam.startFollow(this.jogador, true, 0.15, 0.15);
     else cam.stopFollow();
+  }
+
+  /** Quem entrou pelo meu link: recompensa por convidado (1 cristal, 10 madeira, 5 pedra no baú da ilha). */
+  private async resgatarConvites() {
+    const nomes = await this.cfg.nuvem?.resgatarConvites();
+    if (!nomes?.length) return;
+    for (const n of nomes) {
+      this.presente('cristal', 1); this.presente('madeira', 10); this.presente('pedra', 5);
+      this.registrar(`${n} entrou pelo seu convite: +1 cristal, +10 madeira, +5 pedra`);
+    }
+    this.ui.aviso(`🎁 ${nomes.length === 1 ? `${nomes[0]} entrou` : `${nomes.length} amigos entraram`} pelo seu convite! Presentes recebidos`);
+    this.tocar('nivel'); this.mudou(); this.salvar(true);
   }
 
   private tocar(e: Efeito) {
@@ -412,18 +592,777 @@ export class CenaJogo extends Phaser.Scene {
   /** Avança o tutorial e mostra a missão atual. */
   private atualizarTutorial() {
     const el = document.getElementById('missao')!;
-    const nova = missaoAtual({ inv: this.inv, construcoes: this.construcoes, status: this.status, habilidades: this.habilidades, criados: this.criados, mortos: this.mortos }, this.missao);
+    // pisou em terra de outra ilha?
+    const j = this.jogador, tx = Math.floor(j.x / T), ty = Math.floor(j.y / T);
+    if (!this.visitouOutra && TILE_ANDAVEL[tileEm(this.mundo, tx, ty)] && Math.hypot(tx - this.minhaIlha.cx, ty - this.minhaIlha.cy) > this.minhaIlha.raio * 1.6) this.visitouOutra = true;
+    const nova = missaoAtual({ inv: this.inv, construcoes: this.construcoes, status: this.status, habilidades: this.habilidades, criados: this.criados, mortos: this.mortos, nivel: this.nivel, visitouOutra: this.visitouOutra, bausAbertos: this.bausAbertos }, this.missao);
     if (nova !== this.missao) {
       this.missao = nova; this.sujo = true;
       el.classList.remove('feita'); void el.offsetWidth; el.classList.add('feita');
       this.tocar('criar');
       if (nova >= MISSOES.length) this.ui.aviso('Tutorial completo! Agora é com você');
     }
-    if (this.missao >= MISSOES.length || this.assistindo) { el.hidden = true; return; }
+    if (this.assistindo) { el.hidden = true; return; }
+    if (this.missao >= MISSOES.length) { this.mostrarMetas(el); return; }
     const m = MISSOES[this.missao];
     el.hidden = false;
-    const html = `<b>${this.missao + 1}/${MISSOES.length} · ${m.titulo}</b><p>${m.dica}</p><small>toque para recolher</small>`;
+    const celular = document.body.classList.contains('toque');
+    const dica = celular ? m.dica.replace('Criar (C)', 'Criar (🛠)').replace('Habilidades (K)', 'Habilidades (✦)').replace(/Espaço\/AÇÃO/g, 'o botão de ação') : m.dica.replace(/Espaço\/AÇÃO/g, 'Espaço');
+    const mt = this.missao >= TUTORIAL_BASE ? this.estadoMetas() : null;
+    const linhaMetas = mt ? `<small class="linha-metas">📅 Metas do dia ${mt.metas.filter(x => x.feito >= x.alvo).length}/3: ${mt.metas.map(x => `${DEF_METAS[x.tipo].texto(x.alvo)} (${x.feito}/${x.alvo})`).join(' · ')}</small>` : '';
+    const html = `<b>${this.missao + 1}/${MISSOES.length} · ${m.titulo}</b><p>${dica}</p>${linhaMetas}<small>${celular ? 'toque para abrir/fechar' : 'clique para recolher'}</small>`;
     if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; }
+  }
+
+  /** Terreno de uma ilha mudou de nível: atualiza mapa, recursos e bloqueios. */
+  private aplicarExpansao(ilha: import('../sim/mundo').Ilha, nivel: number) {
+    const r = expandirTerreno(this.mundo, this.recursos, ilha, nivel);
+    for (const x of r.submergiram) { this.mapa.definirObjeto(x.x, x.y, null); this.bloqueio.delete(this.idx(x.x, x.y)); }
+    for (const x of r.emergiram) if (recursoAtivo(this.recursos, x) && !this.construidoEm.has(this.idx(x.x, x.y))) this.mostrarRecurso(x);
+    this.mapa.repintar(r.area);
+  }
+
+  /** Alimenta o Cristal e faz a ilha crescer. */
+  private expandir() {
+    const novo = pagarExpansao(this.nivel, this.construcoes, this.inv);
+    if (!novo) { this.ui.aviso('Ainda falta coisa para alimentar o Cristal'); return; }
+    this.nivel = novo;
+    this.aplicarExpansao(this.minhaIlha, novo);
+    this.ui.aviso(`O Cristal brilhou: sua ilha cresceu para o nível ${novo}!`);
+    this.conquista(`Minha ilha cresceu para o nível ${novo}!`);
+    this.darXp(25);
+    this.tocar('nivel');
+    this.cameras.main.flash(400, 200, 180, 255);
+    this.mudou(); this.salvar(true);
+  }
+
+  /** Jogador encostado no Cristal da própria ilha? */
+  private pertoDoCristal() {
+    const c = tileDoCristal(this.minhaIlha);
+    return Math.hypot(this.jogador.x / T - (c.x + 0.5), this.jogador.y / T - (c.y + 0.5)) < 1.7;
+  }
+
+  /** Construção sua mais perto do jogador, entre os tipos dados, dentro do raio (em tiles). */
+  private minhaConstrucaoPerto(tipos: ItemId[], raio: number): Construcao | null {
+    const jx = this.jogador.x / T, jy = this.jogador.y / T;
+    let melhor: Construcao | null = null, d = raio;
+    for (const c of this.construcoes) {
+      if (!tipos.includes(c.tipo)) continue;
+      const dist = Math.hypot(c.x + 0.5 - jx, c.y + 0.5 - jy);
+      if (dist <= d) { d = dist; melhor = c; }
+    }
+    return melhor;
+  }
+
+  /** 12 tipos de item por baú construído (sem baú, nada guarda). */
+  private capacidadeArmazem() { return this.construcoes.filter(c => c.tipo === 'bau').length * 12; }
+
+  static readonly CRESCIMENTO = 120_000; // plantação: 2 min do tempo do mundo
+
+  private nomeConstrucao(c: Construcao): string {
+    if (c.tipo !== 'plantacao') return c.tipo;
+    if (c.plantadoEm === undefined) return 'plantacao';
+    return this.tempoMundo - c.plantadoEm >= CenaJogo.CRESCIMENTO ? 'plantacao_pronta' : 'plantacao_cresce';
+  }
+
+  /** O que o botão de ação faz perto de uma construção sua (baú, casa à noite, plantação). */
+  private interacaoPerto(noite: boolean): { c: { x: number; y: number }; rotulo: string; fazer: () => void } | null {
+    const j = this.jogador;
+    if (this.tumulo && Math.hypot(this.tumulo.x + 0.5 - j.x / T, this.tumulo.y + 0.5 - j.y / T) < 1.6) return { c: this.tumulo, rotulo: 'Recuperar', fazer: () => this.recuperarTumulo() };
+    const vg = this.vinganca && this.vinganca.ate > this.tempoJogado ? this.vinganca : null;
+    const ilhaVg = vg ? this.mundo.ilhas.find(i => i.id === vg.ilha) : undefined;
+    if (vg && ilhaVg) {
+      const cv = tileDoCristal(ilhaVg);
+      if (Math.hypot(cv.x + 0.5 - j.x / T, cv.y + 0.5 - j.y / T) < 2) return { c: cv, rotulo: 'Vingar', fazer: () => this.vingar() };
+    }
+    const pilha = this.chao.find(c => Math.hypot(c.x + 0.5 - j.x / T, c.y + 0.5 - j.y / T) < 1.3);
+    if (pilha) return { c: pilha, rotulo: 'Pegar', fazer: () => this.pegarDoChao(pilha) };
+    const bau = this.bausMundo.perto(j.x / T, j.y / T);
+    if (bau) return { c: bau, rotulo: `Abrir baú ${RARIDADES[bau.raridade].nome.toLowerCase()}`, fazer: () => this.abrirBauMundo(bau) };
+    const c = this.minhaConstrucaoPerto(['bau', 'casa', 'plantacao'], 1.6);
+    if (!c) return null;
+    if (c.tipo === 'bau') return { c, rotulo: 'Baú', fazer: () => this.ui.abrirBau() };
+    if (c.tipo === 'casa') return noite ? { c, rotulo: 'Dormir', fazer: () => this.dormir() } : null;
+    const est = this.nomeConstrucao(c);
+    if (est === 'plantacao') return { c, rotulo: 'Plantar', fazer: () => {
+      if (!remover(this.inv, 'baga', 1)) { this.ui.aviso('Precisa de 1 baga para plantar'); return; }
+      c.plantadoEm = this.tempoMundo; this.mostrarConstrucao(c); this.tocar('arbusto'); this.ui.aviso('Plantado! Cresce em 2 minutos'); this.mudou();
+    } };
+    if (est === 'plantacao_cresce') return { c, rotulo: 'Crescendo', fazer: () => {
+      const falta = Math.ceil((CenaJogo.CRESCIMENTO - (this.tempoMundo - c.plantadoEm!)) / 1000);
+      this.ui.aviso(`Ainda cresce: ${falta}s`);
+    } };
+    return { c, rotulo: 'Colher', fazer: () => {
+      if (!cabe(this.inv, ['baga', 'fibra'])) { this.ui.aviso('Mochila cheia! Guarde coisas no baú'); return; }
+      adicionar(this.inv, 'baga', 3); adicionar(this.inv, 'fibra', 2);
+      c.plantadoEm = undefined; this.mostrarConstrucao(c); this.tocar('criar'); this.meta('colher');
+      this.textoFlutuante((c.x + 0.5) * T, c.y * T, '+3 Baga +2 Fibra'); this.mudou();
+    } };
+  }
+
+  static ESCUDO_MS = 20 * 60_000;
+  /** ms restantes do escudo de novato (0 = sem escudo) */
+  private escudo() { return this.nivel >= 3 ? 0 : Math.max(0, CenaJogo.ESCUDO_MS - this.tempoJogado); }
+
+  /** Volta ao jogo: plantações cresceram enquanto você esteve fora; resumo do que aconteceu. */
+  private boasVindas() {
+    if (!this.salvoEm) return;
+    const fora = Math.min(8 * 3600_000, Date.now() - this.salvoEm);
+    if (fora < 2 * 60_000) return;
+    let prontas = 0;
+    for (const c of this.construcoes) if (c.tipo === 'plantacao' && c.plantadoEm !== undefined) {
+      c.plantadoEm -= fora; prontas++; this.mostrarConstrucao(c);
+    }
+    const h = Math.floor(fora / 3600_000), min = Math.round((fora % 3600_000) / 60_000);
+    const tempo = h ? `${h}h${min ? ` ${min}min` : ''}` : `${min} min`;
+    const eventos = this.diario.slice(-3);
+    this.ui.boasVindas(tempo, prontas, eventos);
+  }
+
+  /** Está fora da própria ilha? (então ela fica desprotegida) */
+  private foraDeCasa() {
+    const j = this.jogador;
+    return !naIlha(this.minhaIlha, Math.floor(j.x / T), Math.floor(j.y / T));
+  }
+
+  private registrar(msg: string) {
+    const h = Math.floor(((this.tempoMundo % DURACAO_DIA) / DURACAO_DIA) * 24 + 6) % 24;
+    this.diario.unshift(`${String(h).padStart(2, '0')}h — ${msg}`);
+    this.diario = this.diario.slice(0, 8);
+  }
+
+  /** A cada 20 s, com você fora de casa, um rival pode tentar saquear a ilha. */
+  private checarSaque() {
+    if (this.morto || !this.foraDeCasa() || this.construcoes.length === 0 || this.invasao) return;
+    if (this.escudo() > 0) return;
+    // reinos: vassalo é protegido (metade dos saques); quem resistiu é pressionado pelo rei (o dobro)
+    const eu = this.minhaIlha.id, resist = this.reinos.resistindo[eu];
+    const pressao = resist && resist.ate > this.tempoJogado ? resist : null;
+    const fator = pressao ? 2 : this.reinos.senhor[eu] !== undefined ? 0.5 : 1;
+    if (Math.random() > chanceDeSaque(this.nivel) * fator) return;
+    const meuRei = this.reinos.senhor[eu];
+    const rivais = this.bots.bots.filter(b => b.ilha.id !== meuRei && reiDe(this.reinos, b.ilha.id) !== reiDe(this.reinos, eu));
+    const rivalSemana = this.rival && !this.rival.chave.startsWith('pessoa:') && rivais.some(b => b.nome === this.rival!.nome) && Math.random() < 0.4 ? this.rival.nome : null;
+    const rival = pressao ? this.nomeDe(pressao.rei) : rivalSemana ?? (rivais.length ? rivais[Math.floor(Math.random() * rivais.length)].nome : 'Um pirata');
+    this.iniciarInvasao(rival);
+  }
+
+  /** O invasor chegou ao Cristal: resolve o saque (defesas, roubo, energia, vingança). */
+  private concluirSaque(rival: string) {
+    const r = resolverSaque(this.nivel, this.construcoes, this.armazem, Math.random);
+    if (r.repelido) {
+      this.registrar(`${rival} tentou saquear e foi repelido pela defesa`);
+      this.ui.aviso(`🛡 Sua defesa repeliu ${rival}!`);
+    } else {
+      const levou = Object.entries(r.roubado).map(([id, n]) => `${n} ${ITENS[id as ItemId].nome}`).join(', ');
+      this.energia = Math.max(0, this.energia - r.energiaPerdida);
+      if (!levou) {
+        this.registrar(`${rival} invadiu, não achou nada no baú e foi embora`);
+        this.ui.aviso(`${rival} invadiu sua ilha, mas não achou nada`);
+      } else {
+        this.registrar(`${rival} saqueou ${levou} e drenou ${r.energiaPerdida}% do Cristal`);
+        const bot = this.bots.bots.find(b => b.nome === rival);
+        if (bot) {
+          this.vinganca = { ilha: bot.ilha.id, nome: bot.nome, itens: { ...r.roubado }, ate: this.tempoJogado + CenaJogo.VINGANCA_MS };
+          this.ui.vinganca(bot.nome, levou);
+        }
+        this.ui.aviso(`⚠ ${rival} saqueou sua ilha! −${r.energiaPerdida}% de energia`);
+      }
+      this.tocar('dano');
+      if (this.energia <= 0) this.perderNivel();
+    }
+    this.mudou(); this.salvar(true);
+  }
+
+  /** Energia zerada: a ilha encolhe um nível; o que ficar na água volta como item para o baú. */
+  private perderNivel() {
+    if (this.nivel <= 1) { this.energia = 30; return; }
+    this.nivel--;
+    this.aplicarExpansao(this.minhaIlha, this.nivel);
+    const afundou = this.construcoes.filter(c => !TILE_ANDAVEL[tileEm(this.mundo, c.x, c.y)]);
+    for (const c of afundou) {
+      this.construcoes.splice(this.construcoes.indexOf(c), 1);
+      this.construidoEm.delete(this.idx(c.x, c.y)); this.bloqueio.delete(this.idx(c.x, c.y)); this.mapa.definirObjeto(c.x, c.y, null);
+      adicionar(this.armazem, c.tipo, 1);
+    }
+    this.energia = 50;
+    this.registrar(`O Cristal apagou: a ilha encolheu para o nível ${this.nivel}${afundou.length ? ` (${afundou.length} construções voltaram ao baú)` : ''}`);
+    this.ui.aviso(`💔 O Cristal apagou! Sua ilha encolheu para o nível ${this.nivel}`);
+    this.cameras.main.shake(400, 0.006);
+  }
+
+  private recarregar(id: ItemId) {
+    const ganho = ENERGIA_POR_ITEM[id] ?? 0;
+    if (!ganho) return;
+    if (this.energia >= 100) { this.ui.aviso('O Cristal já está cheio'); return; }
+    if (!remover(this.inv, id, 1)) return;
+    this.energia = Math.min(100, this.energia + ganho);
+    this.tocar('cura'); this.mudou();
+  }
+
+  private mostrarTumulo() {
+    this.imgTumulo?.destroy(); this.imgTumulo = null;
+    if (!this.tumulo) return;
+    const t = this.tumulo;
+    this.imgTumulo = this.add.image((t.x + 0.5) * T, (t.y + 1) * T, 'bau-pequeno', 0).setOrigin(0.5, 1).setTint(0x8a8a9a).setDepth((t.y + 1) * T - 2);
+  }
+
+  private recuperarTumulo() {
+    const t = this.tumulo; if (!t) return;
+    let pegou = 0;
+    for (const id of Object.keys(t.itens.itens) as ItemId[]) {
+      if (moverPilha(t.itens, this.inv, id)) pegou++;
+    }
+    if (!Object.keys(t.itens.itens).length) { this.tumulo = null; this.mostrarTumulo(); this.ui.aviso('Você recuperou tudo do túmulo'); }
+    else this.ui.aviso(pegou ? 'Mochila cheia: parte ficou no túmulo' : 'Mochila cheia!');
+    this.tocar('criar'); this.mudou();
+  }
+
+  /** Todo ganho de XP passa por aqui: texto, subida de nível e aviso das receitas liberadas. */
+  private darXp(xp: number, mostrar = true) {
+    if (xp <= 0) return;
+    const j = this.jogador;
+    const subiu = ganharXp(this.status, xp);
+    if (mostrar) this.textoFlutuante(j.x, j.y - 26, `+${xp} XP`, '#ffd166');
+    if (!subiu) return;
+    const novas = liberadasNoNivel(this.status.nivel).map(id => ITENS[id].nome);
+    if (novas.length) this.time.delayedCall(900, () => this.ui.aviso(`🔓 Novas receitas: ${novas.join(', ')}`));
+    this.tocar('nivel'); this.ui.aviso(`Você subiu para o nível ${this.status.nivel}!`); this.cameras.main.flash(250, 255, 230, 150);
+  }
+
+  /** Recompensa: vai para o baú da ilha se houver um construído; senão para a mochila (ou o baú, se não couber). */
+  private presente(id: ItemId, n: number) {
+    if (!this.construcoes.some(c => c.tipo === 'bau') && cabe(this.inv, [id])) adicionar(this.inv, id, n);
+    else adicionar(this.armazem, id, n);
+  }
+
+  /** Ao carregar: se o personagem estiver morto ou dentro de algo sólido, leva ao lugar livre mais próximo. */
+  private desencalhar() {
+    const j = this.jogador;
+    if (this.renascerAoCarregar) {
+      this.renascerAoCarregar = false;
+      const casaC = this.construcoes.find(c => c.tipo === 'casa');
+      const p = casaC ? { x: casaC.x, y: casaC.y + 1 } : tileDeNascimento(this.minhaIlha);
+      j.setPosition((p.x + 0.5) * T, (p.y + 0.5) * T);
+    }
+    if (this.livre(j.x, j.y)) return;
+    const ox = Math.floor(j.x / T), oy = Math.floor(j.y / T);
+    for (let r = 1; r <= 8; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+      const px = (ox + dx + 0.5) * T, py = (oy + dy + 0.5) * T;
+      if (this.livre(px, py)) { j.setPosition(px, py); return; }
+    }
+  }
+
+  // ---------- Invasão visível ----------
+  private iniciarInvasao(nome: string) {
+    const il = this.minhaIlha, cc = tileDoCristal(il);
+    const bot = this.bots.bots.find(b => b.nome === nome);
+    const arte = `p-${PERSONAGENS[bot ? (bot.id * 7 + bot.cor) % PERSONAGENS.length : 3]}`;
+    const a = Math.random() * Math.PI * 2, r = il.raio + 2;
+    const x = cc.x + 0.5 + Math.cos(a) * r, y = cc.y + 0.5 + Math.sin(a) * r;
+    const dist = Math.hypot(cc.x + 0.5 - x, cc.y + 0.5 - y);
+    const vidaMax = 6 + this.nivel * 3;
+    this.invasao = { nome, x, y, vida: vidaMax, vidaMax, chegaEm: this.tempoJogado + CenaJogo.INVASAO_MS, vel: dist / (CenaJogo.INVASAO_MS / 1000), arte,
+      sprite: this.add.sprite(x * T, y * T, arte, 0).setOrigin(0.5, 0.9).setTint(0xffb0b0),
+      barco: this.add.image(x * T, y * T, 'jangada').setOrigin(0.5, 0),
+      barra: this.add.rectangle(x * T, y * T - 18, 14, 2, 0xff5050).setOrigin(0.5).setDepth(29000) };
+    this.nevoa.revelar(x, y, 4);
+    this.registrar(`${nome} desembarcou para saquear sua ilha`);
+    this.tocar('noite');
+    this.ui.invasao(nome, Math.round(CenaJogo.INVASAO_MS / 1000));
+  }
+
+  /** Move o invasor até o Cristal; chega = saque; vida zerada = fugiu. */
+  private atualizarInvasao(dt: number) {
+    const v = this.invasao; if (!v) return;
+    const cc = tileDoCristal(this.minhaIlha);
+    const dx = cc.x + 0.5 - v.x, dy = cc.y + 0.5 - v.y, d = Math.hypot(dx, dy);
+    if (d < 1.1 || this.tempoJogado >= v.chegaEm) { this.fimInvasao(false); return; }
+    const passo = Math.min(d, (v.vel * dt) / 1000);
+    v.x += (dx / d) * passo; v.y += (dy / d) * passo;
+    const agua = ehAgua(tileEm(this.mundo, Math.floor(v.x), Math.floor(v.y)));
+    const dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'esquerda' : 'direita') : (dy < 0 ? 'cima' : 'baixo');
+    v.sprite.setPosition(v.x * T, v.y * T).setDepth(v.y * T).anims.play(`${v.arte}-${dir}`, true);
+    v.barco.setVisible(agua).setPosition(v.x * T, v.y * T - 1).setDepth(v.y * T - 0.5);
+    v.barra.setPosition(v.x * T, v.y * T - 18).setSize(14 * (v.vida / v.vidaMax), 2);
+  }
+
+  private ferirInvasor(dano: number) {
+    const v = this.invasao; if (!v) return;
+    v.vida -= dano;
+    this.textoFlutuante(v.x * T, v.y * T - 14, `${dano}`, '#ffd166');
+    v.sprite.setTint(0xffffff); this.time.delayedCall(90, () => v.sprite.active && v.sprite.setTint(0xffb0b0));
+    if (v.vida <= 0) this.fimInvasao(true);
+  }
+
+  private fimInvasao(expulso: boolean) {
+    const v = this.invasao; if (!v) return;
+    this.invasao = null;
+    v.sprite.destroy(); v.barco.destroy(); v.barra.destroy();
+    this.ui.fimInvasao();
+    if (expulso) {
+      this.darXp(15);
+      this.registrar(`Você expulsou ${v.nome} da sua ilha`);
+      this.ui.aviso(`🛡 Você expulsou ${v.nome}!`);
+      this.tocar('nivel');
+      this.conquista(`Expulsei ${v.nome} da minha ilha!`);
+    } else this.concluirSaque(v.nome);
+    this.mudou();
+  }
+
+  // ---------- Vingança ----------
+  /** No Cristal de quem te saqueou: recupera o que ele levou, com 50% a mais. */
+  private vingar() {
+    const vg = this.vinganca; if (!vg) return;
+    const bot = this.bots.bots.find(b => b.ilha.id === vg.ilha);
+    const ganho: string[] = [];
+    for (const [id, n] of Object.entries(vg.itens) as [ItemId, number][]) {
+      const q = Math.ceil(n * 1.5);
+      if (bot) remover(bot.inv, id, Math.min(q, bot.inv.itens[id] ?? 0)); // o bot perde o que tiver
+      if (cabe(this.inv, [id])) adicionar(this.inv, id, q); else adicionar(this.armazem, id, q);
+      ganho.push(`${q} ${ITENS[id].nome}`);
+    }
+    this.vinganca = null;
+    this.darXp(20);
+    this.registrar(`Você se vingou de ${vg.nome}: ${ganho.join(', ')}`);
+    this.ui.aviso(`⚔ Vingança! Você recuperou ${ganho.join(', ')}`);
+    this.tocar('nivel'); this.cameras.main.flash(250, 255, 120, 90);
+    this.conquista(`Me vinguei de ${vg.nome}!`);
+    this.mudou(); this.salvar(true);
+  }
+
+  /** Botões da oferta de vingança. */
+  private irVingar() {
+    const vg = this.vinganca; const il = vg && this.mundo.ilhas.find(i => i.id === vg.ilha);
+    if (!il) return;
+    const c = tileDoCristal(il);
+    this.nevoa.revelar(c.x, c.y, 6);
+    this.irPara(c.x, c.y, true);
+  }
+
+  // ---------- Metas do dia ----------
+  private estadoMetas() {
+    if (!this.metas) this.metas = novoEstadoMetas(this.nivel);
+    if (virarDia(this.metas, this.nivel)) { this.ui.aviso('📅 Novas metas do dia!'); this.sujo = true; }
+    return this.metas;
+  }
+
+  /** Progresso numa meta; recompensas ao concluir cada uma e as 3. */
+  private meta(tipo: TipoMeta, n = 1) {
+    if (this.missao < TUTORIAL_BASE) return; // durante o tutorial básico as metas ainda não contam
+    const e = this.estadoMetas();
+    const r = progredir(e, tipo, n);
+    for (const m of r.concluida) {
+      this.presente('madeira', 5); this.presente('pedra', 3); this.darXp(15);
+      this.ui.aviso(`✅ Meta do dia: ${DEF_METAS[m.tipo].texto(m.alvo)} (+5 madeira, +3 pedra no baú)`.replace(' no baú', this.construcoes.some(c => c.tipo === 'bau') ? ' no baú' : ''));
+      this.tocar('criar');
+    }
+    if (r.todas) {
+      const extra = { 3: 1, 7: 2, 14: 3, 30: 5 }[e.sequencia] ?? 0;
+      this.presente('cristal', 1 + extra);
+      this.registrar(`Metas do dia completas! Sequência: ${e.sequencia} ${e.sequencia === 1 ? 'dia' : 'dias'} (+${1 + extra} cristal)`);
+      this.ui.aviso(`🔥 3 metas completas! +${1 + extra} cristal · sequência de ${e.sequencia} ${e.sequencia === 1 ? 'dia' : 'dias'}`);
+      this.tocar('nivel');
+      if (MARCOS_SEQUENCIA.includes(e.sequencia)) this.conquista(`${e.sequencia} dias seguidos de metas completas!`);
+    }
+    if (r.concluida.length || r.todas) this.mudou();
+  }
+
+  /** Card das metas (no lugar do tutorial, depois que ele termina). */
+  private mostrarMetas(el: HTMLElement) {
+    const e = this.estadoMetas();
+    const feitas = e.metas.filter(m => m.feito >= m.alvo).length;
+    el.hidden = false;
+    const linhas = e.metas.map(m => `<li class="${m.feito >= m.alvo ? 'ok' : ''}">${m.feito >= m.alvo ? '✅' : '▫️'} ${DEF_METAS[m.tipo].texto(m.alvo)} <b>${m.feito}/${m.alvo}</b></li>`).join('');
+    const html = `<b>📅 Metas do dia ${feitas}/3${e.sequencia ? ` · 🔥 ${e.sequencia}` : ''}</b><ul class="metas">${linhas}</ul><p>${
+      e.completouHoje ? 'Tudo feito hoje! Volte amanhã para novas metas.' : 'As 3 completas valem 1 cristal. Faltar um dia não zera sua sequência.'}</p><small>toque para abrir/fechar</small>`;
+    if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; }
+  }
+
+  // ---------- Rival da semana ----------
+  static SEMANA_MS = 7 * 24 * 3600_000;
+  /** Escolhe um rival logo acima de você (ou o mais perto abaixo, se você lidera); avisa quando um passa o outro. */
+  private atualizarRival() {
+    if (this.morto) return;
+    const r = this.rankingComReinos();
+    const eu = r.find(l => l.perfil === 'jogador');
+    if (!eu || r.length < 2) return;
+    const chaveDe = (l: (typeof r)[number]) => (l.perfil === 'pessoa' ? `pessoa:${l.nome}` : l.nome);
+    let atual = this.rival ? r.find(l => chaveDe(l) === this.rival!.chave) : undefined;
+    const escolher = (excluir?: string) => {
+      const outros = r.filter(l => l !== eu && chaveDe(l) !== excluir);
+      const acima = outros.filter(l => l.pontos >= eu.pontos).sort((a, b) => a.pontos - b.pontos)[0];
+      const abaixo = outros.sort((a, b) => b.pontos - a.pontos).find(l => l.pontos < eu.pontos);
+      const novo = acima ?? abaixo;
+      if (!novo) return;
+      this.rival = { chave: chaveDe(novo), nome: novo.nome, ate: Date.now() + CenaJogo.SEMANA_MS, frente: eu.pontos > novo.pontos, defender: !acima };
+      atual = novo;
+      this.registrar(`Novo rival da semana: ${novo.nome}`);
+      this.ui.aviso(!acima ? `⚔ Você lidera! Rival da semana: ${novo.nome} — segure a frente até o fim da semana` : `⚔ Seu rival da semana: ${novo.nome} (${novo.pontos} pts)`);
+    };
+    if (!this.rival || !atual) escolher();
+    else {
+      const frente = eu.pontos > atual.pontos;
+      const venceu = !this.rival.defender && atual.pontos > 0 && eu.pontos >= atual.pontos * 1.3;
+      const acabou = Date.now() > this.rival.ate;
+      if (venceu || (acabou && frente)) {
+        this.presente('cristal', 1); this.darXp(30);
+        this.registrar(`Você derrotou seu rival ${atual.nome}! +1 cristal no baú`);
+        this.ui.aviso(`🏆 Você derrotou ${atual.nome}! +1 cristal`);
+        this.conquista(`Derrotei meu rival ${atual.nome}!`);
+        escolher(this.rival.chave);
+      } else if (acabou) {
+        this.registrar(`A semana acabou: ${atual.nome} terminou na sua frente`);
+        escolher(this.rival.chave);
+      } else if (frente !== this.rival.frente) {
+        this.rival.frente = frente;
+        this.registrar(frente ? `Você passou seu rival ${atual.nome}` : `${atual.nome} passou você no ranking`);
+        this.ui.aviso(frente ? (this.rival.defender ? `⚔ Você retomou a frente de ${atual.nome}!` : `⚔ Você passou ${atual.nome}! Abra 30% de vantagem para vencer`) : `⚠ ${atual.nome} passou você!`);
+        this.tocar(frente ? 'nivel' : 'dano');
+      }
+    }
+    if (this.rival && atual) this.ui.rival({ nome: atual.nome, chave: this.rival.chave, dele: atual.pontos, meus: eu.pontos, dias: Math.max(0, Math.ceil((this.rival.ate - Date.now()) / 86_400_000)) });
+    this.mudou();
+  }
+
+  // ---------- Cartão compartilhável ----------
+  private ultimaConquista = '';
+  /** Momento bom para compartilhar: guarda o texto e oferece o botão. */
+  private conquista(texto: string) { this.ultimaConquista = texto; this.ui.conquista(texto); }
+
+  /** Foto da sua ilha vista de cima + nome, nível, reino e posição, pronta para compartilhar (PNG). */
+  async gerarCartao(): Promise<{ blob: Blob; texto: string; url: string }> {
+    const cam = this.cameras.main;
+    const antes = { zoom: cam.zoom, x: cam.scrollX, y: cam.scrollY };
+    const cc = tileDoCristal(this.minhaIlha);
+    const raio = this.minhaIlha.raio + 2;
+    cam.stopFollow();
+    const lado = Math.min(this.scale.width, this.scale.height);
+    cam.setZoom(Phaser.Math.Clamp(lado / (raio * 2 * T), 1, 6)).centerOn((cc.x + 0.5) * T, (cc.y + 0.5) * T);
+    const foto = await new Promise<HTMLImageElement>(ok => {
+      this.time.delayedCall(60, () => this.game.renderer.snapshotArea(
+        Math.round((this.scale.width - lado) / 2), Math.round((this.scale.height - lado) / 2), lado, lado, img => ok(img as HTMLImageElement)));
+    });
+    cam.setZoom(antes.zoom).setScroll(antes.x, antes.y).startFollow(this.jogador, true, 0.15, 0.15);
+
+    const nome = this.cfg.nome || 'Ilhéu';
+    const r = this.rankingComReinos();
+    const pos = r.filter(l => l.pontos > r.find(x => x.perfil === 'jogador')!.pontos).length + 1;
+    const info = this.infoReino();
+    const reino = info.situacao === 'rei' ? `👑 Rei de ${info.vassalos.length}` : info.situacao === 'vassalo' ? `Vassalo de ${info.rei}` : 'Ilha livre';
+    const online = this.cfg.nuvem ? `&c=${this.cfg.slot ?? this.cfg.nuvem.slot}&t=${this.cfg.nuvem.temporada.id}` : '';
+    const url = `${location.origin}${location.pathname}?de=${encodeURIComponent(nome)}&nv=${this.nivel}${online}`;
+
+    const W = 1080, H = 1350, cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const g = cv.getContext('2d')!;
+    const fundo = g.createLinearGradient(0, 0, 0, H); fundo.addColorStop(0, '#2b6cb0'); fundo.addColorStop(1, '#1d2a52');
+    g.fillStyle = fundo; g.fillRect(0, 0, W, H);
+    g.textAlign = 'center'; g.fillStyle = '#ff8fb1'; g.font = '900 96px system-ui, sans-serif'; g.fillText('Ilhas', W / 2, 120);
+    g.fillStyle = '#ffe9a8'; g.font = '700 40px system-ui, sans-serif'; g.fillText(this.ultimaConquista || `A ilha de ${nome}`, W / 2, 185);
+    // foto redonda com moldura
+    g.save(); g.beginPath(); g.arc(W / 2, 600, 380, 0, Math.PI * 2); g.clip();
+    g.imageSmoothingEnabled = false; g.drawImage(foto, W / 2 - 380, 220, 760, 760); g.restore();
+    g.lineWidth = 14; g.strokeStyle = '#f6efe0'; g.beginPath(); g.arc(W / 2, 600, 380, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = '#f6efe0'; g.font = '800 64px system-ui, sans-serif'; g.fillText(nome, W / 2, 1060);
+    g.font = '600 40px system-ui, sans-serif'; g.fillStyle = '#c9d8ff';
+    g.fillText(`Ilha nível ${this.nivel} · ${reino} · ${pos}º de ${r.length}`, W / 2, 1120);
+    g.fillStyle = '#8fd37c'; g.beginPath(); g.roundRect(140, 1170, W - 280, 110, 28); g.fill();
+    g.fillStyle = '#1d2a52'; g.font = '800 36px system-ui, sans-serif'; g.fillText('Consegue me passar?', W / 2, 1215);
+    g.font = '600 32px system-ui, sans-serif'; g.fillText('mydecktcg.com.br/ilhas', W / 2, 1258);
+    const blob = await new Promise<Blob>(ok => cv.toBlob(b => ok(b!), 'image/png'));
+    const texto = `${this.ultimaConquista || `Minha ilha está no nível ${this.nivel}`} — ${reino}, ${pos}º lugar. Consegue me passar?`;
+    return { blob, texto, url };
+  }
+
+  // ---------- Andar até um ponto ----------
+  private podePisar(tx: number, ty: number) {
+    if (tx < 0 || ty < 0 || tx >= this.mundo.largura || ty >= this.mundo.altura) return false;
+    const t = tileEm(this.mundo, tx, ty);
+    return (TILE_ANDAVEL[t] || (qtd(this.inv, 'jangada') > 0 && ehAgua(t))) && !this.bloqueio.has(this.idx(tx, ty));
+  }
+
+  /** Calcula o caminho até o tile e começa a andar. `longe`: viagem pelo mapa-múndi. */
+  irPara(tx: number, ty: number, longe = false) {
+    const j = this.jogador, ox = Math.floor(j.x / T), oy = Math.floor(j.y / T);
+    const t = tileEm(this.mundo, tx, ty);
+    if (ehAgua(t) && !qtd(this.inv, 'jangada')) { this.ui.aviso('Para ir pela água você precisa de uma Jangada'); return false; }
+    // destino ocupado (árvore, pedra, construção, bicho): para do lado dele
+    const adj = !this.podePisar(tx, ty);
+    const c = acharCaminho(ox, oy, tx, ty, (x, y) => this.podePisar(x, y), { alvoAdjacente: adj, maxNos: longe ? 120_000 : 6000 });
+    if (!c) { if (longe) this.ui.aviso('Não achei caminho até lá'); this.pararRota(); return false; }
+    if (!c.length) { this.pararRota(); return true; }
+    this.rota = c; this.rotaParado = 0;
+    if (!this.marcaRota) this.marcaRota = this.add.image(0, 0, 'brilho').setTint(0xffffff).setBlendMode(Phaser.BlendModes.ADD).setScale(0.35).setDepth(4);
+    const [fx, fy] = c[c.length - 1];
+    this.marcaRota.setPosition(((adj ? tx : fx) + 0.5) * T, ((adj ? ty : fy) + 0.5) * T).setVisible(true).setAlpha(0.9);
+    if (longe) { this.ui.fecharPaineis(); this.ui.aviso(`A caminho (${c.length} passos)…`); }
+    return true;
+  }
+
+  private pararRota() { this.rota = null; this.marcaRota?.setVisible(false); }
+
+  // ---------- Reinos ----------
+  private meuMembro(): Membro {
+    return { id: this.minhaIlha.id, nome: this.cfg.nome || 'Você', ilha: this.minhaIlha, nivel: this.nivel, nivelJogador: this.status.nivel, construcoes: this.construcoes, humano: true };
+  }
+  private membros(): Membro[] { return [this.meuMembro(), ...this.bots.bots.map(b => membroDe(b))]; }
+  private nomeDe(id: number) { return id === this.minhaIlha.id ? 'Você' : this.bots.bots.find(b => b.ilha.id === id)?.nome ?? 'Alguém'; }
+  private botDaIlha(id: number) { return this.bots.bots.find(b => b.ilha.id === id); }
+
+  private passoReinos() {
+    if (this.morto) return;
+    const eu = this.minhaIlha.id, agora = this.tempoJogado;
+    const membros = this.membros();
+    // primeiro contato: seu círculo de influência tocou o de um vizinho de outro reino
+    if (!this.avisouContato) {
+      const meu = membros[0];
+      const viz = membros.find(m => m !== meu && reiDe(this.reinos, m.id) !== reiDe(this.reinos, eu) && emContato(meu, m));
+      if (viz) {
+        this.avisouContato = true;
+        const porId = new Map(membros.map(m => [m.id, m]));
+        const fv = forcaReino(this.reinos, porId, reiDe(this.reinos, viz.id)), fm = forcaReino(this.reinos, porId, reiDe(this.reinos, eu));
+        const quem = this.nomeDe(reiDe(this.reinos, viz.id));
+        this.registrar(`Fronteira: sua influência tocou a de ${viz.nome}`);
+        this.ui.contato(viz.nome, quem, Math.round(fm), Math.round(fv));
+      }
+    }
+    for (const ev of passoReinos(this.reinos, membros, agora)) {
+      if (ev.tipo === 'proposta') {
+        this.tocar('noite');
+        this.ui.proposta(this.nomeDe(ev.rei), ev.forcaRei, ev.forcaAlvo,
+          () => { submeter(this.reinos, ev.rei, eu, this.tempoJogado); this.registrar(`Você jurou lealdade a ${this.nomeDe(ev.rei)}`); this.ui.aviso(`Agora você é vassalo de ${this.nomeDe(ev.rei)}`); this.mudou(); },
+          () => { resistir(this.reinos, eu, ev.rei, this.tempoJogado); this.registrar(`Você recusou o domínio de ${this.nomeDe(ev.rei)}`); this.ui.aviso(`⚔ Você resistiu! ${this.nomeDe(ev.rei)} vai atacar sua ilha`); this.mudou(); });
+      } else if (ev.tipo === 'dominou') {
+        if (ev.rei === eu) { this.registrar(`${this.nomeDe(ev.alvo)} virou seu vassalo`); this.ui.aviso(`👑 ${this.nomeDe(ev.alvo)} agora é seu vassalo!`); this.tocar('nivel'); this.conquista(`Virei rei de ${vassalosDe(this.reinos, eu).length} ${vassalosDe(this.reinos, eu).length === 1 ? 'ilha' : 'ilhas'}!`); }
+        else if (ev.rei === reiDe(this.reinos, eu)) this.registrar(`Seu reino cresceu: ${this.nomeDe(ev.alvo)} se submeteu a ${this.nomeDe(ev.rei)}`);
+      } else if (ev.tipo === 'rebeliao') {
+        if (ev.rei === eu && ev.sucesso) { this.registrar(`${this.nomeDe(ev.vassalo)} se rebelou e se libertou`); this.ui.aviso(`⚔ ${this.nomeDe(ev.vassalo)} se rebelou contra você!`); }
+      } else if (ev.tipo === 'tributo') {
+        const vb = this.botDaIlha(ev.vassalo), rb = this.botDaIlha(ev.rei);
+        const lista = (itens: Partial<Record<ItemId, number>>) => Object.entries(itens).map(([id, n]) => `${n} ${ITENS[id as ItemId].nome}`).join(', ') || 'nada';
+        if (ev.vassalo === eu && rb) {
+          const a = pagarTributo(this.armazem, rb.inv), b = pagarTributo(this.inv, rb.inv);
+          for (const [id, n] of Object.entries(b)) a[id as ItemId] = (a[id as ItemId] ?? 0) + n!;
+          this.registrar(`Tributo pago a ${rb.nome}: ${lista(a)}`); this.ui.aviso(`Tributo pago a ${rb.nome}`);
+        } else if (ev.rei === eu && vb) {
+          const a = pagarTributo(vb.inv, this.armazem);
+          this.registrar(`Tributo de ${vb.nome}: ${lista(a)}`); this.ui.aviso(`👑 Tributo de ${vb.nome} chegou ao seu baú`);
+        } else if (vb && rb) pagarTributo(vb.inv, rb.inv);
+      }
+    }
+    this.mudou();
+  }
+
+  private infoReino(): InfoReino {
+    const eu = this.minhaIlha.id, e = this.reinos, agora = this.tempoJogado;
+    const porId = new Map(this.membros().map(m => [m.id, m]));
+    const minhaForca = forcaIlha(this.meuMembro());
+    const raio = raioInfluencia(this.minhaIlha, this.nivel);
+    const min = (ms: number) => Math.max(1, Math.ceil(ms / 60_000));
+    const rei = e.senhor[eu];
+    if (rei !== undefined) {
+      const espera = (e.esperaRebeliao[eu] ?? 0) - agora;
+      return { situacao: 'vassalo', rei: this.nomeDe(rei), forcaRei: forcaIlha(porId.get(rei)!), minhaForca, raio, vassalos: [],
+        proximoTributoMin: min(TRIBUTO_MS - (agora - (e.ultimoTributo[eu] ?? agora))), esperaRebeliaoMin: espera > 0 ? min(espera) : undefined };
+    }
+    const vass = vassalosDe(e, eu).map(id => ({ id, nome: this.nomeDe(id), forca: forcaIlha(porId.get(id)!) }));
+    const res = e.resistindo[eu];
+    return { situacao: vass.length ? 'rei' : 'livre', minhaForca: vass.length ? forcaReino(e, porId, eu) : minhaForca, raio, vassalos: vass,
+      resistindoMin: res && res.ate > agora ? min(res.ate - agora) : undefined };
+  }
+
+  private rebelar() {
+    const eu = this.minhaIlha.id, rei = this.reinos.senhor[eu];
+    if (rei === undefined) return;
+    const r = rebelar(this.reinos, new Map(this.membros().map(m => [m.id, m])), eu, this.tempoJogado);
+    if (r.sucesso) {
+      this.registrar(`Você se rebelou contra ${this.nomeDe(rei)} e venceu!`);
+      this.ui.aviso(`⚔ Rebelião vitoriosa! Sua ilha está livre (${Math.round(r.forca)} × ${Math.round(r.forcaRei)})`);
+      this.tocar('nivel'); this.cameras.main.flash(300, 255, 210, 120);
+      this.conquista(`Me rebelei contra ${this.nomeDe(rei)} e venci!`);
+    } else {
+      this.energia = Math.max(0, this.energia - 30);
+      this.registrar(`Rebelião contra ${this.nomeDe(rei)} fracassou`);
+      this.ui.aviso(`Rebelião fracassou (${Math.round(r.forca)} × ${Math.round(r.forcaRei)}): −30% de energia`);
+      this.tocar('dano'); this.cameras.main.shake(300, 0.006);
+      if (this.energia <= 0) this.perderNivel();
+    }
+    this.mudou(); this.salvar(true);
+  }
+
+  /** Ranking com o reino de cada um (e +30 pts por vassalo para o rei). */
+  private rankingComReinos() {
+    const e = this.reinos, eu = this.minhaIlha.id;
+    const linhas = this.bots.ranking({ nivel: this.nivel, construcoes: this.construcoes, status: this.status }, this.outrosNoRanking())
+      .map(l => {
+        const id = l.perfil === 'jogador' ? eu : l.bot?.ilha.id;
+        if (id === undefined) return l;
+        const v = vassalosDe(e, id).length, rei = e.senhor[id];
+        return { ...l, pontos: l.pontos + v * 30, tag: v ? `👑 rei de ${v}` : rei !== undefined ? `vassalo de ${this.nomeDe(rei)}` : undefined };
+      });
+    return linhas.sort((a, b) => b.pontos - a.pontos || (a.perfil === 'jogador' ? 1 : 0) - (b.perfil === 'jogador' ? 1 : 0));
+  }
+
+  /** Mapa-múndi: o que já foi visto, você, sua ilha, baús e vizinhos que você já encontrou. */
+  private desenharMapa(cv: HTMLCanvasElement) {
+    const n = this.nevoa, marcas: Marca[] = [];
+    for (const b of this.bausMundo.baus) if (n.vistoEm(b.x, b.y)) marcas.push({ x: b.x, y: b.y, cor: '#ffcf4a', raio: 2.5 });
+    for (const b of this.bots.bots) { const c = tileDoCristal(b.ilha); if (n.vistoEm(c.x, c.y)) marcas.push({ x: c.x, y: c.y, cor: '#e8607a', raio: 3 }); }
+    const iniciais = this.mundo.ilhas.filter(i => i.dono !== null);
+    for (const { perfil } of this.outros.values()) { const il = iniciais[perfil.slot]; if (!il) continue; const c = tileDoCristal(il); if (n.vistoEm(c.x, c.y)) marcas.push({ x: c.x, y: c.y, cor: '#5fb3ff', raio: 3 }); }
+    // círculos de influência, com a cor do reino (só de quem você já viu)
+    const corReino = (rei: number) => rei === this.minhaIlha.id ? '#b48cff' : `hsl(${(rei * 137) % 360} 75% 60%)`;
+    for (const mb of this.membros()) {
+      const c = tileDoCristal(mb.ilha);
+      if (mb.humano || n.vistoEm(c.x, c.y)) marcas.unshift({ x: c.x + 0.5, y: c.y + 0.5, cor: corReino(reiDe(this.reinos, mb.id)), anel: raioInfluencia(mb.ilha, mb.nivel) });
+    }
+    const cc = tileDoCristal(this.minhaIlha);
+    marcas.push({ x: cc.x, y: cc.y, cor: '#b48cff', raio: 3 });
+    const vg = this.vinganca && this.vinganca.ate > this.tempoJogado ? this.mundo.ilhas.find(i => i.id === this.vinganca!.ilha) : undefined;
+    if (vg) { const c = tileDoCristal(vg); marcas.push({ x: c.x, y: c.y, cor: '#ff3b3b', anel: 6 }, { x: c.x, y: c.y, cor: '#ff3b3b', raio: 3 }); }
+    if (this.invasao) marcas.push({ x: this.invasao.x, y: this.invasao.y, cor: '#ff3b3b', raio: 3 });
+    marcas.push({ x: this.jogador.x / T, y: this.jogador.y / T, cor: '#ffffff', raio: 3.5 });
+    desenharMapaMundi(cv, this.mundo, n, marcas);
+    return { explorado: n.explorado(this.mundo), jx: this.jogador.x / T / this.mundo.largura, jy: this.jogador.y / T / this.mundo.altura };
+  }
+
+  /** Larga itens no chão, no tile onde o jogador está (junta com a pilha que já estiver lá). */
+  private largar(id: ItemId, n: number) {
+    const j = this.jogador, x = Math.floor(j.x / T), y = Math.floor(j.y / T);
+    const tem = qtd(this.inv, id);
+    const quanto = Math.min(tem, n);
+    if (!quanto) return;
+    if (this.ui.construindo === id && quanto === tem) this.selecionarConstrucao(null);
+    const dur = this.inv.durabilidade[id];
+    remover(this.inv, id, quanto);
+    let pilha = this.chao.find(c => c.x === x && c.y === y);
+    if (!pilha) { pilha = { x, y, itens: novoInventario() }; this.chao.push(pilha); }
+    adicionar(pilha.itens, id, quanto);
+    if (dur !== undefined) pilha.itens.durabilidade[id] = dur;
+    this.desenharPilha(pilha);
+    this.ui.aviso(`Largou ${quanto} ${ITENS[id].nome}`);
+    this.mudou();
+  }
+
+  private desenharPilha(p: (typeof this.chao)[number]) {
+    p.img?.destroy();
+    const ids = Object.keys(p.itens.itens) as ItemId[];
+    if (!ids.length) { this.chao = this.chao.filter(c => c !== p); return; }
+    // o ícone do item (ou um saquinho, se forem vários tipos)
+    const chave = `chao-${ids.length > 1 ? 'couro' : ids[0]}`;
+    const desenhar = () => {
+      p.img = this.add.image((p.x + 0.5) * T, (p.y + 0.8) * T, chave).setOrigin(0.5, 1).setDisplaySize(10, 10).setDepth((p.y + 0.8) * T);
+      this.tweens.add({ targets: p.img, y: p.img.y - 1.5, duration: 700, yoyo: true, repeat: -1 });
+    };
+    if (this.textures.exists(chave)) { desenhar(); return; }
+    const img = new Image();
+    img.onload = () => { if (!this.textures.exists(chave)) this.textures.addImage(chave, img); if (this.chao.includes(p)) desenhar(); };
+    img.src = icone(ids.length > 1 ? 'couro' : ids[0]);
+  }
+
+  private pegarDoChao(p: (typeof this.chao)[number]) {
+    let pegou = 0;
+    for (const id of Object.keys(p.itens.itens) as ItemId[]) if (moverPilha(p.itens, this.inv, id)) pegou++;
+    if (!pegou) { this.ui.aviso('Mochila cheia!'); return; }
+    this.desenharPilha(p);
+    this.tocar('criar'); this.mudou();
+  }
+
+  private abrirBauMundo(bau: import('../sim/baus').Bau) {
+    const r = this.bausMundo.abrir(bau, this.inv);
+    if ('motivo' in r) { this.ui.aviso(r.motivo === 'guardioes' ? `Derrote os guardiões primeiro (${bau.guardioes})` : 'Vazio'); return; }
+    const itens = Object.entries(r.pegou);
+    if (!itens.length) { this.ui.aviso('Mochila cheia! Guarde coisas no baú da ilha'); return; }
+    itens.forEach(([id, n], i) => this.textoFlutuante((bau.x + 0.5) * T, bau.y * T - i * 7, `+${n} ${ITENS[id as ItemId].nome}`, RARIDADES[bau.raridade].corCss));
+    this.ui.aviso(bau.aberto ? `Baú ${RARIDADES[bau.raridade].nome.toLowerCase()} aberto!` : 'Mochila cheia: parte ficou no baú');
+    if (bau.aberto) { this.meta('bau'); this.bausAbertos++; }
+    if (bau.aberto) this.darXp({ comum: 5, raro: 10, epico: 20, lendario: 40 }[bau.raridade]);
+    if (bau.aberto && (bau.raridade === 'lendario' || bau.raridade === 'epico')) this.conquista(`Abri um baú ${RARIDADES[bau.raridade].nome.toLowerCase()}!`);
+    this.tocar(bau.raridade === 'lendario' || bau.raridade === 'epico' ? 'nivel' : 'criar');
+    this.mudou();
+  }
+
+  /** Casa à noite: dorme até o amanhecer (se não houver monstro por perto). */
+  private dormir() {
+    const j = this.jogador;
+    const perigo = this.fauna.lista.some(b => CRIATURAS[b.c.tipo].comportamento === 'hostil' && Math.hypot(b.c.x - j.x / T, b.c.y - j.y / T) < 6);
+    if (perigo) { this.ui.aviso('Não dá para dormir com monstros por perto!'); return; }
+    const f = this.tempoMundo % DURACAO_DIA;
+    this.tempoMundo += DURACAO_DIA - f + DURACAO_DIA * 0.03;
+    this.status.vida = this.status.vidaMax;
+    this.cameras.main.fadeOut(400, 10, 10, 30);
+    this.time.delayedCall(450, () => this.cameras.main.fadeIn(600, 10, 10, 30));
+    this.ui.aviso('Você dormiu até o amanhecer');
+    this.mudou();
+  }
+
+  /** Torres (portal): atiram nos monstros hostis que chegam perto. */
+  private defenderComTorres() {
+    for (const t of this.construcoes) {
+      if (t.tipo !== 'torre') continue;
+      const inv = this.invasao;
+      if (inv && Math.hypot(inv.x - (t.x + 0.5), inv.y - (t.y + 0.5)) < 4.5) {
+        const tiro = this.add.rectangle((t.x + 0.5) * T, t.y * T, 3, 3, 0xffe07a).setDepth(29000);
+        this.tweens.add({ targets: tiro, x: inv.x * T, y: inv.y * T - 6, duration: 180, onComplete: () => { tiro.destroy(); if (this.invasao === inv) this.ferirInvasor(4); } });
+        continue;
+      }
+      const alvo = this.fauna.lista.find(b => CRIATURAS[b.c.tipo].comportamento !== 'passivo' && Math.hypot(b.c.x - (t.x + 0.5), b.c.y - (t.y + 0.5)) < 4.5);
+      if (!alvo) continue;
+      const tiro = this.add.rectangle((t.x + 0.5) * T, t.y * T, 3, 3, 0xffe07a).setDepth(29000);
+      this.tweens.add({ targets: tiro, x: alvo.c.x * T, y: alvo.c.y * T - 6, duration: 180, onComplete: () => {
+        tiro.destroy();
+        if (this.fauna.lista.includes(alvo)) this.ferirBicho(alvo, 4);
+      } });
+    }
+  }
+
+  /** Plantações mudam de estágio com o tempo: atualiza o desenho quando muda. */
+  private atualizarPlantacoes() {
+    for (const c of this.construcoes) {
+      if (c.tipo !== 'plantacao') continue;
+      const k = this.idx(c.x, c.y), est = this.nomeConstrucao(c);
+      if (this.estagioPlantacao.get(k) !== est) { this.estagioPlantacao.set(k, est); this.mostrarConstrucao(c); }
+    }
+  }
+
+  /** Desenha a ilha de outra pessoa da temporada: tamanho, construções e o nome sobre o Cristal. */
+  private mostrarOutro(o: import('../rede/nuvem').PerfilPublico) {
+    const iniciais = this.mundo.ilhas.filter(i => i.dono !== null);
+    const ilha = iniciais[o.slot]; if (!ilha) return;
+    const antes = this.outros.get(o.user_id);
+    if (!antes || antes.perfil.nivel !== o.nivel) this.aplicarExpansaoDeOutro(ilha, o.nivel);
+    for (const c of antes?.perfil.construcoes ?? []) { this.construidoEm.delete(this.idx(c.x, c.y)); this.bloqueio.delete(this.idx(c.x, c.y)); this.mapa?.definirObjeto(c.x, c.y, null); }
+    for (const c of o.construcoes ?? []) {
+      if (!TILE_ANDAVEL[tileEm(this.mundo, c.x, c.y)]) continue;
+      this.removerRecursoSob(c.x, c.y);
+      this.construidoEm.set(this.idx(c.x, c.y), c.tipo); this.bloqueio.add(this.idx(c.x, c.y));
+      this.mapa?.definirObjeto(c.x, c.y, c.tipo in OBJETOS ? c.tipo : null);
+    }
+    const cc = tileDoCristal(ilha);
+    const nome = antes?.nome ?? this.add.text((cc.x + 0.5) * T, cc.y * T - 10, '', {
+      fontFamily: 'system-ui, sans-serif', fontSize: '30px', color: '#ffe9a8', stroke: '#3a2f45', strokeThickness: 6,
+    }).setOrigin(0.5, 1).setScale(0.2).setDepth(24000);
+    nome.setText(`${o.nome} · nv ${o.nivel}`);
+    this.outros.set(o.user_id, { perfil: o, nome });
+  }
+
+  private aplicarExpansaoDeOutro(ilha: import('../sim/mundo').Ilha, nivel: number) {
+    if (this.mapa) this.aplicarExpansao(ilha, nivel);
+    else expandirTerreno(this.mundo, this.recursos, ilha, nivel);
+  }
+
+  /** Atualiza as ilhas das outras pessoas (a cada 30 s). */
+  private async atualizarOutros() {
+    const nuvem = this.cfg.nuvem; if (!nuvem) return;
+    try {
+      for (const o of await nuvem.jogadores()) if (o.user_id !== nuvem.userId) this.mostrarOutro(o);
+    } catch (e) { console.warn('Ilhas: não deu para atualizar os outros jogadores', e); }
+  }
+
+  private outrosNoRanking() {
+    return [...this.outros.values()].map(({ perfil }) => ({ nome: perfil.nome, pontos: perfil.pontos }));
   }
 
   private aprenderHabilidade(id: string) {
@@ -497,15 +1436,19 @@ export class CenaJogo extends Phaser.Scene {
     this.textoFlutuante(b.c.x * T, b.c.y * T - 14, critico ? `${dano}!` : `${dano}`, critico ? '#ff8a3c' : '#ffd166');
     const def = CRIATURAS[b.c.tipo];
     if (this.fauna.ferir(b, dano, j.x / T, j.y / T)) {
+      if (b.c.ancora) this.bausMundo.guardiaoMorreu(b.c.ancora.bau);
+      const multR = MULT_RARIDADE[b.c.raridade][2];
       let i = 0;
       for (const [id, n] of Object.entries(def.solta)) {
-        adicionar(this.inv, id as ItemId, n ?? 0);
-        this.textoFlutuante(b.c.x * T, b.c.y * T - 20 - i++ * 7, `+${n} ${ITENS[id as ItemId].nome}`);
+        if (!cabe(this.inv, [id as ItemId])) { this.ui.aviso(`Mochila cheia: perdeu ${ITENS[id as ItemId].nome}`); continue; }
+        const qn = Math.ceil((n ?? 0) * multR);
+        adicionar(this.inv, id as ItemId, qn);
+        this.textoFlutuante(b.c.x * T, b.c.y * T - 20 - i++ * 7, `+${qn} ${ITENS[id as ItemId].nome}`);
       }
-      const subiu = ganharXp(this.status, def.xp);
-      this.textoFlutuante(j.x, j.y - 26, `+${def.xp} XP`, '#ffd166');
+      const xp = Math.round(def.xp * multR * (this.construcoes.some(c => c.tipo === 'estatua') ? 1.25 : 1)); // raridade e estátua aumentam o XP
+      this.darXp(xp);
       this.mortos++;
-      if (subiu) { this.tocar('nivel'); this.ui.aviso(`Você subiu para o nível ${this.status.nivel}!`); this.cameras.main.flash(250, 255, 230, 150); }
+      this.meta('bicho');
     }
     this.mudou();
   }
@@ -529,16 +1472,25 @@ export class CenaJogo extends Phaser.Scene {
   private desmaiar() {
     this.morto = true;
     this.status.vida = 0;
+    // metade da mochila fica no túmulo onde caiu (a jangada não)
+    const j = this.jogador;
+    const novo = criarTumulo(this.inv, Math.floor(j.x / T), Math.floor(j.y / T));
+    // já havia um túmulo: o conteúdo dele vem para o novo (nada se perde)
+    if (this.tumulo && novo) for (const [id, n] of Object.entries(this.tumulo.itens.itens)) adicionar(novo.itens, id as ItemId, n!);
+    this.tumulo = novo ?? this.tumulo;
+    this.mostrarTumulo();
     this.cameras.main.fadeOut(700, 20, 16, 40);
     this.time.delayedCall(900, () => {
-      const casa = this.mundo.ilhas[0];
-      this.jogador.setPosition((Math.round(casa.cx) + 0.5) * T, (Math.round(casa.cy) + 0.5) * T);
+      // renasce ao lado da casa (se tiver) ou do Cristal
+      const casaC = this.construcoes.find(c => c.tipo === 'casa');
+      const p = casaC ? { x: casaC.x, y: casaC.y + 1 } : tileDeNascimento(this.minhaIlha);
+      this.jogador.setPosition((p.x + 0.5) * T, (p.y + 0.5) * T);
       for (const b of [...this.fauna.lista]) this.fauna.remover(b);
       this.status.vida = this.status.vidaMax;
       this.morto = false;
       this.invulneravelAte = this.time.now + 3000;
       this.cameras.main.fadeIn(700, 20, 16, 40);
-      this.ui.aviso('Você desmaiou e acordou em casa');
+      this.ui.aviso(this.tumulo ? 'Você desmaiou: metade da mochila ficou no túmulo' : 'Você desmaiou e acordou em casa');
       this.mudou();
     });
   }
@@ -554,6 +1506,9 @@ export class CenaJogo extends Phaser.Scene {
     const k = this.teclas;
     const j = this.jogador;
     this.mapa.atualizar(this.cameras.main.worldView);
+    if (!this.morto) this.atualizarInvasao(dt);
+    const descobriu = this.nevoa.atualizar(this.jogador.x, this.jogador.y);
+    if (descobriu && this.tempoJogado > 3000) this.meta('explorar', descobriu);
     // Relógio do mundo, noite e criaturas.
     this.tempoMundo += dt;
     const noite = ehNoite(this.tempoMundo);
@@ -563,9 +1518,12 @@ export class CenaJogo extends Phaser.Scene {
       if (noite) this.tocar('noite');
     }
     this.diaNoite.atualizar(this.tempoMundo, this.construcoes.filter(c => c.tipo === 'fogueira'), t);
+    this.bausMundo.atualizar(j.x / T, j.y / T, this.cameras.main.worldView, t);
     this.levarDano(this.fauna.atualizar(dt, j.x / T, j.y / T, !this.morto, noite), t);
     if (!this.morto) {
-      this.mana = Math.min(this.ef.manaMax, this.mana + dt / 1000);
+      // altar: mana 3× mais rápida por perto; casa: vida regenera por perto
+      this.mana = Math.min(this.ef.manaMax, this.mana + (dt / 1000) * (this.minhaConstrucaoPerto(['altar'], 3) ? 3 : 1));
+      if (this.minhaConstrucaoPerto(['casa'], 2.6)) this.status.vida = Math.min(this.status.vidaMax, this.status.vida + (0.8 * dt) / 1000);
       if (this.ef.regen) this.status.vida = Math.min(this.status.vidaMax, this.status.vida + (this.ef.regen * dt) / 1000);
     }
     this.magias.atualizar(dt, (px, py) => !TILE_ANDAVEL[tileEm(this.mundo, Math.floor(px / T), Math.floor(py / T))] && !ehAgua(tileEm(this.mundo, Math.floor(px / T), Math.floor(py / T))) || this.bloqueio.has(this.idx(Math.floor(px / T), Math.floor(py / T))));
@@ -583,6 +1541,14 @@ export class CenaJogo extends Phaser.Scene {
     j.setDepth(j.y);
     this.sombra.setPosition(j.x, j.y + 2).setDepth(j.y - 1).setVisible(!this.naAgua);
     this.som.atualizarMusica(noite);
+    const fora = this.foraDeCasa();
+    document.body.classList.toggle('fora', fora && this.construcoes.length > 0);
+    if (!this.morto) this.tempoJogado += dt;
+    if (fora !== this.estavaFora) {
+      this.estavaFora = fora;
+      const e = this.escudo();
+      if (fora && this.construcoes.length) this.ui.aviso(e > 0 ? `🛡 Escudo de novato: sua ilha está protegida por mais ${Math.ceil(e / 60_000)} min` : '⚠ Sua ilha está desprotegida enquanto você está fora');
+    }
     const agora = ehAgua(tileEm(this.mundo, Math.floor(j.x / T), Math.floor(j.y / T)));
     if (agora !== this.naAgua) {
       this.naAgua = agora;
@@ -596,12 +1562,25 @@ export class CenaJogo extends Phaser.Scene {
     if (k.W.isDown || k.UP.isDown) vy -= 1;
     if (k.S.isDown || k.DOWN.isDown) vy += 1;
     if (toque.x || toque.y) { vx = toque.x; vy = toque.y; }
+    if (vx || vy || this.ui.construindo) { if (this.rota) this.pararRota(); }
+    else if (this.rota && !this.golpeando) {
+      // seguindo o caminho tocado: vai de centro em centro de tile
+      const [nx, ny] = this.rota[0];
+      const ax = (nx + 0.5) * T - j.x, ay = (ny + 0.5) * T - j.y;
+      if (Math.hypot(ax, ay) < 2.5) { this.rota.shift(); if (!this.rota.length) this.pararRota(); }
+      else { vx = ax / Math.hypot(ax, ay); vy = ay / Math.hypot(ax, ay); }
+    }
+    const antesX = j.x, antesY = j.y;
     if ((vx || vy) && !this.golpeando) {
       const vel = VELOCIDADE * (this.naAgua ? 0.85 : 1) * (1 + this.ef.velocidade) * (t < this.magias.ventoAte ? 1.8 : 1);
       const passo = (vel * T * dt) / 1000 / Math.max(1, Math.hypot(vx, vy));
       const nx = j.x + vx * passo, ny = j.y + vy * passo;
       if (this.livre(nx, j.y)) j.x = nx;
       if (this.livre(j.x, ny)) j.y = ny;
+      if (this.rota) { // preso (bicho no caminho, recurso que nasceu): desiste depois de um tempo
+        this.rotaParado = Math.hypot(j.x - antesX, j.y - antesY) < 0.05 ? this.rotaParado + dt : 0;
+        if (this.rotaParado > 700) this.pararRota();
+      }
       this.direcao = Math.abs(vx) > Math.abs(vy) ? (vx < 0 ? 'esquerda' : 'direita') : (vy < 0 ? 'cima' : 'baixo');
       j.anims.play(`p-${this.personagem}-${this.direcao}`, true);
     } else if (!this.golpeando) {
@@ -618,6 +1597,39 @@ export class CenaJogo extends Phaser.Scene {
       return;
     }
     const apertou = k.SPACE.isDown || k.E.isDown || toque.acao;
+    // objeto mais perto ganha o botão de ação (baú ao lado do Cristal precisa abrir)
+    const interPrevia = this.interacaoPerto(noite);
+    const cc = tileDoCristal(this.minhaIlha);
+    const dCristal = Math.hypot(j.x / T - (cc.x + 0.5), j.y / T - (cc.y + 0.5));
+    const dInter = interPrevia ? Math.hypot(j.x / T - (interPrevia.c.x + 0.5), j.y / T - (interPrevia.c.y + 0.5)) : Infinity;
+    if (this.pertoDoCristal() && dCristal < dInter) {
+      this.alvo.setVisible(false);
+      this.ui.rotuloAcao('Cristal');
+      if (Phaser.Input.Keyboard.JustDown(k.SPACE) || Phaser.Input.Keyboard.JustDown(k.E) || (toque.acao && !this.cristalAberto)) { this.cristalAberto = true; this.ui.abrirCristal(); }
+      if (!toque.acao) this.cristalAberto = false;
+      return;
+    }
+    const inter = interPrevia;
+    if (inter && !this.fauna.alvo(j.x / T, j.y / T, VETOR[this.direcao])) {
+      this.alvo.setVisible(true).setPosition(inter.c.x * T, inter.c.y * T);
+      this.ui.rotuloAcao(inter.rotulo);
+      const aperto = Phaser.Input.Keyboard.JustDown(k.SPACE) || Phaser.Input.Keyboard.JustDown(k.E) || (toque.acao && !this.interagiu);
+      if (aperto) { this.interagiu = true; inter.fazer(); }
+      if (!toque.acao) this.interagiu = false;
+      return;
+    }
+    const inv = this.invasao;
+    if (inv && Math.hypot(inv.x - j.x / T, inv.y - j.y / T) < 1.8) {
+      this.alvo.setVisible(false);
+      this.ui.rotuloAcao('Expulsar');
+      if (apertou && t - this.ultimoGolpe >= INTERVALO_ATAQUE / (1 + this.ef.velocidadeAtaque)) {
+        this.ultimoGolpe = t;
+        const arma = ferramentaPara(this.inv, 'criatura');
+        this.tocar('golpe');
+        this.ferirInvasor((arma.id ? arma.dano : 1) + bonusDano(this.status) + this.ef.dano);
+      }
+      return;
+    }
     const bicho = this.fauna.alvo(j.x / T, j.y / T, VETOR[this.direcao]);
     if (bicho) {
       this.alvo.setVisible(false);

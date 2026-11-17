@@ -1,7 +1,8 @@
 import type { ItemId } from './itens';
 import { tileEm, TILE_ANDAVEL, type Ilha, type Mundo } from './mundo';
 
-export interface Construcao { tipo: ItemId; x: number; y: number; }
+/** `plantadoEm`: tempo do mundo (ms) em que a plantação foi semeada; ausente = terra vazia. */
+export interface Construcao { tipo: ItemId; x: number; y: number; plantadoEm?: number; }
 
 /** Tiles que contam como "dentro" da ilha do jogador (área de construção). */
 export function naIlha(ilha: Ilha, x: number, y: number) {
@@ -21,16 +22,20 @@ export function validarLocal(
 }
 
 /** Requisitos para atingir cada nível (o índice 0 é o nível 2). */
+/**
+ * Construções exigidas para cada nível de expansão (acumulado). Enxuto de propósito: a ilha começa
+ * minúscula e cresce aos poucos; o motor da evolução é alimentar o Cristal (ver expansao.ts).
+ */
 export const NIVEIS: { nivel: number; requer: Partial<Record<ItemId, number>>; recompensa: string }[] = [
-  { nivel: 2, requer: { fogueira: 1, bancada: 1 }, recompensa: 'libera cerca, baú, casa e jangada' },
-  { nivel: 3, requer: { fogueira: 1, bancada: 1, bau: 1, casa: 1 }, recompensa: 'ilha mais confortável' },
-  { nivel: 4, requer: { fogueira: 2, bancada: 1, bau: 2, casa: 1, cerca: 12 }, recompensa: 'libera a forja' },
-  { nivel: 5, requer: { fogueira: 2, bancada: 1, bau: 2, casa: 1, cerca: 12, forja: 1 }, recompensa: 'libera ferro' },
-  { nivel: 6, requer: { fogueira: 2, bancada: 1, bau: 2, casa: 2, cerca: 16, forja: 1 }, recompensa: 'libera o altar' },
-  { nivel: 7, requer: { fogueira: 3, bancada: 1, bau: 2, casa: 2, cerca: 16, forja: 1, altar: 1 }, recompensa: 'libera a torre' },
-  { nivel: 8, requer: { fogueira: 3, bancada: 1, bau: 3, casa: 2, cerca: 20, forja: 1, altar: 1, torre: 1 }, recompensa: 'ilha fortificada' },
-  { nivel: 9, requer: { fogueira: 3, bancada: 2, bau: 3, casa: 3, cerca: 24, forja: 1, altar: 1, torre: 2 }, recompensa: 'libera a estátua' },
-  { nivel: 10, requer: { fogueira: 4, bancada: 2, bau: 3, casa: 3, cerca: 24, forja: 2, altar: 1, torre: 2, estatua: 1 }, recompensa: 'ilha lendária' },
+  { nivel: 2, requer: { fogueira: 1 }, recompensa: 'libera baú, casa e cerca' },
+  { nivel: 3, requer: { fogueira: 1, bancada: 1 }, recompensa: '' },
+  { nivel: 4, requer: { fogueira: 1, bancada: 1, bau: 1, casa: 1 }, recompensa: 'libera a forja' },
+  { nivel: 5, requer: { fogueira: 1, bancada: 1, bau: 1, casa: 1, cerca: 4 }, recompensa: 'libera ferro' },
+  { nivel: 6, requer: { fogueira: 1, bancada: 1, bau: 1, casa: 1, cerca: 4, forja: 1 }, recompensa: 'libera o altar' },
+  { nivel: 7, requer: { fogueira: 2, bancada: 1, bau: 1, casa: 2, cerca: 4, forja: 1 }, recompensa: 'libera o portal' },
+  { nivel: 8, requer: { fogueira: 2, bancada: 1, bau: 1, casa: 2, cerca: 4, forja: 1, altar: 1 }, recompensa: '' },
+  { nivel: 9, requer: { fogueira: 2, bancada: 1, bau: 2, casa: 2, cerca: 6, forja: 1, altar: 1, torre: 1 }, recompensa: 'libera a estátua' },
+  { nivel: 10, requer: { fogueira: 2, bancada: 1, bau: 2, casa: 2, cerca: 8, forja: 1, altar: 1, torre: 1, estatua: 1 }, recompensa: 'ela vira lendária' },
 ];
 
 export function contar(construcoes: Construcao[]) {

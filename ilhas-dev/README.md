@@ -46,7 +46,13 @@ Foi assim que achamos ilhas sem pedra, bots que se trancavam nas próprias const
 - [x] Arte do Ninja Adventure Asset Pack (CC0): 24 personagens (escolha na tela inicial), criaturas, árvores, pedras, minério, cristal, construções e ícones; terreno com a paleta do pacote
 - [x] Sons e músicas do pacote (13 efeitos + música de dia e de noite, MP3 leve), ícones restantes, câmera mais próxima
 - [x] Bots navegam: constroem jangada e fazem expedições às ilhas neutras atrás de minério e cristal (ida, coleta, volta; rede de segurança de 6 min); checagem de conectividade trata pedras e minérios como paredes permanentes
-- [ ] Próximo — salvamento na nuvem/multiplayer
+- [x] **v2 Fase A — Núcleo de Cristal** (ver `DESIGN-v2.md`): ilha começa minúscula, alimentar o Cristal com cristal (só existe fora) faz a terra crescer; bots com o mesmo ciclo
+- [x] Cada construção tem função (baú/armazém com mochila limitada, casa, plantação, estações de trabalho, altar, portal que atira, estátua) — ver tabela em `DESIGN-v2.md`
+- [x] **v2 Fase B — Baús e raridades**: ~2 baús por ilha neutra (comum/raro/épico/lendário) com guardiões que só deixam abrir depois de derrotados; criaturas com raridade (mais vida, dano, XP e itens); baú aberto reaparece em outro lugar
+- [x] **v2 Fase C — Saque e defesa**: fora de casa a ilha fica desprotegida; rivais tentam saquear (força cresce com o nível); defesa por portal, cercas, fogueiras, casas e estátua; saque leva parte do baú e drena a energia do Cristal; energia zerada = a ilha encolhe 1 nível; recarga com cristal/gosma; diário da ilha; morte deixa metade da mochila num túmulo recuperável
+- [x] **Multijogador etapa 1** (Supabase + login do MyDeck): temporadas com a mesma semente para todos; cada pessoa ocupa uma ilha (função `ilhas_entrar`), os bots ficam com as livres; progresso privado na nuvem (`ilhas_saves`) e perfil público (`ilhas_jogadores`) com nível, pontos e construções, que aparecem na ilha da pessoa e no ranking. SQL em `../sql/ilhas_multijogador_17nov2026.sql` (testado num Postgres local: RLS, slot único, sem acesso ao save alheio)
+- [ ] Multijogador etapas 2 (saque entre pessoas no servidor) e 3 (tempo real)
+- [ ] v2 Fases D–E — baús com guardiões e raridades, saque e defesa, bots rivais, temporada
 
 ## Créditos
 Arte: [Ninja Adventure Asset Pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack), por Pixel-boy e AAA — licença CC0 (`public/ninja/LICENSE.txt`).

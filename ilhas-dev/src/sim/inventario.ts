@@ -42,3 +42,23 @@ export function desgastar(inv: Inventario, id: ItemId): boolean {
   if (f && qtd(inv, id) > 0) inv.durabilidade[id] = f.durabilidade;
   return true;
 }
+
+/** Mochila do jogador: no máximo esta quantidade de TIPOS de item (a quantidade de cada um é livre). */
+export const LIMITE_MOCHILA = 10;
+
+/** Cabem estes itens? Só conta tipos novos (empilhar o que já tem sempre cabe). */
+export function cabe(inv: Inventario, ids: ItemId[], limite = LIMITE_MOCHILA): boolean {
+  const novos = new Set(ids.filter(id => qtd(inv, id) === 0));
+  return Object.keys(inv.itens).length + novos.size <= limite;
+}
+
+/** Move a pilha inteira de um item entre inventários (mochila ↔ armazém). Retorna quanto moveu. */
+export function moverPilha(de: Inventario, para: Inventario, id: ItemId, limitePara = Infinity): number {
+  const n = qtd(de, id);
+  if (!n || !cabe(para, [id], limitePara)) return 0;
+  const dur = de.durabilidade[id];
+  remover(de, id, n);
+  adicionar(para, id, n);
+  if (dur !== undefined) para.durabilidade[id] = dur;
+  return n;
+}

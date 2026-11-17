@@ -51,3 +51,39 @@ describe('criação', () => {
     expect(golpes).toBe(40);
   });
 });
+
+describe('mochila limitada e baú', () => {
+  it('limita os tipos de item, mas empilhar sempre cabe', async () => {
+    const { cabe, LIMITE_MOCHILA } = await import('../src/sim/inventario');
+    const inv = novoInventario();
+    const ids = ['madeira', 'pedra', 'fibra', 'baga', 'corda', 'carne', 'couro', 'gosma', 'minerio', 'cristal'] as const;
+    ids.slice(0, LIMITE_MOCHILA).forEach(id => adicionar(inv, id, 1));
+    expect(cabe(inv, ['madeira'])).toBe(true);      // já tem: empilha
+    expect(cabe(inv, ['lingote'])).toBe(false);     // tipo novo: não cabe
+  });
+  it('move a pilha inteira entre mochila e baú, com durabilidade', async () => {
+    const { moverPilha } = await import('../src/sim/inventario');
+    const mochila = novoInventario(), bau = novoInventario();
+    adicionar(mochila, 'madeira', 7); adicionar(mochila, 'machado_pedra', 1); mochila.durabilidade.machado_pedra = 12;
+    expect(moverPilha(mochila, bau, 'madeira', 12)).toBe(7);
+    expect(moverPilha(mochila, bau, 'machado_pedra', 12)).toBe(1);
+    expect(bau.durabilidade.machado_pedra).toBe(12);
+    expect(qtd(mochila, 'madeira')).toBe(0);
+    expect(moverPilha(bau, mochila, 'pedra')).toBe(0); // não tem
+  });
+});
+
+describe('grupos de criação', () => {
+  it('toda receita cai num grupo coerente', async () => {
+    const { RECEITAS, grupoDe } = await import('../src/sim/itens');
+    expect(grupoDe('machado_ferro')).toBe('extracao');
+    expect(grupoDe('espada_ferro')).toBe('equipamentos');
+    expect(grupoDe('jangada')).toBe('equipamentos');
+    expect(grupoDe('plantacao')).toBe('construcao');
+    expect(grupoDe('lingote')).toBe('materiais');
+    expect(grupoDe('pocao_mana')).toBe('consumiveis');
+    const porGrupo = new Map<string, number>();
+    for (const r of RECEITAS) porGrupo.set(grupoDe(r.id), (porGrupo.get(grupoDe(r.id)) ?? 0) + 1);
+    expect(porGrupo.size).toBe(5); // nenhum grupo vazio
+  });
+});

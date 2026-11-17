@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { gerarMundo } from '../src/sim/mundo';
-import { nivelIlha, proximoNivel, validarLocal, type Construcao } from '../src/sim/construcao';
+import { validarLocal, type Construcao } from '../src/sim/construcao';
 import { carregar, serializar } from '../src/sim/save';
 import { novoInventario, adicionar, criar, podeCriar } from '../src/sim/inventario';
 import { RECEITAS } from '../src/sim/itens';
@@ -18,14 +18,33 @@ describe('construção', () => {
     expect(validarLocal(m, ilha, [], livre, cx + 200, cy)).toBe('fora_da_ilha');
   });
 
-  it('sobe de nível com as construções exigidas', () => {
+  it('expansão exige construções e alimentar o Cristal (cristal só existe fora de casa)', async () => {
+    const { requisitosExpansao, pagarExpansao } = await import('../src/sim/expansao');
+    const inv = novoInventario();
     const c: Construcao[] = [];
-    expect(nivelIlha(c)).toBe(1);
+    expect(requisitosExpansao(1, c, inv)!.pronto).toBe(false);
     c.push({ tipo: 'fogueira', x: 0, y: 0 });
-    expect(nivelIlha(c)).toBe(1);
-    c.push({ tipo: 'bancada', x: 1, y: 0 });
-    expect(nivelIlha(c)).toBe(2);
-    expect(proximoNivel(c)?.nivel).toBe(3);
+    adicionar(inv, 'madeira', 10);
+    expect(pagarExpansao(1, c, inv)).toBeNull();          // falta cristal
+    adicionar(inv, 'cristal', 1);
+    expect(pagarExpansao(1, c, inv)).toBe(2);
+    expect(inv.itens.cristal ?? 0).toBe(0);               // o Cristal consumiu
+    expect(requisitosExpansao(10, c, inv)).toBeNull();    // nível máximo
+  });
+
+  it('a terra cresce ao expandir e os recursos da área nova aparecem', async () => {
+    const { expandirTerreno } = await import('../src/sim/expansao');
+    const { iniciarRecursos } = await import('../src/sim/coleta');
+    const { TILE_ANDAVEL } = await import('../src/sim/mundo');
+    const m2 = gerarMundo({ seed: 11, participantes: 4 });
+    const rec = iniciarRecursos(m2);
+    const ilha = m2.ilhas[0];
+    const terra = () => { let n = 0; for (let i = 0; i < m2.tiles.length; i++) if (TILE_ANDAVEL[m2.tiles[i] as 0] && Math.hypot(i % m2.largura - ilha.cx, Math.floor(i / m2.largura) - ilha.cy) < ilha.raioMax * 1.3) n++; return n; };
+    const antes = terra(), submersosAntes = rec.submersos.size;
+    const r = expandirTerreno(m2, rec, ilha, 6);
+    expect(terra()).toBeGreaterThan(antes * 2);
+    expect(r.emergiram.length).toBeGreaterThan(0);
+    expect(rec.submersos.size).toBe(submersosAntes - r.emergiram.length);
   });
 
   it('receitas travadas por nível', () => {
