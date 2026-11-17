@@ -14,8 +14,12 @@
     get: function (k, d) { try { var v = localStorage.getItem('fn_' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set: function (k, v) { try { localStorage.setItem('fn_' + k, JSON.stringify(v)); } catch (e) { } }
   };
-  var money = function (v) { return (v == null || isNaN(v)) ? '—' : 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
-  var money0 = function (v) { return v >= 100 ? 'R$ ' + Math.round(v).toLocaleString('pt-BR') : money(v); };
+  var CUR = 'R$'; // moeda da coleção na tela: '$' só quando o idioma é EN e as cartas têm preço em dólar (hoje: Celebração 30 Anos)
+  var money = function (v) {
+    if (v == null || isNaN(v)) return '—';
+    return CUR === '$' ? '$ ' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+  var money0 = function (v) { return v >= 100 ? (CUR === '$' ? '$ ' + Math.round(v).toLocaleString('en-US') : 'R$ ' + Math.round(v).toLocaleString('pt-BR')) : money(v); };
 
   var DEMO = /[?&]demo\b/.test(location.search);
   var VERSION_NAME = { N: 'Normal', RH: 'Reverse Holo', RH2: 'Reverse Holo 2', F: 'Foil / Holo', SP: 'Especial' };
@@ -28,7 +32,7 @@
     q: '', status: 'all', sort: 'num',
     view: LS.get('view', 'grid'),
     cols: LS.get('cols', defCols),
-    lang: (function () { try { return localStorage.getItem('ficLang') || 'pt'; } catch (e) { return 'pt'; } })(), // mesma chave do fichário atual
+    lang: LS.get('lang', 'pt'), // idioma próprio do fichário novo (começa em PT: quem usava EN só para ver a arte no fichário atual não "perde" a coleção de vista)
     pocket: (function () { var p = String(LS.get('pocket', '9')); return p === '20a' ? '20b' : p; })(), // 4×5 foi removido: quem tinha escolhido passa ao 5×4
     imp: false,
     focus: !!LS.get('focus', false),
@@ -58,7 +62,21 @@
   function ck(c) { return c._k || c.n; }
   function sidOf(id, c) { return c._set || id; }
   function findCard(k) { return cur.cards.filter(function (x) { return String(ck(x)) === String(k); })[0]; }
-  function keyOf(id, c, ver) { return slotKey(sidOf(id, c) + ':', c.n, ver); }
+  // 17/11/2026: cada idioma tem a sua própria coleção. Português mantém as chaves de sempre ("me04:001:N");
+  // EN e JP ganham sufixo no código do set ("me04-en:001:N"). cel30jp/cel30cn já são coleções próprias; a Pokédex é sempre PT.
+  // O banco trata um código de set sem catálogo como "slot desconhecido": grava normalmente, só não dá XP.
+  function langSfx(sid) {
+    if (sid === 'cel30jp' || sid === 'cel30cn') return '';
+    var l = effLang(sid); return l === 'pt' ? '' : '-' + l;
+  }
+  function keyOf(id, c, ver) { var sid = sidOf(id, c); return slotKey(sid + (c._k ? '' : langSfx(sid)) + ':', c.n, ver); }
+  // preço do slot no idioma da coleção (EN usa dólar quando a carta tem; senão mantém o preço em R$)
+  function priceOf(id, c, sl) {
+    var base = (sl && sl.price != null) ? sl.price : c.price;
+    if (c._k || effLang(sidOf(id, c)) === 'pt') return base || 0;
+    var i = i18n(c, id); if (i.symbol !== '$' || !c.price) return base || 0;
+    return (i.price || 0) * ((base || c.price) / c.price);
+  }
 
   function setData(id) {
     var prev = currentSet;
@@ -308,7 +326,7 @@
   // ── escolher / trocar / tirar a carta de uma vaga ──
   function dexCands(d) {
     var list = (dexIndex()[d] || []).slice();
-    var rank = function (x) { var c = Object.assign({}, x.c, { _set: x.set }), own = slotsOf('', c).some(function (s) { return has(keyOf('', c, s.ver)); }); return own ? 0 : 1; };
+    var rank = function (x) { var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }), own = slotsOf('', c).some(function (s) { return has(keyOf('', c, s.ver)); }); return own ? 0 : 1; };
     list.sort(function (a, b) { var ra = rank(a), rb = rank(b); if (ra !== rb) return ra - rb; var pa = a.c.price || 1e9, pb = b.c.price || 1e9; return ra === 0 ? (b.c.price || 0) - (a.c.price || 0) : pa - pb; });
     return list;
   }
@@ -329,7 +347,7 @@
     if (cur0) html += '<button type="button" class="fn-dp-item is-clear" data-act="dexclear" data-dex="' + picker.dex + '"><span class="tx"><b>✖ Deixar sem carta</b><small>volta para a arte do Pokémon</small></span></button>';
     if (!items.length) html += '<div class="fn-empty">' + (picker.list.length ? 'Nenhuma carta com essa busca.' : 'Ainda não há carta cadastrada dessa espécie.') + '</div>';
     html += items.slice(0, 80).map(function (x) {
-      var c = Object.assign({}, x.c, { _set: x.set }), on = cur0 && cur0._set === x.set && String(cur0.n) === String(x.c.n);
+      var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }), on = cur0 && cur0._set === x.set && String(cur0.n) === String(x.c.n);
       var own = slotsOf('', c).some(function (s) { return has(keyOf('', c, s.ver)); });
       return '<button type="button" class="fn-dp-item' + (on ? ' is-on' : '') + '" data-act="dexchoose" data-dex="' + picker.dex + '" data-dset="' + esc(x.set) + '" data-dn="' + esc(x.c.n) + '">' +
         '<img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(null, '', c)) + '"><span class="tx"><b>' + esc(i18n(c, '').name) + (own ? ' ✓' : '') + '</b><small>' + esc(setLabelOf(x.set).split('—')[0].trim()) + ' · #' + esc(x.c.n) + ' · ' + esc(rareLabel(x.c.rare)) + '</small></span><span class="pr">' + esc(priceFmt(c, '')) + '</span></button>';
@@ -374,6 +392,7 @@
     if (isDex(st.set)) { loadDex(); return; }
     cur.d = setData(st.set);
     cur.cards = cur.d && cur.d.cards ? cur.d.cards : [];
+    CUR = (effLang(st.set) === 'en' && cur.cards.some(function (c) { return c.priceUsd != null; })) ? '$' : 'R$';
     if (DEMO && !demoSet.size && cur.cards.length) {
       cur.cards.forEach(function (c) {
         var base = c.base ? 0.7 : 0.35;
@@ -413,7 +432,7 @@
     cur.cards.forEach(function (c) {
       var s = stateOf(id, c); t.cards++; if (s.st === 'have') t.cardsHave++;
       s.sl.forEach(function (x) {
-        var k = has(keyOf(id, c, x.ver)); t.slots++; if (k) t.got++; else t.miss += (x.price || c.price || 0);
+        var k = has(keyOf(id, c, x.ver)); t.slots++; if (k) t.got++; else t.miss += priceOf(id, c, x);
         if (c.base) { t.bT++; if (k) t.bG++; } else { t.sT++; if (k) t.sG++; }
       });
     });
@@ -510,7 +529,7 @@
     cur.cards.forEach(function (c) {
       var rl = rareLabel(c.rare); rar[rl] = rar[rl] || { got: 0, tot: 0, miss: 0, rank: rareRank(c.rare) };
       slotsOf(id, c).forEach(function (sl) {
-        var p = sl.price || c.price || 0, k = has(keyOf(id, c, sl.ver)); rar[rl].tot++;
+        var p = priceOf(id, c, sl), k = has(keyOf(id, c, sl.ver)); rar[rl].tot++;
         if (k) { own += p; ownN++; rar[rl].got++; ver[sl.ver] = (ver[sl.ver] || 0) + 1; if (!bestO || p > bestO.p) bestO = { c: c, v: sl.ver, p: p }; }
         else { miss += p; missN++; rar[rl].miss += p; missing.push({ c: c, v: sl.ver, p: p }); if (!bestM || p > bestM.p) bestM = { c: c, v: sl.ver, p: p }; }
       });
@@ -543,12 +562,17 @@
   }
   // quanto faltam em cartas, traduzido em boosters (usa o catálogo de produtos; sem produto cadastrado, não inventa número)
   function bridgeHtml(t) {
-    if (!t.slots || t.miss <= 0 || typeof CATALOG === 'undefined') return '';
+    if (!t.slots || t.miss <= 0 || typeof CATALOG === 'undefined' || effLang(st.set) !== 'pt') return '';
     var ent = CATALOG.filter(function (p) { return p.set === setKey(st.set) && p.boosters > 0 && p.varejo > 0; });
     if (!ent.length) return '';
     var per = Math.min.apply(null, ent.map(function (p) { return p.varejo / p.boosters; }));
     var n = Math.max(1, Math.round(t.miss / per));
     return '<div class="fn-stats fn-bridge" style="margin-top:6px"><span>📦 Com esse valor dá para comprar <b>~' + n + ' booster' + (n > 1 ? 's' : '') + '</b> (' + esc(money(per)) + '/un.)</span></div>';
+  }
+  // aviso no cabeçalho quando a coleção aberta é a de outro idioma (marcações separadas do português)
+  function langNote() {
+    if (st.set === 'cel30jp' || st.set === 'cel30cn') return '';
+    var l = effLang(st.set); return l === 'pt' ? '' : ' · coleção em ' + ({ en: 'inglês', jp: 'japonês', cn: 'chinês' }[l] || l) + ' (marcações separadas do português)';
   }
   function renderHero() {
     if (isDex(st.set)) { renderDexHero(); return; }
@@ -557,12 +581,12 @@
     var label = (cat.label || (d && d.label) || st.set);
     var nameOnly = label.indexOf('—') >= 0 ? label.split('—')[1].trim() : label;
     $('#fn-hero').innerHTML =
-      '<div class="fn-hero-top"><div><h1>' + esc(nameOnly) + '</h1><p class="fn-hero-sub">' + esc(label.split('—')[0].trim()) + (meta.releaseDate ? ' · lançada em ' + esc(meta.releaseDate) : '') + ' · ' + t.cards + ' cartas' + '</p></div>' +
+      '<div class="fn-hero-top"><div><h1>' + esc(nameOnly) + '</h1><p class="fn-hero-sub">' + esc(label.split('—')[0].trim()) + (meta.releaseDate ? ' · lançada em ' + esc(meta.releaseDate) : '') + ' · ' + t.cards + ' cartas' + langNote() + '</p></div>' +
       '<div class="fn-pct">' + pct + '<small>%</small></div></div>' +
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats"><span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' +
       (t.sT ? '<span>Base <b>' + t.bG + '</b>/' + t.bT + '</span><span>Secretas <b>' + t.sG + '</b>/' + t.sT + '</span>' : '') +
-      (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : t.miss > 0 ? '<span class="fn-miss">Faltam <b>' + esc(money0(t.miss)) + '</b></span>' : '<span><b style="color:var(--teal)">Coleção completa 🎉</b></span>') + '</div>' +
+      (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : t.got >= t.slots ? '<span><b style="color:var(--teal)">Coleção completa 🎉</b></span>' : t.miss > 0 ? '<span class="fn-miss">Faltam <b>' + esc(money0(t.miss)) + '</b></span>' : '<span class="fn-miss">Faltam <b>' + (t.slots - t.got) + '</b> slots</span>') + '</div>' +
       bridgeHtml(t) + '<div class="fn-hero-links"><a href="./#lojas">Ver ofertas</a><a href="./#fichario/' + esc(st.set) + '">Abrir no fichário atual</a></div>';
     $('#fn-setbtn-emoji').textContent = cat.emoji || '🃏';
     $('#fn-setbtn-code').textContent = label.split('—')[0].trim();
@@ -632,6 +656,7 @@
 
   // idioma da arte e dos nomes (mesma chave do fichário atual). cel30 jp/cn são coleções próprias.
   function setLang(l) {
+    progCache = {}; LS.set('lang', l);
     var fam = FAMILY.indexOf(st.set) >= 0;
     try { localStorage.setItem('ficLang', fam && (l === 'jp' || l === 'cn') ? 'pt' : l); } catch (e) { }
     if (fam) {
@@ -675,9 +700,9 @@
     var icons = (typeof TYPE_ICON !== 'undefined' && TYPE_ICON) || {}, vs = (typeof VER_SHORT !== 'undefined' && VER_SHORT) || { N: 'N', F: 'F', RH: 'RH', RH2: 'RH2', SP: '★' };
     var slotsTotal = 0, slotsCol = 0, complete = 0, vc = 0, vf = 0;
     var rows = cur.view.map(function (c) {
-      var sl = slotsOf(id, c), dp = (typeof lprice === 'function') ? lprice(id, c.n, c.price) : c.price;
+      var sl = slotsOf(id, c), dp = effLang(id) !== 'pt' ? priceOf(id, c, null) : ((typeof lprice === 'function') ? lprice(id, c.n, c.price) : c.price);
       var parts = sl.map(function (x) {
-        var k = keyOf(id, c, x.ver), on = has(k), sp = x.price != null ? x.price : dp; slotsTotal++;
+        var k = keyOf(id, c, x.ver), on = has(k), sp = effLang(id) !== 'pt' ? priceOf(id, c, x) : (x.price != null ? x.price : dp); slotsTotal++;
         if (on) { slotsCol++; var q = entryOf(k).qty; if (sp) vc += sp * q; return vs[x.ver] + '✅' + (st.status === 'have' && q > 1 ? '×' + q : ''); }
         if (sp) vf += sp; return vs[x.ver] + '❌';
       }).join(' ');
@@ -713,7 +738,8 @@
     var cat = SET_CATALOG.filter(function (x) { return x.id === setKey(st.set); })[0] || {};
     var dx = isDex(st.set);
     if (dx && (!cur.binder || cur.pending > 0)) { toast(cur.binder ? 'Ainda carregando todas as coleções. Tente de novo em instantes.' : 'Sua Pokédex ainda não carregou.'); return; }
-    openSheet('<div class="fn-form"><p class="fn-note"><b>' + esc(dx ? cur.binder.name : (cat.label || st.set)) + '</b><br>Quem abrir o link vê sua coleção marcada, somente leitura. Mostra o que você tem agora.</p>' +
+    var ln = (!dx && langSfx(st.set)) ? '<br><b>Atenção:</b> por enquanto o link mostra as marcações em <b>português</b>, não as desta coleção em outro idioma.' : '';
+    openSheet('<div class="fn-form"><p class="fn-note"><b>' + esc(dx ? cur.binder.name : (cat.label || st.set)) + '</b><br>Quem abrir o link vê sua coleção marcada, somente leitura. Mostra o que você tem agora.' + ln + '</p>' +
       (dx ? '' : '<label>Como mostrar<select id="fn-share-mode"><option value="grid">Grade</option><option value="binder"' + (st.view === 'binder' ? ' selected' : '') + '>Fichário (páginas)</option></select></label>') +
       '<button type="button" class="fn-btn" id="fn-share-go" data-act="sharerun">🔗 Gerar link e QR code</button>' +
       '<div id="fn-share-out" hidden><input id="fn-share-url" type="text" readonly aria-label="Link"><canvas id="fn-share-qr" width="220" height="220"></canvas>' +
@@ -759,6 +785,7 @@
   function doPrint() {
     if (DEMO) { toast('Imprimir não funciona no modo demonstração.'); return; }
     if (typeof printBinder !== 'function') { toast('Impressão indisponível agora. Recarregue a página.'); return; }
+    if (langSfx(st.set)) toast('Atenção: por enquanto o PDF mostra as marcações em português, não as deste idioma.');
     var code = { '4': 2, '9': 3, '12': 7, '16': 4, '20b': 6 }[String(st.pocket)] || 3;
     try { ficBinderSize = code; if (typeof loadCollection === 'function') loadCollection(); } catch (e) { }
     var cat = SET_CATALOG.filter(function (x) { return x.id === setKey(st.set); })[0] || {};
