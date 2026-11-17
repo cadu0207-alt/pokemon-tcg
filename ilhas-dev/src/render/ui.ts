@@ -82,6 +82,8 @@ export class Interface {
     window.addEventListener('keydown', e => { if ((e.key === 'm' || e.key === 'M') && !(e.target instanceof HTMLInputElement)) this.alternarMapa(); });
     $('btn-hab').addEventListener('click', () => this.alternarHabilidades());
     $('status').addEventListener('click', e => {
+      const rv = (e.target as HTMLElement).closest<HTMLElement>('[data-rival]');
+      if (rv) { g.assistir(rv.dataset.rival!); return; }
       const b = (e.target as HTMLElement).closest<HTMLElement>('[data-cfg]');
       if (!b) return;
       if (b.dataset.cfg === 'som') g.alternarSom(); else g.alternarMusica();
@@ -493,7 +495,7 @@ export class Interface {
   musicaLigada = () => true;
   /** Vida, experiência, nível do personagem e relógio do dia. */
   atualizarStatus(s: Status, noite: boolean, fracDia: number, mana = 0, manaMax = 0) {
-    const chave = `${Math.ceil(s.vida)}|${s.vidaMax}|${s.xp}|${s.nivel}|${noite}|${Math.floor(fracDia * 24)}|${Math.floor(mana)}|${manaMax}`;
+    const chave = `${this.rivalHtml}|${Math.ceil(s.vida)}|${s.vidaMax}|${s.xp}|${s.nivel}|${noite}|${Math.floor(fracDia * 24)}|${Math.floor(mana)}|${manaMax}`;
     if (chave === this.ultimoStatus) return;
     this.ultimoStatus = chave;
     const hora = Math.floor((fracDia * 24 + 6) % 24);
@@ -501,8 +503,16 @@ export class Interface {
       <div class="linha"><b>Nv ${s.nivel}</b><span class="icones"><button data-cfg="som" title="Som">${this.somLigado() ? '🔊' : '🔇'}</button><button data-cfg="musica" title="Música">${this.musicaLigada() ? '♫' : '♪̸'}</button></span><span class="relogio">${noite ? '☾' : '☀'} ${String(hora).padStart(2, '0')}h</span></div>
       <div class="bar vida"><i style="width:${(100 * Math.max(0, s.vida)) / s.vidaMax}%"></i><span>${Math.max(0, Math.ceil(s.vida))}/${s.vidaMax}</span></div>
       ${manaMax ? `<div class="bar mana"><i style="width:${(100 * mana) / manaMax}%"></i><span>${Math.floor(mana)}/${manaMax}</span></div>` : ''}
-      <div class="bar xp"><i style="width:${(100 * s.xp) / xpParaProximo(s.nivel)}%"></i><span>XP ${s.xp}/${xpParaProximo(s.nivel)}</span></div>`;
+      <div class="bar xp"><i style="width:${(100 * s.xp) / xpParaProximo(s.nivel)}%"></i><span>XP ${s.xp}/${xpParaProximo(s.nivel)}</span></div>${this.rivalHtml}`;
     this.atualizarHabilidades();
+  }
+
+  private rivalHtml = '';
+  /** Linha do rival da semana no painel de status (toque = visitar a ilha dele). */
+  rival(r: { nome: string; chave: string; dele: number; meus: number; dias: number } | null) {
+    const html = r ? `<button class="rival" data-rival="${r.chave}" title="Seu rival da semana — toque para ver a ilha">⚔ <b>${r.nome}</b> ${
+      r.meus > r.dele ? `<em class="frente">+${r.meus - r.dele}</em>` : r.meus === r.dele ? '<em>empate</em>' : `<em class="atras">−${r.dele - r.meus}</em>`}<small>${r.dias}d</small></button>` : '';
+    if (html !== this.rivalHtml) { this.rivalHtml = html; this.ultimoStatus = ''; }
   }
 
   private rotuloAtual = '';

@@ -93,6 +93,12 @@ e crescer precisa **sair de jangada** atrás de **baús guardados por animais** 
   1 cristal + 10 madeira + 5 pedra no baú por amigo (até 20 por temporada; só vale para quem entrou há menos de 1 h).
 - Visitar: tocar numa pessoa no ranking leva a câmera até a ilha dela.
 
+## Rival da semana (implementado)
+- Rival = quem está logo acima de você no ranking (bot ou pessoa); dura 7 dias reais; aparece no painel de status (toque = ver a ilha).
+- Aviso quando um passa o outro; o rival aparece em 40% dos saques à sua ilha.
+- Vitória: abrir 30% de vantagem (ou estar na frente no fim da semana) = +1 cristal no baú, XP e cartão para compartilhar; vem um novo rival.
+- Se você lidera, o rival é o mais perto abaixo e a regra vira "segurar a frente até o fim da semana" (sem vitória instantânea).
+
 ## Exploração (implementado)
 - **Névoa**: o mundo começa coberto; abre num raio de 7 tiles em volta de você e fica aberto (salvo no save). Sua ilha inteira já começa conhecida.
 - **Mapa-múndi** (botão 🗺 ou tecla M): terreno só onde você já viu, você, sua ilha, baús, ilhas rivais e de outros jogadores que você já encontrou, e o % de terra explorada.

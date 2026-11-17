@@ -92,6 +92,8 @@ export class CenaJogo extends Phaser.Scene {
   private estavaFora = false;
   private salvoEm?: number;
   private reinos: EstadoReinos = novoEstadoReinos();
+  /** `defender`: o rival foi escolhido abaixo de você (você lidera): vence quem estiver na frente no fim da semana */
+  private rival: { chave: string; nome: string; ate: number; frente: boolean; defender?: boolean } | null = null;
   /** andar até um ponto tocado: tiles que faltam e a marca no chão */
   private rota: [number, number][] | null = null;
   private marcaRota?: Phaser.GameObjects.Image;
@@ -175,6 +177,7 @@ export class CenaJogo extends Phaser.Scene {
       if (save.nevoa) this.nevoaSalva = save.nevoa;
       if (save.tempoJogado) this.tempoJogado = save.tempoJogado;
       this.salvoEm = save.salvoEm;
+      if (save.rival) this.rival = save.rival;
       if (save.reinos) this.reinos = { ...novoEstadoReinos(), ...save.reinos };
       if (save.chao) this.chao = save.chao.map(c => ({ x: c.x, y: c.y, itens: c.itens }));
     } else {
@@ -326,6 +329,8 @@ export class CenaJogo extends Phaser.Scene {
     this.time.addEvent({ delay: 1200, loop: true, callback: () => this.defenderComTorres() });
     this.time.addEvent({ delay: 20_000, loop: true, callback: () => this.checarSaque() });
     this.time.addEvent({ delay: 30_000, loop: true, callback: () => this.passoReinos() });
+    this.time.addEvent({ delay: 10_000, loop: true, callback: () => this.atualizarRival() });
+    this.time.delayedCall(5000, () => this.atualizarRival());
     if (this.cfg.nuvem) this.time.addEvent({ delay: 30_000, loop: true, callback: () => void this.atualizarOutros() });
     // convites: confere ao entrar e a cada 2 min
     if (this.cfg.nuvem) { this.time.delayedCall(4000, () => void this.resgatarConvites()); this.time.addEvent({ delay: 120_000, loop: true, callback: () => void this.resgatarConvites() }); }
@@ -377,7 +382,7 @@ export class CenaJogo extends Phaser.Scene {
       inventario: this.inv, construcoes: this.construcoes,
       status: this.status, tempo: Math.round(this.tempoMundo), nivel: this.nivel, armazem: this.armazem, bausMundo: this.bausMundo.salvar(),
       energia: Math.round(this.energia), diario: this.diario, tumulo: this.tumulo,
-      nevoa: this.nevoa?.salvar(), tempoJogado: Math.round(this.tempoJogado), salvoEm: Date.now(), reinos: this.reinos,
+      nevoa: this.nevoa?.salvar(), tempoJogado: Math.round(this.tempoJogado), salvoEm: Date.now(), reinos: this.reinos, rival: this.rival,
       chao: this.chao.map(c => ({ x: c.x, y: c.y, itens: c.itens })), habilidades: this.habilidades, mana: Math.floor(this.mana),
       tutorial: { missao: this.missao, criados: this.criados, mortos: this.mortos },
       bots: this.bots.salvar(),
@@ -705,7 +710,8 @@ export class CenaJogo extends Phaser.Scene {
     if (Math.random() > chanceDeSaque(this.nivel) * fator) return;
     const meuRei = this.reinos.senhor[eu];
     const rivais = this.bots.bots.filter(b => b.ilha.id !== meuRei && reiDe(this.reinos, b.ilha.id) !== reiDe(this.reinos, eu));
-    const rival = pressao ? this.nomeDe(pressao.rei) : rivais.length ? rivais[Math.floor(Math.random() * rivais.length)].nome : 'Um pirata';
+    const rivalSemana = this.rival && !this.rival.chave.startsWith('pessoa:') && rivais.some(b => b.nome === this.rival!.nome) && Math.random() < 0.4 ? this.rival.nome : null;
+    const rival = pressao ? this.nomeDe(pressao.rei) : rivalSemana ?? (rivais.length ? rivais[Math.floor(Math.random() * rivais.length)].nome : 'Um pirata');
     const r = resolverSaque(this.nivel, this.construcoes, this.armazem, Math.random);
     if (r.repelido) {
       this.registrar(`${rival} tentou saquear e foi repelido pela defesa`);
@@ -775,6 +781,52 @@ export class CenaJogo extends Phaser.Scene {
     const novas = liberadasNoNivel(this.status.nivel).map(id => ITENS[id].nome);
     if (novas.length) this.time.delayedCall(900, () => this.ui.aviso(`🔓 Novas receitas: ${novas.join(', ')}`));
     this.tocar('nivel'); this.ui.aviso(`Você subiu para o nível ${this.status.nivel}!`); this.cameras.main.flash(250, 255, 230, 150);
+  }
+
+  // ---------- Rival da semana ----------
+  static SEMANA_MS = 7 * 24 * 3600_000;
+  /** Escolhe um rival logo acima de você (ou o mais perto abaixo, se você lidera); avisa quando um passa o outro. */
+  private atualizarRival() {
+    if (this.morto) return;
+    const r = this.rankingComReinos();
+    const eu = r.find(l => l.perfil === 'jogador');
+    if (!eu || r.length < 2) return;
+    const chaveDe = (l: (typeof r)[number]) => (l.perfil === 'pessoa' ? `pessoa:${l.nome}` : l.nome);
+    let atual = this.rival ? r.find(l => chaveDe(l) === this.rival!.chave) : undefined;
+    const escolher = (excluir?: string) => {
+      const outros = r.filter(l => l !== eu && chaveDe(l) !== excluir);
+      const acima = outros.filter(l => l.pontos >= eu.pontos).sort((a, b) => a.pontos - b.pontos)[0];
+      const abaixo = outros.sort((a, b) => b.pontos - a.pontos).find(l => l.pontos < eu.pontos);
+      const novo = acima ?? abaixo;
+      if (!novo) return;
+      this.rival = { chave: chaveDe(novo), nome: novo.nome, ate: Date.now() + CenaJogo.SEMANA_MS, frente: eu.pontos > novo.pontos, defender: !acima };
+      atual = novo;
+      this.registrar(`Novo rival da semana: ${novo.nome}`);
+      this.ui.aviso(!acima ? `⚔ Você lidera! Rival da semana: ${novo.nome} — segure a frente até o fim da semana` : `⚔ Seu rival da semana: ${novo.nome} (${novo.pontos} pts)`);
+    };
+    if (!this.rival || !atual) escolher();
+    else {
+      const frente = eu.pontos > atual.pontos;
+      const venceu = !this.rival.defender && atual.pontos > 0 && eu.pontos >= atual.pontos * 1.3;
+      const acabou = Date.now() > this.rival.ate;
+      if (venceu || (acabou && frente)) {
+        adicionar(this.armazem, 'cristal', 1); this.darXp(30);
+        this.registrar(`Você derrotou seu rival ${atual.nome}! +1 cristal no baú`);
+        this.ui.aviso(`🏆 Você derrotou ${atual.nome}! +1 cristal no baú`);
+        this.conquista(`Derrotei meu rival ${atual.nome}!`);
+        escolher(this.rival.chave);
+      } else if (acabou) {
+        this.registrar(`A semana acabou: ${atual.nome} terminou na sua frente`);
+        escolher(this.rival.chave);
+      } else if (frente !== this.rival.frente) {
+        this.rival.frente = frente;
+        this.registrar(frente ? `Você passou seu rival ${atual.nome}` : `${atual.nome} passou você no ranking`);
+        this.ui.aviso(frente ? (this.rival.defender ? `⚔ Você retomou a frente de ${atual.nome}!` : `⚔ Você passou ${atual.nome}! Abra 30% de vantagem para vencer`) : `⚠ ${atual.nome} passou você!`);
+        this.tocar(frente ? 'nivel' : 'dano');
+      }
+    }
+    if (this.rival && atual) this.ui.rival({ nome: atual.nome, chave: this.rival.chave, dele: atual.pontos, meus: eu.pontos, dias: Math.max(0, Math.ceil((this.rival.ate - Date.now()) / 86_400_000)) });
+    this.mudou();
   }
 
   // ---------- Cartão compartilhável ----------
