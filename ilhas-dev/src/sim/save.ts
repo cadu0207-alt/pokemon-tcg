@@ -31,6 +31,8 @@ export interface Save {
   nevoa?: string;
   /** ms de jogo acumulados (escudo de novato) e quando foi salvo (resumo ao voltar) */
   tempoJogado?: number; salvoEm?: number;
+  /** reinos (vassalos, imunidades, tributos) entre você e os bots */
+  reinos?: import('./reinos').EstadoReinos;
   chao?: { x: number; y: number; itens: Inventario }[];
   tutorial?: { missao: number; criados: Partial<Record<import('./itens').ItemId, number>>; mortos: number };
 }

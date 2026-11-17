@@ -114,7 +114,7 @@ const COR: Record<Tile, [number, number, number]> = {
   [Tile.Grama]: [126, 190, 90], [Tile.Floresta]: [70, 140, 70], [Tile.Rocha]: [140, 136, 140],
 };
 
-export interface Marca { x: number; y: number; cor: string; raio?: number; rotulo?: string }
+export interface Marca { x: number; y: number; cor: string; raio?: number; rotulo?: string; /** só o contorno (círculo de influência), em tiles */ anel?: number }
 
 /** Desenha o mapa-múndi num canvas: terreno onde já foi visto, névoa no resto, e as marcas. */
 export function desenharMapaMundi(cv: HTMLCanvasElement, mundo: Mundo, nevoa: Nevoa, marcas: Marca[]) {
@@ -135,6 +135,7 @@ export function desenharMapaMundi(cv: HTMLCanvasElement, mundo: Mundo, nevoa: Ne
   }
   ctx.putImageData(img, 0, 0);
   for (const m of marcas) {
+    if (m.anel) { ctx.strokeStyle = m.cor; ctx.globalAlpha = 0.75; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(m.x / R, m.y / R, m.anel / R, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; continue; }
     ctx.fillStyle = m.cor; ctx.strokeStyle = '#2b2238'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.arc(m.x / R, m.y / R, m.raio ?? 2.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   }

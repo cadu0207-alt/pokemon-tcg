@@ -11,6 +11,8 @@ for (let m = 1; m <= minutos; m++) {
     const r = sim.resumo();
     const niveis = r.reduce((acc, b) => ((acc[b.nivelIlha] = (acc[b.nivelIlha] ?? 0) + 1), acc), {} as Record<number, number>);
     console.log(`${m} min de jogo | ilhas por nível ${JSON.stringify(niveis)} | líder ${r[0].nome} (${r[0].perfil}) ${r[0].pontos} pts`);
+    const ev = sim.eventosReinos.reduce((a, e) => ((a[e.tipo + (e.tipo === 'rebeliao' ? (e.sucesso ? '+' : '-') : '')] = (a[e.tipo] ?? 0) + 1), a), {} as Record<string, number>);
+    console.log(`   reinos: ${JSON.stringify(sim.resumoReinos().slice(0, 6))} | eventos ${JSON.stringify(ev)}`);
   }
 }
 console.log(`tempo real: ${((performance.now() - t0) / 1000).toFixed(1)} s`);

@@ -90,7 +90,7 @@ e crescer precisa **sair de jangada** atrás de **baús guardados por animais** 
 - **Névoa**: o mundo começa coberto; abre num raio de 7 tiles em volta de você e fica aberto (salvo no save). Sua ilha inteira já começa conhecida.
 - **Mapa-múndi** (botão 🗺 ou tecla M): terreno só onde você já viu, você, sua ilha, baús, ilhas rivais e de outros jogadores que você já encontrou, e o % de terra explorada.
 
-## Reinos (ideia do dono, 17/11/2026 — a desenhar e implementar)
+## Reinos (ideia do dono, 17/11/2026 — 1ª versão implementada com bots)
 Crescer não é só ter mais terra: cada Cristal projeta um **círculo de influência** que aumenta com o nível da ilha.
 - **Choque de fronteiras**: quando o círculo de uma ilha alcança a ilha vizinha (ou as ilhas crescem até se encostar),
   abre-se uma **disputa**. A ilha mais forte (nível + defesa + força do dono) pressiona a mais fraca.
@@ -101,8 +101,20 @@ Crescer não é só ter mais terra: cada Cristal projeta um **círculo de influ�
 - **Reinos** = grupos de pessoas e bots com um rei; aparecem no mapa-múndi com a mesma cor e no ranking como reino.
 - **Rebelião**: um vassalo que cresce pode se rebelar (sozinho ou junto com outros vassalos). Se a força dos rebeldes
   passar a do rei, a ilha se liberta (ou o rebelde vira o novo rei).
-- Perguntas em aberto: a disputa é automática (cálculo de força) ou exige um ataque/combate jogado? quanto é o tributo
-  (sugestão: 10–20% de madeira/pedra/minério a cada hora de jogo)? o rei pode libertar/expulsar vassalos?
+- **Decidido e implementado (src/sim/reinos.ts)**:
+  - influência = raio da ilha + 2,2 tiles por nível; força = nível×10 + defesa das construções + nível do dono×2;
+    reino = força do rei + metade da força dos vassalos;
+  - disputa **automática** a cada 30 s: domina quem tem ≥ 25% a mais; quem é dominado leva os próprios vassalos junto;
+  - pessoa recebe **proposta** (aceitar vassalagem ou resistir: livre, mas o rei saqueia o dobro por 15 min);
+  - **tributo** de 15% de madeira/pedra/fibra/minério/lingote/couro a cada hora de jogo (baú do vassalo → baú do rei);
+    vassalo sofre metade dos saques (proteção do reino);
+  - **rebelião**: bots se rebelam sozinhos quando passam o rei; você usa o botão no Cristal (soma metade da força dos
+    vassalos fortes do mesmo rei); falhou = −30% de energia e espera de 10 min; venceu = 20 min de imunidade;
+  - o **rei pode libertar** vassalos; ranking mostra 👑 rei de N / vassalo de X (+30 pts por vassalo);
+    mapa-múndi desenha os círculos de influência com a cor do reino.
+  - Simulador (60 min, 99 bots): primeiros reinos aos ~40 min; aos 60 min, 6 reinos (o maior com 4 vassalos).
+- Ainda falta: **mudar-se** para outra ilha (opção de quem perde), reinos com **pessoas reais** (etapa 2 do online),
+  ataque jogado opcional.
 
 ## Fases de implementação
 | Fase | Entrega | Status |

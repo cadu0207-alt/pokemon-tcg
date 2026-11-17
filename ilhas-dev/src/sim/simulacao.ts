@@ -3,12 +3,15 @@ import { iniciarRecursos, atualizarRecursos, type EstadoRecursos } from './colet
 import { expandirTerreno, tileDoCristal } from './expansao';
 import { DURACAO_DIA, ehNoite } from './criaturas';
 import { gerarMundo, type Mundo } from './mundo';
+import { membroDe, novoEstadoReinos, pagarTributo, passoReinos, reiDe, vassalosDe, type EventoReino } from './reinos';
 
 /** Mundo só com bots, sem tela. Serve para testes e para balancear o jogo. */
 export class SimulacaoHeadless {
   mundo: Mundo; recursos: EstadoRecursos; bots: Bot[];
   bloqueio = new Set<number>();
   agora = 0;
+  reinos = novoEstadoReinos();
+  eventosReinos: EventoReino[] = [];
 
   constructor(seed: number, participantes: number, nBots: number, public dificuldade: Dificuldade = 'dificil') {
     this.mundo = gerarMundo({ seed, participantes });
@@ -42,6 +45,7 @@ export class SimulacaoHeadless {
       this.agora += dt;
       const ctx = this.ctx();
       for (const b of this.bots) atualizarBot(b, ctx, dt);
+      if (this.agora % 30_000 === 0) this.passoReinos();
       if (this.agora % 1000 === 0) {
         for (const r of atualizarRecursos(this.recursos, this.mundo, this.agora)) {
           if (this.recursos.porTile.get(r.y * L + r.x) === r && r.tipo !== 'arbusto') this.bloqueio.add(r.y * L + r.x);
@@ -49,6 +53,24 @@ export class SimulacaoHeadless {
       }
     }
   }
+
+  passoReinos() {
+    const porIlha = new Map(this.bots.map(b => [b.ilha.id, b]));
+    for (const ev of passoReinos(this.reinos, this.bots.map(b => membroDe(b)), this.agora)) {
+      if (ev.tipo === 'tributo') { const v = porIlha.get(ev.vassalo), r = porIlha.get(ev.rei); if (v && r) ev.itens = pagarTributo(v.inv, r.inv); }
+      this.eventosReinos.push(ev);
+    }
+  }
+
+  /** Reinos atuais: rei -> número de vassalos. */
+  resumoReinos() {
+    const reis = new Set(Object.values(this.reinos.senhor));
+    return [...reis].map(r => ({ rei: this.bots.find(b => b.ilha.id === r)?.nome ?? String(r), vassalos: vassalosDe(this.reinos, r).length }))
+      .sort((a, b) => b.vassalos - a.vassalos);
+  }
+
+  /** Reino de um bot (id da ilha do rei). */
+  reinoDe(b: { ilha: { id: number } }) { return reiDe(this.reinos, b.ilha.id); }
 
   resumo() {
     return this.bots.map(b => ({

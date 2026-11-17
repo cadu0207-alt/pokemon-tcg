@@ -19,7 +19,11 @@ export interface Ganchos {
   confirmarConstrucao: () => void;
   zoom: (fator: number) => void;
   comer: (id: ItemId) => void;
-  ranking: () => { nome: string; perfil: string; pontos: number }[];
+  ranking: () => { nome: string; perfil: string; pontos: number; tag?: string }[];
+  /** situação no jogo de reinos */
+  reino: () => InfoReino;
+  rebelar: () => void;
+  libertar: (id: number) => void;
   assistir: (nome: string | null) => void;
   habilidades: () => { status: Status; aprendidas: string[] };
   requisitos: () => Requisitos | null;
@@ -49,6 +53,13 @@ export interface Ganchos {
 }
 
 /** Interface em HTML por cima do canvas. */
+export interface InfoReino {
+  situacao: 'livre' | 'rei' | 'vassalo';
+  rei?: string; forcaRei?: number; minhaForca: number; raio: number;
+  vassalos: { id: number; nome: string; forca: number }[];
+  proximoTributoMin?: number; esperaRebeliaoMin?: number; resistindoMin?: number;
+}
+
 export class Interface {
   private barra = $('barra');
   private craft = $('craft');
@@ -146,7 +157,7 @@ export class Interface {
       <button data-rec="gosma" ${qtd(this.inv, 'gosma') ? '' : 'disabled'}><img src="${icone('gosma')}">+10%</button></div>`;
     const diario = this.g.diario();
     const diarioHtml = diario.length ? `<h4>Diário da ilha</h4><ul class="diario">${diario.map(l => `<li>${l}</li>`).join('')}</ul>` : '';
-    $('cristal').innerHTML = `<h3>Cristal da ilha <button class="fechar">✕</button></h3>` + energia + (req
+    $('cristal').innerHTML = `<h3>Cristal da ilha <button class="fechar">✕</button></h3>` + energia + this.htmlReino() + (req
       ? `<p>Nível <b>${nivel}</b> → <b>${req.nivel}</b>: a ilha cresce${libera ? ` e ${libera}` : ''}.</p>
          ${req.construcoes.length ? `<h4>Construções na ilha</h4><ul>${req.construcoes.map(linha).join('')}</ul>` : ''}
          <h4>Alimentar o Cristal com</h4><ul>${req.itens.map(linha).join('')}</ul>
@@ -155,7 +166,46 @@ export class Interface {
       : '<p>Sua ilha chegou ao tamanho máximo. Lendária!</p>') + diarioHtml;
     $('cristal').querySelector('.fechar')!.addEventListener('click', () => ($('cristal').hidden = true));
     $('cristal').querySelector('.expandir')?.addEventListener('click', () => { this.g.expandir(); this.desenharCristal(); });
+    $('cristal').querySelector('.rebelar')?.addEventListener('click', () => { this.g.rebelar(); this.desenharCristal(); });
+    $('cristal').querySelectorAll<HTMLElement>('[data-libertar]').forEach(b => b.addEventListener('click', () => {
+      if (confirm('Libertar este vassalo? Ele deixa de pagar tributo.')) { this.g.libertar(Number(b.dataset.libertar)); this.desenharCristal(); }
+    }));
     $('cristal').querySelectorAll<HTMLElement>('[data-rec]').forEach(b => b.addEventListener('click', () => { this.g.recarregar(b.dataset.rec as ItemId); this.desenharCristal(); }));
+  }
+
+  private htmlReino() {
+    const r = this.g.reino();
+    const forca = `<small>Sua força: <b>${Math.round(r.minhaForca)}</b> · influência: ${Math.round(r.raio)} tiles</small>`;
+    let corpo = '';
+    if (r.situacao === 'vassalo') {
+      corpo = `<p>Você é <b>vassalo de ${r.rei}</b> (força ${Math.round(r.forcaRei ?? 0)}). Paga 15% dos materiais a cada hora de jogo${
+        r.proximoTributoMin !== undefined ? ` (próximo em ${r.proximoTributoMin} min)` : ''}; em troca, o reino protege sua ilha (metade dos saques).</p>
+        <button class="rebelar" ${r.esperaRebeliaoMin ? 'disabled' : ''}>${r.esperaRebeliaoMin ? `Rebelião possível em ${r.esperaRebeliaoMin} min` : '⚔ Rebelar-se'}</button>
+        <p class="dica">A rebelião vence se a sua força (mais metade da força dos vassalos fortes do mesmo rei) passar a do rei. Se falhar, o Cristal perde 30% de energia.</p>`;
+    } else if (r.situacao === 'rei') {
+      corpo = `<p>👑 Você é <b>rei</b> de ${r.vassalos.length} ${r.vassalos.length === 1 ? 'ilha' : 'ilhas'}. Os vassalos pagam 15% dos materiais por hora, direto no seu baú.</p>
+        <ul class="vassalos">${r.vassalos.map(v => `<li>${v.nome} <small>força ${Math.round(v.forca)}</small><button data-libertar="${v.id}">Libertar</button></li>`).join('')}</ul>
+        <p class="dica">Vassalos que ficarem mais fortes que você se rebelam.</p>`;
+    } else {
+      corpo = `<p>Sua ilha é <b>livre</b>. Quando seu círculo de influência tocar o de um vizinho bem mais fraco (25% a menos), ele vira seu vassalo — e o contrário também vale.</p>${
+        r.resistindoMin ? `<p class="dica">⚔ Você recusou a vassalagem: o rei vai pressionar com saques por mais ${r.resistindoMin} min.</p>` : ''}`;
+    }
+    return `<h4>Reino</h4><div class="reino">${corpo}${forca}</div>`;
+  }
+
+  /** Um rei mais forte chegou à sua fronteira: aceitar a vassalagem ou resistir. */
+  proposta(rei: string, forcaRei: number, minhaForca: number, aceitar: () => void, resistir: () => void) {
+    document.getElementById('proposta')?.remove();
+    const el = document.createElement('div');
+    el.id = 'proposta'; el.className = 'painel';
+    el.innerHTML = `<h3>👑 ${rei} chegou à sua fronteira</h3>
+      <p>O reino de <b>${rei}</b> tem força <b>${Math.round(forcaRei)}</b>; a sua é <b>${Math.round(minhaForca)}</b>.</p>
+      <p><b>Aceitar:</b> vira vassalo — paga 15% dos materiais por hora e ganha proteção contra saques. Pode se rebelar quando ficar forte.</p>
+      <p><b>Resistir:</b> continua livre, mas ${rei} saqueia sua ilha com mais frequência por 15 min.</p>
+      <div class="botoes"><button class="aceitar">Aceitar vassalagem</button><button class="resistir">⚔ Resistir</button></div>`;
+    el.querySelector('.aceitar')!.addEventListener('click', () => { el.remove(); aceitar(); });
+    el.querySelector('.resistir')!.addEventListener('click', () => { el.remove(); resistir(); });
+    document.body.appendChild(el);
   }
 
   /** Painel do baú: mochila de um lado, armazém da ilha do outro; toque num item para mover a pilha. */
@@ -264,7 +314,7 @@ export class Interface {
     $('mapa').innerHTML = `<h3>Mapa-múndi <button class="fechar">✕</button></h3>
       <div class="moldura"><canvas></canvas></div>
       <p class="legenda"><i style="background:#fff"></i>você <i style="background:#b48cff"></i>sua ilha <i style="background:#ffcf4a"></i>baú
-        <i style="background:#e8607a"></i>rival <i style="background:#5fb3ff"></i>jogador</p><p class="explorado"></p>`;
+        <i style="background:#e8607a"></i>rival <i style="background:#5fb3ff"></i>jogador <span>◯ influência do reino</span></p><p class="explorado"></p>`;
     const cv = $('mapa').querySelector('canvas')!;
     const r = this.g.mapaMundi(cv);
     $('mapa').querySelector('.explorado')!.textContent = `Terra explorada: ${(r.explorado * 100).toFixed(1)}%`;
@@ -293,7 +343,7 @@ export class Interface {
     const acima = [...r].reverse().find(l => l.pontos > eu.pontos);
     const mostrar = r.slice(0, 8);
     const linha = (l: (typeof r)[number], i: number) =>
-      `<li data-nome="${l.nome}" class="${l.perfil === 'jogador' ? 'eu' : l.perfil === 'pessoa' ? 'pessoa' : ''}"><span>${i + 1}º</span><b>${l.nome}</b><small>${Interface.ROTULO[l.perfil]}</small><em>${l.pontos}</em></li>`;
+      `<li data-nome="${l.nome}" class="${l.perfil === 'jogador' ? 'eu' : l.perfil === 'pessoa' ? 'pessoa' : ''}"><span>${i + 1}º</span><b>${l.nome}</b><small>${l.tag ?? Interface.ROTULO[l.perfil]}</small><em>${l.pontos}</em></li>`;
     $('ranking').innerHTML = `<h3>Ranking <button class="fechar">✕</button></h3>
       <p class="sua">Sua posição: <b>${pos}º de ${r.length}</b>${empatados ? ` <small class="emp">empatado com ${empatados}</small>` : ''}${acima ? `<span class="alvo">Faltam <b>${acima.pontos - eu.pontos + 1}</b> pts para passar ${acima.nome}</span>` : r.length > 1 && !empatados ? `<span class="alvo">Você lidera por ${eu.pontos - r.find(l => l !== eu)!.pontos} pts</span>` : ''}<small>Toque num nome para assistir</small></p><ol>${
       mostrar.map(linha).join('')}${minha >= 8 ? linha(r[minha], minha) : ''}</ol>`;

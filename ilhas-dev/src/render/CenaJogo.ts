@@ -11,6 +11,8 @@ import { ITENS, type ItemId } from '../sim/itens';
 import { criarCriaturas, T } from './texturas';
 import { registrarRecorte, icone } from './icones';
 import { Nevoa, desenharMapaMundi, type Marca } from './Nevoa';
+import { forcaIlha, forcaReino, membroDe, novoEstadoReinos, pagarTributo, passoReinos, raioInfluencia, rebelar, reiDe, resistir, submeter, libertar, vassalosDe, TRIBUTO_MS, type EstadoReinos, type Membro } from '../sim/reinos';
+import type { InfoReino } from './ui';
 import { recorteComoUrl, carregar as carregarArte, preparar, quadroParado, varianteArvore, OBJETOS, PERSONAGENS, type Personagem } from './assets';
 import { Fauna } from './Fauna';
 import { DiaNoite } from './DiaNoite';
@@ -86,6 +88,7 @@ export class CenaJogo extends Phaser.Scene {
   private tempoJogado = 0;
   private estavaFora = false;
   private salvoEm?: number;
+  private reinos: EstadoReinos = novoEstadoReinos();
   private nevoa!: Nevoa;
   private nevoaSalva?: string;
   /** Itens largados no chão: pilhas por tile, com o desenho do ícone. */
@@ -165,6 +168,7 @@ export class CenaJogo extends Phaser.Scene {
       if (save.nevoa) this.nevoaSalva = save.nevoa;
       if (save.tempoJogado) this.tempoJogado = save.tempoJogado;
       this.salvoEm = save.salvoEm;
+      if (save.reinos) this.reinos = { ...novoEstadoReinos(), ...save.reinos };
       if (save.chao) this.chao = save.chao.map(c => ({ x: c.x, y: c.y, itens: c.itens }));
     } else {
       // começo: só o necessário para a primeira jangada (2 cordas + madeira)
@@ -244,7 +248,10 @@ export class CenaJogo extends Phaser.Scene {
       confirmarConstrucao: () => this.construir(),
       zoom: f => cam.setZoom(Phaser.Math.Clamp(cam.zoom * f, 0.5, 5)),
       comer: id => this.comer(id),
-      ranking: () => this.bots.ranking({ nivel: this.nivel, construcoes: this.construcoes, status: this.status }, this.outrosNoRanking()),
+      ranking: () => this.rankingComReinos(),
+      reino: () => this.infoReino(),
+      rebelar: () => this.rebelar(),
+      libertar: id => { libertar(this.reinos, id, this.tempoJogado); this.registrar(`Você libertou ${this.nomeDe(id)}`); this.mudou(); },
       requisitos: () => requisitosExpansao(this.nivel, this.construcoes, this.inv),
       expandir: () => this.expandir(),
       energia: () => this.energia,
@@ -303,6 +310,7 @@ export class CenaJogo extends Phaser.Scene {
     if (save) this.ui.aviso('Progresso carregado');
     this.time.addEvent({ delay: 1200, loop: true, callback: () => this.defenderComTorres() });
     this.time.addEvent({ delay: 20_000, loop: true, callback: () => this.checarSaque() });
+    this.time.addEvent({ delay: 30_000, loop: true, callback: () => this.passoReinos() });
     if (this.cfg.nuvem) this.time.addEvent({ delay: 30_000, loop: true, callback: () => void this.atualizarOutros() });
     this.mostrarTumulo();
     for (const c of this.chao) this.desenharPilha(c);
@@ -352,7 +360,7 @@ export class CenaJogo extends Phaser.Scene {
       inventario: this.inv, construcoes: this.construcoes,
       status: this.status, tempo: Math.round(this.tempoMundo), nivel: this.nivel, armazem: this.armazem, bausMundo: this.bausMundo.salvar(),
       energia: Math.round(this.energia), diario: this.diario, tumulo: this.tumulo,
-      nevoa: this.nevoa?.salvar(), tempoJogado: Math.round(this.tempoJogado), salvoEm: Date.now(),
+      nevoa: this.nevoa?.salvar(), tempoJogado: Math.round(this.tempoJogado), salvoEm: Date.now(), reinos: this.reinos,
       chao: this.chao.map(c => ({ x: c.x, y: c.y, itens: c.itens })), habilidades: this.habilidades, mana: Math.floor(this.mana),
       tutorial: { missao: this.missao, criados: this.criados, mortos: this.mortos },
       bots: this.bots.salvar(),
@@ -653,9 +661,14 @@ export class CenaJogo extends Phaser.Scene {
   private checarSaque() {
     if (this.morto || !this.foraDeCasa() || this.construcoes.length === 0) return;
     if (this.escudo() > 0) return;
-    if (Math.random() > chanceDeSaque(this.nivel)) return;
-    const rivais = this.bots.bots;
-    const rival = rivais.length ? rivais[Math.floor(Math.random() * rivais.length)].nome : 'Um pirata';
+    // reinos: vassalo é protegido (metade dos saques); quem resistiu é pressionado pelo rei (o dobro)
+    const eu = this.minhaIlha.id, resist = this.reinos.resistindo[eu];
+    const pressao = resist && resist.ate > this.tempoJogado ? resist : null;
+    const fator = pressao ? 2 : this.reinos.senhor[eu] !== undefined ? 0.5 : 1;
+    if (Math.random() > chanceDeSaque(this.nivel) * fator) return;
+    const meuRei = this.reinos.senhor[eu];
+    const rivais = this.bots.bots.filter(b => b.ilha.id !== meuRei && reiDe(this.reinos, b.ilha.id) !== reiDe(this.reinos, eu));
+    const rival = pressao ? this.nomeDe(pressao.rei) : rivais.length ? rivais[Math.floor(Math.random() * rivais.length)].nome : 'Um pirata';
     const r = resolverSaque(this.nivel, this.construcoes, this.armazem, Math.random);
     if (r.repelido) {
       this.registrar(`${rival} tentou saquear e foi repelido pela defesa`);
@@ -727,6 +740,93 @@ export class CenaJogo extends Phaser.Scene {
     this.tocar('nivel'); this.ui.aviso(`Você subiu para o nível ${this.status.nivel}!`); this.cameras.main.flash(250, 255, 230, 150);
   }
 
+  // ---------- Reinos ----------
+  private meuMembro(): Membro {
+    return { id: this.minhaIlha.id, nome: this.cfg.nome || 'Você', ilha: this.minhaIlha, nivel: this.nivel, nivelJogador: this.status.nivel, construcoes: this.construcoes, humano: true };
+  }
+  private membros(): Membro[] { return [this.meuMembro(), ...this.bots.bots.map(b => membroDe(b))]; }
+  private nomeDe(id: number) { return id === this.minhaIlha.id ? 'Você' : this.bots.bots.find(b => b.ilha.id === id)?.nome ?? 'Alguém'; }
+  private botDaIlha(id: number) { return this.bots.bots.find(b => b.ilha.id === id); }
+
+  private passoReinos() {
+    if (this.morto) return;
+    const eu = this.minhaIlha.id, agora = this.tempoJogado;
+    for (const ev of passoReinos(this.reinos, this.membros(), agora)) {
+      if (ev.tipo === 'proposta') {
+        this.tocar('noite');
+        this.ui.proposta(this.nomeDe(ev.rei), ev.forcaRei, ev.forcaAlvo,
+          () => { submeter(this.reinos, ev.rei, eu, this.tempoJogado); this.registrar(`Você jurou lealdade a ${this.nomeDe(ev.rei)}`); this.ui.aviso(`Agora você é vassalo de ${this.nomeDe(ev.rei)}`); this.mudou(); },
+          () => { resistir(this.reinos, eu, ev.rei, this.tempoJogado); this.registrar(`Você recusou o domínio de ${this.nomeDe(ev.rei)}`); this.ui.aviso(`⚔ Você resistiu! ${this.nomeDe(ev.rei)} vai atacar sua ilha`); this.mudou(); });
+      } else if (ev.tipo === 'dominou') {
+        if (ev.rei === eu) { this.registrar(`${this.nomeDe(ev.alvo)} virou seu vassalo`); this.ui.aviso(`👑 ${this.nomeDe(ev.alvo)} agora é seu vassalo!`); this.tocar('nivel'); }
+        else if (ev.rei === reiDe(this.reinos, eu)) this.registrar(`Seu reino cresceu: ${this.nomeDe(ev.alvo)} se submeteu a ${this.nomeDe(ev.rei)}`);
+      } else if (ev.tipo === 'rebeliao') {
+        if (ev.rei === eu && ev.sucesso) { this.registrar(`${this.nomeDe(ev.vassalo)} se rebelou e se libertou`); this.ui.aviso(`⚔ ${this.nomeDe(ev.vassalo)} se rebelou contra você!`); }
+      } else if (ev.tipo === 'tributo') {
+        const vb = this.botDaIlha(ev.vassalo), rb = this.botDaIlha(ev.rei);
+        const lista = (itens: Partial<Record<ItemId, number>>) => Object.entries(itens).map(([id, n]) => `${n} ${ITENS[id as ItemId].nome}`).join(', ') || 'nada';
+        if (ev.vassalo === eu && rb) {
+          const a = pagarTributo(this.armazem, rb.inv), b = pagarTributo(this.inv, rb.inv);
+          for (const [id, n] of Object.entries(b)) a[id as ItemId] = (a[id as ItemId] ?? 0) + n!;
+          this.registrar(`Tributo pago a ${rb.nome}: ${lista(a)}`); this.ui.aviso(`Tributo pago a ${rb.nome}`);
+        } else if (ev.rei === eu && vb) {
+          const a = pagarTributo(vb.inv, this.armazem);
+          this.registrar(`Tributo de ${vb.nome}: ${lista(a)}`); this.ui.aviso(`👑 Tributo de ${vb.nome} chegou ao seu baú`);
+        } else if (vb && rb) pagarTributo(vb.inv, rb.inv);
+      }
+    }
+    this.mudou();
+  }
+
+  private infoReino(): InfoReino {
+    const eu = this.minhaIlha.id, e = this.reinos, agora = this.tempoJogado;
+    const porId = new Map(this.membros().map(m => [m.id, m]));
+    const minhaForca = forcaIlha(this.meuMembro());
+    const raio = raioInfluencia(this.minhaIlha, this.nivel);
+    const min = (ms: number) => Math.max(1, Math.ceil(ms / 60_000));
+    const rei = e.senhor[eu];
+    if (rei !== undefined) {
+      const espera = (e.esperaRebeliao[eu] ?? 0) - agora;
+      return { situacao: 'vassalo', rei: this.nomeDe(rei), forcaRei: forcaIlha(porId.get(rei)!), minhaForca, raio, vassalos: [],
+        proximoTributoMin: min(TRIBUTO_MS - (agora - (e.ultimoTributo[eu] ?? agora))), esperaRebeliaoMin: espera > 0 ? min(espera) : undefined };
+    }
+    const vass = vassalosDe(e, eu).map(id => ({ id, nome: this.nomeDe(id), forca: forcaIlha(porId.get(id)!) }));
+    const res = e.resistindo[eu];
+    return { situacao: vass.length ? 'rei' : 'livre', minhaForca: vass.length ? forcaReino(e, porId, eu) : minhaForca, raio, vassalos: vass,
+      resistindoMin: res && res.ate > agora ? min(res.ate - agora) : undefined };
+  }
+
+  private rebelar() {
+    const eu = this.minhaIlha.id, rei = this.reinos.senhor[eu];
+    if (rei === undefined) return;
+    const r = rebelar(this.reinos, new Map(this.membros().map(m => [m.id, m])), eu, this.tempoJogado);
+    if (r.sucesso) {
+      this.registrar(`Você se rebelou contra ${this.nomeDe(rei)} e venceu!`);
+      this.ui.aviso(`⚔ Rebelião vitoriosa! Sua ilha está livre (${Math.round(r.forca)} × ${Math.round(r.forcaRei)})`);
+      this.tocar('nivel'); this.cameras.main.flash(300, 255, 210, 120);
+    } else {
+      this.energia = Math.max(0, this.energia - 30);
+      this.registrar(`Rebelião contra ${this.nomeDe(rei)} fracassou`);
+      this.ui.aviso(`Rebelião fracassou (${Math.round(r.forca)} × ${Math.round(r.forcaRei)}): −30% de energia`);
+      this.tocar('dano'); this.cameras.main.shake(300, 0.006);
+      if (this.energia <= 0) this.perderNivel();
+    }
+    this.mudou(); this.salvar(true);
+  }
+
+  /** Ranking com o reino de cada um (e +30 pts por vassalo para o rei). */
+  private rankingComReinos() {
+    const e = this.reinos, eu = this.minhaIlha.id;
+    const linhas = this.bots.ranking({ nivel: this.nivel, construcoes: this.construcoes, status: this.status }, this.outrosNoRanking())
+      .map(l => {
+        const id = l.perfil === 'jogador' ? eu : l.bot?.ilha.id;
+        if (id === undefined) return l;
+        const v = vassalosDe(e, id).length, rei = e.senhor[id];
+        return { ...l, pontos: l.pontos + v * 30, tag: v ? `👑 rei de ${v}` : rei !== undefined ? `vassalo de ${this.nomeDe(rei)}` : undefined };
+      });
+    return linhas.sort((a, b) => b.pontos - a.pontos || (a.perfil === 'jogador' ? 1 : 0) - (b.perfil === 'jogador' ? 1 : 0));
+  }
+
   /** Mapa-múndi: o que já foi visto, você, sua ilha, baús e vizinhos que você já encontrou. */
   private desenharMapa(cv: HTMLCanvasElement) {
     const n = this.nevoa, marcas: Marca[] = [];
@@ -734,6 +834,12 @@ export class CenaJogo extends Phaser.Scene {
     for (const b of this.bots.bots) { const c = tileDoCristal(b.ilha); if (n.vistoEm(c.x, c.y)) marcas.push({ x: c.x, y: c.y, cor: '#e8607a', raio: 3 }); }
     const iniciais = this.mundo.ilhas.filter(i => i.dono !== null);
     for (const { perfil } of this.outros.values()) { const il = iniciais[perfil.slot]; if (!il) continue; const c = tileDoCristal(il); if (n.vistoEm(c.x, c.y)) marcas.push({ x: c.x, y: c.y, cor: '#5fb3ff', raio: 3 }); }
+    // círculos de influência, com a cor do reino (só de quem você já viu)
+    const corReino = (rei: number) => rei === this.minhaIlha.id ? '#b48cff' : `hsl(${(rei * 137) % 360} 75% 60%)`;
+    for (const mb of this.membros()) {
+      const c = tileDoCristal(mb.ilha);
+      if (mb.humano || n.vistoEm(c.x, c.y)) marcas.unshift({ x: c.x + 0.5, y: c.y + 0.5, cor: corReino(reiDe(this.reinos, mb.id)), anel: raioInfluencia(mb.ilha, mb.nivel) });
+    }
     const cc = tileDoCristal(this.minhaIlha);
     marcas.push({ x: cc.x, y: cc.y, cor: '#b48cff', raio: 3 });
     marcas.push({ x: this.jogador.x / T, y: this.jogador.y / T, cor: '#ffffff', raio: 3.5 });
