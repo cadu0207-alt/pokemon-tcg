@@ -10,6 +10,7 @@ import { carregar, serializar } from '../sim/save';
 import { ITENS, type ItemId } from '../sim/itens';
 import { criarCriaturas, T } from './texturas';
 import { registrarRecorte, icone } from './icones';
+import { Nevoa, desenharMapaMundi, type Marca } from './Nevoa';
 import { recorteComoUrl, carregar as carregarArte, preparar, quadroParado, varianteArvore, OBJETOS, PERSONAGENS, type Personagem } from './assets';
 import { Fauna } from './Fauna';
 import { DiaNoite } from './DiaNoite';
@@ -81,6 +82,8 @@ export class CenaJogo extends Phaser.Scene {
   /** Armazém da ilha (baús): guarda o que não cabe na mochila. */
   private armazem: Inventario = novoInventario();
   private interagiu = false;
+  private nevoa!: Nevoa;
+  private nevoaSalva?: string;
   /** Itens largados no chão: pilhas por tile, com o desenho do ícone. */
   private chao: { x: number; y: number; itens: Inventario; img?: Phaser.GameObjects.Image }[] = [];
   /** Energia do Cristal (0–100): saques drenam; zerada, a ilha perde um nível. */
@@ -155,6 +158,7 @@ export class CenaJogo extends Phaser.Scene {
       if (save.energia !== undefined) this.energia = save.energia;
       if (save.diario) this.diario = save.diario;
       if (save.tumulo) this.tumulo = save.tumulo;
+      if (save.nevoa) this.nevoaSalva = save.nevoa;
       if (save.chao) this.chao = save.chao.map(c => ({ x: c.x, y: c.y, itens: c.itens }));
     } else {
       // começo: só o necessário para a primeira jangada (2 cordas + madeira)
@@ -214,6 +218,9 @@ export class CenaJogo extends Phaser.Scene {
     this.fantasma = this.add.image(0, 0, 'acampamento', 'fogueira').setOrigin(0.5, 1).setDepth(30000).setAlpha(0.7).setVisible(false);
     this.alvo = this.add.rectangle(0, 0, T, T).setStrokeStyle(1, 0xffffff, 0.9).setOrigin(0).setDepth(5).setVisible(false);
 
+    this.nevoa = new Nevoa(this, m, this.nevoaSalva);
+    // sua ilha inteira (no tamanho final) já começa conhecida
+    { const cc = tileDoCristal(this.minhaIlha); this.nevoa.revelar(cc.x, cc.y, this.minhaIlha.raioMax + 3); }
     const cam = this.cameras.main;
     cam.setBounds(0, 0, m.largura * T, m.altura * T);
     // Mostra ~11 tiles no lado menor da tela (os personagens do pacote têm 16 px).
@@ -240,6 +247,7 @@ export class CenaJogo extends Phaser.Scene {
       perto: estacao => !!this.minhaConstrucaoPerto([estacao], 2.6),
       nivelJogador: () => this.status.nivel,
       largar: (id, n) => this.largar(id, n),
+      mapaMundi: cv => this.desenharMapa(cv),
       armazem: () => this.armazem,
       capacidadeArmazem: () => this.capacidadeArmazem(),
       moverParaBau: id => { if (!moverPilha(this.inv, this.armazem, id, this.capacidadeArmazem())) this.ui.aviso('Baú cheio: construa mais baús'); this.mudou(); },
@@ -333,6 +341,7 @@ export class CenaJogo extends Phaser.Scene {
       inventario: this.inv, construcoes: this.construcoes,
       status: this.status, tempo: Math.round(this.tempoMundo), nivel: this.nivel, armazem: this.armazem, bausMundo: this.bausMundo.salvar(),
       energia: Math.round(this.energia), diario: this.diario, tumulo: this.tumulo,
+      nevoa: this.nevoa?.salvar(),
       chao: this.chao.map(c => ({ x: c.x, y: c.y, itens: c.itens })), habilidades: this.habilidades, mana: Math.floor(this.mana),
       tutorial: { missao: this.missao, criados: this.criados, mortos: this.mortos },
       bots: this.bots.salvar(),
@@ -685,6 +694,20 @@ export class CenaJogo extends Phaser.Scene {
     this.tocar('nivel'); this.ui.aviso(`Você subiu para o nível ${this.status.nivel}!`); this.cameras.main.flash(250, 255, 230, 150);
   }
 
+  /** Mapa-múndi: o que já foi visto, você, sua ilha, baús e vizinhos que você já encontrou. */
+  private desenharMapa(cv: HTMLCanvasElement) {
+    const n = this.nevoa, marcas: Marca[] = [];
+    for (const b of this.bausMundo.baus) if (n.vistoEm(b.x, b.y)) marcas.push({ x: b.x, y: b.y, cor: '#ffcf4a', raio: 2.5 });
+    for (const b of this.bots.bots) { const c = tileDoCristal(b.ilha); if (n.vistoEm(c.x, c.y)) marcas.push({ x: c.x, y: c.y, cor: '#e8607a', raio: 3 }); }
+    const iniciais = this.mundo.ilhas.filter(i => i.dono !== null);
+    for (const { perfil } of this.outros.values()) { const il = iniciais[perfil.slot]; if (!il) continue; const c = tileDoCristal(il); if (n.vistoEm(c.x, c.y)) marcas.push({ x: c.x, y: c.y, cor: '#5fb3ff', raio: 3 }); }
+    const cc = tileDoCristal(this.minhaIlha);
+    marcas.push({ x: cc.x, y: cc.y, cor: '#b48cff', raio: 3 });
+    marcas.push({ x: this.jogador.x / T, y: this.jogador.y / T, cor: '#ffffff', raio: 3.5 });
+    desenharMapaMundi(cv, this.mundo, n, marcas);
+    return { explorado: n.explorado(this.mundo), jx: this.jogador.x / T / this.mundo.largura, jy: this.jogador.y / T / this.mundo.altura };
+  }
+
   /** Larga itens no chão, no tile onde o jogador está (junta com a pilha que já estiver lá). */
   private largar(id: ItemId, n: number) {
     const j = this.jogador, x = Math.floor(j.x / T), y = Math.floor(j.y / T);
@@ -792,7 +815,7 @@ export class CenaJogo extends Phaser.Scene {
     const cc = tileDoCristal(ilha);
     const nome = antes?.nome ?? this.add.text((cc.x + 0.5) * T, cc.y * T - 10, '', {
       fontFamily: 'system-ui, sans-serif', fontSize: '30px', color: '#ffe9a8', stroke: '#3a2f45', strokeThickness: 6,
-    }).setOrigin(0.5, 1).setScale(0.2).setDepth(29000);
+    }).setOrigin(0.5, 1).setScale(0.2).setDepth(24000);
     nome.setText(`${o.nome} · nv ${o.nivel}`);
     this.outros.set(o.user_id, { perfil: o, nome });
   }
@@ -952,6 +975,7 @@ export class CenaJogo extends Phaser.Scene {
     const k = this.teclas;
     const j = this.jogador;
     this.mapa.atualizar(this.cameras.main.worldView);
+    this.nevoa.atualizar(this.jogador.x, this.jogador.y);
     // Relógio do mundo, noite e criaturas.
     this.tempoMundo += dt;
     const noite = ehNoite(this.tempoMundo);

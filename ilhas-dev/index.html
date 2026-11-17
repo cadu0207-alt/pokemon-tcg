@@ -158,6 +158,18 @@
     #alerta-fora { display: none; position: fixed; left: 0; right: 0; margin: 0 auto; width: max-content; max-width: calc(100vw - 24px); top: calc(max(12px, env(safe-area-inset-top)) + 54px);
       padding: 5px 12px; font-size: 12px; font-weight: 700; color: #fff; background: #c0392bdd; border: 2px solid #3a2f45; border-radius: 10px; z-index: 6; pointer-events: none; }
     body.fora #alerta-fora { display: block; }
+    #btn-mapa { position: fixed; right: 12px; top: calc(max(12px, env(safe-area-inset-top)) + 196px); padding: 8px 12px; font-weight: 700; }
+    #mapa { position: fixed; z-index: 8; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 24px);
+      display: flex; flex-direction: column; padding: 12px; background: #f6efe0; border: 2px solid #3a2f45; border-radius: 12px; color: #3a2f45; box-shadow: 0 6px 0 #2b2238; }
+    #mapa[hidden] { display: none; }
+    #mapa h3 { margin: 0 0 8px; display: flex; align-items: center; } #mapa h3 .fechar { margin-left: auto; font-size: 22px; padding: 2px 8px; }
+    #mapa .moldura { overflow: auto; touch-action: pan-x pan-y; overscroll-behavior: contain; border: 2px solid #3a2f45; border-radius: 8px; background: #22263f; min-height: 0; flex: 1; }
+    #mapa canvas { display: block; width: 1200px; height: 1200px; image-rendering: pixelated; }
+    #mapa .legenda { margin: 8px 0 0; font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+    #mapa .legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid #2b2238; margin-right: -6px; }
+    #mapa .explorado { margin: 4px 0 0; font-size: 12px; color: #8a7f95; }
+    body.toque #btn-mapa { left: auto; right: 12px; bottom: auto; width: 48px; height: 48px; padding: 0; font-size: 0; top: calc(max(12px, env(safe-area-inset-top)) + 264px); }
+    body.toque #btn-mapa::before { content: '🗺'; font-size: 22px; }
     #item-menu { position: fixed; z-index: 9; display: flex; flex-direction: column; gap: 4px; min-width: 150px; padding: 8px; background: #f6efe0;
       border: 2px solid #3a2f45; border-radius: 10px; color: #3a2f45; box-shadow: 0 4px 0 #2b2238; }
     #item-menu[hidden] { display: none; }
@@ -187,7 +199,7 @@
       border: 2px solid #3a2f45; border-radius: 10px; }
     body.construindo #btn-ok { right: 12px; background: #8fd27a; } body.construindo #btn-cancelar { left: 12px; background: #f6efe0; }
     body.toque #zoom { display: flex; gap: 6px; position: fixed; right: 12px; top: calc(max(12px, env(safe-area-inset-top)) + 104px); }
-    body.toque #btn-ranking, body.toque #btn-hab, body.toque #btn-craft { left: auto; right: 12px; bottom: auto; width: 48px; height: 48px; padding: 0;
+    body.toque #btn-ranking, body.toque #btn-hab, body.toque #btn-craft, body.toque #btn-mapa { left: auto; right: 12px; bottom: auto; width: 48px; height: 48px; padding: 0;
       font-size: 0; border-radius: 50%; display: grid; place-items: center; }
     body.toque #btn-craft::before { content: '🛠'; font-size: 22px; } body.toque #btn-ranking::before { content: '🏆'; font-size: 22px; }
     body.toque #btn-hab::before { content: '✦'; font-size: 22px; } body.toque #btn-hab .badge { position: absolute; top: -4px; right: -4px; font-size: 11px; }
@@ -228,6 +240,8 @@
   <button id="btn-craft">Criar (C)</button>
   <button id="btn-ranking">🏆 Ranking</button>
   <button id="btn-hab">✦ Habilidades</button>
+  <button id="btn-mapa">🗺 Mapa</button>
+  <div id="mapa" hidden></div>
   <div id="habilidades" hidden></div>
   <div id="cristal" hidden></div>
   <div id="bau" hidden></div>

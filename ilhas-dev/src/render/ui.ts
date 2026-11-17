@@ -29,6 +29,8 @@ export interface Ganchos {
   nivelJogador: () => number;
   /** larga no chão `n` unidades (Infinity = a pilha toda) */
   largar: (id: ItemId, n: number) => void;
+  /** desenha o mapa-múndi no canvas; devolve fração explorada e posição relativa do jogador */
+  mapaMundi: (cv: HTMLCanvasElement) => { explorado: number; jx: number; jy: number };
   armazem: () => Inventario;
   capacidadeArmazem: () => number;
   moverParaBau: (id: ItemId) => void;
@@ -61,6 +63,8 @@ export class Interface {
     $('zoom-mais').addEventListener('click', () => g.zoom(1.25));
     $('zoom-menos').addEventListener('click', () => g.zoom(0.8));
     $('btn-ranking').addEventListener('click', () => this.alternarRanking());
+    $('btn-mapa').addEventListener('click', () => this.alternarMapa());
+    window.addEventListener('keydown', e => { if ((e.key === 'm' || e.key === 'M') && !(e.target instanceof HTMLInputElement)) this.alternarMapa(); });
     $('btn-hab').addEventListener('click', () => this.alternarHabilidades());
     $('status').addEventListener('click', e => {
       const b = (e.target as HTMLElement).closest<HTMLElement>('[data-cfg]');
@@ -107,12 +111,12 @@ export class Interface {
     $('fundo').addEventListener('click', () => this.fecharPaineis());
     window.addEventListener('keydown', e => { if (e.key === 'Escape') this.fecharPaineis(); });
     // marca no <body> quando algum painel está aberto (mostra o fundo)
-    const observar = () => document.body.classList.toggle('painel-aberto', ['craft', 'habilidades', 'cristal', 'bau', 'ranking'].some(id => !$(id).hidden));
+    const observar = () => document.body.classList.toggle('painel-aberto', ['craft', 'habilidades', 'cristal', 'bau', 'ranking', 'mapa'].some(id => !$(id).hidden));
     new MutationObserver(observar).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['hidden'] });
   }
 
   fecharPaineis() {
-    this.alternarCraft(false); this.alternarHabilidades(false); this.alternarRanking(false);
+    this.alternarCraft(false); this.alternarHabilidades(false); this.alternarRanking(false); this.alternarMapa(false);
     $('cristal').hidden = true; $('bau').hidden = true;
   }
 
@@ -236,6 +240,25 @@ export class Interface {
       b.classList.toggle('sem-mana', mana < MAGIAS[m].custo);
       (b.querySelector('i') as HTMLElement).style.width = `${(1 - p) * 100}%`;
     });
+  }
+
+  mapaAberto = false;
+  alternarMapa(forcar?: boolean) {
+    this.mapaAberto = forcar ?? !this.mapaAberto;
+    $('mapa').hidden = !this.mapaAberto;
+    if (!this.mapaAberto) return;
+    this.alternarCraft(false); this.alternarRanking(false); this.alternarHabilidades(false);
+    $('mapa').innerHTML = `<h3>Mapa-múndi <button class="fechar">✕</button></h3>
+      <div class="moldura"><canvas></canvas></div>
+      <p class="legenda"><i style="background:#fff"></i>você <i style="background:#b48cff"></i>sua ilha <i style="background:#ffcf4a"></i>baú
+        <i style="background:#e8607a"></i>rival <i style="background:#5fb3ff"></i>jogador</p><p class="explorado"></p>`;
+    const cv = $('mapa').querySelector('canvas')!;
+    const r = this.g.mapaMundi(cv);
+    $('mapa').querySelector('.explorado')!.textContent = `Terra explorada: ${(r.explorado * 100).toFixed(1)}%`;
+    // abre centrado em você
+    const mol = $('mapa').querySelector<HTMLElement>('.moldura')!;
+    requestAnimationFrame(() => { mol.scrollLeft = r.jx * mol.scrollWidth - mol.clientWidth / 2; mol.scrollTop = r.jy * mol.scrollHeight - mol.clientHeight / 2; });
+    $('mapa').querySelector('.fechar')!.addEventListener('click', () => this.alternarMapa(false));
   }
 
   rankingAberto = false;

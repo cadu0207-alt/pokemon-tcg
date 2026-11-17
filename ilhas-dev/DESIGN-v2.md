@@ -79,6 +79,10 @@ e crescer precisa **sair de jangada** atrás de **baús guardados por animais** 
 | Cerca | barreira: criaturas não atravessam |
 | Estátua | +25% de XP |
 
+## Exploração (implementado)
+- **Névoa**: o mundo começa coberto; abre num raio de 7 tiles em volta de você e fica aberto (salvo no save). Sua ilha inteira já começa conhecida.
+- **Mapa-múndi** (botão 🗺 ou tecla M): terreno só onde você já viu, você, sua ilha, baús, ilhas rivais e de outros jogadores que você já encontrou, e o % de terra explorada.
+
 ## Fases de implementação
 | Fase | Entrega | Status |
 |---|---|---|

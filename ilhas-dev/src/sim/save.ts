@@ -27,6 +27,8 @@ export interface Save {
   diario?: string[];
   tumulo?: import('./saque').Tumulo | null;
   /** Itens largados no chão. */
+  /** Névoa: células já vistas, bits em base64. */
+  nevoa?: string;
   chao?: { x: number; y: number; itens: Inventario }[];
   tutorial?: { missao: number; criados: Partial<Record<import('./itens').ItemId, number>>; mortos: number };
 }
