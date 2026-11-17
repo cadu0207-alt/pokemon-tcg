@@ -49,7 +49,8 @@ Foi assim que achamos ilhas sem pedra, bots que se trancavam nas próprias const
 - [x] **v2 Fase A — Núcleo de Cristal** (ver `DESIGN-v2.md`): ilha começa minúscula, alimentar o Cristal com cristal (só existe fora) faz a terra crescer; bots com o mesmo ciclo
 - [x] Cada construção tem função (baú/armazém com mochila limitada, casa, plantação, estações de trabalho, altar, portal que atira, estátua) — ver tabela em `DESIGN-v2.md`
 - [x] **v2 Fase B — Baús e raridades**: ~2 baús por ilha neutra (comum/raro/épico/lendário) com guardiões que só deixam abrir depois de derrotados; criaturas com raridade (mais vida, dano, XP e itens); baú aberto reaparece em outro lugar
-- [ ] v2 Fases C–E — baús com guardiões e raridades, saque e defesa, bots rivais, temporada
+- [x] **v2 Fase C — Saque e defesa**: fora de casa a ilha fica desprotegida; rivais tentam saquear (força cresce com o nível); defesa por portal, cercas, fogueiras, casas e estátua; saque leva parte do baú e drena a energia do Cristal; energia zerada = a ilha encolhe 1 nível; recarga com cristal/gosma; diário da ilha; morte deixa metade da mochila num túmulo recuperável
+- [ ] v2 Fases D–E — baús com guardiões e raridades, saque e defesa, bots rivais, temporada
 
 ## Créditos
 Arte: [Ninja Adventure Asset Pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack), por Pixel-boy e AAA — licença CC0 (`public/ninja/LICENSE.txt`).

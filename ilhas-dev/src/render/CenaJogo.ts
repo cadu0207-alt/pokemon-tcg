@@ -16,6 +16,8 @@ import { DiaNoite } from './DiaNoite';
 import { BotsVisuais } from './BotsVisuais';
 import { BausVisuais } from './BausVisuais';
 import { MULT_RARIDADE } from '../sim/criaturas';
+import { ENERGIA_POR_ITEM, chanceDeSaque, criarTumulo, resolverSaque, type Tumulo } from '../sim/saque';
+import { naIlha } from '../sim/construcao';
 import { RARIDADES } from '../sim/baus';
 import { MapaEmPedacos } from './MapaEmPedacos';
 import { Magias } from './Magias';
@@ -70,6 +72,11 @@ export class CenaJogo extends Phaser.Scene {
   /** Armazém da ilha (baús): guarda o que não cabe na mochila. */
   private armazem: Inventario = novoInventario();
   private interagiu = false;
+  /** Energia do Cristal (0–100): saques drenam; zerada, a ilha perde um nível. */
+  private energia = 100;
+  private diario: string[] = [];
+  private tumulo: Tumulo | null = null;
+  private imgTumulo: Phaser.GameObjects.Image | null = null;
   private ultimoAvisoCheia = -9999;
   private estagioPlantacao = new Map<number, string>();
   private visitouOutra = false;
@@ -133,6 +140,9 @@ export class CenaJogo extends Phaser.Scene {
       if (save.tempo !== undefined) this.tempoMundo = save.tempo;
       this.nivel = save.nivel ?? 1;
       if (save.armazem) Object.assign(this.armazem, save.armazem);
+      if (save.energia !== undefined) this.energia = save.energia;
+      if (save.diario) this.diario = save.diario;
+      if (save.tumulo) this.tumulo = save.tumulo;
     } else {
       // começo: só o necessário para a primeira jangada (2 cordas + madeira)
       Object.assign(this.inv.itens, { madeira: 6, fibra: 6 });
@@ -204,6 +214,9 @@ export class CenaJogo extends Phaser.Scene {
       ranking: () => this.bots.ranking({ nivel: this.nivel, construcoes: this.construcoes, status: this.status }),
       requisitos: () => requisitosExpansao(this.nivel, this.construcoes, this.inv),
       expandir: () => this.expandir(),
+      energia: () => this.energia,
+      diario: () => this.diario,
+      recarregar: id => this.recarregar(id),
       perto: estacao => !!this.minhaConstrucaoPerto([estacao], 2.6),
       armazem: () => this.armazem,
       capacidadeArmazem: () => this.capacidadeArmazem(),
@@ -253,6 +266,8 @@ export class CenaJogo extends Phaser.Scene {
     document.addEventListener('visibilitychange', () => document.hidden && this.salvar(true));
     if (save) this.ui.aviso('Progresso carregado');
     this.time.addEvent({ delay: 1200, loop: true, callback: () => this.defenderComTorres() });
+    this.time.addEvent({ delay: 20_000, loop: true, callback: () => this.checarSaque() });
+    this.mostrarTumulo();
     this.time.addEvent({ delay: 1000, loop: true, callback: () => this.atualizarPlantacoes() });
     document.getElementById('missao')!.addEventListener('click', e => (e.currentTarget as HTMLElement).classList.toggle('fechada'));
     this.time.addEvent({ delay: 500, loop: true, callback: () => this.atualizarTutorial() });
@@ -292,7 +307,8 @@ export class CenaJogo extends Phaser.Scene {
       seed: this.mundo.seed, participantes: this.mundo.ilhas.filter(i => i.dono !== null).length,
       jogador: { x: Math.round(this.jogador.x), y: Math.round(this.jogador.y) },
       inventario: this.inv, construcoes: this.construcoes,
-      status: this.status, tempo: Math.round(this.tempoMundo), nivel: this.nivel, armazem: this.armazem, bausMundo: this.bausMundo.salvar(), habilidades: this.habilidades, mana: Math.floor(this.mana),
+      status: this.status, tempo: Math.round(this.tempoMundo), nivel: this.nivel, armazem: this.armazem, bausMundo: this.bausMundo.salvar(),
+      energia: Math.round(this.energia), diario: this.diario, tumulo: this.tumulo, habilidades: this.habilidades, mana: Math.floor(this.mana),
       tutorial: { missao: this.missao, criados: this.criados, mortos: this.mortos },
       bots: this.bots.salvar(),
     });
@@ -519,6 +535,7 @@ export class CenaJogo extends Phaser.Scene {
   /** O que o botão de ação faz perto de uma construção sua (baú, casa à noite, plantação). */
   private interacaoPerto(noite: boolean): { c: { x: number; y: number }; rotulo: string; fazer: () => void } | null {
     const j = this.jogador;
+    if (this.tumulo && Math.hypot(this.tumulo.x + 0.5 - j.x / T, this.tumulo.y + 0.5 - j.y / T) < 1.6) return { c: this.tumulo, rotulo: 'Recuperar', fazer: () => this.recuperarTumulo() };
     const bau = this.bausMundo.perto(j.x / T, j.y / T);
     if (bau) return { c: bau, rotulo: `Abrir baú ${RARIDADES[bau.raridade].nome.toLowerCase()}`, fazer: () => this.abrirBauMundo(bau) };
     const c = this.minhaConstrucaoPerto(['bau', 'casa', 'plantacao'], 1.6);
@@ -540,6 +557,83 @@ export class CenaJogo extends Phaser.Scene {
       c.plantadoEm = undefined; this.mostrarConstrucao(c); this.tocar('criar');
       this.textoFlutuante((c.x + 0.5) * T, c.y * T, '+3 Baga +2 Fibra'); this.mudou();
     } };
+  }
+
+  /** Está fora da própria ilha? (então ela fica desprotegida) */
+  private foraDeCasa() {
+    const j = this.jogador;
+    return !naIlha(this.mundo.ilhas[0], Math.floor(j.x / T), Math.floor(j.y / T));
+  }
+
+  private registrar(msg: string) {
+    const h = Math.floor(((this.tempoMundo % DURACAO_DIA) / DURACAO_DIA) * 24 + 6) % 24;
+    this.diario.unshift(`${String(h).padStart(2, '0')}h — ${msg}`);
+    this.diario = this.diario.slice(0, 8);
+  }
+
+  /** A cada 20 s, com você fora de casa, um rival pode tentar saquear a ilha. */
+  private checarSaque() {
+    if (this.morto || !this.foraDeCasa() || this.construcoes.length === 0) return;
+    if (Math.random() > chanceDeSaque(this.nivel)) return;
+    const rivais = this.bots.bots;
+    const rival = rivais.length ? rivais[Math.floor(Math.random() * rivais.length)].nome : 'Um pirata';
+    const r = resolverSaque(this.nivel, this.construcoes, this.armazem, Math.random);
+    if (r.repelido) {
+      this.registrar(`${rival} tentou saquear e foi repelido pela defesa`);
+      this.ui.aviso(`🛡 Sua defesa repeliu ${rival}!`);
+    } else {
+      const levou = Object.entries(r.roubado).map(([id, n]) => `${n} ${ITENS[id as ItemId].nome}`).join(', ');
+      this.energia = Math.max(0, this.energia - r.energiaPerdida);
+      this.registrar(`${rival} saqueou ${levou || 'nada (baú vazio)'} e drenou ${r.energiaPerdida}% do Cristal`);
+      this.ui.aviso(`⚠ ${rival} saqueou sua ilha! −${r.energiaPerdida}% de energia`);
+      this.tocar('dano');
+      if (this.energia <= 0) this.perderNivel();
+    }
+    this.mudou(); this.salvar(true);
+  }
+
+  /** Energia zerada: a ilha encolhe um nível; o que ficar na água volta como item para o baú. */
+  private perderNivel() {
+    if (this.nivel <= 1) { this.energia = 30; return; }
+    this.nivel--;
+    this.aplicarExpansao(this.mundo.ilhas[0], this.nivel);
+    const afundou = this.construcoes.filter(c => !TILE_ANDAVEL[tileEm(this.mundo, c.x, c.y)]);
+    for (const c of afundou) {
+      this.construcoes.splice(this.construcoes.indexOf(c), 1);
+      this.construidoEm.delete(this.idx(c.x, c.y)); this.bloqueio.delete(this.idx(c.x, c.y)); this.mapa.definirObjeto(c.x, c.y, null);
+      adicionar(this.armazem, c.tipo, 1);
+    }
+    this.energia = 50;
+    this.registrar(`O Cristal apagou: a ilha encolheu para o nível ${this.nivel}${afundou.length ? ` (${afundou.length} construções voltaram ao baú)` : ''}`);
+    this.ui.aviso(`💔 O Cristal apagou! Sua ilha encolheu para o nível ${this.nivel}`);
+    this.cameras.main.shake(400, 0.006);
+  }
+
+  private recarregar(id: ItemId) {
+    const ganho = ENERGIA_POR_ITEM[id] ?? 0;
+    if (!ganho) return;
+    if (this.energia >= 100) { this.ui.aviso('O Cristal já está cheio'); return; }
+    if (!remover(this.inv, id, 1)) return;
+    this.energia = Math.min(100, this.energia + ganho);
+    this.tocar('cura'); this.mudou();
+  }
+
+  private mostrarTumulo() {
+    this.imgTumulo?.destroy(); this.imgTumulo = null;
+    if (!this.tumulo) return;
+    const t = this.tumulo;
+    this.imgTumulo = this.add.image((t.x + 0.5) * T, (t.y + 1) * T, 'bau-pequeno', 0).setOrigin(0.5, 1).setTint(0x8a8a9a).setDepth((t.y + 1) * T - 2);
+  }
+
+  private recuperarTumulo() {
+    const t = this.tumulo; if (!t) return;
+    let pegou = 0;
+    for (const id of Object.keys(t.itens.itens) as ItemId[]) {
+      if (moverPilha(t.itens, this.inv, id)) pegou++;
+    }
+    if (!Object.keys(t.itens.itens).length) { this.tumulo = null; this.mostrarTumulo(); this.ui.aviso('Você recuperou tudo do túmulo'); }
+    else this.ui.aviso(pegou ? 'Mochila cheia: parte ficou no túmulo' : 'Mochila cheia!');
+    this.tocar('criar'); this.mudou();
   }
 
   private abrirBauMundo(bau: import('../sim/baus').Bau) {
@@ -698,6 +792,11 @@ export class CenaJogo extends Phaser.Scene {
   private desmaiar() {
     this.morto = true;
     this.status.vida = 0;
+    // metade da mochila fica no túmulo onde caiu (a jangada não)
+    const j = this.jogador;
+    if (this.tumulo) this.ui.aviso('O túmulo antigo se perdeu');
+    this.tumulo = criarTumulo(this.inv, Math.floor(j.x / T), Math.floor(j.y / T));
+    this.mostrarTumulo();
     this.cameras.main.fadeOut(700, 20, 16, 40);
     this.time.delayedCall(900, () => {
       // renasce ao lado da casa (se tiver) ou do Cristal
@@ -709,7 +808,7 @@ export class CenaJogo extends Phaser.Scene {
       this.morto = false;
       this.invulneravelAte = this.time.now + 3000;
       this.cameras.main.fadeIn(700, 20, 16, 40);
-      this.ui.aviso('Você desmaiou e acordou em casa');
+      this.ui.aviso(this.tumulo ? 'Você desmaiou: metade da mochila ficou no túmulo' : 'Você desmaiou e acordou em casa');
       this.mudou();
     });
   }
@@ -757,6 +856,7 @@ export class CenaJogo extends Phaser.Scene {
     j.setDepth(j.y);
     this.sombra.setPosition(j.x, j.y + 2).setDepth(j.y - 1).setVisible(!this.naAgua);
     this.som.atualizarMusica(noite);
+    document.body.classList.toggle('fora', this.foraDeCasa() && this.construcoes.length > 0);
     const agora = ehAgua(tileEm(this.mundo, Math.floor(j.x / T), Math.floor(j.y / T)));
     if (agora !== this.naAgua) {
       this.naAgua = agora;

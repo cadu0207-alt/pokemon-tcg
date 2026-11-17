@@ -30,6 +30,9 @@ export interface Ganchos {
   moverParaBau: (id: ItemId) => void;
   moverParaMochila: (id: ItemId) => void;
   expandir: () => void;
+  energia: () => number;
+  recarregar: (id: ItemId) => void;
+  diario: () => string[];
   aprender: (id: string) => void;
   lancar: (m: Magia) => void;
   criou: (id: ItemId) => void;
@@ -106,15 +109,23 @@ export class Interface {
     const linha = ([id, t, p]: [ItemId, number, number]) =>
       `<li class="${t >= p ? 'ok' : 'falta'}"><img src="${icone(id)}">${ITENS[id].nome}<b>${Math.min(t, p)}/${p}</b></li>`;
     const libera = req ? NIVEIS.find(n => n.nivel === req.nivel)?.recompensa ?? '' : '';
-    $('cristal').innerHTML = `<h3>Cristal da ilha <button class="fechar">✕</button></h3>` + (req
+    const en = Math.round(this.g.energia());
+    const energia = `<div class="bar energia"><i style="width:${en}%"></i><span>Energia ${en}%</span></div>
+      <p class="dica">Saques drenam a energia. Se zerar, a ilha perde um nível.</p>
+      <div class="recarga"><button data-rec="cristal" ${qtd(this.inv, 'cristal') ? '' : 'disabled'}><img src="${icone('cristal')}">+50%</button>
+      <button data-rec="gosma" ${qtd(this.inv, 'gosma') ? '' : 'disabled'}><img src="${icone('gosma')}">+10%</button></div>`;
+    const diario = this.g.diario();
+    const diarioHtml = diario.length ? `<h4>Diário da ilha</h4><ul class="diario">${diario.map(l => `<li>${l}</li>`).join('')}</ul>` : '';
+    $('cristal').innerHTML = `<h3>Cristal da ilha <button class="fechar">✕</button></h3>` + energia + (req
       ? `<p>Nível <b>${nivel}</b> → <b>${req.nivel}</b>: a ilha cresce${libera ? ` e ${libera}` : ''}.</p>
          ${req.construcoes.length ? `<h4>Construções na ilha</h4><ul>${req.construcoes.map(linha).join('')}</ul>` : ''}
          <h4>Alimentar o Cristal com</h4><ul>${req.itens.map(linha).join('')}</ul>
          <p class="dica">Cristais só existem fora da sua ilha — pegue a jangada.</p>
          <button class="expandir" ${req.pronto ? '' : 'disabled'}>Expandir a ilha</button>`
-      : '<p>Sua ilha chegou ao tamanho máximo. Lendária!</p>');
+      : '<p>Sua ilha chegou ao tamanho máximo. Lendária!</p>') + diarioHtml;
     $('cristal').querySelector('.fechar')!.addEventListener('click', () => ($('cristal').hidden = true));
     $('cristal').querySelector('.expandir')?.addEventListener('click', () => { this.g.expandir(); this.desenharCristal(); });
+    $('cristal').querySelectorAll<HTMLElement>('[data-rec]').forEach(b => b.addEventListener('click', () => { this.g.recarregar(b.dataset.rec as ItemId); this.desenharCristal(); }));
   }
 
   /** Painel do baú: mochila de um lado, armazém da ilha do outro; toque num item para mover a pilha. */
@@ -245,7 +256,8 @@ export class Interface {
     const req = this.g.requisitos();
     const item = ([id, t, p]: [ItemId, number, number]) =>
       `<span class="${t >= p ? 'ok' : ''}"><img src="${icone(id)}">${Math.min(t, p)}/${p}</span>`;
-    $('nivel').innerHTML = `<b>Ilha nível ${nivel}</b>` + (req
+    const en = Math.round(this.g.energia());
+    $('nivel').innerHTML = `<b>Ilha nível ${nivel}</b> <span class="energia ${en < 30 ? 'baixa' : ''}">⚡${en}%</span>` + (req
       ? `<div class="req">${[...req.construcoes, ...req.itens].map(item).join('')}</div><small>${req.pronto ? 'Pronto! Vá até o Cristal' : `para o nível ${req.nivel}`}</small>`
       : '<small>nível máximo</small>');
     if (!$('cristal').hidden) this.desenharCristal();

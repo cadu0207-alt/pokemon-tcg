@@ -23,6 +23,9 @@ export interface Save {
   armazem?: Inventario;
   /** Baús do mundo (fase B). */
   bausMundo?: { baus: import('./baus').Bau[]; proximoId: number };
+  energia?: number;
+  diario?: string[];
+  tumulo?: import('./saque').Tumulo | null;
   tutorial?: { missao: number; criados: Partial<Record<import('./itens').ItemId, number>>; mortos: number };
 }
 

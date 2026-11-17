@@ -133,6 +133,14 @@
     #bau h3 { margin: 0 0 4px; display: flex; justify-content: space-between; color: #8a5a3c; } #bau h4 { margin: 10px 0 4px; font-size: 13px; } #bau h4 small { color: #8a7f95; font-weight: 400; }
     #bau .dica { color: #8a7f95; font-size: 12px; margin: 0; } #bau .grade { display: flex; flex-wrap: wrap; gap: 6px; } #bau .vazio { color: #8a7f95; font-size: 12px; }
     #barra[data-cheia="true"] { box-shadow: 0 0 0 3px #e0503c; }
+    .energia { font-size: 12px; color: #c3a6ff; } .energia.baixa { color: #ff8080; animation: pisca 1s infinite; } @keyframes pisca { 50% { opacity: .4 } }
+    .bar.energia i { background: #a98bff; } #cristal .bar.energia { height: 16px; } #cristal .bar.energia span { line-height: 16px; font-size: 11px; color: #fff; }
+    #cristal .recarga { display: flex; gap: 6px; margin: 4px 0; } #cristal .recarga button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 6px;
+      border: 2px solid #3a2f45; border-radius: 8px; background: #fff; font-weight: 700; } #cristal .recarga button:disabled { opacity: .45; } #cristal .recarga img { width: 18px; height: 18px; }
+    #cristal .diario { font-size: 12px; } #cristal .diario li { background: #fff4e0; }
+    #alerta-fora { display: none; position: fixed; left: 0; right: 0; margin: 0 auto; width: max-content; max-width: calc(100vw - 24px); top: calc(max(12px, env(safe-area-inset-top)) + 54px);
+      padding: 5px 12px; font-size: 12px; font-weight: 700; color: #fff; background: #c0392bdd; border: 2px solid #3a2f45; border-radius: 10px; z-index: 6; pointer-events: none; }
+    body.fora #alerta-fora { display: block; }
     #nivel { position: fixed; top: max(12px, env(safe-area-inset-top)); right: 12px; padding: 8px 10px; font-size: 13px; max-width: 220px; }
     #nivel .req { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 2px; } #nivel .ok { color: #9be38a; } #nivel small { opacity: .75; }
     #avisos { position: fixed; top: 12px; left: 0; right: 0; margin: 0 auto; display: grid; gap: 6px; pointer-events: none; z-index: 6; width: max-content; max-width: 60vw; }
@@ -190,6 +198,7 @@
   <div id="status" class="painel"></div>
   <div id="nivel" class="painel"></div>
   <div id="avisos"></div>
+  <div id="alerta-fora">⚠ Sua ilha está desprotegida</div>
   <div id="barra" class="painel"></div>
   <div id="dica-construcao" class="painel"></div>
   <button id="btn-craft">Criar (C)</button>
