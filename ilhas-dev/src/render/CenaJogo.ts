@@ -99,6 +99,10 @@ export class CenaJogo extends Phaser.Scene {
   private bausAbertos = 0;
   private vinganca: { ilha: number; nome: string; itens: Partial<Record<ItemId, number>>; ate: number } | null = null;
   static VINGANCA_MS = 15 * 60_000;
+  /** invasor a caminho do seu Cristal (visível no mapa); some ao ser expulso ou ao saquear */
+  private invasao: { nome: string; x: number; y: number; vida: number; vidaMax: number; chegaEm: number; vel: number; arte: string;
+    sprite: Phaser.GameObjects.Sprite; barco: Phaser.GameObjects.Image; barra: Phaser.GameObjects.Rectangle } | null = null;
+  static INVASAO_MS = 45_000;
   private rival: { chave: string; nome: string; ate: number; frente: boolean; defender?: boolean } | null = null;
   /** andar até um ponto tocado: tiles que faltam e a marca no chão */
   private rota: [number, number][] | null = null;
@@ -275,6 +279,7 @@ export class CenaJogo extends Phaser.Scene {
       rebelar: () => this.rebelar(),
       cartao: () => this.gerarCartao(),
       irVingar: () => this.irVingar(),
+      voltarParaCasa: () => { const c = tileDoCristal(this.minhaIlha); this.irPara(c.x, c.y, true); },
       pedirAjuda: () => { if (this.vinganca) this.ultimaConquista = `${this.vinganca.nome} saqueou minha ilha! Me ajuda a revidar?`; },
       viajar: (x, y) => { if (!this.nevoa.vistoEm(x, y)) { this.ui.aviso('Você ainda não conhece esse lugar'); return false; } return this.irPara(x, y, true); },
       libertar: id => { libertar(this.reinos, id, this.tempoJogado); this.registrar(`Você libertou ${this.nomeDe(id)}`); this.mudou(); },
@@ -726,7 +731,7 @@ export class CenaJogo extends Phaser.Scene {
 
   /** A cada 20 s, com você fora de casa, um rival pode tentar saquear a ilha. */
   private checarSaque() {
-    if (this.morto || !this.foraDeCasa() || this.construcoes.length === 0) return;
+    if (this.morto || !this.foraDeCasa() || this.construcoes.length === 0 || this.invasao) return;
     if (this.escudo() > 0) return;
     // reinos: vassalo é protegido (metade dos saques); quem resistiu é pressionado pelo rei (o dobro)
     const eu = this.minhaIlha.id, resist = this.reinos.resistindo[eu];
@@ -737,6 +742,11 @@ export class CenaJogo extends Phaser.Scene {
     const rivais = this.bots.bots.filter(b => b.ilha.id !== meuRei && reiDe(this.reinos, b.ilha.id) !== reiDe(this.reinos, eu));
     const rivalSemana = this.rival && !this.rival.chave.startsWith('pessoa:') && rivais.some(b => b.nome === this.rival!.nome) && Math.random() < 0.4 ? this.rival.nome : null;
     const rival = pressao ? this.nomeDe(pressao.rei) : rivalSemana ?? (rivais.length ? rivais[Math.floor(Math.random() * rivais.length)].nome : 'Um pirata');
+    this.iniciarInvasao(rival);
+  }
+
+  /** O invasor chegou ao Cristal: resolve o saque (defesas, roubo, energia, vingança). */
+  private concluirSaque(rival: string) {
     const r = resolverSaque(this.nivel, this.construcoes, this.armazem, Math.random);
     if (r.repelido) {
       this.registrar(`${rival} tentou saquear e foi repelido pela defesa`);
@@ -840,6 +850,63 @@ export class CenaJogo extends Phaser.Scene {
       const px = (ox + dx + 0.5) * T, py = (oy + dy + 0.5) * T;
       if (this.livre(px, py)) { j.setPosition(px, py); return; }
     }
+  }
+
+  // ---------- Invasão visível ----------
+  private iniciarInvasao(nome: string) {
+    const il = this.minhaIlha, cc = tileDoCristal(il);
+    const bot = this.bots.bots.find(b => b.nome === nome);
+    const arte = `p-${PERSONAGENS[bot ? (bot.id * 7 + bot.cor) % PERSONAGENS.length : 3]}`;
+    const a = Math.random() * Math.PI * 2, r = il.raio + 2;
+    const x = cc.x + 0.5 + Math.cos(a) * r, y = cc.y + 0.5 + Math.sin(a) * r;
+    const dist = Math.hypot(cc.x + 0.5 - x, cc.y + 0.5 - y);
+    const vidaMax = 6 + this.nivel * 3;
+    this.invasao = { nome, x, y, vida: vidaMax, vidaMax, chegaEm: this.tempoJogado + CenaJogo.INVASAO_MS, vel: dist / (CenaJogo.INVASAO_MS / 1000), arte,
+      sprite: this.add.sprite(x * T, y * T, arte, 0).setOrigin(0.5, 0.9).setTint(0xffb0b0),
+      barco: this.add.image(x * T, y * T, 'jangada').setOrigin(0.5, 0),
+      barra: this.add.rectangle(x * T, y * T - 18, 14, 2, 0xff5050).setOrigin(0.5).setDepth(29000) };
+    this.nevoa.revelar(x, y, 4);
+    this.registrar(`${nome} desembarcou para saquear sua ilha`);
+    this.tocar('noite');
+    this.ui.invasao(nome, Math.round(CenaJogo.INVASAO_MS / 1000));
+  }
+
+  /** Move o invasor até o Cristal; chega = saque; vida zerada = fugiu. */
+  private atualizarInvasao(dt: number) {
+    const v = this.invasao; if (!v) return;
+    const cc = tileDoCristal(this.minhaIlha);
+    const dx = cc.x + 0.5 - v.x, dy = cc.y + 0.5 - v.y, d = Math.hypot(dx, dy);
+    if (d < 1.1 || this.tempoJogado >= v.chegaEm) { this.fimInvasao(false); return; }
+    const passo = Math.min(d, (v.vel * dt) / 1000);
+    v.x += (dx / d) * passo; v.y += (dy / d) * passo;
+    const agua = ehAgua(tileEm(this.mundo, Math.floor(v.x), Math.floor(v.y)));
+    const dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'esquerda' : 'direita') : (dy < 0 ? 'cima' : 'baixo');
+    v.sprite.setPosition(v.x * T, v.y * T).setDepth(v.y * T).anims.play(`${v.arte}-${dir}`, true);
+    v.barco.setVisible(agua).setPosition(v.x * T, v.y * T - 1).setDepth(v.y * T - 0.5);
+    v.barra.setPosition(v.x * T, v.y * T - 18).setSize(14 * (v.vida / v.vidaMax), 2);
+  }
+
+  private ferirInvasor(dano: number) {
+    const v = this.invasao; if (!v) return;
+    v.vida -= dano;
+    this.textoFlutuante(v.x * T, v.y * T - 14, `${dano}`, '#ffd166');
+    v.sprite.setTint(0xffffff); this.time.delayedCall(90, () => v.sprite.active && v.sprite.setTint(0xffb0b0));
+    if (v.vida <= 0) this.fimInvasao(true);
+  }
+
+  private fimInvasao(expulso: boolean) {
+    const v = this.invasao; if (!v) return;
+    this.invasao = null;
+    v.sprite.destroy(); v.barco.destroy(); v.barra.destroy();
+    this.ui.fimInvasao();
+    if (expulso) {
+      this.darXp(15);
+      this.registrar(`Você expulsou ${v.nome} da sua ilha`);
+      this.ui.aviso(`🛡 Você expulsou ${v.nome}!`);
+      this.tocar('nivel');
+      this.conquista(`Expulsei ${v.nome} da minha ilha!`);
+    } else this.concluirSaque(v.nome);
+    this.mudou();
   }
 
   // ---------- Vingança ----------
@@ -1139,6 +1206,7 @@ export class CenaJogo extends Phaser.Scene {
     marcas.push({ x: cc.x, y: cc.y, cor: '#b48cff', raio: 3 });
     const vg = this.vinganca && this.vinganca.ate > this.tempoJogado ? this.mundo.ilhas.find(i => i.id === this.vinganca!.ilha) : undefined;
     if (vg) { const c = tileDoCristal(vg); marcas.push({ x: c.x, y: c.y, cor: '#ff3b3b', anel: 6 }, { x: c.x, y: c.y, cor: '#ff3b3b', raio: 3 }); }
+    if (this.invasao) marcas.push({ x: this.invasao.x, y: this.invasao.y, cor: '#ff3b3b', raio: 3 });
     marcas.push({ x: this.jogador.x / T, y: this.jogador.y / T, cor: '#ffffff', raio: 3.5 });
     desenharMapaMundi(cv, this.mundo, n, marcas);
     return { explorado: n.explorado(this.mundo), jx: this.jogador.x / T / this.mundo.largura, jy: this.jogador.y / T / this.mundo.altura };
@@ -1218,6 +1286,12 @@ export class CenaJogo extends Phaser.Scene {
   private defenderComTorres() {
     for (const t of this.construcoes) {
       if (t.tipo !== 'torre') continue;
+      const inv = this.invasao;
+      if (inv && Math.hypot(inv.x - (t.x + 0.5), inv.y - (t.y + 0.5)) < 4.5) {
+        const tiro = this.add.rectangle((t.x + 0.5) * T, t.y * T, 3, 3, 0xffe07a).setDepth(29000);
+        this.tweens.add({ targets: tiro, x: inv.x * T, y: inv.y * T - 6, duration: 180, onComplete: () => { tiro.destroy(); if (this.invasao === inv) this.ferirInvasor(4); } });
+        continue;
+      }
       const alvo = this.fauna.lista.find(b => CRIATURAS[b.c.tipo].comportamento !== 'passivo' && Math.hypot(b.c.x - (t.x + 0.5), b.c.y - (t.y + 0.5)) < 4.5);
       if (!alvo) continue;
       const tiro = this.add.rectangle((t.x + 0.5) * T, t.y * T, 3, 3, 0xffe07a).setDepth(29000);
@@ -1416,6 +1490,7 @@ export class CenaJogo extends Phaser.Scene {
     const k = this.teclas;
     const j = this.jogador;
     this.mapa.atualizar(this.cameras.main.worldView);
+    if (!this.morto) this.atualizarInvasao(dt);
     const descobriu = this.nevoa.atualizar(this.jogador.x, this.jogador.y);
     if (descobriu && this.tempoJogado > 3000) this.meta('explorar', descobriu);
     // Relógio do mundo, noite e criaturas.
@@ -1525,6 +1600,18 @@ export class CenaJogo extends Phaser.Scene {
       const aperto = Phaser.Input.Keyboard.JustDown(k.SPACE) || Phaser.Input.Keyboard.JustDown(k.E) || (toque.acao && !this.interagiu);
       if (aperto) { this.interagiu = true; inter.fazer(); }
       if (!toque.acao) this.interagiu = false;
+      return;
+    }
+    const inv = this.invasao;
+    if (inv && Math.hypot(inv.x - j.x / T, inv.y - j.y / T) < 1.8) {
+      this.alvo.setVisible(false);
+      this.ui.rotuloAcao('Expulsar');
+      if (apertou && t - this.ultimoGolpe >= INTERVALO_ATAQUE / (1 + this.ef.velocidadeAtaque)) {
+        this.ultimoGolpe = t;
+        const arma = ferramentaPara(this.inv, 'criatura');
+        this.tocar('golpe');
+        this.ferirInvasor((arma.id ? arma.dano : 1) + bonusDano(this.status) + this.ef.dano);
+      }
       return;
     }
     const bicho = this.fauna.alvo(j.x / T, j.y / T, VETOR[this.direcao]);

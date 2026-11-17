@@ -28,6 +28,7 @@ export interface Ganchos {
   /** cartão compartilhável da sua ilha */
   cartao: () => Promise<{ blob: Blob; texto: string; url: string }>;
   irVingar: () => void;
+  voltarParaCasa: () => void;
   pedirAjuda: () => void;
   libertar: (id: number) => void;
   assistir: (nome: string | null) => void;
@@ -303,6 +304,22 @@ export class Interface {
   }
 
   /** Conquista: oferece um botão de compartilhar por alguns segundos. */
+  /** Invasor a caminho do Cristal: alerta com contagem e botão para voltar. */
+  invasao(nome: string, segundos: number) {
+    this.fimInvasao();
+    const el = document.createElement('div');
+    el.id = 'invasao'; el.className = 'painel';
+    let resta = segundos;
+    el.innerHTML = `<b>⚠ ${nome} está invadindo sua ilha!</b><small>Chega ao Cristal em <span class="seg">${resta}</span> s. Volte e ataque para expulsar (torres ajudam).</small>
+      <div class="botoes"><button class="ir">🏠 Voltar para casa</button><button class="fechar">✕</button></div>`;
+    el.querySelector('.ir')!.addEventListener('click', () => this.g.voltarParaCasa());
+    el.querySelector('.fechar')!.addEventListener('click', () => el.remove());
+    document.body.appendChild(el);
+    this.relogioInvasao = window.setInterval(() => { resta = Math.max(0, resta - 1); const s = el.querySelector('.seg'); if (s) s.textContent = String(resta); }, 1000);
+  }
+  private relogioInvasao = 0;
+  fimInvasao() { document.getElementById('invasao')?.remove(); window.clearInterval(this.relogioInvasao); }
+
   /** Fui saqueado: ir se vingar (rota automática) ou pedir ajuda (cartão com link). */
   vinganca(nome: string, levou: string) {
     document.getElementById('vinganca')?.remove();

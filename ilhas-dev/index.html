@@ -208,6 +208,10 @@
     #status .rival .frente { color: #8fd37c; } #status .rival .atras { color: #ff9b8a; } #status .rival small { opacity: .6; }
     #missao .metas { list-style: none; margin: 4px 0; padding: 0; } #missao .metas li { margin: 2px 0; } #missao .metas li b { color: #ffd166; }
     #missao .metas li.ok { opacity: .65; text-decoration: line-through; }
+    #invasao { position: fixed; z-index: 10; left: 12px; right: 12px; margin: 0 auto; top: calc(max(12px, env(safe-area-inset-top)) + 70px); max-width: 360px; box-sizing: border-box;
+      padding: 10px 12px; background: #ffb3a7; color: #3a2f45; border: 2px solid #3a2f45; border-radius: 12px; box-shadow: 0 4px 0 #2b2238; animation: surgir .4s; }
+    #invasao b { display: block; font-size: 15px; } #invasao small { display: block; margin: 4px 0 8px; font-size: 12px; }
+    #invasao .botoes { display: flex; gap: 6px; } #invasao button { flex: 1; padding: 8px; font-weight: 700; border: 2px solid #3a2f45; border-radius: 8px; background: #fff; } #invasao .fechar { flex: 0 0 40px; }
     #vinganca { position: fixed; z-index: 10; left: 12px; right: 12px; margin: 0 auto; top: calc(max(12px, env(safe-area-inset-top)) + 70px);
       max-width: 360px; box-sizing: border-box; padding: 10px 12px; background: #ffd9d3; color: #3a2f45; border: 2px solid #3a2f45; border-radius: 12px; box-shadow: 0 4px 0 #2b2238; animation: surgir .4s; }
     @keyframes surgir { from { opacity: 0; translate: 0 -10px; } }
