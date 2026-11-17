@@ -79,6 +79,19 @@ export class Nuvem {
     return data ?? [];
   }
 
+  /** Recém-chegado registra quem o convidou (slot da ilha do padrinho no link). Devolve o nome do padrinho ou null. */
+  async registrarConvite(slot: number): Promise<string | null> {
+    const { data, error } = await this.c.rpc<string | null>('ilhas_registrar_convite', { p_temporada: this.temporada.id, p_slot: slot });
+    if (error) { console.warn('Ilhas: convite', error.message); return null; }
+    return data;
+  }
+  /** Nomes de quem entrou pelo meu convite e ainda não rendeu recompensa (marca como recebidas). */
+  async resgatarConvites(): Promise<string[]> {
+    const { data, error } = await this.c.rpc<string[]>('ilhas_resgatar_convites', { p_temporada: this.temporada.id });
+    if (error) { console.warn('Ilhas: resgatar convites', error.message); return []; }
+    return data ?? [];
+  }
+
   private salvando = false;
   /** Salva o progresso privado e atualiza o perfil público. Ignora chamadas enquanto outra está em andamento. */
   async salvar(saveTexto: string, perfil: { nome: string; personagem: string; nivel: number; pontos: number; construcoes: Construcao[] }) {

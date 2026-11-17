@@ -45,7 +45,8 @@ if (q.has('n') || q.has('bots') || q.has('seed')) {
   let dificuldade: Dificuldade = ultimo.dificuldade;
   const menu = document.getElementById('menu')!;
   // link de desafio: ?de=Nome&nv=5
-  const desafio = q.get('de') ? { nome: q.get('de')!.replace(/[<>&"]/g, '').slice(0, 16), nv: Number(q.get('nv')) || 0 } : null;
+  const desafio = q.get('de') ? { nome: q.get('de')!.replace(/[<>&"]/g, '').slice(0, 16), nv: Number(q.get('nv')) || 0,
+    slot: q.has('c') ? Number(q.get('c')) : null, temporada: Number(q.get('t')) || null } : null;
   const desenhar = () => {
     const salvo = temSave(MUNDOS[mundo].n);
     menu.innerHTML = `
@@ -107,11 +108,16 @@ if (q.has('n') || q.has('bots') || q.has('seed')) {
         apelido = ((document.getElementById('apelido') as HTMLInputElement)?.value || apelido).trim().slice(0, 16) || 'Ilhéu';
         gravar('ilhas-apelido', apelido);
         gravar('ilhas-ultimo', { mundo, dificuldade, personagem });
+        const jaEstava = !!(await nuvem.meuPerfil());
         const slot = await nuvem.entrar(apelido, personagem);
+        // chegou pelo link de alguém da mesma temporada: registra o convite (os dois ganham presente)
+        let convite: string | undefined;
+        if (!jaEstava && desafio && desafio.slot !== null && desafio.temporada === nuvem.temporada.id && desafio.slot !== slot)
+          convite = (await nuvem.registrarConvite(desafio.slot)) ?? undefined;
         const [saveNuvem, todos] = await Promise.all([nuvem.carregarSave(), nuvem.jogadores()]);
         const t = nuvem.temporada;
         iniciar({ seed: t.seed, participantes: t.participantes, bots: Math.max(0, Math.min(99, t.participantes - todos.length)),
-          dificuldade, personagem, novo: false, slot, nome: apelido, nuvem, saveNuvem, outros: todos });
+          dificuldade, personagem, novo: false, slot, nome: apelido, nuvem, saveNuvem, outros: todos, convite });
       } catch (err) {
         estadoOnline = `<p>Não deu para entrar: ${(err as Error).message}</p>`; desenharOnline();
       }

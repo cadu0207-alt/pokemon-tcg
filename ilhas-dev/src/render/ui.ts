@@ -100,7 +100,7 @@ export class Interface {
     $('btn-voltar').addEventListener('click', () => g.assistir(null));
     $('ranking').addEventListener('click', e => {
       const li = (e.target as HTMLElement).closest<HTMLElement>('[data-nome]');
-      if (li && li.dataset.nome !== 'Você' && !li.classList.contains('pessoa')) { g.assistir(li.dataset.nome!); this.alternarRanking(false); }
+      if (li && li.dataset.nome && li.dataset.nome !== 'Você' && !li.classList.contains('eu') && !li.classList.contains('sep')) { g.assistir(li.classList.contains('pessoa') ? `pessoa:${li.dataset.nome}` : li.dataset.nome); this.alternarRanking(false); }
     });
     this.barra.addEventListener('click', e => {
       const slot = (e.target as HTMLElement).closest<HTMLElement>('[data-id]');
@@ -322,7 +322,7 @@ export class Interface {
     el.innerHTML = `<h3>Compartilhe sua ilha <button class="fechar">✕</button></h3><img src="${src}" alt="Cartão da sua ilha">
       <div class="botoes">${'share' in navigator ? '<button class="share">📤 Compartilhar</button>' : ''}
       <a class="baixar" href="${src}" download="minha-ilha.png">⬇ Baixar imagem</a><button class="copiar">🔗 Copiar link</button></div>
-      <p class="dica">Quem entrar pelo seu link começa com 1 cristal de presente.</p>`;
+      <p class="dica">Quem entrar pelo seu link começa com 1 cristal de presente. Jogando online, você também ganha: 1 cristal, 10 madeira e 5 pedra por amigo que entrar na temporada.</p>`;
     const fechar = () => { el.remove(); URL.revokeObjectURL(src); };
     el.querySelector('.fechar')!.addEventListener('click', fechar);
     el.querySelector('.share')?.addEventListener('click', async () => {
@@ -399,7 +399,7 @@ export class Interface {
 
   assistindo(nome: string | null, perfil = '') {
     document.body.classList.toggle('espectador', !!nome);
-    $('espectador-nome').textContent = nome ? `Assistindo ${nome} (${Interface.ROTULO[perfil] ?? perfil})` : '';
+    $('espectador-nome').textContent = nome ? (perfil === 'pessoa' ? `Visitando a ilha de ${nome}` : `Assistindo ${nome} (${Interface.ROTULO[perfil] ?? perfil})`) : '';
   }
 
   aviso(texto: string) {

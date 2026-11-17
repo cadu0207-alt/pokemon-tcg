@@ -86,6 +86,13 @@ e crescer precisa **sair de jangada** atrás de **baús guardados por animais** 
 - Ranking: empatados dividem a posição; mostra "faltam X pts para passar Fulano".
 - **Bem-vindo de volta**: ao voltar depois de 2+ min, resumo do tempo fora e dos últimos acontecimentos; plantações crescem enquanto você está fora (até 8 h).
 
+## Compartilhar e convidar (implementado)
+- Cartão PNG da ilha (foto de cima, nome, nível, reino, posição) nas conquistas e no painel do Cristal; Compartilhar/Baixar/Copiar link.
+- Link de desafio `?de=Nome&nv=N` (+ `&c=slot&t=temporada` online): quem chega ganha 1 cristal.
+- Online: o convite é registrado no servidor (`ilhas_convites`, sql/ilhas_convites_17nov2026.sql) e quem convidou recebe
+  1 cristal + 10 madeira + 5 pedra no baú por amigo (até 20 por temporada; só vale para quem entrou há menos de 1 h).
+- Visitar: tocar numa pessoa no ranking leva a câmera até a ilha dela.
+
 ## Exploração (implementado)
 - **Névoa**: o mundo começa coberto; abre num raio de 7 tiles em volta de você e fica aberto (salvo no save). Sua ilha inteira já começa conhecida.
 - **Mapa-múndi** (botão 🗺 ou tecla M): terreno só onde você já viu, você, sua ilha, baús, ilhas rivais e de outros jogadores que você já encontrou, e o % de terra explorada.

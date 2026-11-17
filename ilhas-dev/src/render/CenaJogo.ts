@@ -123,7 +123,7 @@ export class CenaJogo extends Phaser.Scene {
   private naAgua = false;
   private bots!: BotsVisuais;
   private bausMundo!: BausVisuais;
-  private assistindo: import('../sim/bots').Bot | null = null;
+  private assistindo: { x: number; y: number } | null = null;
 
   constructor() { super('jogo'); }
 
@@ -327,6 +327,8 @@ export class CenaJogo extends Phaser.Scene {
     this.time.addEvent({ delay: 20_000, loop: true, callback: () => this.checarSaque() });
     this.time.addEvent({ delay: 30_000, loop: true, callback: () => this.passoReinos() });
     if (this.cfg.nuvem) this.time.addEvent({ delay: 30_000, loop: true, callback: () => void this.atualizarOutros() });
+    // convites: confere ao entrar e a cada 2 min
+    if (this.cfg.nuvem) { this.time.delayedCall(4000, () => void this.resgatarConvites()); this.time.addEvent({ delay: 120_000, loop: true, callback: () => void this.resgatarConvites() }); }
     this.mostrarTumulo();
     for (const c of this.chao) this.desenharPilha(c);
     this.time.addEvent({ delay: 1000, loop: true, callback: () => this.atualizarPlantacoes() });
@@ -526,11 +528,30 @@ export class CenaJogo extends Phaser.Scene {
 
   private assistir(nome: string | null) {
     const cam = this.cameras.main;
-    const bot = nome ? this.bots.bots.find(b => b.nome === nome) ?? null : null;
-    this.assistindo = bot;
-    this.ui.assistindo(bot?.nome ?? null, bot?.perfil);
-    if (!bot) cam.startFollow(this.jogador, true, 0.15, 0.15);
+    // "pessoa:Nome" = jogador de verdade (pode ter o mesmo nome de um bot)
+    const ehPessoa = !!nome?.startsWith('pessoa:');
+    if (ehPessoa) nome = nome!.slice(7);
+    const bot = nome && !ehPessoa ? this.bots.bots.find(b => b.nome === nome) ?? null : null;
+    // pessoa de verdade: a câmera vai até a ilha dela (só para ver)
+    const pessoa = ehPessoa ? [...this.outros.values()].find(o => o.perfil.nome === nome)?.perfil : undefined;
+    const ilha = pessoa ? this.mundo.ilhas.filter(i => i.dono !== null)[pessoa.slot] : undefined;
+    this.assistindo = bot ?? (ilha ? (() => { const c = tileDoCristal(ilha); return { x: c.x + 0.5, y: c.y + 0.5 }; })() : null);
+    if (ilha) this.nevoa.revelar(ilha.cx, ilha.cy, ilha.raio + 4);
+    this.ui.assistindo(this.assistindo ? nome : null, bot ? bot.perfil : 'pessoa');
+    if (!this.assistindo) cam.startFollow(this.jogador, true, 0.15, 0.15);
     else cam.stopFollow();
+  }
+
+  /** Quem entrou pelo meu link: recompensa por convidado (1 cristal, 10 madeira, 5 pedra no baú da ilha). */
+  private async resgatarConvites() {
+    const nomes = await this.cfg.nuvem?.resgatarConvites();
+    if (!nomes?.length) return;
+    for (const n of nomes) {
+      adicionar(this.armazem, 'cristal', 1); adicionar(this.armazem, 'madeira', 10); adicionar(this.armazem, 'pedra', 5);
+      this.registrar(`${n} entrou pelo seu convite: +1 cristal, +10 madeira, +5 pedra no baú`);
+    }
+    this.ui.aviso(`🎁 ${nomes.length === 1 ? `${nomes[0]} entrou` : `${nomes.length} amigos entraram`} pelo seu convite! Presentes no baú da ilha`);
+    this.tocar('nivel'); this.mudou(); this.salvar(true);
   }
 
   private tocar(e: Efeito) {
@@ -781,7 +802,8 @@ export class CenaJogo extends Phaser.Scene {
     const pos = r.filter(l => l.pontos > r.find(x => x.perfil === 'jogador')!.pontos).length + 1;
     const info = this.infoReino();
     const reino = info.situacao === 'rei' ? `👑 Rei de ${info.vassalos.length}` : info.situacao === 'vassalo' ? `Vassalo de ${info.rei}` : 'Ilha livre';
-    const url = `${location.origin}${location.pathname}?de=${encodeURIComponent(nome)}&nv=${this.nivel}`;
+    const online = this.cfg.nuvem ? `&c=${this.cfg.slot ?? this.cfg.nuvem.slot}&t=${this.cfg.nuvem.temporada.id}` : '';
+    const url = `${location.origin}${location.pathname}?de=${encodeURIComponent(nome)}&nv=${this.nivel}${online}`;
 
     const W = 1080, H = 1350, cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
