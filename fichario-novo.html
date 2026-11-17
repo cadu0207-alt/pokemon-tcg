@@ -44,7 +44,7 @@
   <section class="fn-hero" id="fn-hero" aria-live="polite"></section>
 
   <section class="fn-bar" id="fn-bar">
-    <!-- Linha 1: Busca à esquerda + Status e Foco/Importantes à direita -->
+    <!-- Linha 1: Busca comprida à esquerda + Status e Foco/Importantes à direita -->
     <div class="fn-bar-top">
       <div class="fn-search">
         <input id="fn-q" type="search" placeholder="Buscar por nome ou número…" autocomplete="off" aria-label="Buscar carta">
@@ -61,31 +61,33 @@
       </label>
     </div>
 
-    <!-- Linha 2: Visualização, Idioma e Ordenar à esquerda | Tamanho e Engrenagem à direita -->
+    <!-- Linha 2: Filtros de visualização/idioma à esquerda e todos os demais agrupados à direita -->
     <div class="fn-bar-bottom">
-      <div class="fn-seg" id="fn-view" role="group" aria-label="Modo de visualização">
-        <button data-view="grid" type="button" class="is-on">Grade</button>
-        <button data-view="binder" type="button">Fichário</button>
-        <button data-view="table" type="button">Tabela</button>
-        <button data-view="dash" type="button">Dashboard</button>
+      <div class="fn-bar-left-tools">
+        <div class="fn-seg" id="fn-view" role="group" aria-label="Modo de visualização">
+          <button data-view="grid" type="button" class="is-on">Grade</button>
+          <button data-view="binder" type="button">Fichário</button>
+          <button data-view="table" type="button">Tabela</button>
+          <button data-view="dash" type="button">Dashboard</button>
+        </div>
+        <div class="fn-seg" id="fn-lang" role="group" aria-label="Idioma da arte" hidden>
+          <button data-lang="pt" type="button">PT</button>
+          <button data-lang="en" type="button">EN</button>
+          <button data-lang="jp" type="button">JP</button>
+          <button data-lang="cn" type="button">CN</button>
+        </div>
       </div>
-      <div class="fn-seg" id="fn-lang" role="group" aria-label="Idioma da arte" hidden>
-        <button data-lang="pt" type="button">PT</button>
-        <button data-lang="en" type="button">EN</button>
-        <button data-lang="jp" type="button">JP</button>
-        <button data-lang="cn" type="button">CN</button>
-      </div>
-      <label class="fn-sel"><span>Ordenar</span>
-        <select id="fn-sort" aria-label="Ordenar por">
-          <option value="num">Número</option>
-          <option value="name">Nome</option>
-          <option value="rare">Raridade</option>
-          <option value="price">Preço (maior)</option>
-          <option value="dex">Pokédex</option>
-        </select>
-      </label>
 
       <div class="fn-bar-right">
+        <label class="fn-sel"><span>Ordenar</span>
+          <select id="fn-sort" aria-label="Ordenar por">
+            <option value="num">Número</option>
+            <option value="name">Nome</option>
+            <option value="rare">Raridade</option>
+            <option value="price">Preço (maior)</option>
+            <option value="dex">Pokédex</option>
+          </select>
+        </label>
         <div class="fn-step" id="fn-cols-wrap" title="Tamanho das cartas">
           <button id="fn-cols-minus" type="button" aria-label="Cartas maiores">–</button>
           <span id="fn-cols-val">4</span>
@@ -118,7 +120,7 @@
 <script defer src="cards/cards_me2pt5.js"></script>
 <script defer src="cards/cards_me05.js"></script>
 <script defer src="cards/cards_me04.js"></script>
-<script defer src="cards/cards_me03.js"></script>
+<script defer src="cards/cards_me03.js</th>"></script>
 <script defer src="cards/cards_me02.js"></script>
 <script defer src="cards/cards_meg.js"></script>
 <script defer src="cards/cards_mep.js"></script>
