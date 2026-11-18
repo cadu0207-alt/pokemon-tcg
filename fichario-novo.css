@@ -411,3 +411,11 @@ button{cursor:pointer}
 .fn-dp-item.is-on{border-color:var(--teal);box-shadow:0 0 0 1px var(--teal) inset}
 .fn-dp-item.is-clear{border-style:dashed}
 .fn-act:disabled{opacity:.5;cursor:default}
+
+/* ── Meus fichários e Favoritos ── */
+.fn-fav{position:absolute;right:6px;bottom:6px;z-index:2;font-size:14px;line-height:1;padding:3px;border-radius:99px;background:rgba(0,0,0,.55);pointer-events:none}
+.fn-form input[type="text"],.fn-form input[type="search"]{width:100%;height:42px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text);padding:0 12px;font-size:14px;outline:none}
+.fn-form input[type="text"]:focus,.fn-form input[type="search"]:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.fn-form input[type="color"]{width:100%;height:42px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);padding:3px}
+.fn-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fn-sub-h{margin:16px 2px 8px;font-size:13px;color:var(--text2);font-weight:700}
