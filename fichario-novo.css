@@ -427,3 +427,10 @@ body.fn-share #fn-setbtn{pointer-events:none}
 body.fn-share #fn-setbtn .fn-caret{display:none}
 body.fn-share .fn-ph .fn-img,body.fn-share .fn-pocket.fn-ph{pointer-events:none}
 
+/* ── Fichário de Pokémon (posições fixas) ── */
+body.fn-pk .fn-bar{display:none}
+.fn-pocket.is-empty{background:var(--surface2);border:1px dashed var(--border2);color:var(--muted);display:grid;place-items:center;aspect-ratio:63/88;cursor:default}
+.fn-pocket.is-empty.is-edit{cursor:pointer;border-color:var(--accent)}
+.fn-pocket.is-empty .fn-plus{font-size:26px;color:var(--accent);font-weight:800;line-height:1}
+.fn-pocket.is-empty .fn-slotn{position:absolute;left:5px;top:4px}
+
