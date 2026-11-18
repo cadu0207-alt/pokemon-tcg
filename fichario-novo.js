@@ -414,7 +414,7 @@
   }
   function cbBinders() {
     if (DEMO) { if (!demoCb) demoCbInit(); return demoCb; }
-    try { return (customBinders || []).filter(function (b) { var t = cbType(b); return b && (t === 'manual' || t === 'preset'); }); } catch (e) { return []; }
+    try { return (customBinders || []).filter(function (b) { var t = cbType(b); return b && (t === 'manual' || t === 'preset' || t === 'artist'); }); } catch (e) { return []; }
   }
   function cbSorted() { return cbBinders().slice().sort(function (a, b) { return (cbIsFav(b) ? 1 : 0) - (cbIsFav(a) ? 1 : 0); }); } // Favoritos sempre primeiro
   function cbById(id) { return cbBinders().filter(function (b) { return String(b.id) === String(id); })[0] || null; }
@@ -435,6 +435,10 @@
     var cards = [], miss = 0, cfg = b.filter_config || {};
     if (cfg.type === 'preset') {
       try { getBinderCards(b).forEach(function (c) { cards.push(Object.assign({}, c, { _set: c._setId, _k: c._setId + '~' + c.n })); }); } catch (e) { }
+      return { cards: cards, pending: 0 };
+    }
+    if (cfg.type === 'artist') { // fichário por artista: dinâmico, varre o catálogo inteiro
+      try { Object.keys(SET_CARDS_MAP).forEach(function (sid) { var cs = []; try { cs = SET_CARDS_MAP[sid]() || []; } catch (e) { return; } cs.forEach(function (c) { if (c.artist === cfg.artist) cards.push(Object.assign({}, c, { _set: sid, _setId: sid, _k: sid + '~' + c.n })); }); }); } catch (e) { }
       return { cards: cards, pending: 0 };
     }
     var memo = {}, seen = {};
@@ -470,12 +474,12 @@
     return (progCache[key] = out);
   }
   function dropMultiProg() { Object.keys(progCache).forEach(function (k) { if (/^(dex|cb):/.test(k)) delete progCache[k]; }); }
-  function cbKind(b) { return cbIsFav(b) ? 'Favoritas de todas as coleções' : cbType(b) === 'preset' ? 'Sugestão temática' : 'Fichário personalizado'; }
+  function cbKind(b) { return cbIsFav(b) ? 'Favoritas de todas as coleções' : cbType(b) === 'preset' ? 'Sugestão temática' : cbType(b) === 'artist' ? 'Fichário por artista' : 'Fichário personalizado'; }
   function cbTreeHtml() {
     var bs = cbSorted();
     var rows = bs.map(function (b) {
       var p = cbProg(b), nm = plainName(b.name) || 'Sem nome';
-      return '<button type="button" class="fn-set' + ('cb:' + b.id === st.set ? ' is-cur' : '') + '" data-pick="cb:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' meus fichários favoritos')) + '"><span class="em">' + esc(b.emoji || '📚') + '</span><span class="tx"><b>' + esc(nm) + '</b><small>' + p.cards + ' carta' + (p.cards === 1 ? '' : 's') + (cbIsFav(b) ? ' · favoritas' : cbType(b) === 'preset' ? ' · temático' : '') + '</small>' +
+      return '<button type="button" class="fn-set' + ('cb:' + b.id === st.set ? ' is-cur' : '') + '" data-pick="cb:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' meus fichários favoritos')) + '"><span class="em">' + esc(b.emoji || '📚') + '</span><span class="tx"><b>' + esc(nm) + '</b><small>' + p.cards + ' carta' + (p.cards === 1 ? '' : 's') + (cbIsFav(b) ? ' · favoritas' : cbType(b) === 'preset' ? ' · temático' : cbType(b) === 'artist' ? ' · artista' : '') + '</small>' +
         '<div class="mini"><i style="width:' + p.pct + '%"></i></div></span><span class="pc' + (p.pct ? '' : ' z') + '">' + p.pct + '%</span></button>';
     }).join('');
     rows += '<button type="button" class="fn-set" data-act="cbnew" data-find="novo fichário criar personalizado"><span class="em">➕</span><span class="tx"><b>Novo fichário</b><small>Personalizado ou sugestão temática</small></span></button>';
@@ -661,6 +665,111 @@
       renderCbAdd(q);
     } finally { cbBusy = false; }
   }
+  // ── Meus artistas ──
+  function artistStats() {
+    var by = {};
+    try {
+      Object.keys(SET_CARDS_MAP).forEach(function (sid) {
+        var cs = []; try { cs = SET_CARDS_MAP[sid]() || []; } catch (e) { return; }
+        cs.forEach(function (c) {
+          if (!c.artist) return; var a = by[c.artist] = by[c.artist] || { owned: 0, total: 0 }; a.total++;
+          var c2 = Object.assign({}, c, { _set: sid, _k: sid + '~' + c.n });
+          if (slotsOf('', c2).some(function (x) { return has(keyOf('', c2, x.ver)); })) a.owned++;
+        });
+      });
+    } catch (e) { }
+    return Object.keys(by).map(function (k) { return { name: k, owned: by[k].owned, total: by[k].total }; })
+      .sort(function (a, b) { return b.owned - a.owned || b.total - a.total || a.name.localeCompare(b.name, 'pt'); });
+  }
+  var artistList = null;
+  function openArtists() {
+    artistList = artistStats();
+    var withAny = artistList.filter(function (a) { return a.owned > 0; }).length;
+    openSheet('<p class="fn-note"><b>' + withAny + '</b> de <b>' + artistList.length + '</b> ilustradores com pelo menos 1 carta sua, somando todas as coleções do site. Cartas sem dado de ilustrador não entram na conta.</p>' +
+      '<div class="fn-form"><label>Buscar ilustrador<input id="fn-ar-q" type="search" placeholder="nome…" autocomplete="off"></label></div><div class="fn-dp" id="fn-ar"></div>', 'Meus artistas');
+    renderArtists('');
+  }
+  function renderArtists(q) {
+    var box = $('#fn-ar'); if (!box || !artistList) return;
+    var w = normTxt(q).split(/\s+/).filter(Boolean), have = cbBinders();
+    var items = artistList.filter(function (a) { var h = normTxt(a.name); return w.every(function (x) { return h.indexOf(x) >= 0; }); });
+    if (!items.length) { box.innerHTML = '<div class="fn-empty">Nenhum ilustrador com essa busca.</div>'; return; }
+    box.innerHTML = items.slice(0, 80).map(function (a) {
+      var pc = a.total ? Math.round(a.owned / a.total * 100) : 0, ex = have.filter(function (b) { return cbType(b) === 'artist' && b.filter_config.artist === a.name; })[0];
+      return '<div class="fn-dp-item"><span class="tx"><b>' + esc(a.name) + '</b><small>' + a.owned + ' de ' + a.total + ' cartas · ' + pc + '%</small></span>' +
+        '<button type="button" class="fn-ver' + (ex ? ' is-on' : '') + '" data-act="artbinder" data-artist="' + esc(a.name) + '">' + (ex ? '📂 Abrir' : '+ Fichário') + '</button></div>';
+    }).join('') + (items.length > 80 ? '<div class="fn-empty">Mostrando 80 de ' + items.length + '. Use a busca.</div>' : '');
+  }
+  async function artistBinder(name) {
+    var ex = cbBinders().filter(function (b) { return cbType(b) === 'artist' && b.filter_config.artist === name; })[0];
+    if (ex) { closeSheet(); pickSet('cb:' + ex.id); return; }
+    if (!DEMO && !loggedIn()) { toast('Entre no MyDeck para criar fichários.'); return; }
+    if (cbBusy) return; cbBusy = true;
+    try {
+      var saved = await cbSave({ name: '🎨 ' + name, emoji: '🎨', layout: 3, filter_config: { type: 'artist', artist: name }, card_ids: [], cover_color: '#a855f7' });
+      if (!saved) { toast('Não foi possível criar. Confira a conexão e tente de novo.'); return; }
+      closeSheet(); dropMultiProg(); pickSet('cb:' + saved.id);
+    } finally { cbBusy = false; }
+  }
+
+  // ── Cartão de progresso (PNG para compartilhar) ──
+  function rrect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+  async function progressCard() {
+    try {
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      var t = totals(), pct = t.slots ? Math.round(t.got / t.slots * 100) : 0, sub = '';
+      var label = isCb(st.set) || isDex(st.set) ? (cur.binder ? cur.binder.name : 'Meu fichário') : ((SET_CATALOG.filter(function (x) { return x.id === setKey(st.set); })[0] || {}).label || st.set);
+      if (!isCb(st.set) && !isDex(st.set)) { try { var ch = typeof chaseFor === 'function' ? chaseFor(setKey(st.set)) : ''; if (ch) sub = '💎 Chase: ' + ch; } catch (e) { } }
+      else sub = t.cards + ' cartas';
+      var cw = 680, chh = 360, pad = 28, cv = document.createElement('canvas'); cv.width = cw; cv.height = chh;
+      var ctx = cv.getContext('2d'), g = ctx.createLinearGradient(0, 0, 0, chh); g.addColorStop(0, '#141726'); g.addColorStop(1, '#0a0b10');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, cw, chh); ctx.textBaseline = 'top';
+      ctx.fillStyle = '#ffd166'; ctx.font = "700 20px 'Bebas Neue', sans-serif"; ctx.fillText('MEU PROGRESSO — MYDECK TCG', pad, pad - 6);
+      ctx.fillStyle = '#fff'; ctx.font = "700 30px 'Bebas Neue', sans-serif"; ctx.fillText(String(label).slice(0, 42), pad, pad + 34);
+      var pc = pct >= 100 ? '#06d6a0' : '#ffd166'; ctx.fillStyle = pc; ctx.font = "700 96px 'Bebas Neue', sans-serif"; ctx.textAlign = 'right'; ctx.fillText(pct + '%', cw - pad, pad + 40); ctx.textAlign = 'left';
+      var by = pad + 150, bw = cw - pad * 2, bh = 16;
+      rrect(ctx, pad, by, bw, bh, 8); ctx.fillStyle = '#242840'; ctx.fill();
+      rrect(ctx, pad, by, Math.max(bh, bw * pct / 100), bh, 8); ctx.fillStyle = pc; ctx.fill();
+      ctx.fillStyle = '#c7cbe0'; ctx.font = "700 18px 'Space Mono', monospace"; ctx.fillText(t.got + '/' + t.slots + ' slots coletados', pad, by + 34);
+      if (sub) { ctx.fillStyle = '#118ab2'; ctx.font = "700 15px 'Space Mono', monospace"; ctx.fillText(sub.slice(0, 60), pad, by + 64); }
+      ctx.fillStyle = '#565d74'; ctx.font = "14px 'Space Mono', monospace"; ctx.fillText('mydecktcg.com.br', pad, chh - pad - 14);
+      var blob = await new Promise(function (r) { cv.toBlob(r, 'image/png'); }); if (!blob) throw new Error('png');
+      var name = 'mydeck-progresso-' + String(st.set).replace(/[^\w-]/g, '_') + '.png';
+      try { var f = new File([blob], name, { type: 'image/png' }); if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: 'Meu progresso no MyDeck' }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+      var url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      toast('Imagem salva. Mande no grupo!');
+    } catch (e) { console.error(e); toast('Não foi possível gerar a imagem agora.'); }
+  }
+  // informações do set (data dos preços, carta mais valiosa) — só em coleções de verdade
+  function infoHtml() {
+    if (isCb(st.set) || isDex(st.set)) return '';
+    var id = setKey(st.set), bits = [];
+    try { if (typeof formatPriceUpdatedAt === 'function' && typeof PRICE_UPDATED_AT !== 'undefined' && Object.prototype.hasOwnProperty.call(PRICE_UPDATED_AT, id)) bits.push('🗓️ preços atualizados ' + esc(formatPriceUpdatedAt(id))); } catch (e) { }
+    try { var ch = typeof chaseFor === 'function' ? chaseFor(id) : ''; if (ch) bits.push('💎 chase: ' + esc(ch)); } catch (e) { }
+    return bits.length ? '<div class="fn-stats fn-bridge" style="margin-top:6px">' + bits.map(function (b) { return '<span>' + b + '</span>'; }).join('') + '</div>' : '';
+  }
+  // Pokédex: preenche só as vagas vazias (nunca mexe nas que você já escolheu): a mais valiosa que você já tem, senão a mais barata
+  async function dexAutoFill() {
+    var b = cur.binder; if (!b || !isDex(st.set) || dexBusy) return;
+    if (cur.pending > 0) { toast('Ainda carregando todas as coleções. Tente de novo em instantes.'); return; }
+    var ids = (b.card_ids || []).slice(), added = 0, idx = dexIndex();
+    cur.species.forEach(function (sp) {
+      if (cur.byDex[sp.dex]) return;
+      var cands = (idx[sp.dex] || []).map(function (x) { var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }); return { set: x.set, c: x.c, own: slotsOf('', c).some(function (s) { return has(keyOf('', c, s.ver)); }) }; });
+      if (!cands.length) return;
+      var owned = cands.filter(function (x) { return x.own; }), pr = function (x) { return (typeof x.c.price === 'number' && x.c.price > 0) ? x.c.price : Infinity; };
+      var pick = owned.length ? owned.reduce(function (m, x) { return pr(x) > pr(m) ? x : m; }, owned[0]) : cands.reduce(function (m, x) { return pr(x) < pr(m) ? x : m; }, cands[0]);
+      ids.push({ set: pick.set, n: String(pick.c.n), dex: sp.dex }); added++;
+    });
+    if (!added) { toast('Nenhuma vaga vazia com carta disponível para preencher.'); return; }
+    if (!confirm('Preencher ' + added + ' vaga' + (added > 1 ? 's' : '') + ' vazia' + (added > 1 ? 's' : '') + '? Em cada uma entra a carta mais valiosa que você já tem daquela espécie ou, se não tiver nenhuma, a mais barata. As vagas que você já escolheu não mudam.')) return;
+    dexBusy = true;
+    try {
+      var nb = Object.assign({}, b, { card_ids: ids });
+      if (DEMO) demoBinders[0] = nb; else { var saved = await saveCustomBinder(nb); if (!saved) { toast('Não foi possível salvar. Tente de novo.'); return; } }
+      closeSheet(); progCache = {}; loadCur(); renderHero(); renderBody(); renderSide(); toast(added + ' vaga' + (added > 1 ? 's preenchidas.' : ' preenchida.'));
+    } finally { dexBusy = false; }
+  }
   function cbRefs() { return cur.cards.map(function (c) { return { set: c._set, n: c.n }; }); }
 
   function loadCur() {
@@ -835,7 +944,7 @@
     return html + '</div>';
   }
   function emptyMsg() {
-    if (isCb(st.set) && cur.binder && !cur.cards.length) return '<div class="fn-empty">' + (cur.pending ? 'Carregando as cartas…' : cbType(cur.binder) === 'manual' ? 'Nenhuma carta guardada ainda. Toque em “Adicionar cartas” acima, ou abra qualquer carta e escolha “Guardar em fichário”.' : 'Nenhuma carta das suas coleções ativas entra nesta sugestão.') + '</div>';
+    if (isCb(st.set) && cur.binder && !cur.cards.length) return '<div class="fn-empty">' + (cur.pending ? 'Carregando as cartas…' : cbType(cur.binder) === 'manual' ? 'Nenhuma carta guardada ainda. Toque em “Adicionar cartas” acima, ou abra qualquer carta e escolha “Guardar em fichário”.' : 'Nenhuma carta entra neste fichário por enquanto.') + '</div>';
     if (!cur.d || !cur.cards.length) return '<div class="fn-empty">' + (loggedIn() || DEMO ? 'Carregando as cartas desta coleção…' : 'Esta coleção carrega depois do login.') + '</div>';
     return '<div class="fn-empty">Nenhuma carta com esse filtro.</div>';
   }
@@ -867,7 +976,7 @@
       '<div class="fn-stats"><span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' +
       (t.sT ? '<span>Base <b>' + t.bG + '</b>/' + t.bT + '</span><span>Secretas <b>' + t.sG + '</b>/' + t.sT + '</span>' : '') +
       (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : t.got >= t.slots ? '<span><b style="color:var(--teal)">Coleção completa 🎉</b></span>' : t.miss > 0 ? '<span class="fn-miss">Faltam <b>' + esc(money0(t.miss)) + '</b></span>' : '<span class="fn-miss">Faltam <b>' + (t.slots - t.got) + '</b> slots</span>') + '</div>' +
-      bridgeHtml(t) + '<div class="fn-hero-links"><a href="./#lojas">Ver ofertas</a><a href="./#fichario/' + esc(st.set) + '">Abrir no fichário atual</a></div>';
+      bridgeHtml(t) + infoHtml() + '<div class="fn-hero-links"><a href="./#lojas">Ver ofertas</a><a href="./#fichario/' + esc(st.set) + '">Abrir no fichário atual</a></div>';
     $('#fn-setbtn-emoji').textContent = cat.emoji || '🃏';
     $('#fn-setbtn-code').textContent = label.split('—')[0].trim();
     $('#fn-setbtn-name').textContent = nameOnly;
@@ -1000,7 +1109,8 @@
       var nv = dexVisible().length;
       openSheet('<div class="fn-acts">' +
         '<button type="button" class="fn-act" data-act="share"><span class="em">🔗</span><span><b>Compartilhar Pokédex</b><small>Link e QR code só para ver; as vagas que faltam aparecem com a arte do Pokémon</small></span></button>' +
-        '<button type="button" class="fn-act" data-act="copy"><span class="em">📋</span><span><b>Copiar lista (texto)</b><small>' + nv + ' espécie' + (nv === 1 ? '' : 's') + ' como estão na tela, com ✅ e ❌, pronto para colar no WhatsApp</small></span></button></div>', 'Ferramentas');
+        '<button type="button" class="fn-act" data-act="copy"><span class="em">📋</span><span><b>Copiar lista (texto)</b><small>' + nv + ' espécie' + (nv === 1 ? '' : 's') + ' como estão na tela, com ✅ e ❌, pronto para colar no WhatsApp</small></span></button>' +
+        '<button type="button" class="fn-act" data-act="dexfill"><span class="em">✨</span><span><b>Preencher vagas vazias</b><small>Escolhe uma carta para cada vaga sem carta (a mais valiosa que você tem, ou a mais barata). Não mexe nas que você já escolheu</small></span></button>' + extraTools() + '</div>', 'Ferramentas');
       return;
     }
     if (isCb(st.set)) {
@@ -1011,15 +1121,19 @@
         '<button type="button" class="fn-act" data-act="copy"><span class="em">📋</span><span><b>Copiar lista (texto)</b><small>' + n + ' carta' + (n === 1 ? '' : 's') + ' como estão na tela, pronto para colar no WhatsApp</small></span></button>' +
         '<button type="button" class="fn-act" data-act="print"><span class="em">🖨️</span><span><b>Imprimir PDF</b><small>Fichário em páginas, no tamanho escolhido</small></span></button>' +
         '<button type="button" class="fn-act" data-act="bulk"><span class="em">✅</span><span><b>Marcar várias de uma vez</b><small>Marca como coletadas as cartas visíveis deste fichário</small></span></button>' +
-        '<button type="button" class="fn-act" data-act="cbedit"><span class="em">✏️</span><span><b>Editar fichário</b><small>Nome, emoji, cor ou excluir</small></span></button></div>', 'Ferramentas');
+        '<button type="button" class="fn-act" data-act="cbedit"><span class="em">✏️</span><span><b>Editar fichário</b><small>Nome, emoji, cor ou excluir</small></span></button>' + extraTools() + '</div>', 'Ferramentas');
       return;
     }
     openSheet('<div class="fn-acts">' +
       '<button type="button" class="fn-act" data-act="share"><span class="em">🔗</span><span><b>Compartilhar coleção</b><small>Gera um link (e QR code) só para ver, sem precisar de login</small></span></button>' +
       '<button type="button" class="fn-act" data-act="copy"><span class="em">📋</span><span><b>Copiar lista (texto)</b><small>' + n + ' carta' + (n === 1 ? '' : 's') + ' como estão na tela, pronto para colar no WhatsApp</small></span></button>' +
       '<button type="button" class="fn-act" data-act="print"><span class="em">🖨️</span><span><b>Imprimir PDF</b><small>Fichário em páginas, no tamanho escolhido</small></span></button>' +
-      '<button type="button" class="fn-act" data-act="bulk"><span class="em">✅</span><span><b>Marcar várias de uma vez</b><small>Base set, secretas, tudo ou uma raridade: marca como coletadas as cartas visíveis</small></span></button>' +
+      '<button type="button" class="fn-act" data-act="bulk"><span class="em">✅</span><span><b>Marcar várias de uma vez</b><small>Base set, secretas, tudo ou uma raridade: marca como coletadas as cartas visíveis (dá para desfazer)</small></span></button>' + extraTools() +
       '</div>', 'Ferramentas');
+  }
+  function extraTools() {
+    return '<button type="button" class="fn-act" data-act="progcard"><span class="em">🖼️</span><span><b>Cartão de progresso (imagem)</b><small>Uma imagem com a sua porcentagem, para mandar no grupo</small></span></button>' +
+      '<button type="button" class="fn-act" data-act="artists"><span class="em">🎨</span><span><b>Meus artistas</b><small>Quantas cartas você tem de cada ilustrador, e criar um fichário por artista</small></span></button>';
   }
   var shareUrl = '';
   function doShare() {
@@ -1123,18 +1237,43 @@
     cur.view.filter(bulkMatch(rare)).forEach(function (c) { slotsOf(id, c).forEach(function (x) { var k = keyOf(id, c, x.ver); if (!has(k)) keys.push(k); }); });
     if (!keys.length) { toast('Já estão todas marcadas.'); closeSheet(); return; }
     var go = $('#fn-bulk-go'); if (go) { go.disabled = true; go.textContent = 'Marcando…'; }
-    if (DEMO) { keys.forEach(function (k) { demoSet.add(k); }); closeSheet(); renderAll(); toast(keys.length + ' versões marcadas (demonstração).'); return; }
+    if (DEMO) { keys.forEach(function (k) { demoSet.add(k); }); closeSheet(); renderAll(); bulkDone(keys, keys.length, false); return; }
     if (!loggedIn()) { toast('Entre no MyDeck para marcar suas cartas.'); closeSheet(); return; }
-    var done = 0, failed = false;
+    var done = 0, failed = false, okKeys = [];
     for (var i = 0; i < keys.length; i += 50) {
       var chunk = keys.slice(i, i + 50);
       chunk.forEach(function (k) { collected.add(k); collectedQty.set(k, { qty: 1, origins: [] }); });
       var res; try { res = await sbClient.from('collection').upsert(chunk.map(function (k) { return { slot_key: k, user_id: uid(), quantity: 1, origins: [] }; }), { onConflict: 'user_id,slot_key' }); } catch (e) { res = { error: e }; }
       if (res && res.error) { chunk.forEach(function (k) { collected.delete(k); collectedQty.delete(k); }); failed = true; console.error(res.error); break; }
-      done += chunk.length; if (go) go.textContent = 'Marcando… ' + done + '/' + keys.length;
+      done += chunk.length; okKeys = okKeys.concat(chunk); if (go) go.textContent = 'Marcando… ' + done + '/' + keys.length;
     }
     closeSheet(); progCache = {}; renderAll();
-    toast(failed ? 'Marquei ' + done + ' de ' + keys.length + '. Houve um erro, tente de novo.' : keys.length + ' versões marcadas como coletadas.');
+    bulkDone(okKeys, keys.length, failed);
+  }
+  // depois de marcar em massa, oferece desfazer (só as versões que ESTA marcação adicionou)
+  var lastBulk = null;
+  function bulkDone(okKeys, total, failed) {
+    lastBulk = okKeys.slice();
+    if (!okKeys.length) { toast('Não foi possível marcar. Tente de novo.'); return; }
+    openSheet('<div class="fn-form"><p class="fn-note"><b>' + okKeys.length + (okKeys.length === 1 ? ' versão marcada' : ' versões marcadas') + ' como coletadas.</b>' + (failed ? '<br>Houve um erro e só marquei ' + okKeys.length + ' de ' + total + '. Você pode tentar de novo.' : '') +
+      '<br>Se foi sem querer, dá para desfazer agora: só tira o que esta marcação adicionou.</p>' +
+      '<button type="button" class="fn-btn is-alt" data-act="bulkundo">↩ Desfazer esta marcação</button><button type="button" class="fn-btn" data-close>Fechar</button></div>', 'Marcação concluída');
+  }
+  async function runUndoBulk() {
+    var keys = lastBulk || []; if (!keys.length) { closeSheet(); return; }
+    var btn = $('#fn-overlay [data-act="bulkundo"]'); if (btn) { btn.disabled = true; btn.textContent = 'Desfazendo…'; }
+    if (DEMO) { keys.forEach(function (k) { demoSet.delete(k); demoQty.delete(k); }); lastBulk = null; closeSheet(); progCache = {}; renderAll(); toast('Marcação desfeita.'); return; }
+    if (!loggedIn()) { closeSheet(); return; }
+    var removed = [], failed = false;
+    for (var i = 0; i < keys.length; i += 50) {
+      var chunk = keys.slice(i, i + 50), res;
+      try { res = await sbClient.from('collection').delete().eq('user_id', uid()).in('slot_key', chunk); } catch (e) { res = { error: e }; }
+      if (res && res.error) { failed = true; console.error(res.error); break; }
+      chunk.forEach(function (k) { collected.delete(k); collectedQty.delete(k); }); removed = removed.concat(chunk);
+    }
+    lastBulk = failed ? keys.filter(function (k) { return removed.indexOf(k) < 0; }) : null;
+    closeSheet(); progCache = {}; renderAll();
+    toast(failed ? 'Desfiz ' + removed.length + ' de ' + keys.length + '. Houve um erro.' : 'Marcação desfeita (' + removed.length + (removed.length === 1 ? ' versão' : ' versões') + ').');
   }
 
   // ── folhas ─────────────────────────────────────────────────
@@ -1284,7 +1423,7 @@
         var cc3 = findCard(t.dataset.n);
         if (cc3) { var e3 = entryOf(keyOf(st.set, cc3, t.dataset.ver)); e3.origins.splice(Number(t.dataset.delorig), 1); setEntry(t.dataset.n, t.dataset.ver, e3.qty, e3.origins); }
       }
-      else if (t.dataset.act) { var a = t.dataset.act; e.preventDefault(); if (a === 'share') doShare(); else if (a === 'sharerun') runShare(); else if (a === 'sharecopy') copyShare(); else if (a === 'sharewa') waShare(); else if (a === 'copy') doCopy(); else if (a === 'copyrun') runCopy(); else if (a === 'print') doPrint(); else if (a === 'bulk') doBulk(); else if (a === 'bulkrun') runBulk();
+      else if (t.dataset.act) { var a = t.dataset.act; e.preventDefault(); if (a === 'share') doShare(); else if (a === 'sharerun') runShare(); else if (a === 'sharecopy') copyShare(); else if (a === 'sharewa') waShare(); else if (a === 'copy') doCopy(); else if (a === 'copyrun') runCopy(); else if (a === 'print') doPrint(); else if (a === 'bulk') doBulk(); else if (a === 'bulkrun') runBulk(); else if (a === 'bulkundo') runUndoBulk();
         else if (a === 'dexmore') { dexLimit += 300; renderBody(); }
         else if (a === 'dexnew') openDexNew();
         else if (a === 'dexcreate') dexCreate(t.dataset.kind);
@@ -1300,14 +1439,18 @@
         else if (a === 'cbsave') cbSaveEdit();
         else if (a === 'cbdelete') cbDelete();
         else if (a === 'cbadd') openCbAdd();
-        else if (a === 'cbpick') cbPick(t.dataset.set, t.dataset.cn); }
+        else if (a === 'cbpick') cbPick(t.dataset.set, t.dataset.cn);
+        else if (a === 'progcard') progressCard();
+        else if (a === 'artists') openArtists();
+        else if (a === 'artbinder') artistBinder(t.dataset.artist);
+        else if (a === 'dexfill') dexAutoFill(); }
       else if (t.dataset.blk) toggleBlock(t.dataset.blk);
       else if (t.dataset.pick) pickSet(t.dataset.pick);
       else if (t.dataset.close != null) closeSheet();
       else if (t.dataset.bnav) { st.bpage = Math.max(0, st.bpage + Number(t.dataset.bnav) * (innerWidth >= 700 ? 2 : 1)); renderBody(); }
       else if (t.dataset.pocket) { st.pocket = String(t.dataset.pocket); LS.set('pocket', st.pocket); st.bpage = 0; renderBody(); }
     });
-    document.addEventListener('input', function (e) { if (e.target.id === 'fn-dp-q') { renderDexPicker(e.target.value); return; } if (e.target.id === 'fn-cp-q') { renderCbAdd(e.target.value); return; } if (e.target.classList && e.target.classList.contains('fn-tsearch')) applyTreeFilter(e.target.closest('.fn-side,.fn-drawer')); });
+    document.addEventListener('input', function (e) { if (e.target.id === 'fn-dp-q') { renderDexPicker(e.target.value); return; } if (e.target.id === 'fn-cp-q') { renderCbAdd(e.target.value); return; } if (e.target.id === 'fn-ar-q') { renderArtists(e.target.value); return; } if (e.target.classList && e.target.classList.contains('fn-tsearch')) applyTreeFilter(e.target.closest('.fn-side,.fn-drawer')); });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') { var ov = $('#fn-overlay'); if (ov && !ov.hidden) closeSheet(); else if (document.body.classList.contains('fn-focus')) { st.focus = false; LS.set('focus', false); applyFocus(); } return; }
       var tg = e.target && e.target.tagName; if (/INPUT|SELECT|TEXTAREA/.test(tg || '')) return;
