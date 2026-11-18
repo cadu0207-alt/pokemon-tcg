@@ -19,8 +19,8 @@
 // (activate acima já faz isso). Ver [[feedback_coding]].
 // v6 (04/11/2026): menus Pokédex/Fichários do iPhone (fichario_accordion.js) e seletor do Master Set — força quem
 // já tem o SW instalado a trocar de versão e baixar os scripts novos.
-const CACHE = 'mydeck-v6';
-const STATIC = ['./', './index.html', './style.css', './app.js', './fichario_patch.js', './ev_calculator.js',
+const CACHE = 'mydeck-v7'; // v7 (18/11/2026): limpeza — saiu Preço Justo/Simulador/Lorcana (ev_calculator.js não existe mais)
+const STATIC = ['./', './index.html', './style.css', './app.js', './fichario_patch.js',
   './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
 self.addEventListener('install', e => {

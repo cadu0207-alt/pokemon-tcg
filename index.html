@@ -21,11 +21,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="google-site-verification" content="BCnkuzgOq8Up6R74GAR7AoqM3WhsrL52KgB2ds4P1sc" />
 <title>MyDeck — Pokémon TCG Tracker</title>
-<meta name="description" content="MyDeck é um tracker gratuito de coleção Pokémon TCG: acompanhe seu master set, gastos, cartas tiradas e preço justo, além de ofertas e cupons rastreados no Mercado Livre.">
+<meta name="description" content="MyDeck é um tracker gratuito de coleção Pokémon TCG: acompanhe seu master set e suas cartas tiradas, além de ofertas e cupons rastreados no Mercado Livre.">
 <link rel="canonical" href="https://mydecktcg.com.br/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="MyDeck — Pokémon TCG Tracker">
-<meta property="og:description" content="Tracker gratuito de coleção Pokémon TCG: master set, gastos, cartas tiradas, preço justo e ofertas rastreadas no Mercado Livre.">
+<meta property="og:description" content="Tracker gratuito de coleção Pokémon TCG: master set, cartas tiradas e ofertas rastreadas no Mercado Livre.">
 <meta property="og:url" content="https://mydecktcg.com.br/">
 <!-- og:image dedicado (04/09/2026): antes apontava pro ícone quadrado
      512x512 (pokébola) — funciona, mas cortava/centralizava mal nos
@@ -40,7 +40,7 @@
 <meta property="og:site_name" content="MyDeck">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="MyDeck — Pokémon TCG Tracker">
-<meta name="twitter:description" content="Tracker gratuito de coleção Pokémon TCG: master set, gastos, cartas tiradas, preço justo e ofertas rastreadas no Mercado Livre.">
+<meta name="twitter:description" content="Tracker gratuito de coleção Pokémon TCG: master set, cartas tiradas e ofertas rastreadas no Mercado Livre.">
 <meta name="twitter:image" content="https://mydecktcg.com.br/og-image.jpg">
 <!-- JSON-LD (04/09/2026): structured data pra rich snippets/entender o site -
      WebSite (com nome/URL do site) + Organization (marca) + WebApplication
@@ -69,7 +69,7 @@
       "@type": "WebApplication",
       "name": "MyDeck — Pokémon TCG Tracker",
       "url": "https://mydecktcg.com.br/",
-      "description": "Tracker gratuito de coleção Pokémon TCG: master set, gastos, cartas tiradas, preço justo e ofertas rastreadas no Mercado Livre.",
+      "description": "Tracker gratuito de coleção Pokémon TCG: master set, cartas tiradas e ofertas rastreadas no Mercado Livre.",
       "applicationCategory": "UtilitiesApplication",
       "operatingSystem": "Web",
       "inLanguage": "pt-BR",
@@ -293,7 +293,6 @@
     <button type="button" class="tdesk-link" data-tab="dash" onclick="goToTab('dash')"><span class="tdesk-icon">📊</span>Dashboard</button>
     <button type="button" class="tdesk-link" data-tab="fichario" onclick="goToTab('fichario')"><span class="tdesk-icon">📚</span>Fichários</button>
     <button type="button" class="tdesk-link" data-tab="gastos" onclick="goToTab('gastos')"><span class="tdesk-icon">💸</span>Gastos</button>
-    <button type="button" class="tdesk-link" data-tab="preco" onclick="goToTab('preco')"><span class="tdesk-icon">💰</span>Preço Justo</button>
     <button type="button" class="tdesk-link" data-tab="centralizacao" onclick="goToTab('centralizacao')"><span class="tdesk-icon">🎯</span>Centralização</button>
 
     <div class="tdesk-label">Compra &amp; Venda</div>
@@ -312,8 +311,6 @@
     <button type="button" class="tdesk-link tdesk-admin" id="desk-tab-admin" style="display:none" data-tab="admin" onclick="goToTab('admin')"><span class="tdesk-icon">🔐</span>Admin</button>
 
     <div class="tdesk-spacer"></div>
-    <button type="button" class="tdesk-link tdesk-cta" onclick="window.open('simulador.html','_blank')"><span class="tdesk-icon">🎰</span>Simulador</button>
-    <button type="button" class="tdesk-link tdesk-cta" onclick="window.open('lorcana.html','_blank')"><span class="tdesk-icon">✨</span>Alpha Lorcana</button>
   </nav>
 
   <!-- ids nav-tab-* adicionados 02/08/2026 — permitem goToTab(id) (app.js) navegar
@@ -332,7 +329,6 @@
     <button type="button" class="tab" id="nav-tab-fichario" onclick="go('fichario',this)">📚 Fichário</button>
     <button type="button" class="tab" id="nav-tab-gastos" onclick="go('gastos',this)">💸 Gastos</button>
     <button type="button" class="tab" id="nav-tab-cartas" onclick="go('cartas',this)">📈 Compra/Venda</button>
-    <button type="button" class="tab" id="nav-tab-preco" onclick="go('preco',this)">💰 Preço Justo</button>
     <button type="button" class="tab" id="nav-tab-mk" onclick="go('mk',this)">🧸 Loja Toybox <i class="mk-nav-badge" hidden>NOVO</i></button>
     <button type="button" class="tab" id="nav-tab-lojas" onclick="go('lojas',this)">🔎 Busca de Promoções ML</button>
     <button type="button" class="tab" id="nav-tab-iniciantes" onclick="go('iniciantes',this)">🔰 Iniciantes</button>
@@ -350,7 +346,6 @@
          — display:none aqui é o estado padrão/seguro; admin_panel.js mostra via JS
          só depois de confirmar o e-mail logado (e-mail do Eduardo). -->
     <button type="button" class="tab" id="nav-tab-admin" style="display:none" onclick="go('admin',this)">🔐 Admin</button>
-    <button type="button" class="tab" onclick="window.open('simulador.html','_blank')" style="background:linear-gradient(90deg,#7b2ff744,#f107a322);color:#c084fc">🎰 Simulador</button>
   </nav>
 
   <!-- MENU MOBILE (barra inferior estilo app) — 29/08/2026, pedido do Eduardo
@@ -386,7 +381,6 @@
       <div class="msheet-grid">
         <button type="button" class="msheet-item" data-tab="dash" onclick="mNav('dash')"><span class="msheet-ic">📊</span><span class="msheet-lb">Dashboard</span></button>
         <button type="button" class="msheet-item" data-tab="gastos" onclick="mNav('gastos')"><span class="msheet-ic">💸</span><span class="msheet-lb">Gastos</span></button>
-        <button type="button" class="msheet-item" data-tab="preco" onclick="mNav('preco')"><span class="msheet-ic">💰</span><span class="msheet-lb">Preço Justo</span></button>
         <button type="button" class="msheet-item" data-tab="centralizacao" onclick="mNav('centralizacao')"><span class="msheet-ic">🎯</span><span class="msheet-lb">Centralização</span></button>
       </div>
       <div class="msheet-label">Compra &amp; Venda</div>
@@ -398,7 +392,6 @@
       <div class="msheet-label">&nbsp;</div>
       <div class="msheet-grid">
         <button type="button" class="msheet-item" data-tab="iniciantes" onclick="mNav('iniciantes')"><span class="msheet-ic">🔰</span><span class="msheet-lb">Iniciantes</span></button>
-        <button type="button" class="msheet-item msheet-cta" onclick="closeMSheet();window.open('simulador.html','_blank')"><span class="msheet-ic">🎰</span><span class="msheet-lb">Simulador</span></button>
         <!-- 02/09/2026 (pedido do Eduardo): Alpha Lorcana entra aqui no
              mobile porque a faixa de logo+atalhos que ficava no topo da
              Início (.inicio-brand-row) saiu pra dar lugar aos feeds de
@@ -406,7 +399,6 @@
              Alpha Lorcana que existia no mobile. No desktop continua
              disponível no .tdesk (o cluster fixo .tfa-row-quick, que
              duplicava esse link, foi removido em 04/09/2026). -->
-        <button type="button" class="msheet-item msheet-cta" onclick="closeMSheet();window.open('lorcana.html','_blank')"><span class="msheet-ic">✨</span><span class="msheet-lb">Alpha Lorcana</span></button>
         <!-- espelha #nav-tab-admin: admin_panel.js mostra só pro Eduardo
              (updateAdminTabVisibility, isAdmin()). -->
         <button type="button" class="msheet-item msheet-admin" id="msheet-tab-admin" data-tab="admin" style="display:none" onclick="mNav('admin')"><span class="msheet-ic">🔐</span><span class="msheet-lb">Admin</span></button>
@@ -455,7 +447,7 @@
        (hasPerm('inicio'), home_content_admin.js). -->
   <div id="inicio" class="pane active">
     <!-- 03/10/2026: h1 da página (SEO/leitores de tela). A logo é imagem e não conta como título; .sr-only deixa visível só pra quem lê a página, sem mexer no layout. -->
-    <h1 class="sr-only">MyDeck — tracker de coleção Pokémon TCG Brasil: master set, fichário, gastos, preço justo, leilões e rifas</h1>
+    <h1 class="sr-only">MyDeck — tracker de coleção Pokémon TCG Brasil: master set, fichário e leilões</h1>
     <!-- IDENTIDADE VISUAL + ATALHOS 31/08/2026 (pedido do Eduardo): logo e os
          2 botões viviam empilhados e centralizados, ocupando bastante altura
          antes das Novidades. Viraram uma faixa só: logo à esquerda (menor,
@@ -816,14 +808,6 @@
 
     <!-- Conteúdo do binder -->
     <div id="bwrap"></div>
-  </div>
-
-  <!-- ===== ABA PREÇO JUSTO ===== -->
-  <div id="preco" class="pane">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-      <div class="sec-title" role="heading" aria-level="2" style="margin:0">💰 Calculadora de Preço Justo / EV</div>
-    </div>
-    <div id="ev-wrap"></div>
   </div>
 
   <div id="lojas" class="pane">
@@ -2164,7 +2148,6 @@ window.loadJsPdf=function(){
      diário), continue criando <script defer> aqui em cima; pra sets SV/legados,
      adicione o arquivo em LAZY_SET_SCRIPTS no app.js. -->
 
-<script defer src="pull_rates.js"></script>
 <script defer src="price_updated_at.js"></script>
 <!-- 17/10/2026: artes da CEL30 e catálogo de produtos agora são arquivos próprios (o Simulador também usa) -->
 <script defer src="img_cel30.js"></script>
@@ -2190,7 +2173,6 @@ window.loadJsPdf=function(){
 <script defer src="fichario_pokemon_binder.js"></script>
 <script defer src="fichario_nav_desktop.js"></script>
 <script defer src="import_ligapokemon.js"></script>
-<script defer src="ev_calculator.js"></script>
 <script defer src="lojas.js"></script>
 <!-- staff_access.js (21/08/2026): tabela/telinha de acesso da equipe (view-only
      por padrão + permissões granulares por área) — precisa carregar depois de
@@ -2258,16 +2240,6 @@ window.loadJsPdf=function(){
 <script defer src="xp_system.js"></script>
 <script defer src="wild_pokemon.js"></script>
 <script defer src="inicio_ranking.js"></script>
-<script>
-// Renderizar EV ao abrir a aba Preco Justo (após scripts deferidos)
-document.addEventListener('DOMContentLoaded', function(){
-  const _goOriginal = window.go;
-  window.go = function(id, el) {
-    _goOriginal && _goOriginal(id, el);
-    if (id === 'preco') renderEV();
-  };
-});
-</script>
 <script>
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
 </script>

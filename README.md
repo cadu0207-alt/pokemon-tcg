@@ -24,7 +24,6 @@ Quase tudo fica na raiz, sem subpastas por módulo.
 | `leilao*.js` | Leilão. |
 | `mk_*.js`, `mk.css` | Marketplace e loja Toybox. |
 | `lojas*.js` | Lojas e ofertas rastreadas, cupons e alertas de preço. |
-| `lorcana*.js`, `lorcana.html` | Seção de Lorcana. |
 | `rifa.js`, `inicio*.js`, `notificacoes.js`, `wild_pokemon.js` | Rifa, página inicial, notificações e minigame. |
 | `sw.js`, `manifest.json`, `pwa_install.js` | Service worker e instalação como aplicativo (PWA). |
 | `CNAME`, `robots.txt`, `sitemap.xml`, `llms.txt` | Domínio, SEO e indexação. |
