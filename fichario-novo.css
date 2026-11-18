@@ -360,6 +360,13 @@ button{cursor:pointer}
 @media (min-width:700px){.fn-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:699px){.fn-more span{display:none}.fn-rrow{grid-template-columns:1fr 1fr auto}}
 
+/* Compartilhar (modal das Ferramentas) */
+.fn-note{margin:0;font-size:13px;line-height:1.5;color:var(--text2)}
+#fn-share-out{display:grid;gap:10px;justify-items:center}
+#fn-share-out input{width:100%;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text);padding:10px;font-size:13px}
+#fn-share-out .fn-btn{width:100%}
+#fn-share-qr{border-radius:8px;background:#fff}
+
 /* ── Modo foco: fichário inteiro na tela ── */
 @media (min-width:700px){
   body.fn-focus{--top-h:46px}
