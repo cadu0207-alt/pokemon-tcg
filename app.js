@@ -1176,7 +1176,9 @@ function go(id,el){
 // 17/10/2026: Lojas Confiáveis e Cadastro Positivo saíram do menu (decisão do Eduardo, foco na Loja Toybox);
 // links antigos caem na Loja Toybox. Painéis, código e dados continuam no repo/banco, só sem entrada.
 // 18/11/2026: Loja Toybox, Preço Justo também saíram — qualquer link/notificação antiga cai na Início (ou no Dashboard).
-const RETIRED_TABS={mercado:'inicio',positivo:'inicio',mk:'inicio',preco:'dash'};
+const RETIRED_TABS={mercado:'inicio',positivo:'inicio',mk:'inicio',preco:'dash',
+  // 18/11/2026: Gastos, Venda de Produtos (cartas) e Rifas ficam ESCONDIDOS (sem botão de menu); código e dados preservados — ver _ocultos/LEIAME.md
+  gastos:'dash',cartas:'dash',rifas:'inicio'};
 function goToTab(id){
   if(RETIRED_TABS[id])id=RETIRED_TABS[id];
   const el=document.getElementById('nav-tab-'+id);
@@ -1323,16 +1325,14 @@ function renderDash(){
           <h3 class="dash-empty-title">Seu Dashboard ainda está vazio — comece por aqui</h3>
           <ol class="dash-empty-steps">
             <li><span class="dash-empty-n">1</span><div><b>Marque suas cartas</b><small>Abra um fichário e toque nas cartas que você já tem.</small></div><button type="button" class="btn-mini" onclick="goToTab('fichario')">Abrir Fichário</button></li>
-            <li><span class="dash-empty-n">2</span><div><b>Registre o que você gastou</b><small>Boosters, ETBs e acessórios entram no total investido e no R$/booster.</small></div><button type="button" class="btn-mini" onclick="goToTab('gastos')">Registrar compra</button></li>
-            <li><span class="dash-empty-n">3</span><div><b>Confira o preço justo</b><small>Veja quanto vale a pena pagar por um produto antes de comprar.</small></div><button type="button" class="btn-mini" onclick="goToTab('preco')">Calcular</button></li>
           </ol>
         </section>`
       :'';
   }
   document.getElementById('kpi-dash').innerHTML=
-    kpiHTML('red',dico('wallet')+' Total Investido','R$'+fmtR(invested),purchases.length+' compras','gastos')+
-    kpiHTML('orange',dico('box')+' Boosters',''+tb,'~'+bst.reduce((a,p)=>a+(Number(p.cards)||0),0)+' cartas','gastos')+
-    kpiHTML('gold',dico('coins')+' R$/Booster','R$'+apb.replace('.',','),'média ponderada','gastos')+
+    kpiHTML('red',dico('wallet')+' Total Investido','R$'+fmtR(invested),purchases.length+' compras')+
+    kpiHTML('orange',dico('box')+' Boosters',''+tb,'~'+bst.reduce((a,p)=>a+(Number(p.cards)||0),0)+' cartas')+
+    kpiHTML('gold',dico('coins')+' R$/Booster','R$'+apb.replace('.',','),'média ponderada')+
     kpiHTML('teal',dico('book')+' Valor Fichário','R$'+fmtR(fichVal),collected.size+' slots coletados','fichario')+
     kpiHTML('blue',dico('trend')+' Fichário ÷ Investido',roi+'%','valor do fichário ÷ investido em cartas','fichario');
 
