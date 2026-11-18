@@ -290,7 +290,7 @@
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats">' + (b ? '<span><b>' + own + '</b>/' + t + ' espécies</span><span>Com carta escolhida <b>' + (t - empty) + '</b></span>' + (empty ? '<span>Vagas sem carta <b>' + empty + '</b></span>' : '') +
         (missV > 0 ? '<span class="fn-miss">Faltam <b>' + esc(money0(missV)) + '</b> <small>(só nas vagas com carta)</small></span>' : '') : '<span>' + (loggedIn() || DEMO ? 'Carregando a sua Pokédex…' : 'Entre no MyDeck para carregar a sua Pokédex.') + '</span>') + '</div>' +
-      '<div class="fn-hero-links"><a href="./#fichario">Abrir no fichário atual</a></div>';
+      '<div class="fn-hero-links"><a href="./?classico#fichario">Abrir no fichário clássico</a></div>';
     $('#fn-setbtn-emoji').textContent = (b && b.emoji) || '🌐'; $('#fn-setbtn-code').textContent = 'Pokédex'; $('#fn-setbtn-name').textContent = name;
   }
   function dexTreeHtml() {
@@ -505,7 +505,7 @@
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats">' + (t.slots ? '<span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' + (t.got >= t.slots ? '<span><b style="color:var(--teal)">Fichário completo 🎉</b></span>' : t.miss > 0 ? '<span class="fn-miss">Faltam <b>' + esc(money0(t.miss)) + '</b></span>' : '<span class="fn-miss">Faltam <b>' + (t.slots - t.got) + '</b> slots</span>')
         : '<span>' + (manual ? (cur.pending ? 'Carregando as cartas…' : 'Este fichário ainda não tem cartas. Use “Adicionar cartas” ou o botão “Guardar em fichário” de qualquer carta.') : 'Nenhuma carta nas suas coleções ativas para esta sugestão.') + '</span>') + '</div>' +
-      '<div class="fn-hero-links">' + (manual ? '<a href="#" data-act="cbadd">➕ Adicionar cartas</a>' : '') + '<a href="#" data-act="cbedit">✏️ Editar fichário</a><a href="./#fichario">Abrir no fichário atual</a></div>';
+      '<div class="fn-hero-links">' + (manual ? '<a href="#" data-act="cbadd">➕ Adicionar cartas</a>' : '') + '<a href="#" data-act="cbedit">✏️ Editar fichário</a><a href="./?classico#fichario">Abrir no fichário clássico</a></div>';
     $('#fn-setbtn-emoji').textContent = b.emoji || '📚'; $('#fn-setbtn-code').textContent = cbIsFav(b) ? 'Favoritos' : 'Meu fichário'; $('#fn-setbtn-name').textContent = nm;
   }
   // ── favoritos ──
@@ -830,7 +830,7 @@
     var r = cur.pk, pages = pkPages(b), per = pages[0].length, total = pages.length * per, pct = r.filled ? Math.round(r.got / r.filled * 100) : 0, sp = (b.filter_config || {}).name;
     $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>📍 ' + esc(plainName(b.name) || 'Sem nome') + '</h1><p class="fn-hero-sub">Fichário de Pokémon' + (sp ? ' · ' + esc(sp) : '') + ' · ' + pages.length + ' página' + (pages.length === 1 ? '' : 's') + ' de ' + binderSizeLabel(b.layout || 3) + '</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
       '<div class="fn-progress"><i style="width:' + pct + '%"></i></div><div class="fn-stats"><span><b>' + r.got + '</b>/' + r.filled + ' cartas colocadas que você tem</span><span>Vagas preenchidas <b>' + r.filled + '</b>/' + total + '</span></div>' +
-      '<div class="fn-hero-links"><a href="#" data-act="pkedit">' + (pkEdit ? '✔ Terminar edição' : '✏️ Editar posições') + '</a><a href="#" data-act="cbedit">⚙️ Nome / excluir</a><a href="./#fichario">Abrir no fichário atual</a></div>' +
+      '<div class="fn-hero-links"><a href="#" data-act="pkedit">' + (pkEdit ? '✔ Terminar edição' : '✏️ Editar posições') + '</a><a href="#" data-act="cbedit">⚙️ Nome / excluir</a><a href="./?classico#fichario">Abrir no fichário clássico</a></div>' +
       (pkEdit ? '<div class="fn-warn" style="margin-top:10px">Modo edição: toque numa vaga vazia para escolher a carta, ou numa carta para trocá-la ou tirá-la. Tudo é salvo na hora.</div>' : '');
     $('#fn-setbtn-emoji').textContent = '📍'; $('#fn-setbtn-code').textContent = 'Pokémon'; $('#fn-setbtn-name').textContent = plainName(b.name) || 'Pokémon';
   }
@@ -936,7 +936,13 @@
 
   function cbRefs() { return cur.cards.map(function (c) { return { set: c._set, n: c.n }; }); }
 
+  // links vindos do fichário clássico usam __cb__<id> para qualquer tipo de fichário: acha o tipo certo quando a lista chega
+  function fixSetId() {
+    if (!isCb(st.set) || cbBinder(st.set)) return; var id = st.set.slice(3);
+    if (pkBinder('pk:' + id)) st.set = 'pk:' + id; else if (dexBinder('dex:' + id)) st.set = 'dex:' + id;
+  }
   function loadCur() {
+    fixSetId();
     if (isDex(st.set)) { loadDex(); return; }
     if (isCb(st.set)) { loadCb(); return; }
     if (isPk(st.set)) { loadPk(); return; }
@@ -1146,7 +1152,7 @@
       '<div class="fn-stats"><span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' +
       (t.sT ? '<span>Base <b>' + t.bG + '</b>/' + t.bT + '</span><span>Secretas <b>' + t.sG + '</b>/' + t.sT + '</span>' : '') +
       (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : t.got >= t.slots ? '<span><b style="color:var(--teal)">Coleção completa 🎉</b></span>' : t.miss > 0 ? '<span class="fn-miss">Faltam <b>' + esc(money0(t.miss)) + '</b></span>' : '<span class="fn-miss">Faltam <b>' + (t.slots - t.got) + '</b> slots</span>') + '</div>' +
-      bridgeHtml(t) + infoHtml() + '<div class="fn-hero-links"><a href="./#lojas">Ver ofertas</a><a href="./#fichario/' + esc(st.set) + '">Abrir no fichário atual</a></div>';
+      bridgeHtml(t) + infoHtml() + '<div class="fn-hero-links"><a href="./#lojas">Ver ofertas</a><a href="./?classico#fichario/' + esc(st.set) + '">Abrir no fichário clássico</a></div>';
     $('#fn-setbtn-emoji').textContent = cat.emoji || '🃏';
     $('#fn-setbtn-code').textContent = label.split('—')[0].trim();
     $('#fn-setbtn-name').textContent = nameOnly;
