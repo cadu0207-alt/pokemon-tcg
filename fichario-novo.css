@@ -419,3 +419,11 @@ button{cursor:pointer}
 .fn-form input[type="color"]{width:100%;height:42px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);padding:3px}
 .fn-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .fn-sub-h{margin:16px 2px 8px;font-size:13px;color:var(--text2);font-weight:700}
+
+/* ── Link compartilhado (somente leitura) ── */
+body.fn-share .fn-side,body.fn-share #fn-more,body.fn-share #fn-user,body.fn-share .fn-ph .fn-vers{display:none!important}
+body.fn-share .fn-layout{display:block;max-width:none}
+body.fn-share #fn-setbtn{pointer-events:none}
+body.fn-share #fn-setbtn .fn-caret{display:none}
+body.fn-share .fn-ph .fn-img,body.fn-share .fn-pocket.fn-ph{pointer-events:none}
+

@@ -1082,19 +1082,23 @@ function _printOnlyState() {
 }
 window._printOnlyState = _printOnlyState;
 
-async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
+// opts (opcional, usado só pelo fichário novo): { keySetOf(c) → código do set usado na CHAVE da marcação (ex.: 'me04-en' para a
+// coleção em inglês; padrão = o próprio setId) e lang → idioma da arte ('en','jp'…). Sem opts, tudo funciona como sempre.
+async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState, opts) {
   const N     = ficBinderSize;
   const { cols: BC, rows: BR } = binderDims(N);
   const cards = cardsOverride || getSetCards();
   const sIdOf = setIdOf || (() => currentSet);
   let slots = [];
-  cards.forEach(c => getSlots(c, sIdOf(c)).forEach(s => slots.push({ card: c, ver: s.ver, setId: sIdOf(c) })));
+  const kSetOf = (opts && opts.keySetOf) || sIdOf;
+  const pLang = opts && opts.lang;
+  cards.forEach(c => getSlots(c, sIdOf(c)).forEach(s => slots.push({ card: c, ver: s.ver, setId: sIdOf(c), keySet: kSetOf(c) })));
 
   // Filtra ANTES de paginar — imprime só o que o filtro pede, sem página
   // vazia sobrando pros slots que ficaram de fora.
   if (onlyState === 'missing' || onlyState === 'collected') {
     slots = slots.filter(slot => {
-      const key = `${slot.setId}:${slot.card.n}:${slot.ver}`;
+      const key = `${slot.keySet}:${slot.card.n}:${slot.ver}`;
       const qty = ficCollection[key]?.qty || (collected.has(key) ? 1 : 0);
       return onlyState === 'missing' ? qty <= 0 : qty > 0;
     });
@@ -1174,8 +1178,8 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
     popup.document.write(`<div class="page">`);
     page.forEach(slot => {
       if (!slot) { popup.document.write(`<div class="slot"><div class="empty">vazio</div></div>`); return; }
-      const { card: c, ver: v, setId } = slot;
-      const key = `${setId}:${c.n}:${v}`;
+      const { card: c, ver: v, setId, keySet } = slot;
+      const key = `${keySet}:${c.n}:${v}`;
       const qty = ficCollection[key]?.qty || (collected.has(key) ? 1 : 0);
       // CORRIGIDO 04/09/2026 (pedido do Eduardo, mockup "antes/depois"): badge
       // era um texto colorido sobre fundo quase transparente (${col}33 = ~20%
@@ -1195,7 +1199,7 @@ async function printBinder(cardsOverride, setIdOf, labelOverride, onlyState) {
       popup.document.write(`
       <div class="slot">
         <div class="imgwrap">
-          <img src="${(typeof imgMedium === 'function') ? imgMedium(imgUrl(c.n, setId, c)) : imgUrl(c.n, setId, c)}" alt="${c.name}" style="${grayFilter}" referrerpolicy="no-referrer"
+          <img src="${(() => { const u = (pLang && pLang !== 'pt' && typeof getBinderImg === 'function' && getBinderImg(c, setId, pLang)) || imgUrl(c.n, setId, c); return (typeof imgMedium === 'function') ? imgMedium(u) : u; })()}" alt="${c.name}" style="${grayFilter}" referrerpolicy="no-referrer"
                onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=empty>${c.n}<br>${c.name}</div>')">
         </div>
         <div class="label">
