@@ -296,7 +296,6 @@
     <div class="tdesk-label">Compra &amp; Venda</div>
     <button type="button" class="tdesk-link" data-tab="lojas" onclick="goToTab('lojas')"><span class="tdesk-icon">🔎</span>Busca de Promoções ML</button>
     <!-- espelha nav-tab-leilao: só admin vê (updateLeilaoTabVisibility em leilao.js) -->
-    <button type="button" class="tdesk-link" id="desk-tab-leilao" style="display:none" data-tab="leilao" onclick="goToTab('leilao')"><span class="tdesk-icon">🔨</span>Leilão</button>
     <!-- RIFAS (24/08/2026): mesma visibilidade do leilão — qualquer usuário
          logado vê (updateRifasTabVisibility em rifa.js); painel de rifeiro
          usa a MESMA permissão do leiloeiro (aucIsLeilaoAdmin). -->
@@ -329,7 +328,6 @@
          lojas.js), igual o padrão da aba Admin abaixo. display:none aqui é o
          estado padrão/seguro; leilao.js mostra via JS. Pra abrir pra todos os
          usuários registrados, trocar a condição em updateLeilaoTabVisibility(). -->
-    <button type="button" class="tab" id="nav-tab-leilao" style="display:none" onclick="go('leilao',this)">🔨 Leilão</button>
     <!-- RIFAS (24/08/2026): mesma visibilidade do leilão (updateRifasTabVisibility,
          rifa.js) — qualquer usuário logado vê; painel de rifeiro usa a mesma
          permissão do leiloeiro. -->
@@ -357,7 +355,6 @@
     <!-- espelha #nav-tab-leilao: leilao.js mostra pra qualquer usuário
          logado (updateLeilaoTabVisibility, show=!!uid()) — não é só admin,
          só o painel interno do leiloeiro que é restrito. -->
-    <button type="button" class="mnav-btn" id="mnav-tab-leilao" data-tab="leilao" style="display:none" onclick="mNav('leilao')"><span class="mnav-ic">🔨</span>Leilão</button>
     <!-- espelha #nav-tab-rifas: mesma regra do leilão (rifa.js,
          updateRifasTabVisibility). -->
     <button type="button" class="mnav-btn" id="mnav-more-btn" onclick="toggleMSheet()" aria-expanded="false" aria-controls="msheetBackdrop"><span class="mnav-ic">☰</span>Mais</button>
@@ -2000,7 +1997,6 @@ window.loadJsPdf=function(){
 <!-- frete.js (31/08/2026): módulo compartilhado de cotação de frete
      (SuperFrete) — usado por leilao.js/rifa.js hoje, marketplace depois.
      Precisa carregar ANTES do leilao.js. -->
-<script defer src="frete.js"></script>
 <script defer src="leilao.js"></script>
 <!-- 02/10/2026: aba Participantes & Bloqueios do Leilão -->
 <script defer src="leilao_participantes.js"></script>

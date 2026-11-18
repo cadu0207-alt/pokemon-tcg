@@ -1178,7 +1178,9 @@ function go(id,el){
 // 18/11/2026: Loja Toybox, Preço Justo também saíram — qualquer link/notificação antiga cai na Início (ou no Dashboard).
 const RETIRED_TABS={mercado:'inicio',positivo:'inicio',mk:'inicio',preco:'dash',
   // 18/11/2026: Gastos, Venda de Produtos (cartas) e Rifas ficam ESCONDIDOS (sem botão de menu); código e dados preservados — ver _ocultos/LEIAME.md
-  gastos:'dash',cartas:'dash',rifas:'inicio'};
+  gastos:'dash',cartas:'dash',rifas:'inicio',
+  // 18/11/2026: Leilão "adormecido" (pedido do Eduardo) — sem botão; leilao.js segue carregado e a aba #leilao fica no index.html
+  leilao:'inicio'};
 function goToTab(id){
   if(RETIRED_TABS[id])id=RETIRED_TABS[id];
   const el=document.getElementById('nav-tab-'+id);
