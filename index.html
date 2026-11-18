@@ -91,7 +91,6 @@
 <link rel="preconnect" href="https://images.scrydex.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,900&family=IBM+Plex+Mono:wght@400;600;700&family=DM+Sans:wght@300;500;700&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="mk.css">
 <script>
 (function(){
   var t = localStorage.getItem('mydeck-theme') || 'light';
@@ -296,7 +295,6 @@
     <button type="button" class="tdesk-link" data-tab="centralizacao" onclick="goToTab('centralizacao')"><span class="tdesk-icon">🎯</span>Centralização</button>
 
     <div class="tdesk-label">Compra &amp; Venda</div>
-    <button type="button" class="tdesk-link" data-tab="mk" onclick="goToTab('mk')"><span class="tdesk-icon">🧸</span>Loja Toybox <i class="mk-nav-badge" hidden>NOVO</i></button>
     <button type="button" class="tdesk-link" data-tab="cartas" onclick="goToTab('cartas')"><span class="tdesk-icon">📈</span>Venda de Produtos</button>
     <button type="button" class="tdesk-link" data-tab="lojas" onclick="goToTab('lojas')"><span class="tdesk-icon">🔎</span>Busca de Promoções ML</button>
     <!-- espelha nav-tab-leilao: só admin vê (updateLeilaoTabVisibility em leilao.js) -->
@@ -329,7 +327,6 @@
     <button type="button" class="tab" id="nav-tab-fichario" onclick="go('fichario',this)">📚 Fichário</button>
     <button type="button" class="tab" id="nav-tab-gastos" onclick="go('gastos',this)">💸 Gastos</button>
     <button type="button" class="tab" id="nav-tab-cartas" onclick="go('cartas',this)">📈 Compra/Venda</button>
-    <button type="button" class="tab" id="nav-tab-mk" onclick="go('mk',this)">🧸 Loja Toybox <i class="mk-nav-badge" hidden>NOVO</i></button>
     <button type="button" class="tab" id="nav-tab-lojas" onclick="go('lojas',this)">🔎 Busca de Promoções ML</button>
     <button type="button" class="tab" id="nav-tab-iniciantes" onclick="go('iniciantes',this)">🔰 Iniciantes</button>
     <button type="button" class="tab" id="nav-tab-centralizacao" onclick="go('centralizacao',this)">🎯 Avaliação de Centralização</button>
@@ -363,7 +360,6 @@
   <nav class="mnav" aria-label="Navegação mobile" id="mnav">
     <button type="button" class="mnav-btn active" id="mnav-tab-inicio" data-tab="inicio" onclick="mNav('inicio')"><span class="mnav-ic">🏠</span>Início</button>
     <button type="button" class="mnav-btn" id="mnav-tab-fichario" data-tab="fichario" onclick="mNav('fichario')"><span class="mnav-ic">📚</span>Fichário</button>
-    <button type="button" class="mnav-btn" id="mnav-tab-mk" data-tab="mk" onclick="mNav('mk')"><span class="mnav-ic">🧸</span>Toybox<i class="mk-nav-badge mk-nav-dot" hidden></i></button>
     <!-- espelha #nav-tab-leilao: leilao.js mostra pra qualquer usuário
          logado (updateLeilaoTabVisibility, show=!!uid()) — não é só admin,
          só o painel interno do leiloeiro que é restrito. -->
@@ -385,7 +381,6 @@
       </div>
       <div class="msheet-label">Compra &amp; Venda</div>
       <div class="msheet-grid">
-        <button type="button" class="msheet-item" data-tab="mk" onclick="mNav('mk')"><span class="msheet-ic">🧸</span><span class="msheet-lb">Loja Toybox <i class="mk-nav-badge" hidden>NOVO</i></span></button>
         <button type="button" class="msheet-item" data-tab="cartas" onclick="mNav('cartas')"><span class="msheet-ic">📈</span><span class="msheet-lb">Venda de Produtos</span></button>
         <button type="button" class="msheet-item" data-tab="lojas" onclick="mNav('lojas')"><span class="msheet-ic">🔎</span><span class="msheet-lb">Busca de Promoções ML</span></button>
       </div>
@@ -467,8 +462,6 @@
     <div id="inicio-welcome-slot"></div>
     <!-- 17/10/2026: banner dos eventos de aparição do minigame (wild_pokemon.js → wpEventRenderBanners); vazio fora de evento -->
     <div id="inicio-wild-event-slot"></div>
-    <!-- Loja Toybox (16/10/2026): banner + produtos, montados sozinhos por mk_banners.js; vazio enquanto não houver produto ativo com estoque -->
-    <div id="mk-hero-slot"></div>
     <div class="inicio-market-feed-target" id="inicio-market-feed-wrap-top"></div>
 
     <div id="inicio-hero-wrap"></div>
@@ -568,7 +561,6 @@
       <b>Ainda não faz o cruzamento automático</b> — quando um valor pedido bater com um valor ofertado, isso vai virar
       um match com sistema de mensagem entre as partes. Por enquanto é só registro.
     </div>
-    <div id="mk-cons-box"></div>
     <div id="cards-hdr"></div>
 
     <div class="cv-section-t">📤 VENDER — o que você tem</div>
@@ -812,11 +804,6 @@
 
   <div id="lojas" class="pane">
     <div id="lojas-wrap"></div>
-  </div>
-
-  <!-- LOJA TOYBOX (15/10/2026): vitrine + painel do lojista (mk_core.js / mk_store.js / mk_panel.js) -->
-  <div id="mk" class="pane">
-    <div id="mk-wrap"></div>
   </div>
 
   <div id="iniciantes" class="pane">
@@ -2219,14 +2206,6 @@ window.loadJsPdf=function(){
 <script defer src="lojas_ordenar.js"></script>
 <script defer src="lojas_admin_collapse.js"></script>
 <!-- Loja Toybox (15/10/2026): base do marketplace. Depende de app.js (sbClient, uid, hasPerm via staff_access.js). Ordem: core, vitrine, painel. -->
-<script defer src="mk_core.js"></script>
-<script defer src="mk_store.js"></script>
-<script defer src="mk_panel.js"></script>
-<script defer src="mk_orders.js"></script>
-<script defer src="mk_cart.js"></script>
-<script defer src="mk_atacado.js"></script>
-<script defer src="mk_consign.js"></script>
-<script defer src="mk_banners.js"></script>
 <script defer src="iniciantes.js"></script>
 <script defer src="centralizacao.js"></script>
 <script defer src="admin_stats.js"></script>

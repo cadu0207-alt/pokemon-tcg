@@ -36,8 +36,6 @@ async function renderAdminOverview() {
   const items = [
     { n: n(p.feedback_unanswered), icon: '💬', label: 'mensagens de usuários sem resposta', act: "openAdminSection('feedback')" },
     { n: n(p.auction_overdue_orders), icon: '🔨', label: 'pagamentos de leilão vencidos (R$ ' + fmtR(p.auction_overdue_amount) + ')', act: "goToTab('leilao')" },
-    { n: n(p.mk_to_ship), icon: '🧸', label: 'pedidos da Toybox pagos, pra enviar', act: "goToTab('mk')" },
-    { n: n(p.mk_waiting_payment), icon: '⏳', label: 'pedidos da Toybox aguardando pagamento', act: "goToTab('mk')" },
     { n: n(p.positivo_pending), icon: '✅', label: 'indicações do Cadastro Positivo pendentes', act: "openAdminSection('positivo')" },
     { n: n(p.stores_pending), icon: '🏪', label: 'lojas confiáveis pendentes', act: "openAdminSection('marketplace')" },
   ].filter(function (i) { return i.n > 0; });

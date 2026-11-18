@@ -1117,7 +1117,7 @@ function goPage(id){
 // Abas que qualquer visitante pode ver sem login — hoje só a Início
 // (conteúdo público: novidades/notícias/vídeos/links/revista + atalhos).
 // Todo o resto exige conta (Opção 1 — ver conversa de 29/08/2026).
-const PUBLIC_TABS = new Set(['inicio','mk']); // mk = vitrine da Loja Toybox (leitura pública)
+const PUBLIC_TABS = new Set(['inicio']);
 function tabRequiresAuth(id){ return !PUBLIC_TABS.has(id); }
 function go(id,el){
   // GATE 29/08/2026 (Opção 1): abas pessoais exigem login — sem sair da
@@ -1150,7 +1150,6 @@ function go(id,el){
   if(id==='cartas'){renderCartas();}
   if(id==='gastos'){renderGastos();}
   if(id==='lojas'){if(typeof renderLojas==='function')renderLojas();}
-  if(id==='mk'){if(typeof renderMk==='function')renderMk();}
   if(id==='mercado'){if(typeof renderMercado==='function')renderMercado();}
   if(id==='leilao'){if(typeof renderLeilaoTab==='function')renderLeilaoTab();}
   if(id==='rifas'){if(typeof renderRifasTab==='function')renderRifasTab();}
@@ -1176,7 +1175,8 @@ function go(id,el){
 // primeiro.
 // 17/10/2026: Lojas Confiáveis e Cadastro Positivo saíram do menu (decisão do Eduardo, foco na Loja Toybox);
 // links antigos caem na Loja Toybox. Painéis, código e dados continuam no repo/banco, só sem entrada.
-const RETIRED_TABS={mercado:'mk',positivo:'mk'};
+// 18/11/2026: Loja Toybox, Preço Justo também saíram — qualquer link/notificação antiga cai na Início (ou no Dashboard).
+const RETIRED_TABS={mercado:'inicio',positivo:'inicio',mk:'inicio',preco:'dash'};
 function goToTab(id){
   if(RETIRED_TABS[id])id=RETIRED_TABS[id];
   const el=document.getElementById('nav-tab-'+id);

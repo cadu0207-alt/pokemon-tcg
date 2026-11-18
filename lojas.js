@@ -599,7 +599,6 @@ function renderStoreCard(s) {
   if (s.tiktok) links.push('<a href="' + s.tiktok + '" target="_blank" rel="noopener">🎵 TikTok</a>');
   if (s.instagram) links.push('<a href="' + s.instagram + '" target="_blank" rel="noopener">📸 Instagram</a>');
   if (s.whatsapp) links.push('<a href="' + s.whatsapp + '" target="_blank" rel="noopener">💬 WhatsApp</a>');
-  if (s.shop) links.unshift('<a href="#" onclick="goToTab(\'mk\');return false;"><b>🛒 Ver a loja no MyDeck</b></a>');
   const linksHtml = links.length ? links.join(' &nbsp;·&nbsp; ') : '<span style="opacity:.5">links em breve</span>';
   return (
     '<div class="store-card" style="--store-color:' + s.color + '">' +
