@@ -657,10 +657,12 @@
     if (DEMO) { if (!demoCb) demoCbInit(); return demoCb; }
     try { return (customBinders || []).filter(function (b) { var t = cbType(b); return b && (t === 'manual' || t === 'preset' || t === 'artist'); }); } catch (e) { return []; }
   }
-  function cbSorted() { return cbBinders().slice().sort(function (a, b) { return (cbIsFav(b) ? 1 : 0) - (cbIsFav(a) ? 1 : 0); }); }
+  function cbOnlyBinders() { return cbBinders().filter(function (b) { return cbType(b) !== 'artist'; }); }
+  function artBinders() { return cbBinders().filter(function (b) { return cbType(b) === 'artist'; }); }
+  function cbSorted() { return cbOnlyBinders().slice().sort(function (a, b) { return (cbIsFav(b) ? 1 : 0) - (cbIsFav(a) ? 1 : 0); }); }
   function cbById(id) { return cbBinders().filter(function (b) { return String(b.id) === String(id); })[0] || null; }
   function cbBinder(setId) { return cbById(String(setId).replace(/^cb:/, '')); }
-  function favBinder() { return cbBinders().filter(cbIsFav)[0] || null; }
+  function favBinder() { return cbOnlyBinders().filter(cbIsFav)[0] || null; }
   function hasRef(b, sid, n) { return (b.card_ids || []).some(function (r) { return r.set === sid && String(r.n) === String(n); }); }
   async function cbSave(p) {
     if (DEMO) {
@@ -715,39 +717,66 @@
   }
   function dropMultiProg() { Object.keys(progCache).forEach(function (k) { if (/^(dex|cb):/.test(k)) delete progCache[k]; }); }
   function cbKind(b) { return cbIsFav(b) ? 'Favoritas de todas as coleções' : cbType(b) === 'preset' ? 'Sugestão temática' : cbType(b) === 'artist' ? 'Fichário por artista' : 'Fichário personalizado'; }
+
   function cbTreeHtml() {
     var bs = cbSorted();
+    var pks = pkBinders();
+    var isCurCb = isCb(st.set) && cur.binder && cbType(cur.binder) !== 'artist';
+    var isOpen = openBlocks().indexOf('__cb') >= 0 || isCurCb || isPk(st.set);
     var rows = bs.map(function (b) {
       var p = cbProg(b), nm = plainName(b.name) || 'Sem nome';
-      return '<button type="button" class="fn-set' + ('cb:' + b.id === st.set ? ' is-cur' : '') + '" data-pick="cb:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' personalizados meus fichários favoritos')) + '"><span class="em">' + esc(b.emoji || '📚') + '</span><span class="tx"><b>' + esc(nm) + '</b><small>' + p.cards + ' carta' + (p.cards === 1 ? '' : 's') + (cbIsFav(b) ? ' · favoritas' : cbType(b) === 'preset' ? ' · temático' : cbType(b) === 'artist' ? ' · artista' : '') + '</small>' +
+      return '<button type="button" class="fn-set' + ('cb:' + b.id === st.set ? ' is-cur' : '') + '" data-pick="cb:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' personalizados meus fichários favoritos')) + '"><span class="em">' + esc(b.emoji || '📚') + '</span><span class="tx"><b>' + esc(nm) + '</b><small>' + p.cards + ' carta' + (p.cards === 1 ? '' : 's') + (cbIsFav(b) ? ' · favoritas' : cbType(b) === 'preset' ? ' · temático' : '') + '</small>' +
         '<div class="mini"><i style="width:' + p.pct + '%"></i></div></span><span class="pc' + (p.pct ? '' : ' z') + '">' + p.pct + '%</span></button>';
     }).join('');
-    rows += pkBinders().map(function (b) {
+    rows += pks.map(function (b) {
       var p = pkProg(b), nm = plainName(b.name) || 'Sem nome';
       return '<button type="button" class="fn-set' + ('pk:' + b.id === st.set ? ' is-cur' : '') + '" data-pick="pk:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' pokemon fichario personalizados ' + ((b.filter_config || {}).name || ''))) + '"><span class="em">📍</span><span class="tx"><b>' + esc(nm) + '</b><small>' + p.filled + ' carta' + (p.filled === 1 ? '' : 's') + ' · Pokémon</small><div class="mini"><i style="width:' + p.pct + '%"></i></div></span><span class="pc' + (p.pct ? '' : ' z') + '">' + p.pct + '%</span></button>';
     }).join('');
     rows += '<button type="button" class="fn-set" data-act="cbnew" data-find="novo fichário criar personalizado"><span class="em">➕</span><span class="tx"><b>Novo fichário</b><small>Personalizado ou sugestão temática</small></span></button>';
-    return '<section class="fn-blk is-open" data-blk-id="__cb"><div class="fn-blk-h"><span class="t">Personalizados</span><span class="n">' + (bs.length + pkBinders().length) + '</span></div><div class="fn-blk-b">' + rows + '</div></section>';
+    return '<section class="fn-blk' + (isOpen ? ' is-open' : '') + '" data-blk-id="__cb">' +
+      '<button type="button" class="fn-blk-h" data-blk="__cb" aria-expanded="' + isOpen + '">' +
+      '<span class="ch">▸</span><span class="t">Personalizados</span>' +
+      '<span class="n">' + (bs.length + pks.length) + '</span>' +
+      '</button><div class="fn-blk-b">' + rows + '</div></section>';
   }
+
+  function artTreeHtml() {
+    var bs = artBinders();
+    var isCurArt = isCb(st.set) && cur.binder && cbType(cur.binder) === 'artist';
+    var isOpen = openBlocks().indexOf('__art') >= 0 || isCurArt;
+    var rows = bs.map(function (b) {
+      var p = cbProg(b), nm = plainName(b.name) || (b.filter_config && b.filter_config.artist) || 'Artista';
+      return '<button type="button" class="fn-set' + ('cb:' + b.id === st.set ? ' is-cur' : '') + '" data-pick="cb:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' artista ilustrador')) + '">' +
+        '<span class="em">' + esc(b.emoji || '🎨') + '</span><span class="tx"><b>' + esc(nm) + '</b><small>' + p.cards + ' carta' + (p.cards === 1 ? '' : 's') + ' · ilustrador</small>' +
+        '<div class="mini"><i style="width:' + p.pct + '%"></i></div></span><span class="pc' + (p.pct ? '' : ' z') + '">' + p.pct + '%</span></button>';
+    }).join('');
+    rows += '<button type="button" class="fn-set" data-act="artists" data-find="adicionar artista ilustrador meus artistas"><span class="em">➕</span><span class="tx"><b>Adicionar artista</b><small>Escolher ilustrador</small></span></button>';
+    return '<section class="fn-blk' + (isOpen ? ' is-open' : '') + '" data-blk-id="__art">' +
+      '<button type="button" class="fn-blk-h" data-blk="__art" aria-expanded="' + isOpen + '">' +
+      '<span class="ch">▸</span><span class="t">Artistas</span>' +
+      '<span class="n">' + bs.length + '</span>' +
+      '</button><div class="fn-blk-b">' + rows + '</div></section>';
+  }
+
   function renderCbHero() {
     var b = cur.binder;
     if (!b) {
       $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>Personalizados</h1><p class="fn-hero-sub">' + (loggedIn() || DEMO ? 'Carregando os seus fichários…' : 'Entre no MyDeck para ver os seus fichários.') + '</p></div></div>';
       $('#fn-setbtn-emoji').textContent = '📚'; $('#fn-setbtn-code').textContent = 'Fichário'; $('#fn-setbtn-name').textContent = 'Personalizados'; return;
     }
-    var t = totals(), pct = t.slots ? Math.round(t.got / t.slots * 100) : 0, nm = plainName(b.name) || 'Sem nome', nsets = (cur.d.sections || []).length, manual = cbType(b) === 'manual';
+    var t = totals(), pct = t.slots ? Math.round(t.got / t.slots * 100) : 0, nm = plainName(b.name) || 'Sem nome', nsets = (cur.d.sections || []).length, manual = cbType(b) === 'manual', isArtistBinder = cbType(b) === 'artist';
     $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>' + esc((b.emoji || '📚') + ' ' + nm) + '</h1><p class="fn-hero-sub">' + esc(cbKind(b)) + ' · ' + t.cards + ' carta' + (t.cards === 1 ? '' : 's') + (nsets > 1 ? ' de ' + nsets + ' coleções' : '') + '</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats">' + (t.slots ? '<span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' + (t.got >= t.slots ? '<span><b style="color:var(--teal)">Fichário completo 🎉</b></span>' : '<span><b>' + (t.slots - t.got) + '</b> slots restantes</span>')
         : '<span>' + (manual ? (cur.pending ? 'Carregando as cartas…' : 'Este fichário ainda não tem cartas. Use “Adicionar cartas” ou o botão “Guardar em fichário” de qualquer carta.') : 'Nenhuma carta nas suas coleções ativas para esta sugestão.') + '</span>') + '</div>' +
-      '<div class="fn-hero-links">' + (manual ? '<a href="#" data-act="cbadd">➕ Adicionar cartas</a>' : '') + '<a href="#" data-act="cbedit">✏️ Editar fichário</a><a href="./?classico#fichario">Abrir no fichário clássico</a></div>';
-    $('#fn-setbtn-emoji').textContent = b.emoji || '📚'; $('#fn-setbtn-code').textContent = cbIsFav(b) ? 'Favoritos' : 'Personalizado'; $('#fn-setbtn-name').textContent = nm;
+      '<div class="fn-hero-links">' + (manual ? '<a href="#" data-act="cbadd">➕ Adicionar cartas</a>' : '') + (isArtistBinder ? '<a href="#" data-act="artists">🎨 Outros artistas</a>' : '') + '<a href="#" data-act="cbedit">✏️ Editar fichário</a><a href="./?classico#fichario">Abrir no fichário clássico</a></div>';
+    $('#fn-setbtn-emoji').textContent = b.emoji || (isArtistBinder ? '🎨' : '📚'); $('#fn-setbtn-code').textContent = cbIsFav(b) ? 'Favoritos' : isArtistBinder ? 'Artista' : 'Personalizado'; $('#fn-setbtn-name').textContent = nm;
   }
 
   // ── Personalizados (tela inicial) ──
   function lastSetId() { var l = LS.get('set', null); return l && SET_CATALOG.some(function (x) { return x.id === l; }) ? l : null; }
-function renderHomeHero() {
-    var n = cbSorted().length + pkBinders().length + dexBinders().length, last = lastSetId();
+  function renderHomeHero() {
+    var n = cbSorted().length + pkBinders().length + dexBinders().length + artBinders().length, last = lastSetId();
     var lastCat = last ? SET_CATALOG.filter(function (x) { return x.id === last; })[0] : null;
     $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>📚 Meus fichários</h1><p class="fn-hero-sub">' +
       (loggedIn() || DEMO ? (n ? n + ' fichário' + (n === 1 ? '' : 's') + ' seu' + (n === 1 ? '' : 's') + ' · e todas as coleções do MyDeck' : 'Organize suas cartas do jeito que quiser · e veja todas as coleções do MyDeck') : 'Entre no MyDeck para ver os seus fichários.') + '</p></div></div>' +
@@ -769,6 +798,7 @@ function renderHomeHero() {
     });
     pkBinders().forEach(function (b) { var p = pkProg(b), nm = plainName(b.name) || 'Sem nome'; tiles += homeTile('pk:' + b.id, '📍', nm, p.filled + ' carta' + (p.filled === 1 ? '' : 's') + ' · Pokémon', p.pct); });
     dexBinders().forEach(function (b) { var p = dexProg(b), nm = b.name.replace(/^[^\wÀ-ú(]+/, ''); tiles += homeTile('dex:' + b.id, b.emoji || '🌐', nm, 'Pokédex · ' + p.got + '/' + p.tot, p.pct); });
+    artBinders().forEach(function (b) { var p = cbProg(b), nm = plainName(b.name) || 'Artista'; tiles += homeTile('cb:' + b.id, b.emoji || '🎨', nm, p.cards + ' carta' + (p.cards === 1 ? '' : 's') + ' · Artista', p.pct); });
     if (!fav) tiles += '<div class="fn-hcard is-hint"><span class="em">⭐</span><span class="tx"><b>Favoritos</b><small>Abra uma carta e toque em “Favoritar”: o fichário Favoritos aparece aqui.</small></span></div>';
     out += '<h2 class="fn-home-h">Personalizados</h2><div class="fn-home-grid">' + tiles + '</div>';
     var sets = SET_CATALOG.map(function (x) { return { s: x, p: progOf(x.id) }; }).filter(function (o) { return o.p && o.p.pct > 0; }).sort(function (a, b) { return b.p.pct - a.p.pct; }).slice(0, 9);
@@ -847,7 +877,7 @@ function renderHomeHero() {
   // ── criar / editar / excluir ──
   function openCbNew(withN) {
     if (!DEMO && !loggedIn()) { toast('Entre no MyDeck para criar fichários.'); return; }
-    var have = cbBinders(), all = []; try { all = getAllCardsWithSet(); } catch (e) { }
+    var have = cbOnlyBinders(), all = []; try { all = getAllCardsWithSet(); } catch (e) { }
     var presets = (typeof BINDER_PRESETS !== 'undefined' ? BINDER_PRESETS : []).map(function (p) {
       var done = have.some(function (b) { return cbType(b) === 'preset' && b.filter_config.key === p.key; }), n = 0; try { n = all.filter(p.filter).length; } catch (e) { }
       return '<button type="button" class="fn-act" data-act="cbpreset" data-key="' + esc(p.key) + '"' + (done ? ' disabled' : '') + '><span class="em">' + esc(p.emoji) + '</span><span><b>' + esc(p.name) + '</b><small>' + (done ? 'Você já tem este fichário' : esc(p.desc) + ' · ' + n + ' cartas') + '</small></span></button>';
@@ -914,7 +944,7 @@ function renderHomeHero() {
         var i = customBinders.findIndex(function (x) { return x.id === b.id; }); if (i >= 0) customBinders.splice(i, 1);
         try { var pi = pinnedBinders.indexOf(String(b.id)); if (pi >= 0) { pinnedBinders.splice(pi, 1); savePinnedBinders(); } } catch (e) { }
       }
-      closeSheet(); dropMultiProg(); toast('Fichário excluído.'); pickSet('me06');
+      closeSheet(); dropMultiProg(); toast('Fichário excluído.'); pickSet('home');
     } finally { cbBusy = false; }
   }
   // ── adicionar cartas (busca no catálogo inteiro) ──
@@ -981,17 +1011,17 @@ function renderHomeHero() {
   }
   function renderArtists(q) {
     var box = $('#fn-ar'); if (!box || !artistList) return;
-    var w = normTxt(q).split(/\s+/).filter(Boolean), have = cbBinders();
+    var w = normTxt(q).split(/\s+/).filter(Boolean), have = artBinders();
     var items = artistList.filter(function (a) { var h = normTxt(a.name); return w.every(function (x) { return h.indexOf(x) >= 0; }); });
     if (!items.length) { box.innerHTML = '<div class="fn-empty">Nenhum ilustrador com essa busca.</div>'; return; }
     box.innerHTML = items.slice(0, 80).map(function (a) {
-      var pc = a.total ? Math.round(a.owned / a.total * 100) : 0, ex = have.filter(function (b) { return cbType(b) === 'artist' && b.filter_config.artist === a.name; })[0];
+      var pc = a.total ? Math.round(a.owned / a.total * 100) : 0, ex = have.filter(function (b) { return b.filter_config && b.filter_config.artist === a.name; })[0];
       return '<div class="fn-dp-item"><span class="tx"><b>' + esc(a.name) + '</b><small>' + a.owned + ' de ' + a.total + ' cartas · ' + pc + '%</small></span>' +
         '<button type="button" class="fn-ver' + (ex ? ' is-on' : '') + '" data-act="artbinder" data-artist="' + esc(a.name) + '">' + (ex ? '📂 Abrir' : '+ Fichário') + '</button></div>';
     }).join('') + (items.length > 80 ? '<div class="fn-empty">Mostrando 80 de ' + items.length + '. Use a busca.</div>' : '');
   }
   async function artistBinder(name) {
-    var ex = cbBinders().filter(function (b) { return cbType(b) === 'artist' && b.filter_config.artist === name; })[0];
+    var ex = artBinders().filter(function (b) { return b.filter_config && b.filter_config.artist === name; })[0];
     if (ex) { closeSheet(); pickSet('cb:' + ex.id); return; }
     if (!DEMO && !loggedIn()) { toast('Entre no MyDeck para criar fichários.'); return; }
     if (cbBusy) return; cbBusy = true;
@@ -1505,7 +1535,7 @@ function renderHomeHero() {
     if (!loggedIn()) { toast('Entre no MyDeck para salvar suas cartas.'); return; }
     if (typeof saveSlot !== 'function') { toast('Não foi possível salvar agora. Recarregue a página.'); return; }
     if (busy[key]) return; busy[key] = true;
-    Promise.resolve(saveSlot(key, qty, origins)).then(function () { patchOne(kId); }, function () { toast('Não foi possível salvar. Tente de novo.'); patchOne(kId); }).then(function () { busy[key] = false; });
+    Promise.resolve(saveSlot(key, qty, origins)).then(function () { patchOne(kId); }, function () { toast('Não foi possível salvar. Tente de novo.'); }).then(function () { busy[key] = false; });
   }
   function originOptions() {
     var o = [];
@@ -1789,8 +1819,8 @@ function renderHomeHero() {
         '<button type="button" class="fn-blk-h" data-blk="' + esc(k) + '" aria-expanded="' + isOpen + '"><span class="ch">▸</span><span class="t">' + esc(blockTitle(k)) + '</span>' +
         '<span class="n">' + (bp != null ? '<b>' + bp + '%</b> · ' : '') + sets.length + '</span></button><div class="fn-blk-b">' + rows + '</div></section>';
     }).join('');
-   var homeRow = '<button type="button" class="fn-set fn-home-row' + (isHome(st.set) ? ' is-cur' : '') + '" data-pick="home" data-find="meus fichários personalizados início home"><span class="em">🏠</span><span class="tx"><b>Meus fichários</b><small>Visão geral</small></span></button>';
-    return homeRow + cbTreeHtml() + dexTreeHtml() + (html || '<div class="fn-tree-empty">Nenhuma coleção encontrada.</div>');
+    var homeRow = '<button type="button" class="fn-set fn-home-row' + (isHome(st.set) ? ' is-cur' : '') + '" data-pick="home" data-find="meus fichários personalizados início home"><span class="em">🏠</span><span class="tx"><b>Meus fichários</b><small>Visão geral</small></span></button>';
+    return homeRow + cbTreeHtml() + dexTreeHtml() + artTreeHtml() + (html || '<div class="fn-tree-empty">Nenhuma coleção encontrada.</div>');
   }
   function sideHtml() { return '<input class="fn-tsearch" type="search" placeholder="Buscar coleção…" autocomplete="off" aria-label="Buscar coleção"><div class="fn-tree">' + treeHtml() + '</div>'; }
   function renderSide() {
@@ -1824,7 +1854,11 @@ function renderHomeHero() {
     dexLimit = 300; st.set = id; st.q = ''; st.status = 'all'; st.bpage = 0; st.artist = ''; st.imp = false; if (SET_CATALOG.some(function (x) { return x.id === id; })) LS.set('set', id);
     try { history.replaceState(null, '', '#' + id); } catch (e) { }
     $('#fn-q').value = '';
-    var ser = isDex(id) ? '__dex' : (SET_CATALOG.filter(function (x) { return x.id === setKey(id); })[0] || {}).series;
+    var bObj = isCb(id) ? cbBinder(id) : null;
+    var ser = isDex(id) ? '__dex'
+      : isPk(id) ? '__cb'
+      : bObj ? (cbType(bObj) === 'artist' ? '__art' : '__cb')
+      : (SET_CATALOG.filter(function (x) { return x.id === setKey(id); })[0] || {}).series;
     var ob = openBlocks();
     if (ser && ob.indexOf(ser) < 0) { ob.push(ser); LS.set('open', ob); }
     closeSheet(); renderAll(); window.scrollTo({ top: 0 });
