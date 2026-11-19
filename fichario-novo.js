@@ -1646,7 +1646,9 @@ function dexTreeHtml() {
     dexLimit = 300; st.set = id; st.q = ''; st.status = 'all'; st.bpage = 0; st.artist = ''; st.imp = false; if (SET_CATALOG.some(function (x) { return x.id === id; })) LS.set('set', id); // só coleções de verdade viram o "Continuar" da tela inicial
     try { history.replaceState(null, '', '#' + id); } catch (e) { }
     $('#fn-q').value = '';
-    var ser = (SET_CATALOG.filter(function (x) { return x.id === setKey(id); })[0] || {}).series; var ob = openBlocks(); if (ser && ob.indexOf(ser) < 0) { ob.push(ser); LS.set('open', ob); }
+    var ser = isDex(id) ? '__dex' : (SET_CATALOG.filter(function (x) { return x.id === setKey(id); })[0] || {}).series;
+    var ob = openBlocks();
+    if (ser && ob.indexOf(ser) < 0) { ob.push(ser); LS.set('open', ob); }
     closeSheet(); renderAll(); window.scrollTo({ top: 0 });
     var langs = langsOf(id); if (langs && langs.indexOf(st.lang) < 0) st.lang = 'en';
   }
