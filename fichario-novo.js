@@ -2045,7 +2045,15 @@
     bind(); banner(); renderAll(); cleanupAndEnsureNatDex();
     window.addEventListener('lazy-sets-loaded', function () { dexIdx = null; cbAllIdx = null; onData(); });
     setTimeout(banner, 2500);
-    window.__fn = { st: st, renderAll: renderAll, mark: mark };
+    // 19/11/2026: se os fichários personalizados chegarem depois do primeiro desenho (ou a carga do site correr antes do boot daqui), redesenha
+    (function () {
+      var sig = function () { try { return (customBinders || []).length; } catch (e) { return -1; } }, s0 = sig(), tries = 0;
+      var iv = setInterval(function () { tries++; if (sig() !== s0) { clearInterval(iv); onData(); } else if (tries > 25) clearInterval(iv); }, 800);
+      if (typeof window.loadCustomBinders === 'function' && !window.loadCustomBinders.__fn) {
+        var o = window.loadCustomBinders; window.loadCustomBinders = function () { var r = o.apply(this, arguments); Promise.resolve(r).then(onData, onData); return r; }; window.loadCustomBinders.__fn = true;
+      }
+    })();
+    window.__fn = { st: st, renderAll: renderAll, mark: mark }; // útil para depurar no console
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

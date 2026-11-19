@@ -19,7 +19,7 @@
 // (activate acima já faz isso). Ver [[feedback_coding]].
 // v6 (04/11/2026): menus Pokédex/Fichários do iPhone (fichario_accordion.js) e seletor do Master Set — força quem
 // já tem o SW instalado a trocar de versão e baixar os scripts novos.
-const CACHE = 'mydeck-v8'; // v8 (18/11/2026): fichário novo vira padrão; v7: limpeza — saíram Preço Justo, Simulador, Lorcana, Toybox; Gastos/Rifas/Venda escondidos
+const CACHE = 'mydeck-v9'; // v9 (19/11/2026): loadAll resiliente na página do fichário novo; v8: fichário novo vira padrão; v7: limpeza — saíram Preço Justo, Simulador, Lorcana, Toybox; Gastos/Rifas/Venda escondidos
 const STATIC = ['./', './index.html', './style.css', './app.js', './fichario_patch.js',
   './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 

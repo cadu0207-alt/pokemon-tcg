@@ -1019,9 +1019,11 @@ async function _loadAllImpl(){
     _authLoadState='ok';
   }
   fetchCambio();  // atualiza USD_BRL e EUR_BRL para conversão de preços
-  renderAll();
+  // 19/11/2026: try/catch — na página do fichário novo (sem os painéis do Dashboard) o renderAll antigo pode rodar antes de ser
+  // neutralizado e quebrar por elemento nulo; sem isso o resto da carga (fichários personalizados, preços, fila offline) era pulado.
+  try{renderAll();}catch(e){console.warn('[loadAll] renderAll falhou (página sem os painéis do site)',e);}
   loadCustomBinders();
-  renderTabs();
+  try{renderTabs();}catch(e){console.warn('[loadAll] renderTabs falhou',e);}
   if(typeof initFichario==='function')initFichario();
   mdOutboxSync(); // tenta sincronizar qualquer pendência de sessão anterior
   // Carrega preços ao vivo para o set inicial
