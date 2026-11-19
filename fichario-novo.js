@@ -70,7 +70,19 @@
     if (sid === 'cel30jp' || sid === 'cel30cn') return '';
     var l = effLang(sid); return l === 'pt' ? '' : '-' + l;
   }
-  function keyOf(id, c, ver) { var sid = sidOf(id, c); return slotKey(sid + (c._k ? '' : langSfx(sid)) + ':', c.n, ver); }
+  // Na Pokédex, o progresso é isolado para não contabilizar em outras coleções (nem ser afetado por elas).
+  function dexSlotKey(dexId, sid, n, ver) {
+    var base = slotKey(sid + ':', n, ver);
+    return 'dex-' + String(dexId || 'shared') + ':' + base;
+  }
+  function keyOf(id, c, ver) {
+    var sid = sidOf(id, c);
+    if (isDex(id)) {
+      var bid = (cur.binder && cur.binder.id) || String(id).replace(/^dex:/, '') || 'shared';
+      return dexSlotKey(bid, sid, c.n, ver);
+    }
+    return slotKey(sid + (c._k ? '' : langSfx(sid)) + ':', c.n, ver);
+  }
   // preço do slot no idioma da coleção (EN usa dólar quando a carta tem; senão mantém o preço em R$)
   function priceOf(id, c, sl) {
     var base = (sl && sl.price != null) ? sl.price : c.price;
@@ -195,7 +207,7 @@
   // ── Pokédex (Master Set Nacional e regionais) ──────────────
   // São os MESMOS fichários do site atual: tabela custom_binders, filter_config.type = 'masterdex', card_ids = [{set,n,dex}]
   // (uma entrada por vaga PREENCHIDA; vaga sem entrada = sem carta escolhida, mostra a arte neutra do Pokémon).
-  // Aqui só lemos e trocamos a carta de cada vaga. As marcações N/RH/F continuam nos slots das coleções reais.
+  // Aqui lemos e trocamos a carta de cada vaga, e o progresso da Pokédex fica isolado em chaves próprias (dex-<id>:...).
   var REGION_META = { 1: ['🔴', '#E53935'], 2: ['🟡', '#FDD835'], 3: ['🟢', '#43A047'], 4: ['💎', '#5C6BC0'], 5: ['⚫', '#424242'], 6: ['🌸', '#EC407A'], 7: ['🌺', '#FF7043'], 8: ['⚔️', '#7E57C2'], 9: ['🍇', '#8E24AA'] };
   function isDex(id) { return /^dex:/.test(String(id)); }
   function isRegionalDexBinder(b) { return !!(b && b.filter_config && (b.filter_config.dexFrom != null || b.filter_config.dexTo != null)); }
@@ -267,7 +279,7 @@
     r.cards.forEach(function (c) {
       filled++;
       var sl = slotsOf('', c), any = false;
-      sl.forEach(function (s) { totSlots++; if (has(keyOf('', c, s.ver))) { gotSlots++; any = true; } });
+      sl.forEach(function (s) { totSlots++; if (has(dexSlotKey(b.id, c._set, c.n, s.ver))) { gotSlots++; any = true; } });
       if (any) ownSp++;
     });
     var pct = 0;
@@ -338,7 +350,7 @@
     if (own > 0 && pct === 0) pct = 1;
     var name = b ? b.name.replace(/^[^\wÀ-ú(]+/, '') : 'Pokédex';
     var delLbl = b && isRegionalDexBinder(b) ? '🗑 Excluir região' : '🗑 Excluir Pokédex';
-    $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>' + esc(name) + '</h1><p class="fn-hero-sub">Pokédex · ' + t + ' espécies · uma carta por vaga</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
+    $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>' + esc(name) + '</h1><p class="fn-hero-sub">Pokédex · ' + t + ' espécies · progresso isolado desta Pokédex</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats">' + (b ? '<span><b>' + own + '</b>/' + t + ' espécies</span><span>Com carta escolhida <b>' + chosen + '</b></span>' + (totSlots ? '<span>Slots coletados <b>' + gotSlots + '</b>/' + totSlots + '</span>' : '') + (empty ? '<span>Vagas sem carta <b>' + empty + '</b></span>' : '') +
         (missV > 0 ? '<span class="fn-miss">Faltam <b>' + esc(money0(missV)) + '</b> <small>(só nas vagas com carta)</small></span>' : '') : '<span>' + (loggedIn() || DEMO ? 'Carregando a sua Pokédex…' : 'Entre no MyDeck para carregar a sua Pokédex.') + '</span>') + '</div>' +
@@ -464,7 +476,7 @@
       title: isReg ? 'Excluir Pokédex regional' : 'Excluir Master Set Nacional',
       name: nm,
       kind: isReg ? 'Pokédex regional' : 'Pokédex nacional',
-      note: 'As cartas escolhidas nas vagas e as suas marcações na coleção não serão apagadas.',
+      note: 'As suas coleções normais e as cartas escolhidas nas vagas não serão apagadas.',
       confirmAct: 'dexdelete',
       bid: b.id
     });
@@ -515,7 +527,8 @@
   // ── escolher / trocar / tirar a carta de uma vaga ──
   function dexCands(d) {
     var list = (dexIndex()[d] || []).slice();
-    var rank = function (x) { var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }), own = slotsOf('', c).some(function (s) { return has(keyOf('', c, s.ver)); }); return own ? 0 : 1; };
+    var bid = (cur.binder && cur.binder.id) || String(st.set).replace(/^dex:/, '') || 'shared';
+    var rank = function (x) { var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }), own = slotsOf('', c).some(function (s) { return has(dexSlotKey(bid, x.set, x.c.n, s.ver)); }); return own ? 0 : 1; };
     list.sort(function (a, b) { var ra = rank(a), rb = rank(b); if (ra !== rb) return ra - rb; var pa = a.c.price || 1e9, pb = b.c.price || 1e9; return ra === 0 ? (b.c.price || 0) - (a.c.price || 0) : pa - pb; });
     return list;
   }
@@ -530,6 +543,7 @@
   }
   function renderDexPicker(q) {
     var box = $('#fn-dp'); if (!box || !picker) return;
+    var bid = (cur.binder && cur.binder.id) || String(st.set).replace(/^dex:/, '') || 'shared';
     var words = normTxt(q).split(/\s+/).filter(Boolean), cur0 = cur.byDex[picker.dex];
     var items = picker.list.filter(function (x) { var hay = normTxt(x.c.name + ' ' + x.c.n + ' ' + x.set + ' ' + setLabelOf(x.set) + ' ' + (x.c.rare || '')); return words.every(function (w) { return hay.indexOf(w) >= 0; }); });
     var html = '';
@@ -537,7 +551,7 @@
     if (!items.length) html += '<div class="fn-empty">' + (picker.list.length ? 'Nenhuma carta com essa busca.' : 'Ainda não há carta cadastrada dessa espécie.') + '</div>';
     html += items.slice(0, 80).map(function (x) {
       var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }), on = cur0 && cur0._set === x.set && String(cur0.n) === String(x.c.n);
-      var own = slotsOf('', c).some(function (s) { return has(keyOf('', c, s.ver)); });
+      var own = slotsOf('', c).some(function (s) { return has(dexSlotKey(bid, x.set, x.c.n, s.ver)); });
       return '<button type="button" class="fn-dp-item' + (on ? ' is-on' : '') + '" data-act="dexchoose" data-dex="' + picker.dex + '" data-dset="' + esc(x.set) + '" data-dn="' + esc(x.c.n) + '">' +
         '<img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(null, '', c)) + '"><span class="tx"><b>' + esc(i18n(c, '').name) + (own ? ' ✓' : '') + '</b><small>' + esc(setLabelOf(x.set).split('—')[0].trim()) + ' · #' + esc(x.c.n) + ' · ' + esc(rareLabel(x.c.rare)) + '</small></span><span class="pr">' + esc(priceFmt(c, '')) + '</span></button>';
     }).join('');
@@ -995,10 +1009,11 @@
   async function dexAutoFill() {
     var b = cur.binder; if (!b || !isDex(st.set) || dexBusy) return;
     if (cur.pending > 0) { toast('Ainda carregando todas as coleções. Tente de novo em instantes.'); return; }
+    var bid = (b && b.id) || String(st.set).replace(/^dex:/, '') || 'shared';
     var ids = (b.card_ids || []).slice(), added = 0, idx = dexIndex();
     cur.species.forEach(function (sp) {
       if (cur.byDex[sp.dex]) return;
-      var cands = (idx[sp.dex] || []).map(function (x) { var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }); return { set: x.set, c: x.c, own: slotsOf('', c).some(function (s) { return has(keyOf('', c, s.ver)); }) }; });
+      var cands = (idx[sp.dex] || []).map(function (x) { var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }); return { set: x.set, c: c, own: slotsOf('', c).some(function (s) { return has(dexSlotKey(bid, x.set, x.c.n, s.ver)); }) }; });
       if (!cands.length) return;
       var owned = cands.filter(function (x) { return x.own; }), pr = function (x) { return (typeof x.c.price === 'number' && x.c.price > 0) ? x.c.price : Infinity; };
       var pick = owned.length ? owned.reduce(function (m, x) { return pr(x) > pr(m) ? x : m; }, owned[0]) : cands.reduce(function (m, x) { return pr(x) < pr(m) ? x : m; }, cands[0]);
@@ -1530,7 +1545,7 @@
       var nv = dexVisible().length;
       var isReg = cur.binder && isRegionalDexBinder(cur.binder);
       var dexDelBtn = cur.binder
-        ? '<button type="button" class="fn-act" data-act="dexaskdelete" data-bid="' + esc(cur.binder.id) + '"><span class="em">🗑</span><span><b>' + (isReg ? 'Excluir região' : 'Excluir Pokédex') + '</b><small>Remove esta Pokédex (as cartas escolhidas e suas marcações na coleção não são apagadas)</small></span></button>'
+        ? '<button type="button" class="fn-act" data-act="dexaskdelete" data-bid="' + esc(cur.binder.id) + '"><span class="em">🗑</span><span><b>' + (isReg ? 'Excluir região' : 'Excluir Pokédex') + '</b><small>Remove esta Pokédex (as suas coleções normais e as cartas escolhidas não são apagadas)</small></span></button>'
         : '';
       openSheet('<div class="fn-acts">' +
         '<button type="button" class="fn-act" data-act="share"><span class="em">🔗</span><span><b>Compartilhar Pokédex</b><small>Link e QR code só para ver; as vagas que faltam aparecem com a arte do Pokémon</small></span></button>' +
