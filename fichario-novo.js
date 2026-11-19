@@ -35,7 +35,7 @@
     lang: LS.get('lang', 'pt'),
     pocket: (function () { var p = String(LS.get('pocket', '9')); return p === '20a' ? '20b' : p; })(),
     imp: false,
-    focus: !!LS.get('focus', false),
+    focus: false,
     artist: '',
     bpage: 0
   };
@@ -1480,6 +1480,11 @@
     var b = $('#fn-focus'); if (!b) return;
     b.hidden = !can; b.classList.toggle('is-on', on); b.textContent = on ? '✕ Sair do foco' : '⛶ Foco';
   }
+  function exitFocus() {
+    st.focus = false;
+    LS.set('focus', false);
+    applyFocus();
+  }
   function renderAll() { loadCur(); renderHero(); renderControls(); renderBody(); renderSide(); }
 
   function patchOne(n) {
@@ -1896,6 +1901,17 @@
       var n = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', n); try { localStorage.setItem('mydeck-theme', n); } catch (e) { }
     });
+
+    // No modo foco, clicar no link/botão "My deck" sai do modo foco em vez de navegar para fora
+    document.addEventListener('click', function (e) {
+      if (!document.body.classList.contains('fn-focus')) return;
+      var homeLink = e.target && e.target.closest ? e.target.closest('a[href="./"], a[href="index.html"], a[href="/"], #fn-home, .fn-brand, .fn-logo') : null;
+      if (!homeLink) return;
+      e.preventDefault();
+      e.stopPropagation();
+      exitFocus();
+    }, true);
+
     document.addEventListener('click', function (e) {
       var t = e.target.closest('[data-mark],[data-open],[data-pick],[data-close],[data-bnav],[data-pocket],[data-blk],[data-qty],[data-addorig],[data-delorig],[data-act],[data-dexpick]'); if (!t) { if (e.target.id === 'fn-overlay') closeSheet(); return; }
       if (t.dataset.mark != null) { e.preventDefault(); mark(t.dataset.mark, t.dataset.ver); }
@@ -1956,7 +1972,7 @@
     });
     document.addEventListener('input', function (e) { if (e.target.id === 'fn-dp-q') { renderDexPicker(e.target.value); return; } if (e.target.id === 'fn-cp-q') { renderCbAdd(e.target.value); return; } if (e.target.id === 'fn-ar-q') { renderArtists(e.target.value); return; } if (e.target.id === 'fn-pks-q') { renderPkSpecies(e.target.value); return; } if (e.target.classList && e.target.classList.contains('fn-tsearch')) applyTreeFilter(e.target.closest('.fn-side,.fn-drawer')); });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') { var ov = $('#fn-overlay'); if (ov && !ov.hidden) closeSheet(); else if (document.body.classList.contains('fn-focus')) { st.focus = false; LS.set('focus', false); applyFocus(); } return; }
+      if (e.key === 'Escape') { var ov = $('#fn-overlay'); if (ov && !ov.hidden) closeSheet(); else if (document.body.classList.contains('fn-focus')) exitFocus(); return; }
       var tg = e.target && e.target.tagName; if (/INPUT|SELECT|TEXTAREA/.test(tg || '')) return;
       if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && document.body.classList.contains('fn-focus') && $('#fn-overlay').hidden) { var nb = $('[data-bnav="' + (e.key === 'ArrowRight' ? 1 : -1) + '"]'); if (nb && !nb.disabled) nb.click(); }
     });
