@@ -294,54 +294,55 @@
     $('#fn-setbtn-emoji').textContent = (b && b.emoji) || '🌐'; $('#fn-setbtn-code').textContent = 'Pokédex'; $('#fn-setbtn-name').textContent = name;
   }
 
-  // Apenas o Master Set Nacional vem como sub-aba já feita; as demais regiões ficam disponíveis apenas para adicionar (+)
+  // Mostra apenas o Master Set Nacional (sempre presente) e eventuais regionais já criadas; demais ficam escondidas no botão de adicionar
   function dexTreeHtml() {
     var bs = dexBinders();
     var isOpen = openBlocks().indexOf('__dex') >= 0 || isDex(st.set);
     var isNat = function (b) { return !b.filter_config.dexFrom && !b.filter_config.dexTo; };
     var natBinder = bs.filter(isNat)[0] || null;
+    var genRanges = typeof POKEDEX_GEN_RANGES !== 'undefined' ? POKEDEX_GEN_RANGES : [];
 
-    var items = [{
-      kind: 'nat',
-      label: 'Master Set Nacional (#1–1025)',
-      sub: 'Nacional · 1025 espécies',
-      emoji: '🌐',
-      binder: natBinder
-    }];
+    var rows = [];
 
-    (typeof POKEDEX_GEN_RANGES !== 'undefined' ? POKEDEX_GEN_RANGES : []).forEach(function (g) {
-      var m = REGION_META[g.gen] || ['🗺️'];
-      items.push({
-        kind: String(g.gen),
-        label: 'Master Set ' + g.label + ' (#' + g.from + '–' + g.to + ')',
-        sub: g.label + ' · ' + (g.to - g.from + 1) + ' espécies',
-        emoji: m[0],
-        binder: null
-      });
+    if (natBinder) {
+      var pNat = dexProg(natBinder);
+      var nmNat = natBinder.name.replace(/^[^\wÀ-ú(]+/, '') || 'Master Set Nacional (#1–1025)';
+      rows.push('<button type="button" class="fn-set' + ('dex:' + natBinder.id === st.set ? ' is-cur' : '') +
+        '" data-pick="dex:' + esc(natBinder.id) + '" data-find="' + esc(normTxt(nmNat + ' nacional 1025 pokedex master set')) + '">' +
+        '<span class="em">' + esc(natBinder.emoji || '🌐') + '</span>' +
+        '<span class="tx"><b>' + esc(nmNat) + '</b><small>Nacional · 1025 espécies</small>' +
+        '<div class="mini"><i style="width:' + pNat.pct + '%"></i></div></span>' +
+        '<span class="pc' + (pNat.pct ? '' : ' z') + '">' + pNat.pct + '%</span></button>');
+    } else {
+      rows.push('<button type="button" class="fn-set" data-act="dexcreate" data-kind="nat" data-find="master set nacional 1025 pokedex">' +
+        '<span class="em">🌐</span><span class="tx"><b>Master Set Nacional (#1–1025)</b><small>Nacional · 1025 espécies</small></span><span class="pc z">0%</span></button>');
+    }
+
+    bs.filter(function (b) { return !isNat(b); }).forEach(function (b) {
+      var rg = dexRange(b);
+      var g = genRanges.filter(function (x) { return x.from === rg.from && x.to === rg.to; })[0];
+      var m = (g && REGION_META[g.gen]) || ['🗺️'];
+      var p = dexProg(b);
+      var nm = b.name.replace(/^[^\wÀ-ú(]+/, '') || (g ? 'Master Set ' + g.label : 'Pokédex regional');
+      var sub = g ? (g.label + ' · ' + (g.to - g.from + 1) + ' espécies') : ('#' + rg.from + '–#' + rg.to);
+      rows.push('<button type="button" class="fn-set' + ('dex:' + b.id === st.set ? ' is-cur' : '') +
+        '" data-pick="dex:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' ' + sub + ' pokedex master set')) + '">' +
+        '<span class="em">' + esc(b.emoji || m[0]) + '</span>' +
+        '<span class="tx"><b>' + esc(nm) + '</b><small>' + esc(sub) + '</small>' +
+        '<div class="mini"><i style="width:' + p.pct + '%"></i></div></span>' +
+        '<span class="pc' + (p.pct ? '' : ' z') + '">' + p.pct + '%</span></button>');
     });
 
-    var rows = items.map(function (it) {
-      if (it.binder) {
-        var b = it.binder, p = dexProg(b), nm = b.name.replace(/^[^\wÀ-ú(]+/, '');
-        return '<button type="button" class="fn-set' + ('dex:' + b.id === st.set ? ' is-cur' : '') +
-          '" data-pick="dex:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' ' + it.sub + ' pokedex master set')) + '">' +
-          '<span class="em">' + esc(b.emoji || it.emoji) + '</span>' +
-          '<span class="tx"><b>' + esc(nm) + '</b><small>' + esc(it.sub) + '</small>' +
-          '<div class="mini"><i style="width:' + p.pct + '%"></i></div></span>' +
-          '<span class="pc' + (p.pct ? '' : ' z') + '">' + p.pct + '%</span></button>';
-      }
-      return '<button type="button" class="fn-set" data-act="dexcreate" data-kind="' + esc(it.kind) +
-        '" data-find="' + esc(normTxt(it.label + ' ' + it.sub + ' pokedex master set criar')) + '">' +
-        '<span class="em">' + esc(it.emoji) + '</span>' +
-        '<span class="tx"><b>' + esc(it.label) + '</b><small>Toque para iniciar</small></span>' +
-        '<span class="pc z">+</span></button>';
-    }).join('');
+    rows.push('<button type="button" class="fn-set" data-act="dexnew" data-find="nova pokedex regiao criar kanto johto hoenn sinnoh unova kalos alola galar paldea">' +
+      '<span class="em">➕</span><span class="tx"><b>Nova Pokédex regional</b><small>Criar por região</small></span></button>');
+
+    var countShown = (natBinder ? 1 : 0) + bs.filter(function (b) { return !isNat(b); }).length;
 
     return '<section class="fn-blk' + (isOpen ? ' is-open' : '') + '" data-blk-id="__dex">' +
       '<button type="button" class="fn-blk-h" data-blk="__dex" aria-expanded="' + isOpen + '">' +
       '<span class="ch">▸</span><span class="t">Pokédex</span>' +
-      '<span class="n">' + (natBinder ? '<b>1</b>/' + items.length : items.length) + '</span>' +
-      '</button><div class="fn-blk-b">' + rows + '</div></section>';
+      '<span class="n">' + countShown + '</span>' +
+      '</button><div class="fn-blk-b">' + rows.join('') + '</div></section>';
   }
 
   function openDexNew() {
