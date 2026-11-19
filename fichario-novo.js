@@ -343,8 +343,8 @@
   function dexArt(d) { return d <= 151 ? 'assets/wild/' + d + '.webp' : 'https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/other/official-artwork/' + d + '.png'; }
   window.__fnArtFb = function (img, d) {
     var s = img.dataset.fb || '0';
-    if (s === '0') { img.dataset.fb = '1'; img.src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/' + d + '.png'; }
-    else if (s === '1') { img.dataset.fb = '2'; img.src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + d + '.png'; }
+    if (s === '0') { img.dataset.fb = '1'; img.src = 'https://raw.githubusercontent.com/PokeAPI/sprites@master/sprites/pokemon/other/official-artwork/' + d + '.png'; }
+    else if (s === '1') { img.dataset.fb = '2'; img.src = 'https://raw.githubusercontent.com/PokeAPI/sprites@master/sprites/pokemon/' + d + '.png'; }
     else img.style.display = 'none';
   };
   function artImg(d) { return '<img loading="lazy" decoding="async" referrerpolicy="no-referrer" alt="" src="' + esc(dexArt(d)) + '"' + (d > 151 ? ' onerror="__fnArtFb(this,' + d + ')"' : '') + '>'; }
@@ -774,15 +774,11 @@
   }
 
   // ── Personalizados (tela inicial) ──
-  function lastSetId() { var l = LS.get('set', null); return l && SET_CATALOG.some(function (x) { return x.id === l; }) ? l : null; }
   function renderHomeHero() {
-    var n = cbSorted().length + pkBinders().length + dexBinders().length + artBinders().length, last = lastSetId();
-    var lastCat = last ? SET_CATALOG.filter(function (x) { return x.id === last; })[0] : null;
-    $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>📚 Meus fichários</h1><p class="fn-hero-sub">' +
-      (loggedIn() || DEMO ? (n ? n + ' fichário' + (n === 1 ? '' : 's') + ' seu' + (n === 1 ? '' : 's') + ' · e todas as coleções do MyDeck' : 'Organize suas cartas do jeito que quiser · e veja todas as coleções do MyDeck') : 'Entre no MyDeck para ver os seus fichários.') + '</p></div></div>' +
-      '<div class="fn-hero-links"><a href="#" data-act="cbnew">➕ Novo fichário</a><a href="#" data-act="dexnew">🌐 Criar Pokédex</a><a href="#" data-act="artists">🎨 Meus artistas</a>' +
-      (lastCat ? '<a href="#" data-pick="' + esc(last) + '">▶ Continuar em ' + esc(((lastCat.label || '').split('—').slice(1).join('—').trim()) || lastCat.label) + '</a>' : '') + '</div>';
-    $('#fn-setbtn-emoji').textContent = '📚'; $('#fn-setbtn-code').textContent = 'Fichário'; $('#fn-setbtn-name').textContent = 'Meus fichários';
+    $('#fn-hero').innerHTML = '';
+    $('#fn-setbtn-emoji').textContent = '📚';
+    $('#fn-setbtn-code').textContent = 'Fichário';
+    $('#fn-setbtn-name').textContent = 'Meus fichários';
   }
   function homeTile(pick, em, title, sub, pct) {
     return '<button type="button" class="fn-hcard" data-pick="' + esc(pick) + '"><span class="em">' + esc(em) + '</span><span class="tx"><b>' + esc(title) + '</b><small>' + esc(sub) + '</small></span>' +
