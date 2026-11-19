@@ -173,6 +173,23 @@
     return 1;
   }
 
+  // ── confirmação de exclusão de fichário ───────────────────
+  function openDeleteConfirm(opts) {
+    var title = opts.title || 'Excluir fichário';
+    var name = opts.name || 'Sem nome';
+    var kind = opts.kind || 'Fichário';
+    var note = opts.note || 'As suas marcações de cartas na coleção não são apagadas, apenas este fichário.';
+    var confirmAct = opts.confirmAct;
+    var bidAttr = opts.bid ? ' data-bid="' + esc(opts.bid) + '"' : '';
+    var html = '<div class="fn-form">' +
+      '<div class="fn-warn"><b>' + esc(kind) + ':</b> ' + esc(name) + '<br><small>' + esc(note) + '</small></div>' +
+      '<p class="fn-note">Tem certeza de que deseja excluir este fichário? Essa ação não pode ser desfeita.</p>' +
+      '<button type="button" class="fn-btn is-alt" data-act="' + esc(confirmAct) + '"' + bidAttr + '>🗑 Confirmar exclusão</button>' +
+      '<button type="button" class="fn-btn" data-close>Cancelar</button>' +
+      '</div>';
+    openSheet(html, title);
+  }
+
   // ── dados da tela atual ────────────────────────────────────
   var cur = { d: null, cards: [], view: [] };
   // ── Pokédex (Master Set Nacional e regionais) ──────────────
@@ -325,7 +342,7 @@
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats">' + (b ? '<span><b>' + own + '</b>/' + t + ' espécies</span><span>Com carta escolhida <b>' + chosen + '</b></span>' + (totSlots ? '<span>Slots coletados <b>' + gotSlots + '</b>/' + totSlots + '</span>' : '') + (empty ? '<span>Vagas sem carta <b>' + empty + '</b></span>' : '') +
         (missV > 0 ? '<span class="fn-miss">Faltam <b>' + esc(money0(missV)) + '</b> <small>(só nas vagas com carta)</small></span>' : '') : '<span>' + (loggedIn() || DEMO ? 'Carregando a sua Pokédex…' : 'Entre no MyDeck para carregar a sua Pokédex.') + '</span>') + '</div>' +
-      '<div class="fn-hero-links">' + (b ? '<a href="#" data-act="dexdelete" data-bid="' + esc(b.id) + '">' + delLbl + '</a>' : '') + '<a href="./?classico#fichario">Abrir no fichário clássico</a></div>';
+      '<div class="fn-hero-links">' + (b ? '<a href="#" data-act="dexaskdelete" data-bid="' + esc(b.id) + '">' + delLbl + '</a>' : '') + '<a href="./?classico#fichario">Abrir no fichário clássico</a></div>';
     $('#fn-setbtn-emoji').textContent = (b && b.emoji) || '🌐'; $('#fn-setbtn-code').textContent = 'Pokédex'; $('#fn-setbtn-name').textContent = name;
   }
 
@@ -394,7 +411,7 @@
     });
     openSheet('<p class="fn-note">Cada vaga começa com a arte do Pokémon. Você escolhe a carta que quer em cada uma.</p><div class="fn-acts">' + opts.map(function (o) {
       var delBtn = o.existing
-        ? '<button type="button" class="fn-ver" data-act="dexdelete" data-bid="' + esc(o.existing.id) + '" title="Excluir esta Pokédex">🗑 Excluir</button>'
+        ? '<button type="button" class="fn-ver" data-act="dexaskdelete" data-bid="' + esc(o.existing.id) + '" title="Excluir esta Pokédex">🗑 Excluir</button>'
         : '';
       return '<div class="fn-dp-item' + (o.done ? ' is-on' : '') + '">' +
         '<button type="button" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;flex:1" data-act="dexcreate" data-kind="' + o.k + '"' + (o.done ? ' disabled' : '') + '>' +
@@ -438,11 +455,24 @@
     } catch (e) { }
     return true;
   }
+  function askDexDelete(bid) {
+    var b = dexBinders().filter(function (x) { return String(x.id) === String(bid); })[0];
+    if (!b || dexBusy) return;
+    var isReg = isRegionalDexBinder(b);
+    var nm = b.name.replace(/^[^\wÀ-ú(]+/, '') || (isReg ? 'Pokédex regional' : 'Master Set Nacional');
+    openDeleteConfirm({
+      title: isReg ? 'Excluir Pokédex regional' : 'Excluir Master Set Nacional',
+      name: nm,
+      kind: isReg ? 'Pokédex regional' : 'Pokédex nacional',
+      note: 'As cartas escolhidas nas vagas e as suas marcações na coleção não serão apagadas.',
+      confirmAct: 'dexdelete',
+      bid: b.id
+    });
+  }
   async function dexDelete(bid) {
     var b = dexBinders().filter(function (x) { return String(x.id) === String(bid); })[0];
     if (!b || dexBusy) return;
     var nm = b.name.replace(/^[^\wÀ-ú(]+/, '') || (isRegionalDexBinder(b) ? 'Pokédex regional' : 'Master Set Nacional');
-    if (!confirm('Excluir “' + nm + '”? As cartas escolhidas nela e as suas marcações na coleção não são apagadas.')) return;
     dexBusy = true;
     try {
       var ok = await dexRemoveRecord(b);
@@ -804,7 +834,7 @@
     openSheet('<div class="fn-form"><label>Nome<input type="text" id="fn-cb-name" maxlength="40" value="' + esc(plainName(b.name)) + '" autocomplete="off"></label>' +
       '<div class="fn-row"><label>Emoji<input type="text" id="fn-cb-emoji" maxlength="4" value="' + esc(b.emoji || '📚') + '" autocomplete="off"></label><label>Cor<input type="color" id="fn-cb-color" value="' + esc(/^#[0-9a-f]{6}$/i.test(b.cover_color || '') ? b.cover_color : '#a855f7') + '"></label></div>' +
       (cbIsFav(b) ? '<p class="fn-note">⭐ Favoritos junta as favoritas de todas as coleções. Você pode renomear à vontade.</p>' : '') +
-      '<button type="button" class="fn-btn" data-act="cbsave">Salvar</button><button type="button" class="fn-btn is-alt" data-act="cbdelete">🗑 Excluir fichário</button></div>', 'Editar fichário');
+      '<button type="button" class="fn-btn" data-act="cbsave">Salvar</button><button type="button" class="fn-btn is-alt" data-act="cbaskdelete">🗑 Excluir fichário</button></div>', 'Editar fichário');
   }
   async function cbSaveEdit() {
     var b = cur.binder; if (!b || cbBusy) return;
@@ -816,9 +846,18 @@
       closeSheet(); refreshAfterCb(); toast('Fichário atualizado.');
     } finally { cbBusy = false; }
   }
+  function askCbDelete() {
+    var b = cur.binder; if (!b || cbBusy) return;
+    openDeleteConfirm({
+      title: 'Excluir fichário',
+      name: plainName(b.name) || 'Sem nome',
+      kind: isPk(st.set) ? 'Fichário de Pokémon' : cbKind(b),
+      note: 'As suas marcações de cartas na coleção não serão apagadas, apenas este fichário.',
+      confirmAct: 'cbdelete'
+    });
+  }
   async function cbDelete() {
     var b = cur.binder; if (!b || cbBusy) return;
-    if (!confirm('Excluir o fichário “' + plainName(b.name) + '”? As suas marcações de cartas não são apagadas, só o fichário.')) return;
     cbBusy = true;
     try {
       if (DEMO) demoCb = demoCb.filter(function (x) { return x.id !== b.id; });
@@ -1491,7 +1530,7 @@
       var nv = dexVisible().length;
       var isReg = cur.binder && isRegionalDexBinder(cur.binder);
       var dexDelBtn = cur.binder
-        ? '<button type="button" class="fn-act" data-act="dexdelete" data-bid="' + esc(cur.binder.id) + '"><span class="em">🗑</span><span><b>' + (isReg ? 'Excluir região' : 'Excluir Pokédex') + '</b><small>Remove esta Pokédex (as cartas escolhidas e suas marcações na coleção não são apagadas)</small></span></button>'
+        ? '<button type="button" class="fn-act" data-act="dexaskdelete" data-bid="' + esc(cur.binder.id) + '"><span class="em">🗑</span><span><b>' + (isReg ? 'Excluir região' : 'Excluir Pokédex') + '</b><small>Remove esta Pokédex (as cartas escolhidas e suas marcações na coleção não são apagadas)</small></span></button>'
         : '';
       openSheet('<div class="fn-acts">' +
         '<button type="button" class="fn-act" data-act="share"><span class="em">🔗</span><span><b>Compartilhar Pokédex</b><small>Link e QR code só para ver; as vagas que faltam aparecem com a arte do Pokémon</small></span></button>' +
@@ -1825,6 +1864,7 @@
         else if (a === 'dexnew') openDexNew();
         else if (a === 'drawer') openDrawer();
         else if (a === 'dexcreate') dexCreate(t.dataset.kind);
+        else if (a === 'dexaskdelete') askDexDelete(t.dataset.bid || (cur.binder && cur.binder.id));
         else if (a === 'dexdelete') dexDelete(t.dataset.bid || (cur.binder && cur.binder.id));
         else if (a === 'dexchoose') dexAssign(Number(t.dataset.dex), t.dataset.dset, t.dataset.dn);
         else if (a === 'dexclear') dexAssign(Number(t.dataset.dex), null);
@@ -1836,6 +1876,7 @@
         else if (a === 'cbpreset') cbPreset(t.dataset.key);
         else if (a === 'cbedit') openCbEdit();
         else if (a === 'cbsave') cbSaveEdit();
+        else if (a === 'cbaskdelete') askCbDelete();
         else if (a === 'cbdelete') cbDelete();
         else if (a === 'cbadd') openCbAdd();
         else if (a === 'cbpick') cbPick(t.dataset.set, t.dataset.cn);
