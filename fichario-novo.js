@@ -556,28 +556,9 @@
       }
     } finally { dexBusy = false; }
   }
-  var natCleanBusy = false;
   async function cleanupAndEnsureNatDex() {
-    if (DEMO || SHARE || !loggedIn() || natCleanBusy) return;
-    if (typeof customBinders === 'undefined' || !Array.isArray(customBinders)) return;
-    natCleanBusy = true;
-    try {
-      var nats = customBinders.filter(function (b) { return b && b.filter_config && b.filter_config.type === 'masterdex' && !isRegionalDexBinder(b); });
-      var withCards = nats.filter(function (b) { return binderCardCount(b) > 0; });
-      if (withCards.length > 0 && nats.length > withCards.length) {
-        var extras = nats.filter(function (b) { return binderCardCount(b) === 0; });
-        var removedAny = false;
-        for (var i = 0; i < extras.length; i++) {
-          var ok = await dexRemoveRecord(extras[i]);
-          if (ok) removedAny = true;
-        }
-        if (removedAny) {
-          dropMultiProg();
-          if (String(st.set) === 'dex:' + String(extras[0].id)) st.set = 'dex:' + String(withCards[0].id);
-          loadCur(); renderHero(); renderBody(); renderSide();
-        }
-      }
-    } finally { natCleanBusy = false; }
+    // Remoção automática desativada para evitar apagar registros do Master Set Nacional.
+    return;
   }
 
   // ── escolher / trocar / tirar a carta de uma vaga ──
@@ -1791,7 +1772,9 @@
     var d = setData(id); if (!d || !d.cards || !d.cards.length) return null;
     var tot = 0, got = 0;
     d.cards.forEach(function (c) { slotsOf(id, c).forEach(function (x) { tot++; if (has(keyOf(id, c, x.ver))) got++; }); });
-    return (progCache[id] = tot ? { got: got, tot: tot, pct: Math.round(got / tot * 100) } : null);
+    var out = tot ? { got: got, tot: tot, pct: Math.round(got / tot * 100) } : null;
+    if (out) progCache[id] = out;
+    return out;
   }
   function seriesOrder() {
     var meta = (typeof SERIES_META !== 'undefined' && SERIES_META) || {}, keys = Object.keys(meta);
@@ -1992,7 +1975,7 @@
     clearTimeout(dataT);
     dataT = setTimeout(function () {
       banner();
-      if (engineReady()) { cleanupAndEnsureNatDex(); progCache = {}; loadCur(); renderHero(); renderBody(); renderSide(); }
+      if (engineReady()) { progCache = {}; loadCur(); renderHero(); renderBody(); renderSide(); }
     }, 60);
   }
 
@@ -2040,7 +2023,7 @@
       loadShare().then(function (ok) { if (ok) boot(); else { bind(); banner(); } }, function () { bind(); banner(); }); SHARE = SHARE || { keys: new Set(), loading: true }; return;
     }
     if (!isHome(st.set) && !isDex(st.set) && !isCb(st.set) && !isPk(st.set) && !SET_CATALOG.some(function (s) { return s.id === st.set; })) st.set = 'home';
-    bind(); banner(); renderAll(); cleanupAndEnsureNatDex();
+    bind(); banner(); renderAll();
     window.addEventListener('lazy-sets-loaded', function () { dexIdx = null; cbAllIdx = null; onData(); });
     window.addEventListener('mydeck-data-loaded', onData);
     setTimeout(banner, 2500);
