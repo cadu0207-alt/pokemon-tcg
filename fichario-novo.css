@@ -436,3 +436,25 @@ body.fn-pk .fn-bar{padding-top:0;padding-bottom:0;border:0;background:none}
 .fn-pocket.is-empty .fn-plus{font-size:26px;color:var(--accent);font-weight:800;line-height:1}
 .fn-pocket.is-empty .fn-slotn{position:absolute;left:5px;top:4px}
 
+
+/* ── Meus fichários (tela inicial) ── */
+body.fn-home .fn-bar{display:none}
+.fn-home-h{font-size:15px;font-weight:800;margin:22px 0 10px;color:var(--text2);letter-spacing:.02em}
+.fn-home-h:first-child{margin-top:4px}
+.fn-home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.fn-hcard{position:relative;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;text-align:left;width:100%;padding:12px 12px 14px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);color:var(--text);cursor:pointer;font:inherit}
+.fn-hcard:hover{border-color:var(--accent)}
+.fn-hcard .em{font-size:24px;line-height:1}
+.fn-hcard .tx{min-width:0;display:flex;flex-direction:column}
+.fn-hcard .tx b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fn-hcard .tx small{font-size:11.5px;color:var(--muted);line-height:1.3;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.fn-hcard .pc{font-weight:800;font-size:13px;color:var(--teal)}
+.fn-hcard .pc.z{color:var(--muted)}
+.fn-hcard .mini{grid-column:1/-1;height:5px;border-radius:99px;background:var(--surface2);border:1px solid var(--border);overflow:hidden}
+.fn-hcard .mini i{display:block;height:100%;background:var(--teal)}
+.fn-hcard.is-new{border-style:dashed;grid-template-columns:auto 1fr}
+.fn-hcard.is-hint{cursor:default;border-style:dashed;grid-template-columns:auto 1fr;opacity:.85}
+.fn-hcard.is-hint:hover{border-color:var(--border)}
+.fn-home-more{margin:20px 0 6px;display:flex;justify-content:center}
+.fn-home-more .fn-btn{padding:0 18px}
+.fn-home-row{margin-bottom:6px}

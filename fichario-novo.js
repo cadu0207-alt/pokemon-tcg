@@ -28,7 +28,7 @@
   // ── estado ─────────────────────────────────────────────────
   var defCols = innerWidth < 480 ? 3 : innerWidth < 800 ? 4 : innerWidth < 1200 ? 6 : 7;
   var st = {
-    set: (location.hash || '').replace('#', '') || LS.get('set', 'me06'),
+    set: (location.hash || '').replace('#', '') || 'home', // 19/11/2026: o fichário abre em "Meus fichários"; a última coleção vista vira atalho "Continuar"
     q: '', status: 'all', sort: 'num',
     view: LS.get('view', 'grid'),
     cols: LS.get('cols', defCols),
@@ -508,6 +508,48 @@
       '<div class="fn-hero-links">' + (manual ? '<a href="#" data-act="cbadd">➕ Adicionar cartas</a>' : '') + '<a href="#" data-act="cbedit">✏️ Editar fichário</a><a href="./?classico#fichario">Abrir no fichário clássico</a></div>';
     $('#fn-setbtn-emoji').textContent = b.emoji || '📚'; $('#fn-setbtn-code').textContent = cbIsFav(b) ? 'Favoritos' : 'Meu fichário'; $('#fn-setbtn-name').textContent = nm;
   }
+
+  // ── Meus fichários (tela inicial, 19/11/2026) ──
+  function lastSetId() { var l = LS.get('set', null); return l && SET_CATALOG.some(function (x) { return x.id === l; }) ? l : null; }
+  function renderHomeHero() {
+    var n = cbSorted().length + pkBinders().length + dexBinders().length, last = lastSetId();
+    var lastCat = last ? SET_CATALOG.filter(function (x) { return x.id === last; })[0] : null;
+    $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>📚 Meus fichários</h1><p class="fn-hero-sub">' +
+      (loggedIn() || DEMO ? (n ? n + ' fichário' + (n === 1 ? '' : 's') + ' seu' + (n === 1 ? '' : 's') + ' · e todas as coleções do MyDeck' : 'Organize suas cartas do jeito que quiser · e veja todas as coleções do MyDeck') : 'Entre no MyDeck para ver os seus fichários.') + '</p></div></div>' +
+      '<div class="fn-hero-links"><a href="#" data-act="cbnew">➕ Novo fichário</a><a href="#" data-act="dexnew">🌐 Criar Pokédex</a><a href="#" data-act="artists">🎨 Meus artistas</a>' +
+      (lastCat ? '<a href="#" data-pick="' + esc(last) + '">▶ Continuar em ' + esc(((lastCat.label || '').split('—').slice(1).join('—').trim()) || lastCat.label) + '</a>' : '') + '</div>';
+    $('#fn-setbtn-emoji').textContent = '📚'; $('#fn-setbtn-code').textContent = 'Fichário'; $('#fn-setbtn-name').textContent = 'Meus fichários';
+  }
+  function homeTile(pick, em, title, sub, pct) {
+    return '<button type="button" class="fn-hcard" data-pick="' + esc(pick) + '"><span class="em">' + esc(em) + '</span><span class="tx"><b>' + esc(title) + '</b><small>' + esc(sub) + '</small></span>' +
+      '<span class="pc' + (pct ? '' : ' z') + '">' + pct + '%</span><div class="mini"><i style="width:' + pct + '%"></i></div></button>';
+  }
+  function renderHome() {
+    var out = '';
+    if (!SHARE && !loggedIn() && !DEMO) return '<div class="fn-empty">Entre no MyDeck para ver e montar os seus fichários. <a href="./">Entrar</a></div>';
+    var tiles = '', fav = favBinder();
+    cbSorted().forEach(function (b) {
+      var p = cbProg(b), nm = plainName(b.name) || 'Sem nome';
+      tiles += homeTile('cb:' + b.id, b.emoji || (cbIsFav(b) ? '⭐' : '📚'), nm, p.cards + ' carta' + (p.cards === 1 ? '' : 's') + ' · ' + cbKind(b), p.pct);
+    });
+    pkBinders().forEach(function (b) { var p = pkProg(b), nm = plainName(b.name) || 'Sem nome'; tiles += homeTile('pk:' + b.id, '📍', nm, p.filled + ' carta' + (p.filled === 1 ? '' : 's') + ' · Pokémon', p.pct); });
+    dexBinders().forEach(function (b) { var p = dexProg(b), nm = b.name.replace(/^[^\wÀ-ú(]+/, ''); tiles += homeTile('dex:' + b.id, b.emoji || '🌐', nm, 'Pokédex · ' + p.got + '/' + p.tot, p.pct); });
+    if (!fav) tiles += '<div class="fn-hcard is-hint"><span class="em">⭐</span><span class="tx"><b>Favoritos</b><small>Abra uma carta e toque em “Favoritar”: o fichário Favoritos aparece aqui.</small></span></div>';
+    tiles += '<button type="button" class="fn-hcard is-new" data-act="cbnew"><span class="em">➕</span><span class="tx"><b>Novo fichário</b><small>Personalizado ou sugestão temática</small></span></button>';
+    tiles += '<button type="button" class="fn-hcard is-new" data-act="dexnew"><span class="em">🌐</span><span class="tx"><b>Criar Pokédex</b><small>Nacional ou por região</small></span></button>';
+    out += '<h2 class="fn-home-h">Meus fichários</h2><div class="fn-home-grid">' + tiles + '</div>';
+    var sets = SET_CATALOG.map(function (x) { return { s: x, p: progOf(x.id) }; }).filter(function (o) { return o.p && o.p.pct > 0; }).sort(function (a, b) { return b.p.pct - a.p.pct; }).slice(0, 9);
+    var started = sets.length > 0;
+    if (!started) sets = SET_CATALOG.filter(function (x) { return !x.upcoming; }).slice(0, 6).map(function (x) { return { s: x, p: progOf(x.id) || { got: 0, tot: 0, pct: 0 } }; });
+    if (sets.length) {
+      out += '<h2 class="fn-home-h">' + (started ? 'Coleções em andamento' : 'Coleções') + '</h2><div class="fn-home-grid">' + sets.map(function (o) {
+        var nm = (o.s.label || '').split('—').slice(1).join('—').trim() || o.s.label, code = (o.s.label || '').split('—')[0].trim();
+        return homeTile(o.s.id, o.s.emoji || '🃏', nm, o.p.tot ? code + ' · ' + o.p.got + '/' + o.p.tot + ' slots' : code, o.p.pct);
+      }).join('') + '</div>';
+    }
+    out += '<div class="fn-home-more"><button type="button" class="fn-btn is-alt" data-act="drawer">📖 Ver todas as coleções</button></div>';
+    return out;
+  }
   // ── favoritos ──
   var favKeyCache = { ref: null, set: null };
   function favKeys() {
@@ -941,8 +983,10 @@
     if (!isCb(st.set) || cbBinder(st.set)) return; var id = st.set.slice(3);
     if (pkBinder('pk:' + id)) st.set = 'pk:' + id; else if (dexBinder('dex:' + id)) st.set = 'dex:' + id;
   }
+  function isHome(id) { return String(id) === 'home'; }
   function loadCur() {
     fixSetId();
+    if (isHome(st.set)) { cur.binder = null; cur.pending = 0; cur.pk = null; cur.byDex = {}; cur.species = []; cur.cards = []; cur.d = { label: 'Meus fichários', cards: [], sections: [], home: true }; CUR = 'R$'; return; }
     if (isDex(st.set)) { loadDex(); return; }
     if (isCb(st.set)) { loadCb(); return; }
     if (isPk(st.set)) { loadPk(); return; }
@@ -1138,6 +1182,7 @@
     if (SHARE) { var l = $('#fn-hero .fn-hero-links'); if (!l) { l = document.createElement('div'); l.className = 'fn-hero-links'; $('#fn-hero').appendChild(l); } l.innerHTML = '<a href="./">Montar a minha coleção no MyDeck</a>'; }
   }
   function renderHeroCore() {
+    if (isHome(st.set)) { renderHomeHero(); return; }
     if (isDex(st.set)) { renderDexHero(); return; }
     if (isCb(st.set)) { renderCbHero(); return; }
     if (isPk(st.set)) { renderPkHero(); return; }
@@ -1159,12 +1204,12 @@
   }
   function renderBody() {
     computeView();
-    var html = isPk(st.set) ? renderPk() : isDex(st.set) && (st.view === 'grid' || st.view === 'binder') ? renderDex() :
+    var html = isHome(st.set) ? renderHome() : isPk(st.set) ? renderPk() : isDex(st.set) && (st.view === 'grid' || st.view === 'binder') ? renderDex() :
       st.view === 'table' ? renderTable() : st.view === 'binder' ? renderBinder() : st.view === 'dash' ? renderDashView() : renderGrid();
     $('#fn-body').innerHTML = html;
   }
   function renderControls() {
-    document.body.classList.toggle('fn-pk', isPk(st.set));
+    document.body.classList.toggle('fn-pk', isPk(st.set)); document.body.classList.toggle('fn-home', isHome(st.set));
     $$('.fn-chip[data-status]').forEach(function (b) { b.classList.toggle('is-on', b.dataset.status === st.status); });
     var imp = $('#fn-imp'), hasImp = cur.cards.some(function (c) { return c.important; });
     imp.hidden = !hasImp; imp.classList.add('is-star'); imp.classList.toggle('is-on', st.imp && hasImp);
@@ -1523,7 +1568,8 @@
         '<button type="button" class="fn-blk-h" data-blk="' + esc(k) + '" aria-expanded="' + isOpen + '"><span class="ch">▸</span><span class="t">' + esc(blockTitle(k)) + '</span>' +
         '<span class="n">' + (bp != null ? '<b>' + bp + '%</b> · ' : '') + sets.length + '</span></button><div class="fn-blk-b">' + rows + '</div></section>';
     }).join('');
-    return cbTreeHtml() + dexTreeHtml() + (html || '<div class="fn-tree-empty">Nenhuma coleção encontrada.</div>');
+    var homeRow = '<button type="button" class="fn-set fn-home-row' + (isHome(st.set) ? ' is-cur' : '') + '" data-pick="home" data-find="meus fichários início home"><span class="em">🏠</span><span class="tx"><b>Meus fichários</b><small>Visão geral</small></span></button>';
+    return homeRow + cbTreeHtml() + dexTreeHtml() + (html || '<div class="fn-tree-empty">Nenhuma coleção encontrada.</div>');
   }
   function sideHtml() { return '<input class="fn-tsearch" type="search" placeholder="Buscar coleção…" autocomplete="off" aria-label="Buscar coleção"><div class="fn-tree">' + treeHtml() + '</div>'; }
   function renderSide() {
@@ -1555,7 +1601,7 @@
   }
   function pickSet(id) {
     if (!isPk(id) || String(id) !== String(st.set)) pkEdit = false; pkSpecies = false;
-    dexLimit = 300; st.set = id; st.q = ''; st.status = 'all'; st.bpage = 0; st.artist = ''; st.imp = false; LS.set('set', id);
+    dexLimit = 300; st.set = id; st.q = ''; st.status = 'all'; st.bpage = 0; st.artist = ''; st.imp = false; if (SET_CATALOG.some(function (x) { return x.id === id; })) LS.set('set', id); // só coleções de verdade viram o "Continuar" da tela inicial
     try { history.replaceState(null, '', '#' + id); } catch (e) { }
     $('#fn-q').value = '';
     var ser = (SET_CATALOG.filter(function (x) { return x.id === setKey(id); })[0] || {}).series; var ob = openBlocks(); if (ser && ob.indexOf(ser) < 0) { ob.push(ser); LS.set('open', ob); }
@@ -1617,6 +1663,7 @@
       else if (t.dataset.act) { var a = t.dataset.act; e.preventDefault(); if (a === 'share') doShare(); else if (a === 'sharerun') runShare(); else if (a === 'sharecopy') copyShare(); else if (a === 'sharewa') waShare(); else if (a === 'copy') doCopy(); else if (a === 'copyrun') runCopy(); else if (a === 'print') doPrint(); else if (a === 'bulk') doBulk(); else if (a === 'bulkrun') runBulk(); else if (a === 'bulkundo') runUndoBulk();
         else if (a === 'dexmore') { dexLimit += 300; renderBody(); }
         else if (a === 'dexnew') openDexNew();
+        else if (a === 'drawer') openDrawer();
         else if (a === 'dexcreate') dexCreate(t.dataset.kind);
         else if (a === 'dexchoose') dexAssign(Number(t.dataset.dex), t.dataset.dset, t.dataset.dn);
         else if (a === 'dexclear') dexAssign(Number(t.dataset.dex), null);
@@ -1732,7 +1779,7 @@
       loadShare().then(function (ok) { if (ok) boot(); else { bind(); banner(); } }, function () { bind(); banner(); }); SHARE = SHARE || { keys: new Set(), loading: true }; return;
     }
     neutralizeOldRenderers();
-    if (!isDex(st.set) && !isCb(st.set) && !isPk(st.set) && !SET_CATALOG.some(function (s) { return s.id === st.set; })) st.set = 'me06';
+    if (!isHome(st.set) && !isDex(st.set) && !isCb(st.set) && !isPk(st.set) && !SET_CATALOG.some(function (s) { return s.id === st.set; })) st.set = 'home';
     bind(); banner(); renderAll();
     window.addEventListener('lazy-sets-loaded', function () { dexIdx = null; cbAllIdx = null; onData(); });
     setTimeout(banner, 2500);
