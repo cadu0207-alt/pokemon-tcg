@@ -56,9 +56,9 @@
   // Garante identificador único quando há cartas repetidas (mesmo número/set) na mesma lista
   function tagDuplicateCards(cards, defaultSet) {
     var seen = {};
-    return (cards || []).map(function (c, idx) {
+    return (cards || []).map(function (c) {
       var sid = c._set || c._setId || defaultSet || '';
-      var baseKey = (c._k ? String(c._k) : (sid + ':' + String(c.n)));
+      var baseKey = c._k ? String(c._k) : (sid + ':' + String(c.n));
       var count = (seen[baseKey] || 0) + 1;
       seen[baseKey] = count;
       if (count === 1 && !c._k) {
@@ -92,6 +92,29 @@
   function dexSlotKey(dexId, sid, n, ver) {
     var base = slotKey(sid + ':', n, ver);
     return 'dex-' + String(dexId || 'shared') + ':' + base;
+  }
+  function hasDexSlot(dexId, sid, n, ver) {
+    var base = slotKey(sid + ':', n, ver);
+    if (dexId && has('dex-' + String(dexId) + ':' + base)) return true;
+    if (has('dex-shared:' + base)) return true;
+    if (has(base)) return true;
+
+    var suffix = ':' + base;
+    var checkSet = function (iter) {
+      if (!iter) return false;
+      var found = false;
+      iter.forEach(function (k) {
+        if (!found && typeof k === 'string' && k.indexOf('dex-') === 0 && k.slice(-suffix.length) === suffix) {
+          found = true;
+        }
+      });
+      return found;
+    };
+
+    if (DEMO) return checkSet(demoSet);
+    if (SHARE) return checkSet(SHARE.keys);
+    if (typeof collected !== 'undefined' && collected) return checkSet(collected);
+    return false;
   }
   function keyOf(id, c, ver) {
     var sid = sidOf(id, c);
@@ -282,13 +305,23 @@
     cur.d = { label: b.name, cards: r.cards, sections: [], dex: true };
     if (DEMO && !demoSet.size) cur.cards.forEach(function (c) { slotsOf(st.set, c).forEach(function (s) { if (window.__fnSeed() < 0.45) demoSet.add(keyOf(st.set, c, s.ver)); }); });
   }
-  function dexOwned(c) { return !!c && stateOf(st.set, c).have > 0; }
+  function dexOwned(c) {
+    if (!c) return false;
+    var bid = (cur.binder && cur.binder.id) || String(st.set).replace(/^dex:/, '') || 'shared';
+    var sid = c._set || sidOf(st.set, c);
+    return slotsOf('', c).some(function (s) {
+      return hasDexSlot(bid, sid, c.n, s.ver) || has(keyOf(st.set, c, s.ver));
+    });
+  }
   function dexCalc(b) {
     var r = dexResolve(b), rg = dexRange(b), totSp = rg.to - rg.from + 1, ownSp = 0, filled = 0, gotSlots = 0, totSlots = 0;
     r.cards.forEach(function (c) {
       filled++;
       var sl = slotsOf('', c), any = false;
-      sl.forEach(function (s) { totSlots++; if (has(dexSlotKey(b.id, c._set, c.n, s.ver))) { gotSlots++; any = true; } });
+      sl.forEach(function (s) {
+        totSlots++;
+        if (hasDexSlot(b.id, c._set, c.n, s.ver)) { gotSlots++; any = true; }
+      });
       if (any) ownSp++;
     });
     var pct = 0;
@@ -346,10 +379,17 @@
   }
   function renderDexHero() {
     var b = cur.binder, t = cur.species.length, own = 0, empty = 0, gotSlots = 0, totSlots = 0;
+    var bid = (b && b.id) || String(st.set).replace(/^dex:/, '') || 'shared';
     cur.species.forEach(function (sp) {
       var c = cur.byDex[sp.dex]; if (!c) { empty++; return; }
       var sl = slotsOf(st.set, c), any = false;
-      sl.forEach(function (s) { totSlots++; if (has(keyOf(st.set, c, s.ver))) { gotSlots++; any = true; } });
+      sl.forEach(function (s) {
+        totSlots++;
+        if (hasDexSlot(bid, c._set || sidOf(st.set, c), c.n, s.ver) || has(keyOf(st.set, c, s.ver))) {
+          gotSlots++;
+          any = true;
+        }
+      });
       if (any) own++;
     });
     var chosen = t - empty;
@@ -532,7 +572,7 @@
   function dexCands(d) {
     var list = (dexIndex()[d] || []).slice();
     var bid = (cur.binder && cur.binder.id) || String(st.set).replace(/^dex:/, '') || 'shared';
-    var rank = function (x) { var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }), own = slotsOf('', c).some(function (s) { return has(dexSlotKey(bid, x.set, x.c.n, s.ver)); }); return own ? 0 : 1; };
+    var rank = function (x) { var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }), own = slotsOf('', c).some(function (s) { return hasDexSlot(bid, x.set, x.c.n, s.ver); }); return own ? 0 : 1; };
     list.sort(function (a, b) { var ra = rank(a), rb = rank(b); if (ra !== rb) return ra - rb; var pa = a.c.price || 1e9, pb = b.c.price || 1e9; return ra === 0 ? (b.c.price || 0) - (a.c.price || 0) : pa - pb; });
     return list;
   }
@@ -555,7 +595,7 @@
     if (!items.length) html += '<div class="fn-empty">' + (picker.list.length ? 'Nenhuma carta com essa busca.' : 'Ainda não há carta cadastrada dessa espécie.') + '</div>';
     html += items.slice(0, 80).map(function (x) {
       var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }), on = cur0 && cur0._set === x.set && String(cur0.n) === String(x.c.n);
-      var own = slotsOf('', c).some(function (s) { return has(dexSlotKey(bid, x.set, x.c.n, s.ver)); });
+      var own = slotsOf('', c).some(function (s) { return hasDexSlot(bid, x.set, x.c.n, s.ver); });
       return '<button type="button" class="fn-dp-item' + (on ? ' is-on' : '') + '" data-act="dexchoose" data-dex="' + picker.dex + '" data-dset="' + esc(x.set) + '" data-dn="' + esc(x.c.n) + '">' +
         '<img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(null, '', c)) + '"><span class="tx"><b>' + esc(i18n(c, '').name) + (own ? ' ✓' : '') + '</b><small>' + esc(setLabelOf(x.set).split('—')[0].trim()) + ' · #' + esc(x.c.n) + ' · ' + esc(rareLabel(x.c.rare)) + '</small></span><span class="pr">' + esc(priceFmt(c, '')) + '</span></button>';
     }).join('');
@@ -589,7 +629,7 @@
     return '🎴✨ *' + (b ? b.name : 'Pokédex') + '* ✨🎴\n' + filterLabel() + '\n📅 ' + new Date().toLocaleDateString('pt-BR') + '\n━━━━━━━━━━━━━━━━━━\n' + rows.join('\n') + '\n━━━━━━━━━━━━━━━━━━\n📦 Espécies: *' + got + '/' + vis.length + '*';
   }
   function dexShareRefs() {
-    var rg = dexRange(cur.binder), byDex = {};
+    var byDex = {};
     (cur.binder.card_ids || []).forEach(function (r) { byDex[Number(r.dex)] = r; });
     return cur.species.map(function (sp) { var r = byDex[sp.dex]; return r ? { set: r.set, n: r.n, dex: sp.dex } : { dex: sp.dex, name: sp.name, empty: true }; });
   }
@@ -698,7 +738,7 @@
     var t = totals(), pct = t.slots ? Math.round(t.got / t.slots * 100) : 0, nm = plainName(b.name) || 'Sem nome', nsets = (cur.d.sections || []).length, manual = cbType(b) === 'manual';
     $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>' + esc((b.emoji || '📚') + ' ' + nm) + '</h1><p class="fn-hero-sub">' + esc(cbKind(b)) + ' · ' + t.cards + ' carta' + (t.cards === 1 ? '' : 's') + (nsets > 1 ? ' de ' + nsets + ' coleções' : '') + '</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
-      '<div class="fn-stats">' + (t.slots ? '<span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' + (t.got >= t.slots ? '<span><b style="color:var(--teal)">Fichário completo 🎉</b></span>' : '<span class="fn-miss">Faltam <b>' + (t.slots - t.got) + '</b> slots</span>')
+      '<div class="fn-stats">' + (t.slots ? '<span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' + (t.got >= t.slots ? '<span><b style="color:var(--teal)">Fichário completo 🎉</b></span>' : '<span><b>' + (t.slots - t.got) + '</b> slots restantes</span>')
         : '<span>' + (manual ? (cur.pending ? 'Carregando as cartas…' : 'Este fichário ainda não tem cartas. Use “Adicionar cartas” ou o botão “Guardar em fichário” de qualquer carta.') : 'Nenhuma carta nas suas coleções ativas para esta sugestão.') + '</span>') + '</div>' +
       '<div class="fn-hero-links">' + (manual ? '<a href="#" data-act="cbadd">➕ Adicionar cartas</a>' : '') + '<a href="#" data-act="cbedit">✏️ Editar fichário</a><a href="./?classico#fichario">Abrir no fichário clássico</a></div>';
     $('#fn-setbtn-emoji').textContent = b.emoji || '📚'; $('#fn-setbtn-code').textContent = cbIsFav(b) ? 'Favoritos' : 'Personalizado'; $('#fn-setbtn-name').textContent = nm;
@@ -991,7 +1031,7 @@
       toast('Imagem salva. Mande no grupo!');
     } catch (e) { console.error(e); toast('Não foi possível gerar a imagem agora.'); }
   }
-  // informações do set (apenas data dos preços, sem chase)
+  // informações do set (apenas data dos preços)
   function infoHtml() {
     if (isCb(st.set) || isDex(st.set)) return '';
     var id = setKey(st.set), bits = [];
@@ -1006,7 +1046,7 @@
     var ids = (b.card_ids || []).slice(), added = 0, idx = dexIndex();
     cur.species.forEach(function (sp) {
       if (cur.byDex[sp.dex]) return;
-      var cands = (idx[sp.dex] || []).map(function (x) { var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }); return { set: x.set, c: c, own: slotsOf('', c).some(function (s) { return has(dexSlotKey(bid, x.set, x.c.n, s.ver)); }) }; });
+      var cands = (idx[sp.dex] || []).map(function (x) { var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }); return { set: x.set, c: c, own: slotsOf('', c).some(function (s) { return hasDexSlot(bid, x.set, x.c.n, s.ver); }) }; });
       if (!cands.length) return;
       var owned = cands.filter(function (x) { return x.own; }), pr = function (x) { return (typeof x.c.price === 'number' && x.c.price > 0) ? x.c.price : Infinity; };
       var pick = owned.length ? owned.reduce(function (m, x) { return pr(x) > pr(m) ? x : m; }, owned[0]) : cands.reduce(function (m, x) { return pr(x) < pr(m) ? x : m; }, cands[0]);
@@ -1378,7 +1418,7 @@
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats"><span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' +
       (t.sT ? '<span>Base <b>' + t.bG + '</b>/' + t.bT + '</span><span>Secretas <b>' + t.sG + '</b>/' + t.sT + '</span>' : '') +
-      (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : t.got >= t.slots ? '<span><b style="color:var(--teal)">Coleção completa 🎉</b></span>' : '<span>Faltam <b>' + (t.slots - t.got) + '</b> slots</span>') + '</div>' +
+      (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : t.got >= t.slots ? '<span><b style="color:var(--teal)">Coleção completa 🎉</b></span>' : '<span><b>' + (t.slots - t.got) + '</b> slots restantes</span>') + '</div>' +
       infoHtml() + '<div class="fn-hero-links"><a href="./#lojas">Ver ofertas</a><a href="./?classico#fichario/' + esc(st.set) + '">Abrir no fichário clássico</a></div>';
     $('#fn-setbtn-emoji').textContent = cat.emoji || '🃏';
     $('#fn-setbtn-code').textContent = label.split('—')[0].trim();
