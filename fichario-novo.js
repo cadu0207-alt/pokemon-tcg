@@ -568,7 +568,7 @@
     } finally { natCleanBusy = false; }
   }
 
-  // ── escolher / trocar / tirar a carta de uma vaga (grade visual) ──
+  // ── escolher / trocar / tirar a carta de uma vaga ──
   function dexCands(d) {
     var list = (dexIndex()[d] || []).slice();
     var bid = (cur.binder && cur.binder.id) || String(st.set).replace(/^dex:/, '') || 'shared';
@@ -581,84 +581,26 @@
     if (!DEMO && !loggedIn()) { toast('Entre no MyDeck para escolher cartas.'); return; }
     if (cur.pending > 0) { toast('Ainda carregando todas as coleções. Tente de novo em instantes.'); return; }
     var sp = cur.species.filter(function (x) { return x.dex === d; })[0] || { dex: d, name: '#' + d };
-    var rawList = dexCands(d);
-    picker = { dex: d, list: rawList, name: sp.name, sort: 'price_asc', onlyOwned: false };
-    var html = '<div class="fn-dex-modal">' +
-      '<p class="fn-dex-sub"><span id="fn-dp-count">' + rawList.length + '</span> carta(s) desta espécie em todas as coleções do site. Toque na carta para escolher qual ocupa a vaga.</p>' +
-      '<div class="fn-dex-toolbar">' +
-      '<input id="fn-dp-q" class="fn-dex-search" type="search" placeholder="Buscar: sv3 125, obf 125, ex…" autocomplete="off" aria-label="Buscar nesta espécie">' +
-      '<select id="fn-dp-sort" class="fn-dex-select" aria-label="Ordenar cartas">' +
-      '<option value="price_asc" selected>Menor preço</option>' +
-      '<option value="price_desc">Maior preço</option>' +
-      '<option value="num">Número</option>' +
-      '<option value="name">Nome</option>' +
-      '</select>' +
-      '<label class="fn-dex-chk"><input id="fn-dp-own" type="checkbox"> Só as que tenho</label>' +
-      '</div>' +
-      '<div id="fn-dp-clear-wrap"></div>' +
-      '<div class="fn-dp-grid" id="fn-dp"></div>' +
-      '</div>';
-    openSheet(html, '#' + d + ' ' + sp.name, function (ov) {
-      var sh = $('.fn-sheet', ov);
-      if (sh) sh.classList.add('is-wide');
-    });
+    picker = { dex: d, list: dexCands(d), name: sp.name };
+    openSheet('<div class="fn-form"><label>Buscar nesta espécie<input id="fn-dp-q" type="search" placeholder="coleção, número, raridade…" autocomplete="off"></label></div><div class="fn-dp" id="fn-dp"></div>', '#' + d + ' ' + sp.name);
     renderDexPicker('');
   }
   function renderDexPicker(q) {
     var box = $('#fn-dp'); if (!box || !picker) return;
     var bid = (cur.binder && cur.binder.id) || String(st.set).replace(/^dex:/, '') || 'shared';
     var words = normTxt(q).split(/\s+/).filter(Boolean), cur0 = cur.byDex[picker.dex];
-    var clearWrap = $('#fn-dp-clear-wrap');
-    if (clearWrap) {
-      clearWrap.innerHTML = cur0
-        ? '<div class="fn-dex-clearbar"><button type="button" class="fn-ver" data-act="dexclear" data-dex="' + picker.dex + '">✖ Deixar vaga sem carta (voltar para a arte do Pokémon)</button></div>'
-        : '';
-    }
-    var items = picker.list.filter(function (x) {
-      var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n });
+    var items = picker.list.filter(function (x) { var hay = normTxt(x.c.name + ' ' + x.c.n + ' ' + x.set + ' ' + setLabelOf(x.set) + ' ' + (x.c.rare || '')); return words.every(function (w) { return hay.indexOf(w) >= 0; }); });
+    var html = '';
+    if (cur0) html += '<button type="button" class="fn-dp-item is-clear" data-act="dexclear" data-dex="' + picker.dex + '"><span class="tx"><b>✖ Deixar sem carta</b><small>volta para a arte do Pokémon</small></span></button>';
+    if (!items.length) html += '<div class="fn-empty">' + (picker.list.length ? 'Nenhuma carta com essa busca.' : 'Ainda não há carta cadastrada dessa espécie.') + '</div>';
+    html += items.slice(0, 80).map(function (x) {
+      var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }), on = cur0 && cur0._set === x.set && String(cur0.n) === String(x.c.n);
       var own = slotsOf('', c).some(function (s) { return hasDexSlot(bid, x.set, x.c.n, s.ver); });
-      if (picker.onlyOwned && !own) return false;
-      var hay = normTxt(x.c.name + ' ' + x.c.n + ' ' + x.set + ' ' + setLabelOf(x.set) + ' ' + rareLabel(x.c.rare) + ' ' + (x.c.rare || ''));
-      return words.every(function (w) { return hay.indexOf(w) >= 0; });
-    }).slice();
-
-    var sortMode = picker.sort || 'price_asc';
-    items.sort(function (a, b) {
-      if (sortMode === 'price_desc') return (b.c.price || 0) - (a.c.price || 0);
-      if (sortMode === 'num') return String(a.c.n).localeCompare(String(b.c.n), undefined, { numeric: true });
-      if (sortMode === 'name') return String(a.c.name).localeCompare(String(b.c.name), 'pt');
-      var pa = (typeof a.c.price === 'number' && a.c.price > 0) ? a.c.price : 1e9;
-      var pb = (typeof b.c.price === 'number' && b.c.price > 0) ? b.c.price : 1e9;
-      return pa - pb;
-    });
-
-    var cntEl = $('#fn-dp-count');
-    if (cntEl) cntEl.textContent = String(items.length);
-
-    if (!items.length) {
-      box.innerHTML = '<div class="fn-empty">' + (picker.list.length ? 'Nenhuma carta encontrada com esses filtros.' : 'Ainda não há carta cadastrada dessa espécie.') + '</div>';
-      return;
-    }
-
-    box.innerHTML = items.slice(0, 120).map(function (x) {
-      var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n });
-      var on = cur0 && cur0._set === x.set && String(cur0.n) === String(x.c.n);
-      var own = slotsOf('', c).some(function (s) { return hasDexSlot(bid, x.set, x.c.n, s.ver); });
-      var setCode = setLabelOf(x.set).split('—')[0].trim();
-      var rarLbl = rareLabel(x.c.rare);
-      return '<button type="button" class="fn-dp-tile' + (on ? ' is-selected' : '') + (own ? ' is-owned' : '') + '" data-act="dexchoose" data-dex="' + picker.dex + '" data-dset="' + esc(x.set) + '" data-dn="' + esc(x.c.n) + '">' +
-        '<div class="fn-dp-art">' +
-        '<img loading="lazy" decoding="async" alt="' + esc(i18n(c, '').name) + '" src="' + esc(imgSrc(null, '', c)) + '">' +
-        (own ? '<span class="fn-dp-badge">✓ tenho</span>' : '') +
-        '</div>' +
-        '<div class="fn-dp-info">' +
-        '<b class="fn-dp-name">' + esc(i18n(c, '').name) + '</b>' +
-        '<span class="fn-dp-meta">' + esc(setCode) + ' · #' + esc(x.c.n) + '</span>' +
-        (rarLbl ? '<span class="fn-dp-rar">' + esc(rarLbl) + '</span>' : '') +
-        '<span class="fn-dp-price">' + esc(priceFmt(c, '')) + '</span>' +
-        '</div>' +
-        '</button>';
-    }).join('') + (items.length > 120 ? '<div class="fn-empty" style="grid-column:1/-1">Mostrando 120 de ' + items.length + '. Refine a busca.</div>' : '');
+      return '<button type="button" class="fn-dp-item' + (on ? ' is-on' : '') + '" data-act="dexchoose" data-dex="' + picker.dex + '" data-dset="' + esc(x.set) + '" data-dn="' + esc(x.c.n) + '">' +
+        '<img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(null, '', c)) + '"><span class="tx"><b>' + esc(i18n(c, '').name) + (own ? ' ✓' : '') + '</b><small>' + esc(setLabelOf(x.set).split('—')[0].trim()) + ' · #' + esc(x.c.n) + ' · ' + esc(rareLabel(x.c.rare)) + '</small></span><span class="pr">' + esc(priceFmt(c, '')) + '</span></button>';
+    }).join('');
+    if (items.length > 80) html += '<div class="fn-empty">Mostrando 80 de ' + items.length + '. Refine a busca.</div>';
+    box.innerHTML = html;
   }
   var dexBusy = false;
   async function dexAssign(d, set, n) {
@@ -2012,18 +1954,7 @@
       else if (t.dataset.bnav) { st.bpage = Math.max(0, st.bpage + Number(t.dataset.bnav) * (innerWidth >= 700 ? 2 : 1)); renderBody(); }
       else if (t.dataset.pocket) { st.pocket = String(t.dataset.pocket); LS.set('pocket', st.pocket); st.bpage = 0; renderBody(); }
     });
-    document.addEventListener('input', function (e) {
-      if (e.target.id === 'fn-dp-q') { renderDexPicker(e.target.value); return; }
-      if (e.target.id === 'fn-cp-q') { renderCbAdd(e.target.value); return; }
-      if (e.target.id === 'fn-ar-q') { renderArtists(e.target.value); return; }
-      if (e.target.id === 'fn-pks-q') { renderPkSpecies(e.target.value); return; }
-      if (e.target.classList && e.target.classList.contains('fn-tsearch')) applyTreeFilter(e.target.closest('.fn-side,.fn-drawer'));
-    });
-    document.addEventListener('change', function (e) {
-      if (!picker) return;
-      if (e.target.id === 'fn-dp-sort') { picker.sort = e.target.value; renderDexPicker(($('#fn-dp-q') || {}).value || ''); }
-      else if (e.target.id === 'fn-dp-own') { picker.onlyOwned = !!e.target.checked; renderDexPicker(($('#fn-dp-q') || {}).value || ''); }
-    });
+    document.addEventListener('input', function (e) { if (e.target.id === 'fn-dp-q') { renderDexPicker(e.target.value); return; } if (e.target.id === 'fn-cp-q') { renderCbAdd(e.target.value); return; } if (e.target.id === 'fn-ar-q') { renderArtists(e.target.value); return; } if (e.target.id === 'fn-pks-q') { renderPkSpecies(e.target.value); return; } if (e.target.classList && e.target.classList.contains('fn-tsearch')) applyTreeFilter(e.target.closest('.fn-side,.fn-drawer')); });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') { var ov = $('#fn-overlay'); if (ov && !ov.hidden) closeSheet(); else if (document.body.classList.contains('fn-focus')) { st.focus = false; LS.set('focus', false); applyFocus(); } return; }
       var tg = e.target && e.target.tagName; if (/INPUT|SELECT|TEXTAREA/.test(tg || '')) return;
