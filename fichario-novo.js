@@ -589,7 +589,6 @@ function dexTreeHtml() {
         return homeTile(o.s.id, o.s.emoji || '🃏', nm, o.p.tot ? code + ' · ' + o.p.got + '/' + o.p.tot + ' slots' : code, o.p.pct);
       }).join('') + '</div>';
     }
-    out += '<div class="fn-home-more"><button type="button" class="fn-btn is-alt" data-act="drawer">📖 Ver todas as coleções</button></div>';
     return out;
   }
   // ── favoritos ──
