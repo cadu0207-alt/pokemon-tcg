@@ -1,6 +1,7 @@
-/* Fichário — interface do MyDeck.
-- Usa o motor do site (app.js): login, leitura da coleção, toggleSlot() e catálogos.
-- Nada aqui grava no banco por conta própria: toda marcação passa por toggleSlot() / saveSlot().
+/* Fichário (beta) — interface nova do MyDeck.
+- Usa o MESMO motor do site (app.js): login, leitura da coleção, toggleSlot() e catálogos.
+- Esta página só troca o visual. Nada aqui grava no banco por conta própria: toda marcação passa
+- por toggleSlot(), a mesma função do fichário atual — então o que se marca aqui aparece lá e vice-versa.
 - Modo demonstração (?demo): coleção fictícia só na tela, não grava nada. */
 (function () {
   'use strict';
@@ -13,7 +14,7 @@
     get: function (k, d) { try { var v = localStorage.getItem('fn_' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set: function (k, v) { try { localStorage.setItem('fn_' + k, JSON.stringify(v)); } catch (e) { } }
   };
-  var CUR = 'R$';
+  var CUR = 'R$'; // moeda da coleção na tela: '$' só quando o idioma é EN e as cartas têm preço em dólar (hoje: Celebração 30 Anos)
   var money = function (v) {
     if (v == null || isNaN(v)) return '—';
     return CUR === '$' ? '$ ' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -51,6 +52,7 @@
     window.__fnSeed = rnd;
   })();
 
+  // Garante identificador único quando há cartas repetidas (mesmo número/set) na mesma lista
   function tagDuplicateCards(cards, defaultSet) {
     var seen = {};
     return (cards || []).map(function (c) {
@@ -302,20 +304,12 @@
     cur.d = { label: b.name, cards: r.cards, sections: [], dex: true };
     if (DEMO && !demoSet.size) cur.cards.forEach(function (c) { slotsOf(st.set, c).forEach(function (s) { if (window.__fnSeed() < 0.45) demoSet.add(keyOf(st.set, c, s.ver)); }); });
   }
-  function dexSlotOwned(bid, c, s) {
-    var sid = c._set || sidOf(st.set, c);
-    if (hasDexSlot(bid, sid, c.n, s.ver)) return true;
-    if (typeof slotKey === 'function') {
-      if (has(slotKey('', c.n, s.ver))) return true;
-      if (sid && has(slotKey(sid + ':', c.n, s.ver))) return true;
-    }
-    return false;
-  }
   function dexOwned(c) {
     if (!c) return false;
     var bid = (cur.binder && cur.binder.id) || String(st.set).replace(/^dex:/, '') || 'shared';
+    var sid = c._set || sidOf(st.set, c);
     return slotsOf('', c).some(function (s) {
-      return dexSlotOwned(bid, c, s);
+      return hasDexSlot(bid, sid, c.n, s.ver) || has(keyOf(st.set, c, s.ver));
     });
   }
   function dexCalc(b) {
@@ -325,7 +319,7 @@
       var sl = slotsOf('', c), any = false;
       sl.forEach(function (s) {
         totSlots++;
-        if (dexSlotOwned(b.id, c, s)) { gotSlots++; any = true; }
+        if (hasDexSlot(b.id, c._set, c.n, s.ver)) { gotSlots++; any = true; }
       });
       if (any) ownSp++;
     });
@@ -339,16 +333,10 @@
     return { got: ownSp, tot: totSp, filled: filled, gotSlots: gotSlots, totSlots: totSlots, pct: pct, pending: r.pending };
   }
   function dexProg(b) {
-    var key = 'dex:' + b.id;
+    var key = 'dex:' + b.id; if (progCache[key] !== undefined) return progCache[key];
     var c = dexCalc(b);
     var out = { got: c.got, tot: c.tot, filled: c.filled, gotSlots: c.gotSlots, totSlots: c.totSlots, pct: c.pct };
-    if (c.pending || !c.filled) {
-      delete progCache[key];
-      return out;
-    }
-    if (progCache[key] !== undefined && progCache[key].filled === out.filled && progCache[key].got === out.got) {
-      return progCache[key];
-    }
+    if (c.pending) return out;
     return (progCache[key] = out);
   }
   function dexArt(d) { return d <= 151 ? 'assets/wild/' + d + '.webp' : 'https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/other/official-artwork/' + d + '.png'; }
@@ -396,7 +384,7 @@
       var sl = slotsOf(st.set, c), any = false;
       sl.forEach(function (s) {
         totSlots++;
-        if (dexSlotOwned(bid, c, s)) {
+        if (hasDexSlot(bid, c._set || sidOf(st.set, c), c.n, s.ver) || has(keyOf(st.set, c, s.ver))) {
           gotSlots++;
           any = true;
         }
@@ -540,7 +528,6 @@
   async function dexDelete(bid) {
     var b = dexBinders().filter(function (x) { return String(x.id) === String(bid); })[0];
     if (!b || dexBusy) return;
-    var isReg = isRegionalDexBinder(b);
     var nm = b.name.replace(/^[^\wÀ-ú(]+/, '') || (isReg ? 'Pokédex regional' : 'Master Set Nacional');
     dexBusy = true;
     try {
@@ -556,16 +543,35 @@
       }
     } finally { dexBusy = false; }
   }
+  var natCleanBusy = false;
   async function cleanupAndEnsureNatDex() {
-    // Remoção automática desativada para evitar apagar registros do Master Set Nacional.
-    return;
+    if (DEMO || SHARE || !loggedIn() || natCleanBusy) return;
+    if (typeof customBinders === 'undefined' || !Array.isArray(customBinders)) return;
+    natCleanBusy = true;
+    try {
+      var nats = customBinders.filter(function (b) { return b && b.filter_config && b.filter_config.type === 'masterdex' && !isRegionalDexBinder(b); });
+      var withCards = nats.filter(function (b) { return binderCardCount(b) > 0; });
+      if (withCards.length > 0 && nats.length > withCards.length) {
+        var extras = nats.filter(function (b) { return binderCardCount(b) === 0; });
+        var removedAny = false;
+        for (var i = 0; i < extras.length; i++) {
+          var ok = await dexRemoveRecord(extras[i]);
+          if (ok) removedAny = true;
+        }
+        if (removedAny) {
+          dropMultiProg();
+          if (String(st.set) === 'dex:' + String(extras[0].id)) st.set = 'dex:' + String(withCards[0].id);
+          loadCur(); renderHero(); renderBody(); renderSide();
+        }
+      }
+    } finally { natCleanBusy = false; }
   }
 
   // ── escolher / trocar / tirar a carta de uma vaga ──
   function dexCands(d) {
     var list = (dexIndex()[d] || []).slice();
     var bid = (cur.binder && cur.binder.id) || String(st.set).replace(/^dex:/, '') || 'shared';
-    var rank = function (x) { var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }), own = slotsOf('', c).some(function (s) { return dexSlotOwned(bid, c, s); }); return own ? 0 : 1; };
+    var rank = function (x) { var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }), own = slotsOf('', c).some(function (s) { return hasDexSlot(bid, x.set, x.c.n, s.ver); }); return own ? 0 : 1; };
     list.sort(function (a, b) { var ra = rank(a), rb = rank(b); if (ra !== rb) return ra - rb; var pa = a.c.price || 1e9, pb = b.c.price || 1e9; return ra === 0 ? (b.c.price || 0) - (a.c.price || 0) : pa - pb; });
     return list;
   }
@@ -588,7 +594,7 @@
     if (!items.length) html += '<div class="fn-empty">' + (picker.list.length ? 'Nenhuma carta com essa busca.' : 'Ainda não há carta cadastrada dessa espécie.') + '</div>';
     html += items.slice(0, 80).map(function (x) {
       var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }), on = cur0 && cur0._set === x.set && String(cur0.n) === String(x.c.n);
-      var own = slotsOf('', c).some(function (s) { return dexSlotOwned(bid, c, s); });
+      var own = slotsOf('', c).some(function (s) { return hasDexSlot(bid, x.set, x.c.n, s.ver); });
       return '<button type="button" class="fn-dp-item' + (on ? ' is-on' : '') + '" data-act="dexchoose" data-dex="' + picker.dex + '" data-dset="' + esc(x.set) + '" data-dn="' + esc(x.c.n) + '">' +
         '<img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(null, '', c)) + '"><span class="tx"><b>' + esc(i18n(c, '').name) + (own ? ' ✓' : '') + '</b><small>' + esc(setLabelOf(x.set).split('—')[0].trim()) + ' · #' + esc(x.c.n) + ' · ' + esc(rareLabel(x.c.rare)) + '</small></span><span class="pr">' + esc(priceFmt(c, '')) + '</span></button>';
     }).join('');
@@ -791,8 +797,10 @@
     if (!fav) tiles += '<div class="fn-hcard is-hint"><span class="em">⭐</span><span class="tx"><b>Favoritos</b><small>Abra uma carta e toque em “Favoritar”: o fichário Favoritos aparece aqui.</small></span></div>';
     out += '<h2 class="fn-home-h">Personalizados</h2><div class="fn-home-grid">' + tiles + '</div>';
     var sets = SET_CATALOG.map(function (x) { return { s: x, p: progOf(x.id) }; }).filter(function (o) { return o.p && o.p.pct > 0; }).sort(function (a, b) { return b.p.pct - a.p.pct; }).slice(0, 9);
+    var started = sets.length > 0;
+    if (!started) sets = SET_CATALOG.filter(function (x) { return !x.upcoming; }).slice(0, 6).map(function (x) { return { s: x, p: progOf(x.id) || { got: 0, tot: 0, pct: 0 } }; });
     if (sets.length) {
-      out += '<h2 class="fn-home-h">Coleções em andamento</h2><div class="fn-home-grid">' + sets.map(function (o) {
+      out += '<h2 class="fn-home-h">' + (started ? 'Coleções em andamento' : 'Coleções') + '</h2><div class="fn-home-grid">' + sets.map(function (o) {
         var nm = (o.s.label || '').split('—').slice(1).join('—').trim() || o.s.label, code = (o.s.label || '').split('—')[0].trim();
         return homeTile(o.s.id, o.s.emoji || '🃏', nm, o.p.tot ? code + ' · ' + o.p.got + '/' + o.p.tot + ' slots' : code, o.p.pct);
       }).join('') + '</div>';
@@ -1046,12 +1054,14 @@
       toast('Imagem salva. Mande no grupo!');
     } catch (e) { console.error(e); toast('Não foi possível gerar a imagem agora.'); }
   }
+  // informações do set (apenas data dos preços)
   function infoHtml() {
     if (isCb(st.set) || isDex(st.set)) return '';
     var id = setKey(st.set), bits = [];
     try { if (typeof formatPriceUpdatedAt === 'function' && typeof PRICE_UPDATED_AT !== 'undefined' && Object.prototype.hasOwnProperty.call(PRICE_UPDATED_AT, id)) bits.push('🗓️ preços atualizados ' + esc(formatPriceUpdatedAt(id))); } catch (e) { }
     return bits.length ? '<div class="fn-stats fn-bridge" style="margin-top:6px">' + bits.map(function (b) { return '<span>' + b + '</span>'; }).join('') + '</div>' : '';
   }
+  // Pokédex: preenche só as vagas vazias
   async function dexAutoFill() {
     var b = cur.binder; if (!b || !isDex(st.set) || dexBusy) return;
     if (cur.pending > 0) { toast('Ainda carregando todas as coleções. Tente de novo em instantes.'); return; }
@@ -1059,7 +1069,7 @@
     var ids = (b.card_ids || []).slice(), added = 0, idx = dexIndex();
     cur.species.forEach(function (sp) {
       if (cur.byDex[sp.dex]) return;
-      var cands = (idx[sp.dex] || []).map(function (x) { var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }); return { set: x.set, c: c, own: slotsOf('', c).some(function (s) { return dexSlotOwned(bid, c, s); }) }; });
+      var cands = (idx[sp.dex] || []).map(function (x) { var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }); return { set: x.set, c: c, own: slotsOf('', c).some(function (s) { return hasDexSlot(bid, x.set, x.c.n, s.ver); }) }; });
       if (!cands.length) return;
       var owned = cands.filter(function (x) { return x.own; }), pr = function (x) { return (typeof x.c.price === 'number' && x.c.price > 0) ? x.c.price : Infinity; };
       var pick = owned.length ? owned.reduce(function (m, x) { return pr(x) > pr(m) ? x : m; }, owned[0]) : cands.reduce(function (m, x) { return pr(x) < pr(m) ? x : m; }, cands[0]);
@@ -1505,6 +1515,7 @@
   function setLang(l) {
     progCache = {}; LS.set('lang', l);
     var fam = FAMILY.indexOf(st.set) >= 0;
+    try { localStorage.setItem('ficLang', fam && (l === 'jp' || l === 'cn') ? 'pt' : l); } catch (e) { }
     if (fam) {
       st.lang = (l === 'pt' || l === 'en') ? l : 'pt';
       var target = REGION[l] || 'cel30';
@@ -1664,6 +1675,8 @@
   function doPrint() {
     if (DEMO) { toast('Imprimir não funciona no modo demonstração.'); return; }
     if (typeof printBinder !== 'function') { toast('Impressão indisponível agora. Recarregue a página.'); return; }
+    var code = { '4': 2, '9': 3, '12': 7, '16': 4, '20b': 6 }[String(st.pocket)] || 3;
+    try { ficBinderSize = code; if (typeof loadCollection === 'function') loadCollection(); } catch (e) { }
     var cat = SET_CATALOG.filter(function (x) { return x.id === setKey(st.set); })[0] || {};
     closeSheet();
     var only = st.status === 'miss' ? 'missing' : st.status === 'have' ? 'collected' : undefined;
@@ -1772,9 +1785,7 @@
     var d = setData(id); if (!d || !d.cards || !d.cards.length) return null;
     var tot = 0, got = 0;
     d.cards.forEach(function (c) { slotsOf(id, c).forEach(function (x) { tot++; if (has(keyOf(id, c, x.ver))) got++; }); });
-    var out = tot ? { got: got, tot: tot, pct: Math.round(got / tot * 100) } : null;
-    if (out) progCache[id] = out;
-    return out;
+    return (progCache[id] = tot ? { got: got, tot: tot, pct: Math.round(got / tot * 100) } : null);
   }
   function seriesOrder() {
     var meta = (typeof SERIES_META !== 'undefined' && SERIES_META) || {}, keys = Object.keys(meta);
@@ -1885,6 +1896,7 @@
       document.documentElement.setAttribute('data-theme', n); try { localStorage.setItem('mydeck-theme', n); } catch (e) { }
     });
 
+    // No modo foco, clicar no link/botão "My deck" sai do modo foco em vez de navegar para fora
     document.addEventListener('click', function (e) {
       if (!document.body.classList.contains('fn-focus')) return;
       var homeLink = e.target && e.target.closest ? e.target.closest('a[href="./"], a[href="index.html"], a[href="/"], #fn-home, .fn-brand, .fn-logo') : null;
@@ -1970,14 +1982,20 @@
     addEventListener('error', function (e) { toast('Algo deu errado nesta tela. Se repetir, mande um print.'); try { console.error(e.message); } catch (x) { } });
   }
 
-  var dataT;
-  function onData() {
-    clearTimeout(dataT);
-    dataT = setTimeout(function () {
-      banner();
-      if (engineReady()) { progCache = {}; loadCur(); renderHero(); renderBody(); renderSide(); }
-    }, 60);
+  function neutralizeOldRenderers() {
+    ['renderBinder', 'updateDashProgress', 'renderFicDashboard'].forEach(function (n) {
+      if (typeof window[n] === 'function') window[n] = function () { };
+    });
+    ['renderAll', 'renderDash', 'renderGastos', 'renderCartas', 'renderTabs', 'renderEvolucao', 'renderPatrimonio', 'renderCustomBindersHome'].forEach(function (n) {
+      if (typeof window[n] === 'function') window[n] = function () { onData(); };
+    });
+    if (typeof window.loadAll === 'function') {
+      var orig = window.loadAll;
+      window.loadAll = function () { var r = orig.apply(this, arguments); Promise.resolve(r).then(onData, onData); return r; };
+    }
   }
+  var dataT;
+  function onData() { clearTimeout(dataT); dataT = setTimeout(function () { banner(); if (engineReady()) { cleanupAndEnsureNatDex(); progCache = {}; loadCur(); renderHero(); renderBody(); renderSide(); } }, 60); }
 
   var SHARE_TOKEN = (function () { try { var t = new URLSearchParams(location.search).get('s'); return t && /^[\w-]{6,100}$/.test(t) ? t : null; } catch (e) { return null; } })();
   function demoShareRow(kind) {
@@ -2022,12 +2040,12 @@
       if (typeof sbClient === 'undefined' || !sbClient) return setTimeout(boot, 80);
       loadShare().then(function (ok) { if (ok) boot(); else { bind(); banner(); } }, function () { bind(); banner(); }); SHARE = SHARE || { keys: new Set(), loading: true }; return;
     }
+    neutralizeOldRenderers();
     if (!isHome(st.set) && !isDex(st.set) && !isCb(st.set) && !isPk(st.set) && !SET_CATALOG.some(function (s) { return s.id === st.set; })) st.set = 'home';
-    bind(); banner(); renderAll();
+    bind(); banner(); renderAll(); cleanupAndEnsureNatDex();
     window.addEventListener('lazy-sets-loaded', function () { dexIdx = null; cbAllIdx = null; onData(); });
-    window.addEventListener('mydeck-data-loaded', onData);
     setTimeout(banner, 2500);
-    window.__fn = { st: st, renderAll: renderAll, mark: mark, onData: onData };
+    window.__fn = { st: st, renderAll: renderAll, mark: mark };
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
