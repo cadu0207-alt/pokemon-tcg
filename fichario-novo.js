@@ -1634,6 +1634,12 @@ function dexTreeHtml() {
     LS.set('open', open);
     $$('.fn-blk[data-blk-id="' + k + '"]').forEach(function (b) { b.classList.toggle('is-open', i < 0); var h = $('.fn-blk-h', b); if (h) h.setAttribute('aria-expanded', String(i < 0)); });
   }
+  function openDrawer() {
+    var ov = $('#fn-overlay'); ov.hidden = false; ov.dataset.detail = ''; ov.classList.add('is-drawer');
+    ov.innerHTML = '<div class="fn-drawer" role="dialog" aria-modal="true" aria-label="Escolher coleção"><div class="fn-sheet-h"><h3>Coleções</h3><button class="fn-x" type="button" data-close aria-label="Fechar">×</button></div><div class="fn-sheet-b">' + sideHtml() + '</div></div>';
+    document.body.style.overflow = 'hidden';
+    var cur = $('.fn-drawer .fn-set.is-cur'), body = $('.fn-drawer .fn-sheet-b'); if (cur && body) body.scrollTop = Math.max(0, cur.offsetTop - body.clientHeight / 3);
+  }
   function pickSet(id) {
     if (!isPk(id) || String(id) !== String(st.set)) pkEdit = false; pkSpecies = false;
     dexLimit = 300; st.set = id; st.q = ''; st.status = 'all'; st.bpage = 0; st.artist = ''; st.imp = false; if (SET_CATALOG.some(function (x) { return x.id === id; })) LS.set('set', id); // só coleções de verdade viram o "Continuar" da tela inicial
@@ -1700,6 +1706,7 @@ function dexTreeHtml() {
       else if (t.dataset.act) { var a = t.dataset.act; e.preventDefault(); if (a === 'share') doShare(); else if (a === 'sharerun') runShare(); else if (a === 'sharecopy') copyShare(); else if (a === 'sharewa') waShare(); else if (a === 'copy') doCopy(); else if (a === 'copyrun') runCopy(); else if (a === 'print') doPrint(); else if (a === 'bulk') doBulk(); else if (a === 'bulkrun') runBulk(); else if (a === 'bulkundo') runUndoBulk();
         else if (a === 'dexmore') { dexLimit += 300; renderBody(); }
         else if (a === 'dexnew') openDexNew();
+        else if (a === 'drawer') openDrawer();
         else if (a === 'dexcreate') dexCreate(t.dataset.kind);
         else if (a === 'dexchoose') dexAssign(Number(t.dataset.dex), t.dataset.dset, t.dataset.dn);
         else if (a === 'dexclear') dexAssign(Number(t.dataset.dex), null);
