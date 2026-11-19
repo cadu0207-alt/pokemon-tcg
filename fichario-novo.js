@@ -293,15 +293,57 @@
       '<div class="fn-hero-links"><a href="./?classico#fichario">Abrir no fichário clássico</a></div>';
     $('#fn-setbtn-emoji').textContent = (b && b.emoji) || '🌐'; $('#fn-setbtn-code').textContent = 'Pokédex'; $('#fn-setbtn-name').textContent = name;
   }
-  function dexTreeHtml() {
+function dexTreeHtml() {
     var bs = dexBinders();
-    var rows = bs.map(function (b) {
-      var p = dexProg(b), nm = b.name.replace(/^[^\wÀ-ú(]+/, '');
-      return '<button type="button" class="fn-set' + ('dex:' + b.id === st.set ? ' is-cur' : '') + '" data-pick="dex:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' pokedex master set')) + '"><span class="em">' + esc(b.emoji || '🌐') + '</span><span class="tx"><b>' + esc(nm) + '</b><small>Pokédex</small>' +
-        '<div class="mini"><i style="width:' + p.pct + '%"></i></div></span><span class="pc' + (p.pct ? '' : ' z') + '">' + p.pct + '%</span></button>';
+    var isOpen = openBlocks().indexOf('__dex') >= 0 || isDex(st.set);
+    var isNat = function (b) { return !b.filter_config.dexFrom && !b.filter_config.dexTo; };
+
+    // Monta a lista completa: Nacional + todas as regiões (Kanto, Johto, etc.)
+    var items = [{
+      kind: 'nat',
+      label: 'Master Set Nacional (#1–1025)',
+      sub: 'Nacional · 1025 espécies',
+      emoji: '🌐',
+      binder: bs.filter(isNat)[0] || null
+    }];
+
+    (typeof POKEDEX_GEN_RANGES !== 'undefined' ? POKEDEX_GEN_RANGES : []).forEach(function (g) {
+      var m = REGION_META[g.gen] || ['🗺️'];
+      var found = bs.filter(function (b) {
+        return b.filter_config.dexFrom === g.from && b.filter_config.dexTo === g.to;
+      })[0] || null;
+
+      items.push({
+        kind: String(g.gen),
+        label: 'Master Set ' + g.label + ' (#' + g.from + '–' + g.to + ')',
+        sub: g.label + ' · ' + (g.to - g.from + 1) + ' espécies',
+        emoji: m[0],
+        binder: found
+      });
+    });
+
+    var rows = items.map(function (it) {
+      if (it.binder) {
+        var b = it.binder, p = dexProg(b), nm = b.name.replace(/^[^\wÀ-ú(]+/, '');
+        return '<button type="button" class="fn-set' + ('dex:' + b.id === st.set ? ' is-cur' : '') +
+          '" data-pick="dex:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' ' + it.sub + ' pokedex master set')) + '">' +
+          '<span class="em">' + esc(b.emoji || it.emoji) + '</span>' +
+          '<span class="tx"><b>' + esc(nm) + '</b><small>' + esc(it.sub) + '</small>' +
+          '<div class="mini"><i style="width:' + p.pct + '%"></i></div></span>' +
+          '<span class="pc' + (p.pct ? '' : ' z') + '">' + p.pct + '%</span></button>';
+      }
+      return '<button type="button" class="fn-set" data-act="dexcreate" data-kind="' + esc(it.kind) +
+        '" data-find="' + esc(normTxt(it.label + ' ' + it.sub + ' pokedex master set criar')) + '">' +
+        '<span class="em">' + esc(it.emoji) + '</span>' +
+        '<span class="tx"><b>' + esc(it.label) + '</b><small>Toque para iniciar</small></span>' +
+        '<span class="pc z">+</span></button>';
     }).join('');
-    rows += '<button type="button" class="fn-set" data-act="dexnew" data-find="criar pokedex nacional regional"><span class="em">➕</span><span class="tx"><b>Criar Pokédex</b><small>Nacional ou por região</small></span></button>';
-    return '<section class="fn-blk is-open" data-blk-id="__dex"><div class="fn-blk-h"><span class="t">Pokédex</span><span class="n">' + bs.length + '</span></div><div class="fn-blk-b">' + rows + '</div></section>';
+
+    return '<section class="fn-blk' + (isOpen ? ' is-open' : '') + '" data-blk-id="__dex">' +
+      '<button type="button" class="fn-blk-h" data-blk="__dex" aria-expanded="' + isOpen + '">' +
+      '<span class="ch">▸</span><span class="t">Pokédex</span>' +
+      '<span class="n">' + (bs.length ? '<b>' + bs.length + '</b>/' + items.length : items.length) + '</span>' +
+      '</button><div class="fn-blk-b">' + rows + '</div></section>';
   }
   function openDexNew() {
     if (!DEMO && !loggedIn()) { toast('Entre no MyDeck para criar a sua Pokédex.'); return; }
