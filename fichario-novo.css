@@ -428,7 +428,9 @@ body.fn-share #fn-setbtn .fn-caret{display:none}
 body.fn-share .fn-ph .fn-img,body.fn-share .fn-pocket.fn-ph{pointer-events:none}
 
 /* ── Fichário de Pokémon (posições fixas) ── */
-body.fn-pk .fn-bar{display:none}
+/* no fichário de Pokémon só o botão Ferramentas (compartilhar/PDF) fica na barra; busca, filtros, modos e ordem não se aplicam */
+body.fn-pk .fn-bar-top,body.fn-pk .fn-bar-left-tools,body.fn-pk .fn-bar-right>:not(#fn-more){display:none}
+body.fn-pk .fn-bar{padding-top:0;padding-bottom:0;border:0;background:none}
 .fn-pocket.is-empty{background:var(--surface2);border:1px dashed var(--border2);color:var(--muted);display:grid;place-items:center;aspect-ratio:63/88;cursor:default}
 .fn-pocket.is-empty.is-edit{cursor:pointer;border-color:var(--accent)}
 .fn-pocket.is-empty .fn-plus{font-size:26px;color:var(--accent);font-weight:800;line-height:1}
