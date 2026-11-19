@@ -770,8 +770,6 @@
     pkBinders().forEach(function (b) { var p = pkProg(b), nm = plainName(b.name) || 'Sem nome'; tiles += homeTile('pk:' + b.id, '📍', nm, p.filled + ' carta' + (p.filled === 1 ? '' : 's') + ' · Pokémon', p.pct); });
     dexBinders().forEach(function (b) { var p = dexProg(b), nm = b.name.replace(/^[^\wÀ-ú(]+/, ''); tiles += homeTile('dex:' + b.id, b.emoji || '🌐', nm, 'Pokédex · ' + p.got + '/' + p.tot, p.pct); });
     if (!fav) tiles += '<div class="fn-hcard is-hint"><span class="em">⭐</span><span class="tx"><b>Favoritos</b><small>Abra uma carta e toque em “Favoritar”: o fichário Favoritos aparece aqui.</small></span></div>';
-    tiles += '<button type="button" class="fn-hcard is-new" data-act="cbnew"><span class="em">➕</span><span class="tx"><b>Novo fichário</b><small>Personalizado ou sugestão temática</small></span></button>';
-    tiles += '<button type="button" class="fn-hcard is-new" data-act="dexnew"><span class="em">🌐</span><span class="tx"><b>Criar Pokédex</b><small>Nacional ou por região</small></span></button>';
     out += '<h2 class="fn-home-h">Personalizados</h2><div class="fn-home-grid">' + tiles + '</div>';
     var sets = SET_CATALOG.map(function (x) { return { s: x, p: progOf(x.id) }; }).filter(function (o) { return o.p && o.p.pct > 0; }).sort(function (a, b) { return b.p.pct - a.p.pct; }).slice(0, 9);
     var started = sets.length > 0;
