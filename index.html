@@ -27,12 +27,6 @@
 <meta property="og:title" content="MyDeck — Pokémon TCG Tracker">
 <meta property="og:description" content="Tracker gratuito de coleção Pokémon TCG: master set, cartas tiradas e ofertas rastreadas no Mercado Livre.">
 <meta property="og:url" content="https://mydecktcg.com.br/">
-<!-- og:image dedicado (04/09/2026): antes apontava pro ícone quadrado
-     512x512 (pokébola) — funciona, mas cortava/centralizava mal nos
-     formatos grandes (Facebook/LinkedIn/X preferem paisagem ~1.91:1).
-     og-image.jpg é a wordmark completa (logo-mydeck.webp) composta em
-     1200x630 — gerado a partir do mesmo arquivo de logo, sem redesenhar
-     nada. O favicon/ícone (icon-512.png) continua sendo a pokébola. -->
 <meta property="og:image" content="https://mydecktcg.com.br/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -42,11 +36,6 @@
 <meta name="twitter:title" content="MyDeck — Pokémon TCG Tracker">
 <meta name="twitter:description" content="Tracker gratuito de coleção Pokémon TCG: master set, cartas tiradas e ofertas rastreadas no Mercado Livre.">
 <meta name="twitter:image" content="https://mydecktcg.com.br/og-image.jpg">
-<!-- JSON-LD (04/09/2026): structured data pra rich snippets/entender o site -
-     WebSite (com nome/URL do site) + Organization (marca) + WebApplication
-     (o produto em si, gratuito, categoria utilitario). Sem SearchAction:
-     a busca (#gsearch) e só client-side sobre os sets já carregados, não
-     tem endpoint de URL pra apontar (?q={query} não existe de verdade). -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -85,7 +74,6 @@
   ]
 }
 </script>
-<!-- PERFORMANCE 03/10/2026: abre as conexões das origens externas em paralelo, sem esperar o CSS/JS pedir -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -147,10 +135,6 @@
   flex-shrink: 0;
   will-change: transform;
 }
-/* PERFORMANCE 03/10/2026: as cartinhas deixaram de ser 184 <img> (≈9,2 MB de PNG do scrydex, escondidas
-   atrás do overlay 90% opaco) e viraram recortes de UM sprite WebP de baixa qualidade (~46 KB,
-   mosaic-sprite.webp, gerado por scripts/build_mosaic_sprite.js). Sprite = 12 colunas x 6 linhas
-   de tiles; exibido a 32x44 px por tile (background-size 384x264). */
 .amcard {
   width: 32px;
   height: 44px;
@@ -165,30 +149,13 @@
 .amrow.paused { animation-play-state: paused !important; }
 #pg-app .pane {
   position: relative; z-index: 1;
-  /* MARCA D'ÁGUA 01/09/2026: Rayquaza (mesma arte gerada pro header) como
-     decoração de fundo — grande, centralizada e TRAVADA na tela (background-
-     attachment:fixed), então não se move quando rola a página; fica atrás
-     de tudo (o PNG já vem com opacidade baixa embutida e fundo transparente,
-     então não compete visualmente com botões/imagens). Troca de imagem por
-     tema via [data-theme="dark"] abaixo (mesmo padrão de .home-logo-light/
-     dark). background:var(--bg) fica no shorthand pra não perder a cor de
-     fundo de cada tema. min-height garante que abas com pouco conteúdo
-     (ex: Início) ainda preencham a tela toda. */
   min-height: calc(100vh - var(--topbar-h, 104px));
   background: var(--bg) url('rayquaza-watermark-light.webp') no-repeat center center / 720px auto fixed;
 }
 [data-theme="dark"] #pg-app .pane { background-image: url('rayquaza-watermark-dark.webp'); }
-/* Mobile: tira a marca d'água (economiza banda e evita brigar com a mnav
-   fixa no rodapé) — mantém só a cor sólida de fundo, sem mexer no min-height
-   acima (útil também no mobile pra abas curtas não ficarem "cortadas"). */
 @media (max-width: 900px) {
   #pg-app .pane { background-image: none; }
 }
-/* CORRIGIDO 18/08/2026: .stripe e #feedback-bar-wrap
-   ficam FORA de .pane no DOM, então (sem position própria) eram pintados
-   ANTES do #app-mosaic na stacking order — o overlay quase-opaco do mosaico
-   (::after) cobria tudo, deixando a barra de feedback ("site em construção")
-   e o input de mensagem praticamente invisíveis. Mesmo tratamento de .pane. */
 #pg-app > .stripe,
 #pg-app > #feedback-bar-wrap { position: relative; z-index: 1; }
 </style>
@@ -202,12 +169,6 @@
 </head>
 <body>
 
-<!-- CORRIGIDO 04/09/2026: os botões de Simulador/Alpha Lorcana viviam aqui
-     ATÉ EM DOBRO no desktop — já existiam como link no .tdesk (sidebar
-     esquerda), então essa 2ª linha (.tfa-row-quick) era pura duplicata.
-     Removida. Mobile não é afetado: nunca usou esse cluster (some
-     <901px) — o acesso lá é pela folha "Mais" (.msheet-item, ver
-     inicio.js/index.html mais abaixo). -->
 <div class="top-fixed-actions">
   <div class="tfa-row">
     <a class="wa-community-btn" href="https://chat.whatsapp.com/KAEFJ5pGZrsDZeusCE0Sxs?s=cl&p=i&ilr=4&amv=2" target="_blank" rel="noopener" title="Grupo da Comunidade MyDeck no WhatsApp">
@@ -219,32 +180,12 @@
   </div>
 </div>
 
-<!-- ===== APP =====
-     29/08/2026: a antiga "página inicial" (pg-home, fora do app, com a logo
-     e os botões Entrar/Simulador/Lorcana) foi removida — virava um passo a
-     mais antes de cair na aba Início (que já existia desde 23/08 como
-     porta de entrada real, com novidades/notícias/vídeos/links/revista).
-     Agora pg-app é a única página; a logo virou identidade visual no topo
-     da própria aba Início (ver .inicio-brand mais abaixo), e os botões de
-     Simulador/Lorcana viraram atalhos ali dentro. A Início ficou pública
-     (renderInicio() não exige mais login — ver inicio.js e o gate em
-     go()/app.js), então quem chega sem conta já vê conteúdo de verdade em
-     vez de bater direto numa tela de login. -->
 <div id="pg-app" class="page active">
   <div id="app-mosaic"></div>
   <header>
-    <!-- REDESENHADO 31/08/2026: badge "MyDeck • Pokémon TCG" + wordmark em
-         texto ("MyDeck") + subtítulo dinâmico (siglas dos sets marcados)
-         saíram — essa info já aparece no Fichário/Simulador/Alpha Lorcana,
-         então aqui virava repetição. A logo oficial (com o Rayquaza do
-         letreiro) virou a identidade visual do topo, maior, no lugar do
-         texto. updateHsub() (app.js) continua existindo mas vira no-op
-         inofensivo (só escreve em #hsub-dyn se o elemento existir). -->
     <div class="hdr-logo-block">
       <button class="back-btn" onclick="goToTab('inicio')" title="Início">⌂</button>
       <a href="#" class="hdr-logo-link" title="Início" onclick="goToTab('inicio');return false;">
-        <!-- 03/10/2026: logos redimensionadas (1800→600 px, 313→56 KB) e loading=lazy: o <img> com display:none
-             (tema que não está ativo) não é baixado até o tema trocar. -->
         <img class="hdr-logo-img home-logo-light" src="logo-mydeck.webp" width="600" height="191" loading="lazy" decoding="async" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil">
         <img class="hdr-logo-img home-logo-dark" src="logo-mydeck-dark.webp" width="600" height="191" loading="lazy" decoding="async" alt="MyDeck — Master Set Tracker · Pokémon TCG Brasil">
       </a>
@@ -253,8 +194,6 @@
       <span id="status-dot" class="dot dot-warning"></span>
       <span id="status-txt">Conectando...</span>
       <span id="usd-brl" style="margin-left:14px;opacity:.6"></span>
-      <!-- 02/10/2026: sino de notificações (notificacoes.js) — só aparece
-           logado; o painel é position:fixed, posicionado por JS. -->
       <div id="notif-wrap" style="display:none;margin-left:12px">
         <button type="button" id="notif-bell" class="notif-bell" onclick="notifTogglePanel(event)" aria-label="Notificações" aria-haspopup="true" aria-expanded="false" title="Notificações">🔔<span id="notif-badge" class="notif-badge" style="display:none">0</span></button>
         <div id="notif-panel" class="notif-panel" role="dialog" aria-label="Notificações" style="display:none"></div>
@@ -273,14 +212,13 @@
   <nav class="tdesk tdesk-flat" aria-label="Seções do site (desktop)">
     <button type="button" class="tdesk-link active" data-tab="inicio" onclick="goToTab('inicio')"><span class="tdesk-icon">🏠</span>Início</button>
     <button type="button" class="tdesk-link" data-tab="dash" onclick="goToTab('dash')"><span class="tdesk-icon">📊</span>Dashboard</button>
-    <button type="button" class="tdesk-link" data-tab="fichario" onclick="goToTab('fichario')"><span class="tdesk-icon">📚</span>Fichários</button>
+    <button type="button" class="tdesk-link" data-tab="fichario" onclick="openNewFichario(event)"><span class="tdesk-icon">📚</span>Fichários</button>
     <button type="button" class="tdesk-link" data-tab="centralizacao" onclick="goToTab('centralizacao')"><span class="tdesk-icon">🎯</span>Centralização</button>
 
     <div class="tdesk-label">Compra &amp; Venda</div>
     <button type="button" class="tdesk-link" data-tab="lojas" onclick="goToTab('lojas')"><span class="tdesk-icon">🔎</span>Busca de Promoções ML</button>
 
     <button type="button" class="tdesk-link" data-tab="iniciantes" onclick="goToTab('iniciantes')"><span class="tdesk-icon">🔰</span>Iniciantes</button>
-    <!-- espelha nav-tab-admin: só Eduardo vê (updateAdminTabVisibility em admin_panel.js) -->
     <button type="button" class="tdesk-link tdesk-admin" id="desk-tab-admin" style="display:none" data-tab="admin" onclick="goToTab('admin')"><span class="tdesk-icon">🔐</span>Admin</button>
 
     <div class="tdesk-spacer"></div>
@@ -289,7 +227,7 @@
   <nav class="tabs" aria-label="Seções do site">
     <button type="button" class="tab active" id="nav-tab-inicio" onclick="go('inicio',this)">🏠 Início</button>
     <button type="button" class="tab" id="nav-tab-dash" onclick="go('dash',this)">📊 Dashboard</button>
-    <button type="button" class="tab" id="nav-tab-fichario" onclick="go('fichario',this)">📚 Fichário</button>
+    <button type="button" class="tab" id="nav-tab-fichario" onclick="openNewFichario(event)">📚 Fichário</button>
     <button type="button" class="tab" id="nav-tab-lojas" onclick="go('lojas',this)">🔎 Busca de Promoções ML</button>
     <button type="button" class="tab" id="nav-tab-iniciantes" onclick="go('iniciantes',this)">🔰 Iniciantes</button>
     <button type="button" class="tab" id="nav-tab-centralizacao" onclick="go('centralizacao',this)">🎯 Avaliação de Centralização</button>
@@ -299,7 +237,7 @@
   <!-- MENU MOBILE (barra inferior estilo app) -->
   <nav class="mnav" aria-label="Navegação mobile" id="mnav">
     <button type="button" class="mnav-btn active" id="mnav-tab-inicio" data-tab="inicio" onclick="mNav('inicio')"><span class="mnav-ic">🏠</span>Início</button>
-    <button type="button" class="mnav-btn" id="mnav-tab-fichario" data-tab="fichario" onclick="mNav('fichario')"><span class="mnav-ic">📚</span>Fichário</button>
+    <button type="button" class="mnav-btn" id="mnav-tab-fichario" data-tab="fichario" onclick="openNewFichario(event)"><span class="mnav-ic">📚</span>Fichário</button>
     <button type="button" class="mnav-btn" id="mnav-more-btn" onclick="toggleMSheet()" aria-expanded="false" aria-controls="msheetBackdrop"><span class="mnav-ic">☰</span>Mais</button>
   </nav>
 
@@ -334,10 +272,38 @@
   function toggleMSheet(){
     document.getElementById('msheetBackdrop').classList.contains('show') ? closeMSheet() : openMSheet();
   }
+  function openNewFichario(e){
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+
+    if (/[?&]classico\b/i.test(window.location.search)) {
+      try { localStorage.setItem('mydeck_fichario_ui', 'classico'); } catch (_) {}
+      if (typeof goToTab === 'function') goToTab('fichario');
+      return;
+    }
+
+    try {
+      localStorage.setItem('mydeck_fichario_ui', 'novo');
+      ['mydeck-fichario-mode','mydeck_fichario_mode','fichario_mode','fichario-view-mode','mydeck-binder-ui'].forEach(function(k){
+        if (localStorage.getItem(k) === 'classico' || localStorage.getItem(k) === 'classic') {
+          localStorage.setItem(k, 'novo');
+        }
+      });
+    } catch (_) {}
+
+    window.location.href = 'fichario-novo.html';
+  }
   function mNav(id){
     closeMSheet();
+    if (id === 'fichario') { openNewFichario(); return; }
     goToTab(id);
   }
+  document.addEventListener('click', function(e){
+    if (/[?&]classico\b/i.test(window.location.search)) return;
+    var target = e.target && e.target.closest ? e.target.closest('[data-tab="fichario"], #nav-tab-fichario, #mnav-tab-fichario') : null;
+    if (!target) return;
+    openNewFichario(e);
+  }, true);
   (function(){
     var t;
     function isText(e){ return !!e && /^(INPUT|TEXTAREA|SELECT)$/.test(e.tagName) && !/^(checkbox|radio|button|submit|range|file|color)$/.test(e.type || ''); }
@@ -563,19 +529,11 @@
   </div>
 
   <div id="fichario" class="pane">
-    <!-- Stats globais -->
     <div class="bstats" id="binder-stats"></div>
-
-    <!-- MENU DESKTOP DO FICHÁRIO 12/08/2026 -->
     <div id="fic-tabs-desktop" class="fic-tdesk"></div>
-
-    <!-- Tabs dos sets -->
     <div id="binder-tabs" style="display:flex;gap:2px;margin-bottom:12px;border-bottom:1px solid var(--border);overflow-x:auto;padding-bottom:0"></div>
 
-    <!-- Barra de controles -->
     <div class="bctl" style="flex-direction:column;align-items:stretch;gap:10px;margin-bottom:10px">
-
-      <!-- Linha 1 — busca e filtros -->
       <div class="fic-toolbar-row1" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <input class="bsrch" id="bsrch" placeholder="Buscar carta..." aria-label="Buscar carta neste fichário" oninput="ficSearchDebounced()">
         <button type="button" id="fic-filters-toggle" class="fic-btn" aria-expanded="false" onclick="ficToggleOpts()">⚙ Filtros</button>
@@ -584,7 +542,6 @@
         <label><input type="checkbox" id="fi2" onchange="renderBinder()"> Só importantes ★</label>
       </div>
 
-      <!-- Linha 2 — visualização + ações -->
       <div class="fic-toolbar-row2" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <div style="display:flex;gap:4px;align-items:center">
           <span class="fic-toolbar-lbl">MODO:</span>
@@ -625,13 +582,11 @@
       </div>
     </div>
 
-    <!-- Progresso do set atual -->
     <div id="fic-set-info"
          style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;
                 font-size:10px;color:var(--muted);margin-bottom:14px;padding:10px 14px;
                 background:var(--surface2);border-radius:6px"></div>
 
-    <!-- Conteúdo do binder -->
     <div id="bwrap"></div>
   </div>
 
@@ -665,7 +620,6 @@
       <button type="button" id="leilao-tab-financeiro" class="btn-add leilao-subtab-btn" data-sub="financeiro" onclick="switchLeilaoSubtab('financeiro')" style="display:none">💰 Financeiro</button>
     </div>
 
-    <!-- ── CADASTRO (leiloeiro/admin) ──────────────────────────────── -->
     <div id="leilao-sub-cadastro" style="display:none">
       <div class="mkt-note">
         Fluxo: 1) crie uma <b>rodada</b> (define o prazo dos lances e o prazo de pagamento —
@@ -767,14 +721,12 @@
       </div>
     </div>
 
-    <!-- ── PEDIDOS & ENVIOS ──────────────────────────────────────── -->
     <div id="leilao-sub-pedidos" style="display:none">
       <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">📬 Pedidos / Carrinhos do Leilão</div>
       <div style="font-size:10.5px;color:var(--muted);margin-bottom:14px">Resumo de cada rodada arrematada, endereço de entrega, simulação de frete e o botão pra chamar o comprador no WhatsApp e combinar pagamento/envio.</div>
       <div id="leilao-admin-orders"></div>
     </div>
 
-    <!-- ── PARTICIPANTES & BLOQUEIOS ─────────────────────────────── -->
     <div id="leilao-sub-participantes" style="display:none">
       <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">🚫 Participantes &amp; Bloqueios</div>
       <div class="mkt-note">
@@ -787,7 +739,6 @@
       <div id="leilao-part-list"></div>
     </div>
 
-    <!-- ── ANÁLISES ──────────────────────────────────────────────── -->
     <div id="leilao-sub-analises" style="display:none">
       <div class="kpi-grid" id="leilao-analises-kpis" style="margin-bottom:24px"></div>
       <div id="leilao-analises-countdown" style="margin-bottom:24px"></div>
@@ -811,7 +762,6 @@
       <div id="loja-analises-comissao-total" style="margin-bottom:24px"></div>
     </div>
 
-    <!-- ── ARQUIVO ───────────────────────────────────────────────── -->
     <div id="leilao-sub-arquivo" style="display:none">
       <div class="mkt-note">
         Rodadas encerradas — quem deu lance em cada carta, quem ganhou e por quanto.
@@ -821,7 +771,6 @@
       <div id="leilao-arquivo-list"></div>
     </div>
 
-    <!-- ── FINANCEIRO ────────────────────────────────────────────── -->
     <div id="leilao-sub-financeiro" style="display:none">
       <div class="mkt-note" style="border-color:var(--gold);color:var(--gold)">
         🔒 Só você vê essa aba. Preço pago, margem e lucro nunca aparecem pro comprador nem em nenhum lugar público do site.
@@ -858,7 +807,6 @@
       <div id="loja-financeiro-list"></div>
     </div>
 
-    <!-- ── LEILÕES (todo mundo) ────────────────────────────────────── -->
     <div id="leilao-sub-leiloes">
       <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">🔥 Leilões Vigentes</div>
       <div style="margin-bottom:14px">
@@ -873,7 +821,6 @@
       <div id="leilao-list"></div>
     </div>
 
-    <!-- ── MEUS ARREMATES ────────────────────────────────────────── -->
     <div id="leilao-sub-meus-arremates" style="display:none">
       <div class="mkt-grid">
         <div class="panel">
@@ -919,7 +866,6 @@
       </div>
     </div>
 
-    <!-- ── LOJA DO LEILOEIRO ─────────────────────────────────────── -->
     <div id="leilao-sub-loja" style="display:none">
       <div class="mkt-note">
         Venda direta do leiloeiro, preço fixo — cartas avulsas e produtos selados. "Reservar" segura o
@@ -939,7 +885,6 @@
       <div id="loja-my-reservations"></div>
     </div>
 
-    <!-- ── ESTOQUE DA LOJA ───────────────────────────────────────── -->
     <div id="leilao-sub-estoque" style="display:none">
       <div class="mkt-grid">
         <div class="panel">
