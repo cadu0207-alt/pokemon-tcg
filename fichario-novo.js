@@ -709,13 +709,18 @@ function dexTreeHtml() {
     if (!confirm('Excluir o fichário “' + plainName(b.name) + '”? As suas marcações de cartas não são apagadas, só o fichário.')) return;
     cbBusy = true;
     try {
-      if (DEMO) demoCb = demoCb.filter(function (x) { return x.id !== b.id; });
-      else {
+      if (DEMO) {
+        if (isDex(st.set)) demoBinders = null;
+        else demoCb = demoCb.filter(function (x) { return x.id !== b.id; });
+      } else {
         var r = await sbClient.from('custom_binders').delete().eq('id', b.id).eq('user_id', uid());
         if (r.error) { toast('Não foi possível excluir. Tente de novo.'); return; }
         var i = customBinders.findIndex(function (x) { return x.id === b.id; }); if (i >= 0) customBinders.splice(i, 1);
         try { var pi = pinnedBinders.indexOf(String(b.id)); if (pi >= 0) { pinnedBinders.splice(pi, 1); savePinnedBinders(); } } catch (e) { }
       }
+      closeSheet(); dropMultiProg(); toast('Fichário excluído.'); pickSet('home');
+    } finally { cbBusy = false; }
+  }
       closeSheet(); dropMultiProg(); toast('Fichário excluído.'); pickSet('me06');
     } finally { cbBusy = false; }
   }
