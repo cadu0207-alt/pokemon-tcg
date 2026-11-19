@@ -34,7 +34,6 @@
     cols: LS.get('cols', defCols),
     lang: LS.get('lang', 'pt'),
     pocket: (function () { var p = String(LS.get('pocket', '9')); return p === '20a' ? '20b' : p; })(),
-    imp: false,
     focus: false,
     artist: '',
     bpage: 0
@@ -400,7 +399,7 @@
     $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>' + esc(name) + '</h1><p class="fn-hero-sub">Pokédex · ' + t + ' espécies · progresso isolado desta Pokédex</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats">' + (b ? '<span><b>' + own + '</b>/' + t + ' espécies</span><span>Com carta escolhida <b>' + chosen + '</b></span>' + (totSlots ? '<span>Slots coletados <b>' + gotSlots + '</b>/' + totSlots + '</span>' : '') + (empty ? '<span>Vagas sem carta <b>' + empty + '</b></span>' : '') : '<span>' + (loggedIn() || DEMO ? 'Carregando a sua Pokédex…' : 'Entre no MyDeck para carregar a sua Pokédex.') + '</span>') + '</div>' +
-      '<div class="fn-hero-links">' + (b ? '<a href="#" data-act="dexaskdelete" data-bid="' + esc(b.id) + '">' + delLbl + '</a>' : '') + '<a href="./?classico#fichario">Abrir no fichário clássico</a></div>';
+      (b ? '<div class="fn-hero-links"><a href="#" data-act="dexaskdelete" data-bid="' + esc(b.id) + '">' + delLbl + '</a></div>' : '');
     $('#fn-setbtn-emoji').textContent = (b && b.emoji) || '🌐'; $('#fn-setbtn-code').textContent = 'Pokédex'; $('#fn-setbtn-name').textContent = name;
   }
 
@@ -529,7 +528,7 @@
   async function dexDelete(bid) {
     var b = dexBinders().filter(function (x) { return String(x.id) === String(bid); })[0];
     if (!b || dexBusy) return;
-    var nm = b.name.replace(/^[^\wÀ-ú(]+/, '') || (isRegionalDexBinder(b) ? 'Pokédex regional' : 'Master Set Nacional');
+    var nm = b.name.replace(/^[^\wÀ-ú(]+/, '') || (isReg ? 'Pokédex regional' : 'Master Set Nacional');
     dexBusy = true;
     try {
       var ok = await dexRemoveRecord(b);
@@ -769,7 +768,7 @@
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats">' + (t.slots ? '<span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' + (t.got >= t.slots ? '<span><b style="color:var(--teal)">Fichário completo 🎉</b></span>' : '<span><b>' + (t.slots - t.got) + '</b> slots restantes</span>')
         : '<span>' + (manual ? (cur.pending ? 'Carregando as cartas…' : 'Este fichário ainda não tem cartas. Use “Adicionar cartas” ou o botão “Guardar em fichário” de qualquer carta.') : 'Nenhuma carta nas suas coleções ativas para esta sugestão.') + '</span>') + '</div>' +
-      '<div class="fn-hero-links">' + (manual ? '<a href="#" data-act="cbadd">➕ Adicionar cartas</a>' : '') + (isArtistBinder ? '<a href="#" data-act="artists">🎨 Outros artistas</a>' : '') + '<a href="#" data-act="cbedit">✏️ Editar fichário</a><a href="./?classico#fichario">Abrir no fichário clássico</a></div>';
+      '<div class="fn-hero-links">' + (manual ? '<a href="#" data-act="cbadd">➕ Adicionar cartas</a>' : '') + (isArtistBinder ? '<a href="#" data-act="artists">🎨 Outros artistas</a>' : '') + '<a href="#" data-act="cbedit">✏️ Editar fichário</a></div>';
     $('#fn-setbtn-emoji').textContent = b.emoji || (isArtistBinder ? '🎨' : '📚'); $('#fn-setbtn-code').textContent = cbIsFav(b) ? 'Favoritos' : isArtistBinder ? 'Artista' : 'Personalizado'; $('#fn-setbtn-name').textContent = nm;
   }
 
@@ -1134,7 +1133,7 @@
     var r = cur.pk, pages = pkPages(b), per = pages[0].length, total = pages.length * per, pct = r.filled ? Math.round(r.got / r.filled * 100) : 0, sp = (b.filter_config || {}).name;
     $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>📍 ' + esc(plainName(b.name) || 'Sem nome') + '</h1><p class="fn-hero-sub">Fichário de Pokémon' + (sp ? ' · ' + esc(sp) : '') + ' · ' + pages.length + ' página' + (pages.length === 1 ? '' : 's') + ' de ' + binderSizeLabel(b.layout || 3) + '</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
       '<div class="fn-progress"><i style="width:' + pct + '%"></i></div><div class="fn-stats"><span><b>' + r.got + '</b>/' + r.filled + ' cartas colocadas que você tem</span><span>Vagas preenchidas <b>' + r.filled + '</b>/' + total + '</span></div>' +
-      '<div class="fn-hero-links"><a href="#" data-act="pkedit">' + (pkEdit ? '✔ Terminar edição' : '✏️ Editar posições') + '</a><a href="#" data-act="cbedit">⚙️ Nome / excluir</a><a href="./?classico#fichario">Abrir no fichário clássico</a></div>' +
+      '<div class="fn-hero-links"><a href="#" data-act="pkedit">' + (pkEdit ? '✔ Terminar edição' : '✏️ Editar posições') + '</a><a href="#" data-act="cbedit">⚙️ Nome / excluir</a></div>' +
       (pkEdit ? '<div class="fn-warn" style="margin-top:10px">Modo edição: toque numa vaga vazia para escolher a carta, ou numa carta para trocá-la ou tirá-la. Tudo é salvo na hora.</div>' : '');
     $('#fn-setbtn-emoji').textContent = '📍'; $('#fn-setbtn-code').textContent = 'Pokémon'; $('#fn-setbtn-name').textContent = plainName(b.name) || 'Pokémon';
   }
@@ -1265,7 +1264,6 @@
     var q = st.q.trim().toLowerCase(), id = st.set;
     var arr = cur.cards.filter(function (c) {
       if (q && (c.name + ' ' + c.n + ' ' + (c.nameEn || '') + ' ' + (c.nameJp || '') + ' ' + (c.nameCn || '') + ' ' + (c.type || '') + ' ' + rareLabel(c.rare) + ' ' + (c.rare || '')).toLowerCase().indexOf(q) < 0) return false;
-      if (st.imp && !c.important) return false;
       if (st.artist && c.artist !== st.artist) return false;
       if (st.status !== 'all') { var s = stateOf(id, c).st; if (st.status === 'miss' && s === 'have') return false; if (st.status === 'have' && s !== 'have') return false; }
       return true;
@@ -1315,7 +1313,6 @@
       '<button type="button" class="fn-img" data-open="' + esc(kId) + '" aria-label="Ver ' + esc(nm) + '">' +
       (c._dex ? '<span class="fn-dexn">#' + c._dex + '</span>' : '') +
       '<img loading="lazy" decoding="async" alt="' + esc(nm) + '" src="' + esc(imgSrc(cur.d, id, c)) + '">' +
-      (c.important ? '<span class="fn-star" title="Carta importante" aria-hidden="true">★</span>' : '') +
       (isFav(c) ? '<span class="fn-fav" title="Nos seus Favoritos" aria-hidden="true">⭐</span>' : '') +
       '<span class="fn-tick" aria-hidden="true">' + (s.st === 'part' ? '½' : '✓') + '</span></button>' +
       '<div class="fn-meta"><span class="fn-name" title="' + esc(nm) + '">' + esc(nm) + '</span><span class="fn-price">' + esc(priceFmt(c, id)) + '</span></div>' +
@@ -1347,7 +1344,7 @@
       cur.view.map(function (c) {
         var s = stateOf(id, c), kId = ck(c);
         return '<tr data-n="' + esc(kId) + '" class="' + (s.st === 'miss' ? 't-miss' : '') + '"><td class="t-thumb"><img loading="lazy" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '"></td><td>#' + esc(c.n) + '</td>' +
-          '<td><button type="button" style="all:unset;cursor:pointer;font-weight:700" data-open="' + esc(kId) + '">' + (c.important ? '★ ' : '') + esc(i18n(c, id).name) + '</button></td>' +
+          '<td><button type="button" style="all:unset;cursor:pointer;font-weight:700" data-open="' + esc(kId) + '">' + esc(i18n(c, id).name) + '</button></td>' +
           '<td class="' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</td><td>' + esc(priceFmt(c, id)) + '</td><td>' + verButtons(id, c) + '</td></tr>';
       }).join('') + '</tbody></table></div>';
   }
@@ -1443,7 +1440,7 @@
       '<div class="fn-stats"><span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' +
       (t.sT ? '<span>Base <b>' + t.bG + '</b>/' + t.bT + '</span><span>Secretas <b>' + t.sG + '</b>/' + t.sT + '</span>' : '') +
       (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : t.got >= t.slots ? '<span><b style="color:var(--teal)">Coleção completa 🎉</b></span>' : '<span><b>' + (t.slots - t.got) + '</b> slots restantes</span>') + '</div>' +
-      infoHtml() + '<div class="fn-hero-links"><a href="./#lojas">Ver ofertas</a><a href="./?classico#fichario/' + esc(st.set) + '">Abrir no fichário clássico</a></div>';
+      infoHtml();
     $('#fn-setbtn-emoji').textContent = cat.emoji || '🃏';
     $('#fn-setbtn-code').textContent = label.split('—')[0].trim();
     $('#fn-setbtn-name').textContent = nameOnly;
@@ -1457,8 +1454,6 @@
   function renderControls() {
     document.body.classList.toggle('fn-pk', isPk(st.set)); document.body.classList.toggle('fn-home', isHome(st.set));
     $$('.fn-chip[data-status]').forEach(function (b) { b.classList.toggle('is-on', b.dataset.status === st.status); });
-    var imp = $('#fn-imp'), hasImp = cur.cards.some(function (c) { return c.important; });
-    imp.hidden = !hasImp; imp.classList.add('is-star'); imp.classList.toggle('is-on', st.imp && hasImp);
     var L = langsOf(st.set), lg = $('#fn-lang'); lg.hidden = !L || !!SHARE;
     if (L) $$('button', lg).forEach(function (b) { b.hidden = L.indexOf(b.dataset.lang) < 0; b.classList.toggle('is-on', b.dataset.lang === effLang(st.set)); });
     $$('#fn-view button').forEach(function (b) { b.classList.toggle('is-on', b.dataset.view === st.view); });
@@ -1775,7 +1770,7 @@
     var kId = ck(c), id = st.set, s = stateOf(id, c), nm = i18n(c, id).name;
     var title = s.st === 'have' ? 'Coletada ✓' : s.st === 'part' ? 'Parcial' : 'Faltando';
     var html = '<div class="fn-detail"><div class="fn-detail-top"><div class="fn-detail-img"><img alt="' + esc(nm) + '" src="' + esc(imgSrc(cur.d, id, c, true)) + '"></div>' +
-      '<div class="fn-detail-info"><h4>' + (c.important ? '★ ' : '') + esc(nm) + '</h4><p>#' + esc(c.n) + ' · ' + esc(c.type || '') + '<br><span class="' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</span> · ' + esc(priceFmt(c, id)) + (c.artist ? '<br><small style="color:var(--muted)">Ilustrador: ' + esc(c.artist) + '</small>' : '') + '</p></div></div>' +
+      '<div class="fn-detail-info"><h4>' + esc(nm) + '</h4><p>#' + esc(c.n) + ' · ' + esc(c.type || '') + '<br><span class="' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</span> · ' + esc(priceFmt(c, id)) + (c.artist ? '<br><small style="color:var(--muted)">Ilustrador: ' + esc(c.artist) + '</small>' : '') + '</p></div></div>' +
       (SHARE ? verRO(id, c) : verBlocks(id, c)) +
       (!SHARE && (loggedIn() || DEMO) ? '<div class="fn-dexact"><button type="button" class="fn-btn is-alt" data-act="favtoggle" data-n="' + esc(kId) + '">' + (isFav(c) ? '⭐ Favorita — toque para tirar' : '☆ Favoritar') + '</button><button type="button" class="fn-btn is-alt" data-act="cbmember" data-n="' + esc(kId) + '">📁 Guardar em fichário…</button></div>' : '') +
       (!SHARE && isDex(id) && c._dex ? '<div class="fn-dexact"><p class="fn-note">Vaga #' + c._dex + ' da Pokédex · ' + esc(setLabelOf(c._set).split('—')[0].trim()) + '</p><button type="button" class="fn-btn is-alt" data-dexpick="' + c._dex + '">🔁 Trocar a carta desta vaga</button></div>' : '') + '</div>';
@@ -1852,7 +1847,7 @@
   }
   function pickSet(id) {
     if (!isPk(id) || String(id) !== String(st.set)) pkEdit = false; pkSpecies = false;
-    dexLimit = 300; st.set = id; st.q = ''; st.status = 'all'; st.bpage = 0; st.artist = ''; st.imp = false; if (SET_CATALOG.some(function (x) { return x.id === id; })) LS.set('set', id);
+    dexLimit = 300; st.set = id; st.q = ''; st.status = 'all'; st.bpage = 0; st.artist = ''; if (SET_CATALOG.some(function (x) { return x.id === id; })) LS.set('set', id);
     try { history.replaceState(null, '', '#' + id); } catch (e) { }
     $('#fn-q').value = '';
     var bObj = isCb(id) ? cbBinder(id) : null;
@@ -1883,7 +1878,6 @@
   function bind() {
     $('#fn-q').addEventListener('input', function (e) { clearTimeout(qT); var v = e.target.value; qT = setTimeout(function () { st.q = v; st.bpage = 0; renderBody(); }, 120); });
     $$('.fn-chip[data-status]').forEach(function (b) { b.addEventListener('click', function () { st.status = b.dataset.status; st.bpage = 0; renderControls(); renderBody(); }); });
-    $('#fn-imp').addEventListener('click', function () { st.imp = !st.imp; st.bpage = 0; renderControls(); renderBody(); });
     $$('#fn-lang button').forEach(function (b) { b.addEventListener('click', function () { setLang(b.dataset.lang); }); });
     $('#fn-sort').addEventListener('change', function (e) { st.sort = e.target.value; renderBody(); });
     $$('#fn-view button').forEach(function (b) { b.addEventListener('click', function () { st.view = b.dataset.view; LS.set('view', st.view); renderControls(); renderBody(); }); });
