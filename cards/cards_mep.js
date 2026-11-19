@@ -143,6 +143,10 @@ const CARDS_MEP = [
   {n:'086',name:'Slowpoke',type:'Psíquico',color:'#9C27B0',rare:'Promo (Blister)',price:0.30,base:false,series:'Promos MEP 082–110'},
   {n:'087',name:'Binacle',type:'Lutador',color:'#795548',rare:'Promo (Blister)',price:0.33,base:false,series:'Promos MEP 082–110'},
   {n:'088',name:'Zarude',type:'Escuridão',color:'#212121',rare:'Promo (Pokémon Center)',price:7.90,base:false,series:'Promos MEP 082–110'},
+  // 19/11/2026: #89-91 já têm arte (Limitless/TCGCSV) — preço BRL estimado = US$ × 5,50
+  {n:'089',name:'Mega Zeraora ex',type:'Raio',color:'#FFC107',rare:'Promo',price:33.55,base:false,important:true,series:'Promos MEP 082–110'},
+  {n:'090',name:'Mega Darkrai ex',type:'Escuridão',color:'#212121',rare:'Promo',price:29.92,base:false,important:true,series:'Promos MEP 082–110'},
+  {n:'091',name:'Mega Dragonite ex',type:'Dragão',color:'#7C4DFF',rare:'Promo',price:42.30,base:false,important:true,series:'Promos MEP 082–110'},
   {n:'092',name:'Paradise Resort',type:'Treinador',color:'#607D8B',rare:'Promo (Estádio)',price:1249.90,base:false,series:'Promos MEP 082–110'},
   {n:'093',name:'Pikachu',type:'Raio',color:'#FFC107',rare:'Promo',price:70.80,base:false,series:'Promos MEP 082–110'},
   {n:'094',name:'Alolan Exeggutor',type:'Grama',color:'#4CAF50',rare:'Promo (B&B)',price:0.45,base:false,series:'Promos MEP 082–110'},
@@ -162,6 +166,17 @@ const CARDS_MEP = [
   {n:'108',name:'Espeon ex',type:'Psíquico',color:'#9C27B0',rare:'Promo (Jumbo)',price:379.00,base:false,important:true,series:'Promos MEP 082–110'},
   {n:'109',name:'Pikachu ex',type:'Raio',color:'#FFC107',rare:'Promo (Jumbo)',price:399.00,base:false,important:true,series:'Promos MEP 082–110'},
   {n:'110',name:'Umbreon ex',type:'Escuridão',color:'#212121',rare:'Promo (Jumbo)',price:620.00,base:false,important:true,series:'Promos MEP 082–110'},
+  // MEP111–120 — promos da era Reinado Delta (ME06), pedido do André 19/11/2026.
+  // Lista e artistas conferidos na Limitless; preço BRL estimado = US$ (TCGCSV, Holofoil) × 5,50.
+  // #118–119 ainda não existem na Limitless; #120 sem preço de mercado (estimativa).
+  {n:'111',name:'Masquerain',type:'Grama',color:'#4CAF50',rare:'Promo',price:42.74,base:false,series:'Promos MEP 111–120'},
+  {n:'112',name:'Magmortar',type:'Fogo',color:'#F44336',rare:'Promo',price:56.87,base:false,series:'Promos MEP 111–120'},
+  {n:'113',name:'Enamorus',type:'Psíquico',color:'#9C27B0',rare:'Promo',price:50.33,base:false,series:'Promos MEP 111–120'},
+  {n:'114',name:'Kommo-o',type:'Dragão',color:'#7C4DFF',rare:'Promo',price:46.81,base:false,series:'Promos MEP 111–120'},
+  {n:'115',name:'Spritzee',type:'Psíquico',color:'#9C27B0',rare:'Promo (Blister)',price:1.87,base:false,series:'Promos MEP 111–120'},
+  {n:'116',name:'Seel',type:'Aquático',color:'#2196F3',rare:'Promo (Blister)',price:3.74,base:false,series:'Promos MEP 111–120'},
+  {n:'117',name:'Kyogre',type:'Aquático',color:'#2196F3',rare:'Promo',price:30.09,base:false,series:'Promos MEP 111–120'},
+  {n:'120',name:'Celebratory Fanfare',type:'Treinador',color:'#607D8B',rare:'Promo (Estádio)',price:3.00,base:false,series:'Promos MEP 111–120'},
   // Snover (veio na Coleção Parceiros Iniciais junto com ME02/MEG boosters)
   {n:'140',name:'Snover',type:'Grama',color:'#4CAF50',rare:'Ilustração Rara (IR)',price:8.00,base:false,series:'MEG Secretas'},
 ];

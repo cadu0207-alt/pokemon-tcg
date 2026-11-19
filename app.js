@@ -2955,7 +2955,8 @@ function getSetData(){
         {lbl:'⭐ Série 3 — Hoenn · Kalos · Paldea (MEP055–063)',  filter:c=>c.series&&c.series.includes('Série 3')},
         {lbl:'📦 Promos MEP064–081 — Equilíbrio Perfeito/Caos Ascendente', filter:c=>c.series==='Promos MEP 064–081'},
         {lbl:'📦 Promos MEP082–110 — Ex\'s, Legendary Birds & mais', filter:c=>c.series==='Promos MEP 082–110'},
-        {lbl:'📦 Outros',                                          filter:c=>!c.series||(!c.series.includes('Série')&&c.series!=='Promos MEP 001–036'&&c.series!=='Promos MEP 064–081'&&c.series!=='Promos MEP 082–110')},
+        {lbl:'🔷 Promos MEP111–120 — Reinado Delta & mais',        filter:c=>c.series==='Promos MEP 111–120'},
+        {lbl:'📦 Outros',                                          filter:c=>!c.series||(!c.series.includes('Série')&&c.series!=='Promos MEP 001–036'&&c.series!=='Promos MEP 064–081'&&c.series!=='Promos MEP 082–110'&&c.series!=='Promos MEP 111–120')},
       ]},
     // ── Pokémon GO (2022) ───────────────────────────────────────────
     pgo: {cards:typeof CARDS_PGO!=='undefined'?CARDS_PGO:[], label:'PGO(PGO) — Pokémon GO',
