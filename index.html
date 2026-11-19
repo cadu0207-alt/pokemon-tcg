@@ -67,6 +67,7 @@
     },
     {
       "@type": "WebApplication",
+      "@id": "https://mydecktcg.com.br/#webapp",
       "name": "MyDeck — Pokémon TCG Tracker",
       "url": "https://mydecktcg.com.br/",
       "description": "Tracker gratuito de coleção Pokémon TCG: master set, cartas tiradas e ofertas rastreadas no Mercado Livre.",
@@ -272,7 +273,7 @@
   <nav class="tdesk tdesk-flat" aria-label="Seções do site (desktop)">
     <button type="button" class="tdesk-link active" data-tab="inicio" onclick="goToTab('inicio')"><span class="tdesk-icon">🏠</span>Início</button>
     <button type="button" class="tdesk-link" data-tab="dash" onclick="goToTab('dash')"><span class="tdesk-icon">📊</span>Dashboard</button>
-    <button type="button" class="tdesk-link" data-tab="fichario" onclick="openNewFichario(event)"><span class="tdesk-icon">📚</span>Fichários</button>
+    <button type="button" class="tdesk-link" data-tab="fichario" onclick="goToTab('fichario')"><span class="tdesk-icon">📚</span>Fichários</button>
     <button type="button" class="tdesk-link" data-tab="centralizacao" onclick="goToTab('centralizacao')"><span class="tdesk-icon">🎯</span>Centralização</button>
 
     <div class="tdesk-label">Compra &amp; Venda</div>
@@ -288,7 +289,7 @@
   <nav class="tabs" aria-label="Seções do site">
     <button type="button" class="tab active" id="nav-tab-inicio" onclick="go('inicio',this)">🏠 Início</button>
     <button type="button" class="tab" id="nav-tab-dash" onclick="go('dash',this)">📊 Dashboard</button>
-    <button type="button" class="tab" id="nav-tab-fichario" onclick="openNewFichario(event)">📚 Fichário</button>
+    <button type="button" class="tab" id="nav-tab-fichario" onclick="go('fichario',this)">📚 Fichário</button>
     <button type="button" class="tab" id="nav-tab-lojas" onclick="go('lojas',this)">🔎 Busca de Promoções ML</button>
     <button type="button" class="tab" id="nav-tab-iniciantes" onclick="go('iniciantes',this)">🔰 Iniciantes</button>
     <button type="button" class="tab" id="nav-tab-centralizacao" onclick="go('centralizacao',this)">🎯 Avaliação de Centralização</button>
@@ -298,7 +299,7 @@
   <!-- MENU MOBILE (barra inferior estilo app) -->
   <nav class="mnav" aria-label="Navegação mobile" id="mnav">
     <button type="button" class="mnav-btn active" id="mnav-tab-inicio" data-tab="inicio" onclick="mNav('inicio')"><span class="mnav-ic">🏠</span>Início</button>
-    <button type="button" class="mnav-btn" id="mnav-tab-fichario" data-tab="fichario" onclick="openNewFichario(event)"><span class="mnav-ic">📚</span>Fichário</button>
+    <button type="button" class="mnav-btn" id="mnav-tab-fichario" data-tab="fichario" onclick="mNav('fichario')"><span class="mnav-ic">📚</span>Fichário</button>
     <button type="button" class="mnav-btn" id="mnav-more-btn" onclick="toggleMSheet()" aria-expanded="false" aria-controls="msheetBackdrop"><span class="mnav-ic">☰</span>Mais</button>
   </nav>
 
@@ -335,29 +336,7 @@
   }
   function mNav(id){
     closeMSheet();
-    if (id === 'fichario') { openNewFichario(); return; }
     goToTab(id);
-  }
-  // Acesso direto ao Fichário Novo (respeitando ?classico apenas se explicitado na URL)
-  function openNewFichario(e){
-    if (e && typeof e.preventDefault === 'function') e.preventDefault();
-    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
-    if (/[?&]classico\b/i.test(window.location.search)) {
-      goToTab('fichario');
-      return;
-    }
-    try {
-      ['mydeck-fichario-mode','mydeck_fichario_mode','fichario_mode','fichario-view-mode','mydeck-binder-ui'].forEach(function(k){
-        if (localStorage.getItem(k) === 'classico' || localStorage.getItem(k) === 'classic') {
-          localStorage.setItem(k, 'novo');
-        }
-      });
-    } catch (_) {}
-    if (typeof window.goToNewFichario === 'function') {
-      window.goToNewFichario();
-      return;
-    }
-    window.location.href = 'fichario.html';
   }
   (function(){
     var t;
@@ -1087,11 +1066,11 @@
         outros participantes; tentar contornar as regras acima usando o site fora do previsto.<br><br>
 
         <b>6. Penalidades</b><br>
-- <b>Atraso no pagamento:</b> o sistema bloqueia automaticamente novos lances até a
+        <b>Atraso no pagamento:</b> o sistema bloqueia automaticamente novos lances até a
         pendência ser resolvida com o leiloeiro — sem exposição pública.<br>
-- <b>Reincidência ou lance não honrado:</b> suspensão do acesso ao leilão, a critério do
+        <b>Reincidência ou lance não honrado:</b> suspensão do acesso ao leilão, a critério do
         leiloeiro, podendo se estender por tempo indeterminado.<br>
-- <b>Casos graves</b> (fraude, shill bidding comprovado, assédio): banimento definitivo do
+        <b>Casos graves</b> (fraude, shill bidding comprovado, assédio): banimento definitivo do
         sistema de leilão.<br><br>
 
         <b>7. O papel do MyDeck</b><br>
@@ -1710,34 +1689,6 @@ window.loadJsPdf=function(){
 <script defer src="produtos_catalogo.js"></script>
 <script defer src="app.js"></script>
 <script defer src="fichario_switch.js"></script>
-<script>
-// Garante que clicar em Fichários / goToTab('fichario') vá direto para o fichário novo
-window.addEventListener('DOMContentLoaded', function () {
-  var isClassicForced = /[?&]classico\b/i.test(window.location.search);
-  if (!isClassicForced) {
-    var origGoToTab = window.goToTab;
-    if (typeof origGoToTab === 'function') {
-      window.goToTab = function (id) {
-        if (id === 'fichario') {
-          openNewFichario();
-          return;
-        }
-        return origGoToTab.apply(this, arguments);
-      };
-    }
-    var origGo = window.go;
-    if (typeof origGo === 'function') {
-      window.go = function (id) {
-        if (id === 'fichario') {
-          openNewFichario();
-          return;
-        }
-        return origGo.apply(this, arguments);
-      };
-    }
-  }
-});
-</script>
 <script defer src="fichario_patch.js"></script>
 <script defer src="pokedex_nacional.js"></script>
 <script defer src="fichario_melhorias_23jul.js"></script>
