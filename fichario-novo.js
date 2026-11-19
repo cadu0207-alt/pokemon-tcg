@@ -1,8 +1,8 @@
 /* Fichário (beta) — interface nova do MyDeck.
- * Usa o MESMO motor do site (app.js): login, leitura da coleção, toggleSlot() e catálogos.
- * Esta página só troca o visual. Nada aqui grava no banco por conta própria: toda marcação passa
- * por toggleSlot(), a mesma função do fichário atual — então o que se marca aqui aparece lá e vice-versa.
- * Modo demonstração (?demo): coleção fictícia só na tela, não grava nada. */
+- Usa o MESMO motor do site (app.js): login, leitura da coleção, toggleSlot() e catálogos.
+- Esta página só troca o visual. Nada aqui grava no banco por conta própria: toda marcação passa
+- por toggleSlot(), a mesma função do fichário atual — então o que se marca aqui aparece lá e vice-versa.
+- Modo demonstração (?demo): coleção fictícia só na tela, não grava nada. */
 (function () {
   'use strict';
 
@@ -293,32 +293,30 @@
       '<div class="fn-hero-links"><a href="./?classico#fichario">Abrir no fichário clássico</a></div>';
     $('#fn-setbtn-emoji').textContent = (b && b.emoji) || '🌐'; $('#fn-setbtn-code').textContent = 'Pokédex'; $('#fn-setbtn-name').textContent = name;
   }
-function dexTreeHtml() {
+
+  // Apenas o Master Set Nacional vem como sub-aba já feita; as demais regiões ficam disponíveis apenas para adicionar (+)
+  function dexTreeHtml() {
     var bs = dexBinders();
     var isOpen = openBlocks().indexOf('__dex') >= 0 || isDex(st.set);
     var isNat = function (b) { return !b.filter_config.dexFrom && !b.filter_config.dexTo; };
+    var natBinder = bs.filter(isNat)[0] || null;
 
-    // Monta a lista completa: Nacional + todas as regiões (Kanto, Johto, etc.)
     var items = [{
       kind: 'nat',
       label: 'Master Set Nacional (#1–1025)',
       sub: 'Nacional · 1025 espécies',
       emoji: '🌐',
-      binder: bs.filter(isNat)[0] || null
+      binder: natBinder
     }];
 
     (typeof POKEDEX_GEN_RANGES !== 'undefined' ? POKEDEX_GEN_RANGES : []).forEach(function (g) {
       var m = REGION_META[g.gen] || ['🗺️'];
-      var found = bs.filter(function (b) {
-        return b.filter_config.dexFrom === g.from && b.filter_config.dexTo === g.to;
-      })[0] || null;
-
       items.push({
         kind: String(g.gen),
         label: 'Master Set ' + g.label + ' (#' + g.from + '–' + g.to + ')',
         sub: g.label + ' · ' + (g.to - g.from + 1) + ' espécies',
         emoji: m[0],
-        binder: found
+        binder: null
       });
     });
 
@@ -342,9 +340,10 @@ function dexTreeHtml() {
     return '<section class="fn-blk' + (isOpen ? ' is-open' : '') + '" data-blk-id="__dex">' +
       '<button type="button" class="fn-blk-h" data-blk="__dex" aria-expanded="' + isOpen + '">' +
       '<span class="ch">▸</span><span class="t">Pokédex</span>' +
-      '<span class="n">' + (bs.length ? '<b>' + bs.length + '</b>/' + items.length : items.length) + '</span>' +
+      '<span class="n">' + (natBinder ? '<b>1</b>/' + items.length : items.length) + '</span>' +
       '</button><div class="fn-blk-b">' + rows + '</div></section>';
   }
+
   function openDexNew() {
     if (!DEMO && !loggedIn()) { toast('Entre no MyDeck para criar a sua Pokédex.'); return; }
     var have = dexBinders(), isNat = function (b) { return !b.filter_config.dexFrom && !b.filter_config.dexTo; };
@@ -370,6 +369,19 @@ function dexTreeHtml() {
     if (!saved) { toast('Não foi possível criar. Confira a conexão e tente de novo.'); return; }
     closeSheet(); progCache = {}; pickSet('dex:' + saved.id);
   }
+  var natAutoBusy = false;
+  async function ensureNatDex() {
+    if (DEMO || SHARE || !loggedIn() || natAutoBusy || typeof saveCustomBinder !== 'function') return;
+    if (typeof customBinders === 'undefined' || !Array.isArray(customBinders)) return;
+    var hasNat = dexBinders().some(function (b) { return !b.filter_config.dexFrom && !b.filter_config.dexTo; });
+    if (hasNat) return;
+    natAutoBusy = true;
+    try {
+      var saved = await saveCustomBinder({ name: '🌐 Master Set Nacional (1025)', emoji: '🌐', layout: 3, filter_config: { type: 'masterdex' }, card_ids: [], cover_color: '#118ab2' });
+      if (saved) { progCache = {}; renderSide(); renderBody(); }
+    } finally { natAutoBusy = false; }
+  }
+
   // ── escolher / trocar / tirar a carta de uma vaga ──
   function dexCands(d) {
     var list = (dexIndex()[d] || []).slice();
@@ -1775,7 +1787,7 @@ function dexTreeHtml() {
     }
   }
   var dataT;
-  function onData() { clearTimeout(dataT); dataT = setTimeout(function () { banner(); if (engineReady()) { progCache = {}; loadCur(); renderHero(); renderBody(); renderSide(); } }, 60); }
+  function onData() { clearTimeout(dataT); dataT = setTimeout(function () { banner(); if (engineReady()) { ensureNatDex(); progCache = {}; loadCur(); renderHero(); renderBody(); renderSide(); } }, 60); }
 
   var SHARE_TOKEN = (function () { try { var t = new URLSearchParams(location.search).get('s'); return t && /^[\w-]{6,100}$/.test(t) ? t : null; } catch (e) { return null; } })();
   // abre um link compartilhado: lê a coleção pelo token (função pública do banco) e monta a tela só para olhar
