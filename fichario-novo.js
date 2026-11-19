@@ -302,12 +302,20 @@
     cur.d = { label: b.name, cards: r.cards, sections: [], dex: true };
     if (DEMO && !demoSet.size) cur.cards.forEach(function (c) { slotsOf(st.set, c).forEach(function (s) { if (window.__fnSeed() < 0.45) demoSet.add(keyOf(st.set, c, s.ver)); }); });
   }
+  function dexSlotOwned(bid, c, s) {
+    var sid = c._set || sidOf(st.set, c);
+    if (hasDexSlot(bid, sid, c.n, s.ver)) return true;
+    if (typeof slotKey === 'function') {
+      if (has(slotKey('', c.n, s.ver))) return true;
+      if (sid && has(slotKey(sid + ':', c.n, s.ver))) return true;
+    }
+    return false;
+  }
   function dexOwned(c) {
     if (!c) return false;
     var bid = (cur.binder && cur.binder.id) || String(st.set).replace(/^dex:/, '') || 'shared';
-    var sid = c._set || sidOf(st.set, c);
     return slotsOf('', c).some(function (s) {
-      return hasDexSlot(bid, sid, c.n, s.ver) || has(keyOf(st.set, c, s.ver));
+      return dexSlotOwned(bid, c, s);
     });
   }
   function dexCalc(b) {
@@ -317,7 +325,7 @@
       var sl = slotsOf('', c), any = false;
       sl.forEach(function (s) {
         totSlots++;
-        if (hasDexSlot(b.id, c._set, c.n, s.ver)) { gotSlots++; any = true; }
+        if (dexSlotOwned(b.id, c, s)) { gotSlots++; any = true; }
       });
       if (any) ownSp++;
     });
@@ -331,10 +339,16 @@
     return { got: ownSp, tot: totSp, filled: filled, gotSlots: gotSlots, totSlots: totSlots, pct: pct, pending: r.pending };
   }
   function dexProg(b) {
-    var key = 'dex:' + b.id; if (progCache[key] !== undefined) return progCache[key];
+    var key = 'dex:' + b.id;
     var c = dexCalc(b);
     var out = { got: c.got, tot: c.tot, filled: c.filled, gotSlots: c.gotSlots, totSlots: c.totSlots, pct: c.pct };
-    if (c.pending) return out;
+    if (c.pending || !c.filled) {
+      delete progCache[key];
+      return out;
+    }
+    if (progCache[key] !== undefined && progCache[key].filled === out.filled && progCache[key].got === out.got) {
+      return progCache[key];
+    }
     return (progCache[key] = out);
   }
   function dexArt(d) { return d <= 151 ? 'assets/wild/' + d + '.webp' : 'https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/other/official-artwork/' + d + '.png'; }
@@ -382,7 +396,7 @@
       var sl = slotsOf(st.set, c), any = false;
       sl.forEach(function (s) {
         totSlots++;
-        if (hasDexSlot(bid, c._set || sidOf(st.set, c), c.n, s.ver) || has(keyOf(st.set, c, s.ver))) {
+        if (dexSlotOwned(bid, c, s)) {
           gotSlots++;
           any = true;
         }
@@ -570,7 +584,7 @@
   function dexCands(d) {
     var list = (dexIndex()[d] || []).slice();
     var bid = (cur.binder && cur.binder.id) || String(st.set).replace(/^dex:/, '') || 'shared';
-    var rank = function (x) { var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }), own = slotsOf('', c).some(function (s) { return hasDexSlot(bid, x.set, x.c.n, s.ver); }); return own ? 0 : 1; };
+    var rank = function (x) { var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }), own = slotsOf('', c).some(function (s) { return dexSlotOwned(bid, c, s); }); return own ? 0 : 1; };
     list.sort(function (a, b) { var ra = rank(a), rb = rank(b); if (ra !== rb) return ra - rb; var pa = a.c.price || 1e9, pb = b.c.price || 1e9; return ra === 0 ? (b.c.price || 0) - (a.c.price || 0) : pa - pb; });
     return list;
   }
@@ -593,7 +607,7 @@
     if (!items.length) html += '<div class="fn-empty">' + (picker.list.length ? 'Nenhuma carta com essa busca.' : 'Ainda não há carta cadastrada dessa espécie.') + '</div>';
     html += items.slice(0, 80).map(function (x) {
       var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }), on = cur0 && cur0._set === x.set && String(cur0.n) === String(x.c.n);
-      var own = slotsOf('', c).some(function (s) { return hasDexSlot(bid, x.set, x.c.n, s.ver); });
+      var own = slotsOf('', c).some(function (s) { return dexSlotOwned(bid, c, s); });
       return '<button type="button" class="fn-dp-item' + (on ? ' is-on' : '') + '" data-act="dexchoose" data-dex="' + picker.dex + '" data-dset="' + esc(x.set) + '" data-dn="' + esc(x.c.n) + '">' +
         '<img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(null, '', c)) + '"><span class="tx"><b>' + esc(i18n(c, '').name) + (own ? ' ✓' : '') + '</b><small>' + esc(setLabelOf(x.set).split('—')[0].trim()) + ' · #' + esc(x.c.n) + ' · ' + esc(rareLabel(x.c.rare)) + '</small></span><span class="pr">' + esc(priceFmt(c, '')) + '</span></button>';
     }).join('');
@@ -796,10 +810,8 @@
     if (!fav) tiles += '<div class="fn-hcard is-hint"><span class="em">⭐</span><span class="tx"><b>Favoritos</b><small>Abra uma carta e toque em “Favoritar”: o fichário Favoritos aparece aqui.</small></span></div>';
     out += '<h2 class="fn-home-h">Personalizados</h2><div class="fn-home-grid">' + tiles + '</div>';
     var sets = SET_CATALOG.map(function (x) { return { s: x, p: progOf(x.id) }; }).filter(function (o) { return o.p && o.p.pct > 0; }).sort(function (a, b) { return b.p.pct - a.p.pct; }).slice(0, 9);
-    var started = sets.length > 0;
-    if (!started) sets = SET_CATALOG.filter(function (x) { return !x.upcoming; }).slice(0, 6).map(function (x) { return { s: x, p: progOf(x.id) || { got: 0, tot: 0, pct: 0 } }; });
     if (sets.length) {
-      out += '<h2 class="fn-home-h">' + (started ? 'Coleções em andamento' : 'Coleções') + '</h2><div class="fn-home-grid">' + sets.map(function (o) {
+      out += '<h2 class="fn-home-h">Coleções em andamento</h2><div class="fn-home-grid">' + sets.map(function (o) {
         var nm = (o.s.label || '').split('—').slice(1).join('—').trim() || o.s.label, code = (o.s.label || '').split('—')[0].trim();
         return homeTile(o.s.id, o.s.emoji || '🃏', nm, o.p.tot ? code + ' · ' + o.p.got + '/' + o.p.tot + ' slots' : code, o.p.pct);
       }).join('') + '</div>';
@@ -1066,7 +1078,7 @@
     var ids = (b.card_ids || []).slice(), added = 0, idx = dexIndex();
     cur.species.forEach(function (sp) {
       if (cur.byDex[sp.dex]) return;
-      var cands = (idx[sp.dex] || []).map(function (x) { var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }); return { set: x.set, c: c, own: slotsOf('', c).some(function (s) { return hasDexSlot(bid, x.set, x.c.n, s.ver); }) }; });
+      var cands = (idx[sp.dex] || []).map(function (x) { var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }); return { set: x.set, c: c, own: slotsOf('', c).some(function (s) { return dexSlotOwned(bid, c, s); }) }; });
       if (!cands.length) return;
       var owned = cands.filter(function (x) { return x.own; }), pr = function (x) { return (typeof x.c.price === 'number' && x.c.price > 0) ? x.c.price : Infinity; };
       var pick = owned.length ? owned.reduce(function (m, x) { return pr(x) > pr(m) ? x : m; }, owned[0]) : cands.reduce(function (m, x) { return pr(x) < pr(m) ? x : m; }, cands[0]);
