@@ -1789,7 +1789,7 @@
         '<button type="button" class="fn-blk-h" data-blk="' + esc(k) + '" aria-expanded="' + isOpen + '"><span class="ch">▸</span><span class="t">' + esc(blockTitle(k)) + '</span>' +
         '<span class="n">' + (bp != null ? '<b>' + bp + '%</b> · ' : '') + sets.length + '</span></button><div class="fn-blk-b">' + rows + '</div></section>';
     }).join('');
-    var homeRow = '<button type="button" class="fn-set fn-home-row' + (isHome(st.set) ? ' is-cur' : '') + '" data-pick="home" data-find="personalizados meus fichários início home"><span class="em">🏠</span><span class="tx"><b>Personalizados</b><small>Visão geral</small></span></button>';
+   var homeRow = '<button type="button" class="fn-set fn-home-row' + (isHome(st.set) ? ' is-cur' : '') + '" data-pick="home" data-find="meus fichários personalizados início home"><span class="em">🏠</span><span class="tx"><b>Meus fichários</b><small>Visão geral</small></span></button>';
     return homeRow + cbTreeHtml() + dexTreeHtml() + (html || '<div class="fn-tree-empty">Nenhuma coleção encontrada.</div>');
   }
   function sideHtml() { return '<input class="fn-tsearch" type="search" placeholder="Buscar coleção…" autocomplete="off" aria-label="Buscar coleção"><div class="fn-tree">' + treeHtml() + '</div>'; }
