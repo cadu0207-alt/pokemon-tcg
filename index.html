@@ -268,37 +268,15 @@
   <div class="stripe"></div>
   <div id="feedback-bar-wrap"></div>
 
-  <!-- MENU DESKTOP 12/08/2026: agrupa as abas em 3 menus hover (MYDECK,
-       COMPRA E VENDA E LEILÃO, INICIANTES) pra telas largas — a barra .tabs
-       de baixo tinha ~13 botões e ficava apertada/pouco escaneável no PC.
-       No mobile (≤900px) fica tudo igual: essa nav some via CSS e a .tabs
-       de sempre volta a aparecer, sem mudar nada no comportamento mobile.
-       Cada item chama goToTab(id) — reaproveita o botão original em .tabs
-       (agora invisível no desktop) como fonte de verdade, então toda a lógica
-       de renderX()/active state já existente em go() continua funcionando
-       sem duplicar nada. syncDesktopNav() (app.js) espelha o estado 'active'
-       aqui a cada navegação, venha ela de onde vier. -->
-  <!-- REDESENHADO 31/08/2026 (pedido do Eduardo — "imitando um app mobile"):
-       os dois grupos que abriam/fechavam com clique (MYDECK, COMPRA E VENDA
-       E LEILÃO) viraram lista achatada — todo item sempre visível, sem
-       acordeão. "MyDeck" nem virou rótulo (os itens emendam direto depois
-       do Início, igual o mockup); "Compra & Venda" ganhou um rótulo simples
-       só pra separar visualmente (.tdesk-label, não é botão). tdeskToggleDrop()
-       saiu (não tem mais nada pra expandir aqui) — o Fichário (.fic-tdesk)
-       usa as mesmas classes .tdrop/.tdrop-menu só que em modo hover, sem
-       relação com essa função, então remover ela daqui não afeta lá. -->
+  <!-- MENU DESKTOP 12/08/2026 -->
   <nav class="tdesk tdesk-flat" aria-label="Seções do site (desktop)">
     <button type="button" class="tdesk-link active" data-tab="inicio" onclick="goToTab('inicio')"><span class="tdesk-icon">🏠</span>Início</button>
     <button type="button" class="tdesk-link" data-tab="dash" onclick="goToTab('dash')"><span class="tdesk-icon">📊</span>Dashboard</button>
-    <button type="button" class="tdesk-link" data-tab="fichario" onclick="goToTab('fichario')"><span class="tdesk-icon">📚</span>Fichários</button>
+    <button type="button" class="tdesk-link" data-tab="fichario" onclick="openNewFichario(event)"><span class="tdesk-icon">📚</span>Fichários</button>
     <button type="button" class="tdesk-link" data-tab="centralizacao" onclick="goToTab('centralizacao')"><span class="tdesk-icon">🎯</span>Centralização</button>
 
     <div class="tdesk-label">Compra &amp; Venda</div>
     <button type="button" class="tdesk-link" data-tab="lojas" onclick="goToTab('lojas')"><span class="tdesk-icon">🔎</span>Busca de Promoções ML</button>
-    <!-- espelha nav-tab-leilao: só admin vê (updateLeilaoTabVisibility em leilao.js) -->
-    <!-- RIFAS (24/08/2026): mesma visibilidade do leilão — qualquer usuário
-         logado vê (updateRifasTabVisibility em rifa.js); painel de rifeiro
-         usa a MESMA permissão do leiloeiro (aucIsLeilaoAdmin). -->
 
     <button type="button" class="tdesk-link" data-tab="iniciantes" onclick="goToTab('iniciantes')"><span class="tdesk-icon">🔰</span>Iniciantes</button>
     <!-- espelha nav-tab-admin: só Eduardo vê (updateAdminTabVisibility em admin_panel.js) -->
@@ -307,56 +285,20 @@
     <div class="tdesk-spacer"></div>
   </nav>
 
-  <!-- ids nav-tab-* adicionados 02/08/2026 — permitem goToTab(id) (app.js) navegar
-       pra aba certa a partir de qualquer clique fora do <nav> (cards do Dashboard
-       etc.), marcando a aba como ativa igual um clique nela mesma. -->
-  <!-- ACESSIBILIDADE 03/08/2026 (auditoria): abas eram <div> — invisíveis pra
-       teclado (Tab) e leitores de tela. Viraram <button>, mantendo classes/ids.
-       NAV MOBILE 12/08/2026: agora só aparece ≤900px (CSS .tdesk/.tabs) — no
-       desktop essa barra fica escondida mas ainda existe no DOM como fonte de
-       verdade pro goToTab()/go(), ver comentário acima. -->
   <nav class="tabs" aria-label="Seções do site">
-    <!-- INÍCIO 23/08/2026: nova página inicial da coleção — ver inicio.js.
-         Vira a aba padrão (active) no lugar do Dashboard. -->
     <button type="button" class="tab active" id="nav-tab-inicio" onclick="go('inicio',this)">🏠 Início</button>
     <button type="button" class="tab" id="nav-tab-dash" onclick="go('dash',this)">📊 Dashboard</button>
-    <button type="button" class="tab" id="nav-tab-fichario" onclick="go('fichario',this)">📚 Fichário</button>
+    <button type="button" class="tab" id="nav-tab-fichario" onclick="openNewFichario(event)">📚 Fichário</button>
     <button type="button" class="tab" id="nav-tab-lojas" onclick="go('lojas',this)">🔎 Busca de Promoções ML</button>
     <button type="button" class="tab" id="nav-tab-iniciantes" onclick="go('iniciantes',this)">🔰 Iniciantes</button>
     <button type="button" class="tab" id="nav-tab-centralizacao" onclick="go('centralizacao',this)">🎯 Avaliação de Centralização</button>
-    <!-- LEILÃO 12/08/2026: fase de testes — só visível pro Eduardo (isAdmin(),
-         lojas.js), igual o padrão da aba Admin abaixo. display:none aqui é o
-         estado padrão/seguro; leilao.js mostra via JS. Pra abrir pra todos os
-         usuários registrados, trocar a condição em updateLeilaoTabVisibility(). -->
-    <!-- RIFAS (24/08/2026): mesma visibilidade do leilão (updateRifasTabVisibility,
-         rifa.js) — qualquer usuário logado vê; painel de rifeiro usa a mesma
-         permissão do leiloeiro. -->
-    <!-- ADMIN 11/08/2026: aba própria, só visível pro Eduardo (isAdmin(), lojas.js)
-         — display:none aqui é o estado padrão/seguro; admin_panel.js mostra via JS
-         só depois de confirmar o e-mail logado (e-mail do Eduardo). -->
     <button type="button" class="tab" id="nav-tab-admin" style="display:none" onclick="go('admin',this)">🔐 Admin</button>
   </nav>
 
-  <!-- MENU MOBILE (barra inferior estilo app) — 29/08/2026, pedido do Eduardo
-       depois de testar um protótipo: a .tabs de cima (13 botões, scroll
-       horizontal) ficava comprida e feia no celular. Só aparece ≤900px — a
-       .tabs original vira display:none permanente (ver regra dela em
-       style.css) e continua no DOM só como fonte de verdade pros ids
-       nav-tab-*; o .tdesk acima cuida do desktop, sem mudança nenhuma lá.
-       4 destinos fixos (os que o Eduardo mais usa) + "Mais" abre uma folha
-       com o resto, agrupado igual o .tdesk (MYDECK / COMPRA E VENDA).
-       mNav()/goToTab() reaproveitam o go() de sempre — toda a lógica de
-       renderX()/active state/hash já existente não muda nada. syncMobileNav()
-       (app.js) espelha o estado 'active' aqui a cada navegação, chamada de
-       dentro de go() igual syncDesktopNav(). -->
+  <!-- MENU MOBILE (barra inferior estilo app) -->
   <nav class="mnav" aria-label="Navegação mobile" id="mnav">
     <button type="button" class="mnav-btn active" id="mnav-tab-inicio" data-tab="inicio" onclick="mNav('inicio')"><span class="mnav-ic">🏠</span>Início</button>
-    <button type="button" class="mnav-btn" id="mnav-tab-fichario" data-tab="fichario" onclick="mNav('fichario')"><span class="mnav-ic">📚</span>Fichário</button>
-    <!-- espelha #nav-tab-leilao: leilao.js mostra pra qualquer usuário
-         logado (updateLeilaoTabVisibility, show=!!uid()) — não é só admin,
-         só o painel interno do leiloeiro que é restrito. -->
-    <!-- espelha #nav-tab-rifas: mesma regra do leilão (rifa.js,
-         updateRifasTabVisibility). -->
+    <button type="button" class="mnav-btn" id="mnav-tab-fichario" data-tab="fichario" onclick="openNewFichario(event)"><span class="mnav-ic">📚</span>Fichário</button>
     <button type="button" class="mnav-btn" id="mnav-more-btn" onclick="toggleMSheet()" aria-expanded="false" aria-controls="msheetBackdrop"><span class="mnav-ic">☰</span>Mais</button>
   </nav>
 
@@ -375,23 +317,11 @@
       <div class="msheet-label">&nbsp;</div>
       <div class="msheet-grid">
         <button type="button" class="msheet-item" data-tab="iniciantes" onclick="mNav('iniciantes')"><span class="msheet-ic">🔰</span><span class="msheet-lb">Iniciantes</span></button>
-        <!-- 02/09/2026 (pedido do Eduardo): Alpha Lorcana entra aqui no
-             mobile porque a faixa de logo+atalhos que ficava no topo da
-             Início (.inicio-brand-row) saiu pra dar lugar aos feeds de
-             compra/venda (ver mais abaixo) — esse era o único acesso a
-             Alpha Lorcana que existia no mobile. No desktop continua
-             disponível no .tdesk (o cluster fixo .tfa-row-quick, que
-             duplicava esse link, foi removido em 04/09/2026). -->
-        <!-- espelha #nav-tab-admin: admin_panel.js mostra só pro Eduardo
-             (updateAdminTabVisibility, isAdmin()). -->
         <button type="button" class="msheet-item msheet-admin" id="msheet-tab-admin" data-tab="admin" style="display:none" onclick="mNav('admin')"><span class="msheet-ic">🔐</span><span class="msheet-lb">Admin</span></button>
       </div>
     </div>
   </div>
   <script>
-  // Abre/fecha a folha "Mais" (mesmo padrão do tdeskToggleDrop acima,
-  // adaptado pra bottom sheet). mNav() é o que os botões chamam pra navegar
-  // — fecha a folha (se tava aberta) e delega pro goToTab() de sempre.
   function openMSheet(){
     document.getElementById('msheetBackdrop').classList.add('show');
     document.getElementById('mnav-more-btn').setAttribute('aria-expanded','true');
@@ -403,10 +333,32 @@
   function toggleMSheet(){
     document.getElementById('msheetBackdrop').classList.contains('show') ? closeMSheet() : openMSheet();
   }
-  function mNav(id){ closeMSheet(); goToTab(id); }
-  // 17/10/2026: no Safari do iPhone, depois de digitar num campo e fechar o teclado a barra fixa de baixo fica "presa" na altura
-  // onde o teclado estava (no meio da tela). Esconde a barra enquanto um campo de texto está focado (o teclado cobriria de
-  // qualquer jeito) e, ao sair, dá um empurrão de 1px na rolagem pra o Safari recalcular a posição dos elementos fixos.
+  function mNav(id){
+    closeMSheet();
+    if (id === 'fichario') { openNewFichario(); return; }
+    goToTab(id);
+  }
+  // Acesso direto ao Fichário Novo (respeitando ?classico apenas se explicitado na URL)
+  function openNewFichario(e){
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+    if (/[?&]classico\b/i.test(window.location.search)) {
+      goToTab('fichario');
+      return;
+    }
+    try {
+      ['mydeck-fichario-mode','mydeck_fichario_mode','fichario_mode','fichario-view-mode','mydeck-binder-ui'].forEach(function(k){
+        if (localStorage.getItem(k) === 'classico' || localStorage.getItem(k) === 'classic') {
+          localStorage.setItem(k, 'novo');
+        }
+      });
+    } catch (_) {}
+    if (typeof window.goToNewFichario === 'function') {
+      window.goToNewFichario();
+      return;
+    }
+    window.location.href = 'fichario.html';
+  }
   (function(){
     var t;
     function isText(e){ return !!e && /^(INPUT|TEXTAREA|SELECT)$/.test(e.tagName) && !/^(checkbox|radio|button|submit|range|file|color)$/.test(e.type || ''); }
@@ -423,32 +375,10 @@
   })();
   </script>
 
-  <!-- INÍCIO 23/08/2026: nova página inicial da coleção — ver inicio.js.
-       Novidades reaproveita site_updates (mesma tabela do updates-log-wrap
-       do Dashboard, mostrada aqui numa vitrine simples); Notícias/Vídeos/
-       Links/Revista são conteúdo novo, publicado só pela aba Admin
-       (hasPerm('inicio'), home_content_admin.js). -->
+  <!-- INÍCIO 23/08/2026 -->
   <div id="inicio" class="pane active">
-    <!-- 03/10/2026: h1 da página (SEO/leitores de tela). A logo é imagem e não conta como título; .sr-only deixa visível só pra quem lê a página, sem mexer no layout. -->
     <h1 class="sr-only">MyDeck — tracker de coleção Pokémon TCG Brasil: master set, fichário e leilões</h1>
-    <!-- IDENTIDADE VISUAL + ATALHOS 31/08/2026 (pedido do Eduardo): logo e os
-         2 botões viviam empilhados e centralizados, ocupando bastante altura
-         antes das Novidades. Viraram uma faixa só: logo à esquerda (menor,
-         reaproveita .home-logo-light/.home-logo-dark) e os botões — também
-         menores — à direita, aproveitando a largura em vez da altura. -->
-    <!-- MUDOU 02/09/2026 (pedido do Eduardo): a faixa de logo+atalhos
-         (.inicio-brand-row, já era invisível no desktop desde 31/08 — ver
-         "#inicio .inicio-brand-row{display:none}" no style.css) saiu de
-         vez também do mobile. No print que ele mandou, essa faixa some no
-         mobile porque o back-btn+logo do <header> (sempre visível, todas
-         as abas) já cobre a identidade visual; Simulador/Alpha Lorcana
-         viraram atalhos no menu "Mais" (ver msheet-cta em index.html).
-         No lugar dela entram os feeds de Compra/Venda (ver
-         .inicio-market-feed-target / loadInicioMarketFeed() em inicio.js)
-         — só aparecem quando houver algum anúncio/ordem pra mostrar. -->
-    <!-- 17/10/2026: boas-vindas só para visitante sem login (inicio.js → renderInicioWelcome) -->
     <div id="inicio-welcome-slot"></div>
-    <!-- 17/10/2026: banner dos eventos de aparição do minigame (wild_pokemon.js → wpEventRenderBanners); vazio fora de evento -->
     <div id="inicio-wild-event-slot"></div>
 
     <div id="inicio-hero-wrap"></div>
@@ -456,16 +386,6 @@
     <div class="sec-title" role="heading" aria-level="2">📢 Novidades do MyDeck</div>
     <div id="inicio-updates-wrap"></div>
 
-    <!-- FEED ÚNICO 24/08/2026 (pedido do Eduardo): Notícias, Vídeos, Links e
-         Revista deixaram de ser seções separadas — agora é uma linha do tempo
-         só, ordenada por data (mais novo primeiro), com scroll infinito (ver
-         loadInicioFeed()/inicioRenderFeedPage() em inicio.js).
-
-         RANKING 01/09/2026 (pedido do Eduardo): o feed sempre teve um espaço
-         vazio à direita em telas largas (.inicio-feed tem max-width:720px,
-         ver style.css) — vira uma coluna lateral com o Ranking de Batalhas
-         (ver inicio_ranking.js). Em telas estreitas (≤1100px) a coluna some
-         e o ranking desce pra baixo do feed, empilhado. -->
     <div class="inicio-main-grid">
       <div class="inicio-main-col">
         <div class="sec-title" role="heading" aria-level="2">📰 Feed do Mundo Pokémon</div>
@@ -473,19 +393,11 @@
         <div id="inicio-feed-sentinel" style="display:none"></div>
       </div>
       <div class="inicio-side-col">
-        <!-- 02/09/2026 (pedido do Eduardo): no desktop os feeds de
-             Compra/Venda ficam aqui em cima, acima do Ranking — assim não
-             disputam espaço com o Feed do Mundo Pokémon na coluna
-             principal. Mesmo conteúdo do slot mobile (ver
-             .inicio-market-feed-target), só que um dos dois fica
-             escondido por CSS conforme a largura (ver style.css). -->
         <div class="sec-title" role="heading" aria-level="2" id="inicio-ranking-title">🏆 Ranking de Batalhas</div>
         <div id="inicio-ranking-wrap"></div>
       </div>
     </div>
 
-    <!-- RODAPÉ LEGAL 29/08/2026: Termos/Privacidade viviam só na pg-home
-         removida — precisam continuar acessíveis mesmo sem login. -->
     <div class="inicio-legal-footer">
       <a href="termos-de-uso.html">Termos de Uso</a>
       &nbsp;·&nbsp;
@@ -494,9 +406,6 @@
     </div>
   </div>
 
-  <!-- MODAL DE MATÉRIA 24/08/2026: leitura completa da notícia + comentários
-       (ver openInicioArticle() em inicio.js). Fica fora do fluxo normal do
-       .pane, controlado só por display:none/'' via JS. -->
   <div id="inicio-article-modal" class="inicio-modal" style="display:none"></div>
 
   <div id="dash" class="pane">
@@ -505,18 +414,11 @@
     <div class="kpi-grid" id="kpi-dash"></div>
     <div class="sec-title" role="heading" aria-level="2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 5a2 2 0 0 1 2-2h11a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2Z"/><path d="M4 5v14a2 2 0 0 0 2 2h11"/></svg> Progresso Master Set</div>
     <div id="progress-sets" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:28px"></div>
-    <div class="dual" style="grid-template-columns:1fr"><!-- 17/10/2026: "Gastos por Data" saiu (redundante com Evolução Mensal); Raridades ocupa a linha -->
-      <!-- CORRIGIDO 02/08/2026: painéis agora são clicáveis (.panel-link) e levam
-           pra aba de onde os dados realmente vêm — pedido do Eduardo de hiperlinks
-           entre o Dashboard e as abas correspondentes (Cartas Tiradas/Gastos). -->
+    <div class="dual" style="grid-template-columns:1fr">
       <div class="panel"><div class="panel-t" style="display:flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="3" y="12" width="4" height="8"/><rect x="10" y="7" width="4" height="13"/><rect x="17" y="3" width="4" height="17"/></svg> Raridades do Pull</div><div class="bc" id="chart-rarity"></div></div>
     </div>
     <div class="panel" style="margin-bottom:28px"><div class="panel-t" style="display:flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg> Evolução Mensal — Investido × Pulls</div><div class="bc" id="chart-evolucao"></div></div>
     <div class="panel" style="margin-bottom:28px"><div class="panel-t" style="display:flex;align-items:center;gap:7px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 6h6v6"/></svg> Evolução do Patrimônio</div><div id="chart-patrimonio"></div></div>
-    <!-- CORRIGIDO 02/08/2026: título dizia "Destaques do Pull", mas os cards vêm do
-         FICHÁRIO (cartas coletadas, ver renderDash() em app.js — cada card já mostra
-         a etiqueta "Fichário"), não do log de "Cartas Tiradas". Renomeado pra bater
-         com o dado real, em vez de corrigir o dado pra bater com um título errado. -->
     <div class="sec-title" role="heading" aria-level="2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 2l2.9 6.5L22 9.3l-5 4.9 1.2 7.1L12 17.9l-6.2 3.4L7 14.2 2 9.3l7.1-.8Z"/></svg> Mais valiosas do seu Fichário</div>
     <div class="pulled-grid" id="dash-highlights"></div>
   </div>
@@ -530,7 +432,6 @@
     <div id="gastos-charts"></div>
     <div id="gastos-filter"></div>
     <div id="gastos-cards" style="display:flex;flex-direction:column;gap:16px;margin-bottom:32px"></div>
-    <!-- 17/10/2026: a Timeline repetia as mesmas compras dos cartões acima, só em outra ordem — fica recolhida por padrão -->
     <details id="gastos-tl-wrap" class="gastos-tl">
       <summary class="sec-title">📅 Linha do tempo das compras</summary>
       <div class="tl" id="tlwrap"></div>
@@ -674,10 +575,6 @@
       </div>
     </div>
 
-    <!-- ADMIN 11/08/2026: painel de aprovação saiu daqui e virou parte da aba
-         Admin (mkt-pending-wrap/mkt-pending-list ficam lá agora) — marketplace.js
-         continua achando os elementos por id, então nenhuma função mudou. -->
-
     <div class="sec-title" role="heading" aria-level="2" style="margin-top:24px">✅ Lojas Ativas</div>
     <div id="mkt-active-list" class="mkt-store-list"></div>
   </div>
@@ -690,32 +587,18 @@
     <!-- Stats globais -->
     <div class="bstats" id="binder-stats"></div>
 
-    <!-- MENU DESKTOP DO FICHÁRIO 12/08/2026: mesmo sistema de dropdown hover
-         do menu principal (.tdrop/.tdrop-menu, style.css) — pedido do Eduardo
-         porque o catálogo passou de 30 fichários (ME + SV + legados + por
-         artista) e uma aba por coleção não cabe mais numa barra só. Some
-         ≤900px (mobile mantém #binder-tabs de sempre, sem mudança nenhuma).
-         Populado por fmRenderFicNavDesktop() (fichario_nav_desktop.js), que
-         embrulha window.renderTabs mais uma vez — não edita app.js nem
-         fichario_accordion.js, mesmo padrão de monkey-patch do projeto. -->
+    <!-- MENU DESKTOP DO FICHÁRIO 12/08/2026 -->
     <div id="fic-tabs-desktop" class="fic-tdesk"></div>
 
-    <!-- Tabs dos sets (populadas dinamicamente por renderTabs() em app.js) -->
+    <!-- Tabs dos sets -->
     <div id="binder-tabs" style="display:flex;gap:2px;margin-bottom:12px;border-bottom:1px solid var(--border);overflow-x:auto;padding-bottom:0"></div>
 
-    <!-- Barra de controles — reorganizada 23/07/2026 em 2 linhas:
-         (1) busca+filtros sempre visíveis, (2) visualização+ações agrupadas
-         num menu 'Mais ações'. Ver ANALISE_FICHARIO_PROFISSIONAL_23jul2026.md
-         secao 1/2. Mantém 1 único .bctl (wrapper) pra não quebrar o
-         document.querySelector('.bctl') usado em vários lugares de app.js
-         pra esconder a toolbar inteira nas telas de fichário personalizado. -->
+    <!-- Barra de controles -->
     <div class="bctl" style="flex-direction:column;align-items:stretch;gap:10px;margin-bottom:10px">
 
-      <!-- Linha 1 — busca e filtros (sempre visível) -->
+      <!-- Linha 1 — busca e filtros -->
       <div class="fic-toolbar-row1" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <input class="bsrch" id="bsrch" placeholder="Buscar carta..." aria-label="Buscar carta neste fichário" oninput="ficSearchDebounced()">
-        <!-- 17/10/2026: só no celular (≤900px) — recolhe checkboxes, raridade, artista, ordem por Dex e tamanho
-             pra primeira tela mostrar as cartas (ver ficToggleOpts em fichario_patch.js) -->
         <button type="button" id="fic-filters-toggle" class="fic-btn" aria-expanded="false" onclick="ficToggleOpts()">⚙ Filtros</button>
         <label><input type="checkbox" id="fc"  onchange="renderBinder()"> Só coletadas</label>
         <label><input type="checkbox" id="fm"  onchange="renderBinder()"> Só faltantes</label>
@@ -728,9 +611,6 @@
           <span class="fic-toolbar-lbl">MODO:</span>
           <button id="fic-view-grid" class="fic-btn active" onclick="setFicView('grid')">⊞ Grade</button>
           <button id="fic-view-binder" class="fic-btn" onclick="setFicView('binder')">📖 Fichário</button>
-          <!-- Dashboard do set (04/09/2026, pedido do Eduardo): valor da coleção,
-               quanto falta pra fechar, carta mais valiosa etc. — ver
-               renderFicDashboard() em fichario_patch.js. -->
           <button id="fic-view-dash" class="fic-btn" onclick="setFicView('dash')">📊 Dashboard</button>
         </div>
 
@@ -743,16 +623,6 @@
           <button id="fic-binder-6" class="fic-btn" onclick="setBinderSize(6)" title="5 colunas × 4 linhas (20 por página)">5×4</button>
         </div>
 
-        <!-- Seletor de idioma (30/09/2026, piloto no cel30, pedido do Eduardo)
-             — só aparece quando o set atual tem dados traduzidos
-             (nameEn/priceUsd em algum card). Troca nome/preço/arte exibidos
-             sem mudar a coleção rastreada (mesmo card_n, mesma coleção). -->
-        <!-- 01/10/2026 (pedido do Eduardo): seletor de idioma genérico —
-             cada coleção cadastrada em FIC_LANG_SETS (fichario_patch.js)
-             decide quais dos 4 botões aparecem. Na família cel30, jp/cn
-             trocam o array de cartas por baixo (checklists próprios,
-             diferentes do PT/EN); em coleções normais (ex: ME2.5) é só
-             troca de nome/arte exibidos na MESMA carta — ver setFicLang(). -->
         <div id="fic-lang-controls" style="display:none;gap:4px;align-items:center">
           <span class="fic-toolbar-lbl">IDIOMA:</span>
           <button id="fic-lang-pt" class="fic-btn active" onclick="setFicLang('pt')">🇧🇷 PT</button>
@@ -763,8 +633,6 @@
 
         <span style="margin-left:auto"></span>
 
-        <!-- Menu 'Mais ações' — agrupa copiar lista / imprimir / compartilhar,
-             que antes eram 3 botões soltos disputando espaço com o resto -->
         <div style="position:relative">
           <button id="fic-more-btn" class="fic-btn" aria-label="Mais ações" onclick="ficToggleMoreMenu(event)">⋯<span class="fic-more-txt"> Mais ações</span></button>
           <div id="fic-more-menu" class="fic-more-menu">
@@ -796,32 +664,15 @@
     <div id="iniciantes-wrap"></div>
   </div>
 
-  <!-- ===== ABA AVALIAÇÃO DE CENTRALIZAÇÃO (ferramenta pré-graduação) ===== -->
+  <!-- ===== ABA AVALIAÇÃO DE CENTRALIZAÇÃO ===== -->
   <div id="centralizacao" class="pane">
     <div id="centralizacao-wrap"></div>
   </div>
 
-  <!-- ===== ABA LEILÃO (12/08/2026) =====
-       Aberta pra qualquer usuário logado no MyDeck (nav-tab-leilao, ver
-       leilao.js) — o painel de leiloeiro (criar rodada, cadastrar carta,
-       marcar pagamento) continua restrito a quem está em auction_admins.
-       Leiloeiro cadastra a carta dentro de uma rodada (busca no catálogo já
-       puxa a foto), define preço inicial e reserva opcional; o prazo vem da
-       rodada. Participantes precisam de conta MyDeck + endereço de entrega
-       cadastrado pra dar lance. Pagamento é PIX direto ao leiloeiro fora do
-       site; envio por conta do comprador. Regras anti-fraude: incremento
-       mínimo por faixa (até R$10 → R$0,50 · até R$50 → R$1 · acima → 2%)
-       + extensão automática do prazo se alguém dá lance nos últimos minutos
-       (anti-sniping) — tudo validado no banco (leilao_setup.sql), nunca só
-       no client. -->
+  <!-- ===== ABA LEILÃO ===== -->
   <div id="leilao" class="pane">
     <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">🔨 Leilão</div>
 
-
-    <!-- SUB-MENU 12/08/2026, reaberto pra todo usuário logado em 13/08/2026:
-         "Leilões" e "Meus Arremates" qualquer participante vê; "Cadastro",
-         "Análises", "Arquivo" e "Financeiro" continuam só pro leiloeiro/admin
-         (aucIsLeilaoAdmin, leilao.js esconde/mostra cada um individualmente). -->
     <div id="leilao-subnav" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
       <button type="button" class="btn-add leilao-subtab-btn" data-sub="leiloes" onclick="switchLeilaoSubtab('leiloes')">🃏 Leilões</button>
       <button type="button" class="btn-add leilao-subtab-btn" data-sub="meus-arremates" onclick="switchLeilaoSubtab('meus-arremates')">🏆 Meus Arremates</button>
@@ -901,9 +752,6 @@
             </select>
           </div>
           <div style="font-size:9.5px;color:var(--muted);margin-bottom:8px">Informar o tipo já mostra pros participantes e evita perguntar depois na hora de incluir a carta arrematada no fichário de quem ganhar.</div>
-          <!-- Tipo de pacote pra cotação de frete (frete.js) — 31/08/2026.
-               Quase toda carta é "avulsa"; os outros tipos são pra quando o
-               leiloeiro vende produto lacrado dentro de uma rodada. -->
           <div class="ff"><label>Tipo de pacote (pra cotação de frete)</label>
             <select id="leilao-admin-pacote">
               <option value="avulsa">Carta avulsa (toploader + envelope)</option>
@@ -940,20 +788,14 @@
       </div>
     </div>
 
-    <!-- ── ANÁLISES (leiloeiro/admin) ──────────────────────────────── -->
-    <!-- ── PEDIDOS & ENVIOS (31/08/2026) ───────────────────────────
-         Tudo que o leiloeiro precisa pra resolver uma rodada encerrada
-         num só lugar: resumo do pedido, endereço do comprador, simulação
-         de frete (frete.js) e o botão de chamar no WhatsApp — antes
-         ficava misturado no meio dos gráficos de Análises. -->
+    <!-- ── PEDIDOS & ENVIOS ──────────────────────────────────────── -->
     <div id="leilao-sub-pedidos" style="display:none">
       <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">📬 Pedidos / Carrinhos do Leilão</div>
       <div style="font-size:10.5px;color:var(--muted);margin-bottom:14px">Resumo de cada rodada arrematada, endereço de entrega, simulação de frete e o botão pra chamar o comprador no WhatsApp e combinar pagamento/envio.</div>
       <div id="leilao-admin-orders"></div>
     </div>
 
-    <!-- 02/10/2026 — Participantes & Bloqueios (leilao_participantes.js): quem está
-         bloqueado e quem não, com botões de bloquear/liberar. Só leiloeiro. -->
+    <!-- ── PARTICIPANTES & BLOQUEIOS ─────────────────────────────── -->
     <div id="leilao-sub-participantes" style="display:none">
       <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">🚫 Participantes &amp; Bloqueios</div>
       <div class="mkt-note">
@@ -966,6 +808,7 @@
       <div id="leilao-part-list"></div>
     </div>
 
+    <!-- ── ANÁLISES ──────────────────────────────────────────────── -->
     <div id="leilao-sub-analises" style="display:none">
       <div class="kpi-grid" id="leilao-analises-kpis" style="margin-bottom:24px"></div>
       <div id="leilao-analises-countdown" style="margin-bottom:24px"></div>
@@ -980,7 +823,6 @@
       <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">💰 Comissão MyDeck (mês)</div>
       <div id="leilao-analises-comissao" style="margin-bottom:24px"></div>
 
-      <!-- ── LOJA — integrado na mesma aba Análises, 19/08/2026 ────── -->
       <div class="sec-title" role="heading" aria-level="2">🏪 Loja do Leiloeiro</div>
       <div class="kpi-grid" id="loja-analises-kpis" style="margin-bottom:24px"></div>
       <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">📦 Itens ativos por leiloeiro (Loja)</div>
@@ -990,7 +832,7 @@
       <div id="loja-analises-comissao-total" style="margin-bottom:24px"></div>
     </div>
 
-    <!-- ── ARQUIVO (leiloeiro/admin) ───────────────────────────────── -->
+    <!-- ── ARQUIVO ───────────────────────────────────────────────── -->
     <div id="leilao-sub-arquivo" style="display:none">
       <div class="mkt-note">
         Rodadas encerradas — quem deu lance em cada carta, quem ganhou e por quanto.
@@ -1000,7 +842,7 @@
       <div id="leilao-arquivo-list"></div>
     </div>
 
-    <!-- ── FINANCEIRO (leiloeiro/admin, dados privados) ────────────── -->
+    <!-- ── FINANCEIRO ────────────────────────────────────────────── -->
     <div id="leilao-sub-financeiro" style="display:none">
       <div class="mkt-note" style="border-color:var(--gold);color:var(--gold)">
         🔒 Só você vê essa aba. Preço pago, margem e lucro nunca aparecem pro comprador nem em nenhum lugar público do site.
@@ -1021,7 +863,6 @@
       <div class="sec-title" role="heading" aria-level="2">🃏 Cartas arrematadas — custo, venda e margem</div>
       <div id="leilao-financeiro-list"></div>
 
-      <!-- ── LOJA — integrado no mesmo Financeiro, 19/08/2026 ─────── -->
       <div class="sec-title" role="heading" aria-level="2">🏪 Loja do Leiloeiro</div>
       <div class="kpi-grid" id="loja-financeiro-kpis" style="margin:16px 0 24px"></div>
       <div class="mkt-grid">
@@ -1044,9 +885,6 @@
       <div style="margin-bottom:14px">
         <input type="text" id="leilao-search" placeholder="🔍 Buscar por carta, set ou nº..." class="cv-select" style="width:100%;max-width:420px" oninput="aucApplySearchFilter()">
         <div id="leilao-filter-bar" class="collection-filter-bar" style="margin-top:10px"></div>
-        <!-- Visão por rodada (padrão, como sempre foi) ou agrupada por leiloeiro
-             (21/08/2026, pensado pra quando tiver mais de um leiloeiro ativo ao
-             mesmo tempo) — ver aucSwitchListView() em leilao.js. -->
         <div id="leilao-view-toggle" style="display:flex;gap:8px;margin-top:10px">
           <button type="button" class="filter-chip filter-chip-active" data-view="rodada" onclick="aucSwitchListView('rodada')">🗓️ Por Rodada</button>
           <button type="button" class="filter-chip" data-view="leiloeiro" onclick="aucSwitchListView('leiloeiro')">👤 Por Leiloeiro</button>
@@ -1056,8 +894,7 @@
       <div id="leilao-list"></div>
     </div>
 
-    <!-- ── MEUS ARREMATES (todo mundo — endereço, pedidos, pagamento,
-         envio e o botão de incluir a carta comprada no fichário) ──── -->
+    <!-- ── MEUS ARREMATES ────────────────────────────────────────── -->
     <div id="leilao-sub-meus-arremates" style="display:none">
       <div class="mkt-grid">
         <div class="panel">
@@ -1103,10 +940,7 @@
       </div>
     </div>
 
-    <!-- ── LOJA DO LEILOEIRO (19/08/2026, todo mundo) ──────────────
-         Venda direta, preço fixo — reaproveita a confiança/autorização
-         já existente do leilão (is_auction_admin()) e o endereço +
-         WhatsApp que o comprador já cadastrou em "Meus Arremates". -->
+    <!-- ── LOJA DO LEILOEIRO ─────────────────────────────────────── -->
     <div id="leilao-sub-loja" style="display:none">
       <div class="mkt-note">
         Venda direta do leiloeiro, preço fixo — cartas avulsas e produtos selados. "Reservar" segura o
@@ -1115,7 +949,6 @@
       <div style="margin-bottom:14px">
         <input type="text" id="loja-search" placeholder="🔍 Buscar na loja..." class="cv-select" style="width:100%;max-width:420px" oninput="renderLojaGrid()">
         <div id="loja-filter-bar" class="collection-filter-bar" style="margin-top:10px"></div>
-        <!-- Mesmo padrão da aba Leilões — ver lojaSwitchListView() em loja.js. -->
         <div id="loja-view-toggle" style="display:flex;gap:8px;margin-top:10px">
           <button type="button" class="filter-chip filter-chip-active" data-view="grade" onclick="lojaSwitchListView('grade')">🗂️ Todos os Itens</button>
           <button type="button" class="filter-chip" data-view="leiloeiro" onclick="lojaSwitchListView('leiloeiro')">👤 Por Leiloeiro</button>
@@ -1127,7 +960,7 @@
       <div id="loja-my-reservations"></div>
     </div>
 
-    <!-- ── ESTOQUE DA LOJA (leiloeiro/admin) ───────────────────────── -->
+    <!-- ── ESTOQUE DA LOJA ───────────────────────────────────────── -->
     <div id="leilao-sub-estoque" style="display:none">
       <div class="mkt-grid">
         <div class="panel">
@@ -1189,12 +1022,7 @@
     </div>
   </div>
 
-  <!-- ZOOM DO LEILÃO (12/08/2026): clicar na foto da carta abre esse overlay
-       central com a imagem ampliada + o mesmo painel de lance, sem precisar
-       sair da lista. Reaproveita as classes .ov/.modal já usadas nos outros
-       modais do site (index.html linha ~501) — conteúdo é montado dinâmico
-       em openAuctionZoom() (leilao.js), porque é uma carta diferente a cada
-       clique. -->
+  <!-- ZOOM DO LEILÃO -->
   <div class="ov" id="leilao-zoom-ov" onclick="if(event.target===this)closeModal('leilao-zoom-ov')">
     <div class="modal modal-wide" style="padding:0;overflow:hidden">
       <button class="mc-btn" onclick="closeModal('leilao-zoom-ov')">✕</button>
@@ -1202,11 +1030,7 @@
     </div>
   </div>
 
-  <!-- EDITAR LEILÃO (24/08/2026): botão "✏️ Editar" só aparece pro
-       leiloeiro (aucIsLeilaoAdmin) no card/zoom de cada item já publicado
-       — deixa mudar preço/reserva/condição/descrição/fotos sem precisar
-       excluir e recadastrar. Conteúdo montado em openAuctionEdit()
-       (leilao.js). -->
+  <!-- EDITAR LEILÃO -->
   <div class="ov" id="leilao-edit-ov" onclick="if(event.target===this)closeModal('leilao-edit-ov')">
     <div class="modal">
       <button class="mc-btn" onclick="closeModal('leilao-edit-ov')">✕</button>
@@ -1214,10 +1038,7 @@
     </div>
   </div>
 
-  <!-- ESCOLHA DE VERSÃO (13/08/2026): algumas cartas têm mais de uma versão
-       física possível (ex: Normal + Reverse Holo) — quando isso acontece,
-       addOrderToFichario() (leilao.js) para aqui e pede pra pessoa confirmar
-       qual delas é a carta que ela arrematou, antes de gravar no fichário. -->
+  <!-- ESCOLHA DE VERSÃO -->
   <div class="ov" id="leilao-fichario-pick-ov" onclick="if(event.target===this)closeModal('leilao-fichario-pick-ov')">
     <div class="modal">
       <button class="mc-btn" onclick="closeModal('leilao-fichario-pick-ov')">✕</button>
@@ -1226,11 +1047,7 @@
     </div>
   </div>
 
-  <!-- REGRAS DO LEILÃO (12/08/2026): aparece só na primeira vez que a pessoa
-       tenta dar um lance — leilao.js (submitBid) intercepta e chama
-       openLeilaoRulesModal() antes de deixar o lance passar. O aceite fica
-       salvo em auction_rules_acceptance (banco), então não pergunta de novo
-       depois — nem em outro aparelho. -->
+  <!-- REGRAS DO LEILÃO -->
   <div class="ov" id="leilao-rules-ov" onclick="if(event.target===this)closeModal('leilao-rules-ov')">
     <div class="modal modal-wide">
       <button class="mc-btn" onclick="closeModal('leilao-rules-ov')">✕</button>
@@ -1270,11 +1087,11 @@
         outros participantes; tentar contornar as regras acima usando o site fora do previsto.<br><br>
 
         <b>6. Penalidades</b><br>
-        • <b>Atraso no pagamento:</b> o sistema bloqueia automaticamente novos lances até a
+- <b>Atraso no pagamento:</b> o sistema bloqueia automaticamente novos lances até a
         pendência ser resolvida com o leiloeiro — sem exposição pública.<br>
-        • <b>Reincidência ou lance não honrado:</b> suspensão do acesso ao leilão, a critério do
+- <b>Reincidência ou lance não honrado:</b> suspensão do acesso ao leilão, a critério do
         leiloeiro, podendo se estender por tempo indeterminado.<br>
-        • <b>Casos graves</b> (fraude, shill bidding comprovado, assédio): banimento definitivo do
+- <b>Casos graves</b> (fraude, shill bidding comprovado, assédio): banimento definitivo do
         sistema de leilão.<br><br>
 
         <b>7. O papel do MyDeck</b><br>
@@ -1292,13 +1109,7 @@
     </div>
   </div>
 
-  <!-- COMPROMISSO DO LEILOEIRO (24/08/2026): aparece antes do PRIMEIRO
-       cadastro (rodada ou carta) de quem vira leiloeiro — abre sozinho ao
-       entrar em Cadastro (switchLeilaoSubtab) e também trava dentro de
-       createAuctionRound()/publishAuction() via requireSellerAcceptance().
-       Aceite fica em auction_seller_acceptance (banco, insert-only) — ver
-       leilao_seller_onboarding_setup.sql. Não pergunta de novo a não ser
-       que AUC_SELLER_TERMS_VERSION mude. -->
+  <!-- COMPROMISSO DO LEILOEIRO -->
   <div class="ov" id="leilao-seller-onboarding-ov" onclick="if(event.target===this)closeModal('leilao-seller-onboarding-ov')">
     <div class="modal modal-wide">
       <button class="mc-btn" onclick="closeModal('leilao-seller-onboarding-ov')">✕</button>
@@ -1375,12 +1186,7 @@
     </div>
   </div>
 
-  <!-- MEU PERFIL (28/08/2026): nome + endereço + WhatsApp, num perfil ÚNICO
-       reaproveitado em qualquer lugar do site que precise disso (hoje:
-       leilão — via user_addresses direto — e rifa). Mesma tabela
-       user_addresses de sempre, só ganhou a coluna full_name (ver
-       rifa_setup.sql seção 14). Funções em app.js: loadUserProfile(),
-       openProfileModal(callback), saveUserProfile(). -->
+  <!-- MEU PERFIL -->
   <div class="ov" id="perfil-ov" onclick="if(event.target===this)closeModal('perfil-ov')">
     <div class="modal">
       <button class="mc-btn" onclick="closeModal('perfil-ov')">✕</button>
@@ -1413,11 +1219,7 @@
     </div>
   </div>
 
-  <!-- ESTILOS DA CONTAGEM REGRESSIVA + ROLETA DO SORTEIO (28/08/2026):
-       pedido do Eduardo — letreiro grande com contagem regressiva visível
-       pra todo mundo, números maiores/animados nos últimos 10s, e uma
-       roleta estilo "show de TV" que gira só entre os números vendidos e
-       vai freando até parar exatamente no número sorteado. -->
+  <!-- ESTILOS DA CONTAGEM REGRESSIVA + ROLETA DO SORTEIO -->
   <style>
     .rif-countdown-banner{
       margin-top:10px;padding:12px 14px;border-radius:10px;
@@ -1471,23 +1273,10 @@
     @keyframes rifWinnerFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
   </style>
 
-  <!-- ===== ABA ADMIN (11/08/2026) =====
-       Painel único pro Eduardo — reúne tudo que antes ficava misturado nas
-       abas públicas (estatísticas do site e mensagens de usuários viviam no
-       Dashboard; aprovações de Lojas Confiáveis viviam em Lojas Confiáveis;
-       aprovações de Cadastro Positivo viviam em Cadastro Positivo; cadastro
-       de produtos/cupons do ML vivia em Lojas & Ofertas). A aba em si só
-       fica visível (nav-tab-admin) pra quem loga como o e-mail do Eduardo —
-       ver admin_panel.js. Cada bloco é preenchido pela função que já existia
-       no arquivo original (admin_stats.js, feedback.js, updates.js,
-       marketplace.js, positivo.js, lojas.js/lojas_admin_collapse.js). -->
+  <!-- ===== ABA ADMIN ===== -->
   <div id="admin" class="pane">
     <div class="sec-title" role="heading" aria-level="2" style="margin-top:0">🔐 Painel Admin</div>
 
-    <!-- SEÇÕES COLAPSÁVEIS (23/08/2026) — ver admin_panel.js/toggleAdminSection.
-         Cada bloco nasce fechado, exceto os que tiverem pendência (badge > 0);
-         o estado que o Eduardo escolher manualmente fica salvo em localStorage. -->
-    <!-- 17/10/2026: visão geral — pendências de todos os módulos, atividade real e saúde do sistema (admin_overview.js) -->
     <div class="admin-section" id="asec-overview">
       <div class="admin-section-hdr" onclick="toggleAdminSection('overview')">
         <span class="admin-section-hdr-left"><span class="admin-section-caret">▶</span>🧭 Visão Geral — Pendências e Saúde</span>
@@ -1673,7 +1462,7 @@
   </div>
 </div>
 
-<!-- MODAL REGISTRAR ORDEM DE COMPRA (quero comprar essa carta) -->
+<!-- MODAL REGISTRAR ORDEM DE COMPRA -->
 <div class="ov" id="mbuy" onclick="if(event.target===this)closeModal('mbuy')">
   <div class="modal modal-wide">
     <button class="mc-btn" onclick="closeModal('mbuy')">✕</button>
@@ -1681,7 +1470,7 @@
   </div>
 </div>
 
-<!-- MODAL COMPARTILHAR FICHÁRIO (link público + QR code) -->
+<!-- MODAL COMPARTILHAR FICHÁRIO -->
 <div class="ov" id="mshare" onclick="if(event.target===this)closeModal('mshare')">
   <div class="modal">
     <button class="mc-btn" onclick="closeModal('mshare')">✕</button>
@@ -1711,30 +1500,23 @@
   </div>
 </div>
 
-<!-- AUTH OVERLAY — aparece se o user não estiver logado -->
+<!-- AUTH OVERLAY -->
 <div id="auth-overlay" style="display:none;position:fixed;inset:0;z-index:9999;overflow:hidden;background:#050609">
 
-  <!-- Card Mosaic Background -->
   <div id="auth-mosaic" style="position:absolute;inset:-8%;display:grid;grid-template-columns:repeat(8,1fr);gap:8px;padding:8px;transform:rotate(-6deg) scale(1.15);pointer-events:none;z-index:1"></div>
 
-  <!-- Vignette overlay -->
   <div style="position:absolute;inset:0;z-index:2;background:radial-gradient(ellipse 55% 65% at 50% 50%,rgba(5,6,9,.2) 0%,rgba(5,6,9,.75) 55%,rgba(5,6,9,.97) 88%)"></div>
 
-  <!-- Glow accent -->
   <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:500px;height:500px;background:radial-gradient(circle,rgba(230,57,70,.12) 0%,transparent 70%);z-index:3;pointer-events:none"></div>
 
-  <!-- Login Card -->
   <div style="position:relative;z-index:10;display:flex;align-items:center;justify-content:center;height:100%;padding:24px 0;overflow-y:auto">
     <div style="animation:authCardIn .7s cubic-bezier(.22,1,.36,1) both;text-align:center;width:400px;max-width:92vw;padding:44px 40px 36px;background:rgba(8,10,18,.75);border:1px solid rgba(230,57,70,.22);border-radius:28px;box-shadow:0 0 0 1px rgba(255,255,255,.04),0 32px 80px rgba(0,0,0,.6),0 0 80px rgba(230,57,70,.06);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px)">
 
-      <!-- Logo icon -->
       <div style="width:64px;height:64px;margin:0 auto 18px;background:linear-gradient(135deg,#e63946 0%,#ff6b35 100%);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:0 12px 40px rgba(230,57,70,.4),0 0 0 1px rgba(255,255,255,.08)">🃏</div>
 
-      <!-- Brand name -->
       <div style="font-family:'Fraunces',sans-serif;font-size:44px;letter-spacing:6px;color:#fff;line-height:.95;margin-bottom:6px;text-shadow:0 0 60px rgba(230,57,70,.4)">MyDeck</div>
       <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:4px;color:#8891b0;text-transform:uppercase;margin-bottom:26px">Pokémon TCG Tracker</div>
 
-      <!-- Tabs: Entrar / Criar Conta -->
       <div style="display:flex;background:rgba(255,255,255,.05);border-radius:12px;padding:4px;margin-bottom:20px">
         <button type="button" id="auth-tab-login" onclick="authSwitchTab('login')"
           style="flex:1;padding:10px;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;background:#e63946;color:#fff;transition:all .2s">Entrar</button>
@@ -1742,7 +1524,6 @@
           style="flex:1;padding:10px;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:#9aa0b8;transition:all .2s">Criar Conta</button>
       </div>
 
-      <!-- Google Sign-In -->
       <button onclick="signInGoogle()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:14px;padding:15px 24px;background:#fff;color:#111827;border:none;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .25s;letter-spacing:.2px;box-shadow:0 4px 20px rgba(0,0,0,.35)"
         onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 12px 36px rgba(0,0,0,.5)'"
         onmouseout="this.style.transform='';this.style.boxShadow='0 4px 20px rgba(0,0,0,.35)'">
@@ -1756,7 +1537,6 @@
 
       <div id="auth-msg" style="display:none;font-family:'DM Sans',sans-serif;font-size:12.5px;text-align:left;padding:10px 14px;border-radius:10px;margin-bottom:14px"></div>
 
-      <!-- FORM: ENTRAR (email/senha) -->
       <form id="auth-form-login" onsubmit="doSignInEmail();return false" style="display:flex;flex-direction:column;gap:10px">
         <input class="auth-input" type="email" id="auth-login-email" placeholder="Email" autocomplete="email" required>
         <div style="position:relative">
@@ -1769,7 +1549,6 @@
         <button type="submit" class="auth-submit" style="margin-top:6px">Entrar</button>
       </form>
 
-      <!-- FORM: CRIAR CONTA -->
       <form id="auth-form-signup" onsubmit="doSignUpEmail();return false" style="display:none;flex-direction:column;gap:10px">
         <input class="auth-input" type="email" id="auth-signup-email" placeholder="Email" autocomplete="email" required>
         <input class="auth-input" type="text" id="auth-signup-username" placeholder="Nome de usuário" autocomplete="username" maxlength="24" required>
@@ -1822,13 +1601,9 @@
 <!-- Auth mosaic generator -->
 <script>
 (function(){
-  // PERFORMANCE 03/10/2026: antes eram 40 <img> do scrydex (~51 KB cada, ≈2 MB) que baixavam toda vez que o
-  // fundo da tela de login aparecia. Agora recortam o MESMO sprite do mosaico do app (mosaic-sprite.webp, já
-  // baixado): 12 colunas x 6 linhas de tiles; background-size em % acompanha a célula fluida da grade.
   const SPR_COLS=12, SPR_ROWS=6, SPR_TILES=SPR_COLS*SPR_ROWS;
   const tiles=[];
   for(let i=0;i<SPR_TILES;i++) tiles.push(i);
-  // shuffle
   for(let i=tiles.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[tiles[i],tiles[j]]=[tiles[j],tiles[i]];}
   const mosaic=document.getElementById('auth-mosaic');
   if(!mosaic) return;
@@ -1852,22 +1627,15 @@
   const container=document.getElementById('app-mosaic');
   if(!container) return;
 
-  // Sprite (mosaic-sprite.webp): SPRITE_COLS x (SPRITE_TILES/SPRITE_COLS) tiles — mesmas
-  // constantes de scripts/build_mosaic_sprite.js. Cada linha embaralha os 72 tiles.
   const SPRITE_COLS=12, SPRITE_TILES=72, TILE_W=32, TILE_H=44;
-  // MELHORIA 20/08/2026: linhas cobrindo a tela inteira (antes eram 8 fixas,
-  // que só preenchiam uma faixa no topo). Calculado a partir da altura real
-  // da viewport — reaproveita os mesmos pools de cartas via SETS[si%SETS.length],
-  // não busca cards novos, só repete o padrão em mais linhas.
-  const ROW_UNIT = 44 + 4; // altura da carta (.amrow img) + gap do container
+  const ROW_UNIT = 44 + 4;
   const NUM_ROWS = Math.max(8, Math.ceil(window.innerHeight / ROW_UNIT) + 2);
-  const SPEEDS_BASE=[28,24,32,22,30,26,34,20]; // segundos por ciclo, cicla via módulo
-  const PAUSE_DISTANCE=120; // px — distância do mouse para pausar
+  const SPEEDS_BASE=[28,24,32,22,30,26,34,20];
+  const PAUSE_DISTANCE=120;
 
   function makePool(si){
     const pool=[];
     for(let n=0;n<SPRITE_TILES;n++) pool.push(n);
-    // shuffle
     for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
     return pool;
   }
@@ -1878,12 +1646,9 @@
     row.dataset.row=i;
     const goRight=(i%2===0);
     row.style.animation=`${goRight?'scrollRight':'scrollLeft'} ${SPEEDS_BASE[i%SPEEDS_BASE.length]}s linear infinite`;
-    // Para scrollLeft a tira começa em posição 0→-50%, então não precisa offset inicial
-    // Para scrollRight começa em -50%→0, também sem offset extra (o keyframe cuida)
 
-    // Imagens: triplicar para loop suave em telas largas
     const pool=makePool(i).slice(0,24);
-    const tiles=[...pool,...pool]; // duplica pro loop suave em telas largas
+    const tiles=[...pool,...pool];
     tiles.forEach(t=>{
       const c=document.createElement('div');
       c.className='amcard';
@@ -1893,7 +1658,6 @@
     container.appendChild(row);
   }
 
-  // Pausa por proximidade do mouse
   let _mmPending=false,_mmY=0;
   document.addEventListener('mousemove',function(e){
     _mmY=e.clientY;
@@ -1914,9 +1678,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <!-- QRCode.js — usado no botão Compartilhar do Fichário -->
 <script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
-<!-- jsPDF (12/08/2026): usado só pelo botão "PDF" de compartilhar leilão (leilao.js) — monta um PDF com a foto da carta + o texto padrão do leilão. -->
 <script>
-// PERFORMANCE 03/10/2026: o jsPDF (356 KB) só serve pro botão "PDF" do leilão — carrega só quando alguém clica.
 window.loadJsPdf=function(){
   if(window.jspdf)return Promise.resolve();
   if(!window._jspdfP){
@@ -1942,33 +1704,42 @@ window.loadJsPdf=function(){
 <script defer src="cards/cards_me02.js"></script>
 <script defer src="cards/cards_meg.js"></script>
 <script defer src="cards/cards_mep.js"></script>
-<!-- PERF 03/08/2026 (auditoria): os sets SV (2023-2025) e legados (SWSH até
-     Base Set) — ~2,2 MB de JS em 23 arquivos — saíram do boot. Eram avaliados
-     em TODA visita mesmo pra quem só usa os sets ME, e eram a principal causa
-     do load de ~15s e dos congelamentos ao trocar de aba. Agora são injetados
-     por loadLazySets() (fim do app.js) depois do window.load, e as telas
-     re-renderizam quando os dados chegam. Pra adicionar um set ME novo (uso
-     diário), continue criando <script defer> aqui em cima; pra sets SV/legados,
-     adicione o arquivo em LAZY_SET_SCRIPTS no app.js. -->
 
 <script defer src="price_updated_at.js"></script>
-<!-- 17/10/2026: artes da CEL30 e catálogo de produtos agora são arquivos próprios (o Simulador também usa) -->
 <script defer src="img_cel30.js"></script>
 <script defer src="produtos_catalogo.js"></script>
 <script defer src="app.js"></script>
-<script defer src="fichario_switch.js"></script><!-- escolha fichário novo x clássico (?novo / ?classico) — ver o próprio arquivo -->
-<!-- fichario_patch.js (auditoria 04/09/2026 — comentario so documenta uma
-     dependencia que ja existia, nao muda comportamento): implementacao atual
-     do Fichario, carrega DEPOIS de app.js (usa currentSet/collected/
-     purchases[]/sb dele) e ANTES de fichario_melhorias_23jul.js, que
-     monkey-patcha funcoes definidas aqui. Motivo de nao estar dentro do
-     app.js: truncamento de Edit/Write em arquivos grandes — ver
-     [[feedback_coding]] e o cabecalho do proprio arquivo. -->
+<script defer src="fichario_switch.js"></script>
+<script>
+// Garante que clicar em Fichários / goToTab('fichario') vá direto para o fichário novo
+window.addEventListener('DOMContentLoaded', function () {
+  var isClassicForced = /[?&]classico\b/i.test(window.location.search);
+  if (!isClassicForced) {
+    var origGoToTab = window.goToTab;
+    if (typeof origGoToTab === 'function') {
+      window.goToTab = function (id) {
+        if (id === 'fichario') {
+          openNewFichario();
+          return;
+        }
+        return origGoToTab.apply(this, arguments);
+      };
+    }
+    var origGo = window.go;
+    if (typeof origGo === 'function') {
+      window.go = function (id) {
+        if (id === 'fichario') {
+          openNewFichario();
+          return;
+        }
+        return origGo.apply(this, arguments);
+      };
+    }
+  }
+});
+</script>
 <script defer src="fichario_patch.js"></script>
 <script defer src="pokedex_nacional.js"></script>
-<!-- fichario_melhorias_23jul.js: monkey-patch sobre app.js/fichario_patch.js/
-     pokedex_nacional.js (nessa ordem) — mesmo motivo do comentario acima.
-     Ver cabecalho do proprio arquivo. -->
 <script defer src="fichario_melhorias_23jul.js"></script>
 <script defer src="fichario_favoritos.js"></script>
 <script defer src="fichario_masterdex.js"></script>
@@ -1977,49 +1748,21 @@ window.loadJsPdf=function(){
 <script defer src="fichario_nav_desktop.js"></script>
 <script defer src="import_ligapokemon.js"></script>
 <script defer src="lojas.js"></script>
-<!-- staff_access.js (21/08/2026): tabela/telinha de acesso da equipe (view-only
-     por padrão + permissões granulares por área) — precisa carregar depois de
-     lojas.js (isAdmin/isAdminEditor/uid) e antes de qualquer arquivo que chame
-     hasPerm() em resposta a clique (marketplace.js, positivo.js, feedback.js,
-     updates.js, admin_panel.js). Ver staff_access_setup.sql pro back-end. -->
 <script defer src="staff_access.js"></script>
-<!-- lojas_fix_latest_price.js (auditoria 04/09/2026, so documentando):
-     redefine renderProductCard() por cima da versao de lojas.js — precisa
-     carregar DEPOIS dele. Motivo de nao editar lojas.js direto: arquivo
-     grande, historico de truncamento de Edit/Write no mount do sandbox —
-     ver [[feedback_coding]] e o cabecalho do proprio arquivo. -->
 <script defer src="lojas_fix_latest_price.js"></script>
 <script defer src="marketplace.js"></script>
-<!-- price_history.js (19/08/2026): gráfico de histórico de preço + book de compra/venda
-     por carta — encadeia depois de marketplace.js (openBinderModal já vem monkey-patched
-     por ele) e antes de leilao.js. Ver [[project_price_history_book]] na memória do projeto. -->
 <script defer src="price_history.js"></script>
-<!-- frete.js (31/08/2026): módulo compartilhado de cotação de frete
-     (SuperFrete) — usado por leilao.js/rifa.js hoje, marketplace depois.
-     Precisa carregar ANTES do leilao.js. -->
 <script defer src="leilao.js"></script>
-<!-- 02/10/2026: aba Participantes & Bloqueios do Leilão -->
 <script defer src="leilao_participantes.js"></script>
-<!-- notificacoes.js (02/10/2026): sino + aviso ao vivo; usa aucPendingOpenId
-     do leilao.js, por isso carrega DEPOIS dele. -->
 <script defer src="notificacoes.js"></script>
-<!-- rifa.js (24/08/2026): aba de Rifas, reaproveita estado/funções globais do
-     leilao.js (aucIsLeilaoAdmin, compressAuctionPhoto, uploadAuctionPhotos,
-     etc.) — por isso precisa carregar DEPOIS dele. -->
 <script defer src="loja.js"></script>
 <script defer src="positivo.js"></script>
 <script defer src="lojas_destaques.js"></script>
 <script defer src="lojas_whatsapp.js"></script>
-<!-- lojas_msrp.js (15/10/2026): preço sugerido do fabricante (coluna msrp) — destaque
-     quando o preço do ML estiver até +10% do sugerido Copag. Carrega DEPOIS de
-     lojas_destaques.js e lojas_whatsapp.js (encadeia por cima dos dois). -->
 <script defer src="lojas_msrp.js"></script>
-<!-- lojas_alertas.js (18/10/2026): alerta de preço pessoal (🔔 no card) — depois de lojas_msrp.js, que ele encadeia -->
 <script defer src="lojas_alertas.js"></script>
-<!-- lojas_ordenar.js (18/10/2026): seletor "Ordenar por" (valor por booster etc.) — depois de lojas_destaques.js e lojas_alertas.js -->
 <script defer src="lojas_ordenar.js"></script>
 <script defer src="lojas_admin_collapse.js"></script>
-<!-- Loja Toybox (15/10/2026): base do marketplace. Depende de app.js (sbClient, uid, hasPerm via staff_access.js). Ordem: core, vitrine, painel. -->
 <script defer src="iniciantes.js"></script>
 <script defer src="centralizacao.js"></script>
 <script defer src="admin_stats.js"></script>
