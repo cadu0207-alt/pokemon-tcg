@@ -1,12 +1,12 @@
 /* Fichário novo x clássico — implantação gradual (18/11/2026).
  *
- * Por padrão tudo continua como sempre (fichário clássico). Quem abrir o MyDeck com  ?novo  passa a usar o fichário novo
- * (a aba "Fichário" e os links de fichário levam para fichario-novo.html); com  ?classico  volta ao clássico. A escolha fica
- * guardada neste aparelho. Para virar o padrão de TODO MUNDO, é só trocar DEFAULT_UI para 'novo' (uma palavra).
+ * Desde 18/11/2026 o padrão é o fichário NOVO (a aba "Fichário" e os links de fichário levam para fichario-novo.html).
+ * Com  ?classico  o aparelho volta ao clássico (e  ?novo  desfaz). A escolha fica guardada neste aparelho.
+ * Para voltar o padrão de TODO MUNDO ao clássico, é só trocar DEFAULT_UI para 'classico' (uma palavra).
  * Os dados são os mesmos nos dois (tabela collection e custom_binders): nada se perde indo e voltando. */
 (function () {
   'use strict';
-  var DEFAULT_UI = 'classico';
+  var DEFAULT_UI = 'novo'; // 18/11/2026: fichário novo é o padrão de todos (decisão do Eduardo); ?classico volta ao antigo neste aparelho
   var KEY = 'mydeck_fichario_ui';
   var ui = DEFAULT_UI;
   try {
