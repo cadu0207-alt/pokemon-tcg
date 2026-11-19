@@ -1,7 +1,6 @@
-/* Fichário (beta) — interface nova do MyDeck.
-- Usa o MESMO motor do site (app.js): login, leitura da coleção, toggleSlot() e catálogos.
-- Esta página só troca o visual. Nada aqui grava no banco por conta própria: toda marcação passa
-- por toggleSlot(), a mesma função do fichário atual — então o que se marca aqui aparece lá e vice-versa.
+/* Fichário — interface do MyDeck.
+- Usa o motor do site (app.js): login, leitura da coleção, toggleSlot() e catálogos.
+- Nada aqui grava no banco por conta própria: toda marcação passa por toggleSlot() / saveSlot().
 - Modo demonstração (?demo): coleção fictícia só na tela, não grava nada. */
 (function () {
   'use strict';
@@ -14,7 +13,7 @@
     get: function (k, d) { try { var v = localStorage.getItem('fn_' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set: function (k, v) { try { localStorage.setItem('fn_' + k, JSON.stringify(v)); } catch (e) { } }
   };
-  var CUR = 'R$'; // moeda da coleção na tela: '$' só quando o idioma é EN e as cartas têm preço em dólar (hoje: Celebração 30 Anos)
+  var CUR = 'R$';
   var money = function (v) {
     if (v == null || isNaN(v)) return '—';
     return CUR === '$' ? '$ ' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -52,7 +51,6 @@
     window.__fnSeed = rnd;
   })();
 
-  // Garante identificador único quando há cartas repetidas (mesmo número/set) na mesma lista
   function tagDuplicateCards(cards, defaultSet) {
     var seen = {};
     return (cards || []).map(function (c) {
@@ -528,6 +526,7 @@
   async function dexDelete(bid) {
     var b = dexBinders().filter(function (x) { return String(x.id) === String(bid); })[0];
     if (!b || dexBusy) return;
+    var isReg = isRegionalDexBinder(b);
     var nm = b.name.replace(/^[^\wÀ-ú(]+/, '') || (isReg ? 'Pokédex regional' : 'Master Set Nacional');
     dexBusy = true;
     try {
@@ -1054,14 +1053,12 @@
       toast('Imagem salva. Mande no grupo!');
     } catch (e) { console.error(e); toast('Não foi possível gerar a imagem agora.'); }
   }
-  // informações do set (apenas data dos preços)
   function infoHtml() {
     if (isCb(st.set) || isDex(st.set)) return '';
     var id = setKey(st.set), bits = [];
     try { if (typeof formatPriceUpdatedAt === 'function' && typeof PRICE_UPDATED_AT !== 'undefined' && Object.prototype.hasOwnProperty.call(PRICE_UPDATED_AT, id)) bits.push('🗓️ preços atualizados ' + esc(formatPriceUpdatedAt(id))); } catch (e) { }
     return bits.length ? '<div class="fn-stats fn-bridge" style="margin-top:6px">' + bits.map(function (b) { return '<span>' + b + '</span>'; }).join('') + '</div>' : '';
   }
-  // Pokédex: preenche só as vagas vazias
   async function dexAutoFill() {
     var b = cur.binder; if (!b || !isDex(st.set) || dexBusy) return;
     if (cur.pending > 0) { toast('Ainda carregando todas as coleções. Tente de novo em instantes.'); return; }
@@ -1515,7 +1512,6 @@
   function setLang(l) {
     progCache = {}; LS.set('lang', l);
     var fam = FAMILY.indexOf(st.set) >= 0;
-    try { localStorage.setItem('ficLang', fam && (l === 'jp' || l === 'cn') ? 'pt' : l); } catch (e) { }
     if (fam) {
       st.lang = (l === 'pt' || l === 'en') ? l : 'pt';
       var target = REGION[l] || 'cel30';
@@ -1675,8 +1671,6 @@
   function doPrint() {
     if (DEMO) { toast('Imprimir não funciona no modo demonstração.'); return; }
     if (typeof printBinder !== 'function') { toast('Impressão indisponível agora. Recarregue a página.'); return; }
-    var code = { '4': 2, '9': 3, '12': 7, '16': 4, '20b': 6 }[String(st.pocket)] || 3;
-    try { ficBinderSize = code; if (typeof loadCollection === 'function') loadCollection(); } catch (e) { }
     var cat = SET_CATALOG.filter(function (x) { return x.id === setKey(st.set); })[0] || {};
     closeSheet();
     var only = st.status === 'miss' ? 'missing' : st.status === 'have' ? 'collected' : undefined;
@@ -1896,7 +1890,6 @@
       document.documentElement.setAttribute('data-theme', n); try { localStorage.setItem('mydeck-theme', n); } catch (e) { }
     });
 
-    // No modo foco, clicar no link/botão "My deck" sai do modo foco em vez de navegar para fora
     document.addEventListener('click', function (e) {
       if (!document.body.classList.contains('fn-focus')) return;
       var homeLink = e.target && e.target.closest ? e.target.closest('a[href="./"], a[href="index.html"], a[href="/"], #fn-home, .fn-brand, .fn-logo') : null;
@@ -1982,20 +1975,14 @@
     addEventListener('error', function (e) { toast('Algo deu errado nesta tela. Se repetir, mande um print.'); try { console.error(e.message); } catch (x) { } });
   }
 
-  function neutralizeOldRenderers() {
-    ['renderBinder', 'updateDashProgress', 'renderFicDashboard'].forEach(function (n) {
-      if (typeof window[n] === 'function') window[n] = function () { };
-    });
-    ['renderAll', 'renderDash', 'renderGastos', 'renderCartas', 'renderTabs', 'renderEvolucao', 'renderPatrimonio', 'renderCustomBindersHome'].forEach(function (n) {
-      if (typeof window[n] === 'function') window[n] = function () { onData(); };
-    });
-    if (typeof window.loadAll === 'function') {
-      var orig = window.loadAll;
-      window.loadAll = function () { var r = orig.apply(this, arguments); Promise.resolve(r).then(onData, onData); return r; };
-    }
-  }
   var dataT;
-  function onData() { clearTimeout(dataT); dataT = setTimeout(function () { banner(); if (engineReady()) { cleanupAndEnsureNatDex(); progCache = {}; loadCur(); renderHero(); renderBody(); renderSide(); } }, 60); }
+  function onData() {
+    clearTimeout(dataT);
+    dataT = setTimeout(function () {
+      banner();
+      if (engineReady()) { cleanupAndEnsureNatDex(); progCache = {}; loadCur(); renderHero(); renderBody(); renderSide(); }
+    }, 60);
+  }
 
   var SHARE_TOKEN = (function () { try { var t = new URLSearchParams(location.search).get('s'); return t && /^[\w-]{6,100}$/.test(t) ? t : null; } catch (e) { return null; } })();
   function demoShareRow(kind) {
@@ -2040,12 +2027,12 @@
       if (typeof sbClient === 'undefined' || !sbClient) return setTimeout(boot, 80);
       loadShare().then(function (ok) { if (ok) boot(); else { bind(); banner(); } }, function () { bind(); banner(); }); SHARE = SHARE || { keys: new Set(), loading: true }; return;
     }
-    neutralizeOldRenderers();
     if (!isHome(st.set) && !isDex(st.set) && !isCb(st.set) && !isPk(st.set) && !SET_CATALOG.some(function (s) { return s.id === st.set; })) st.set = 'home';
     bind(); banner(); renderAll(); cleanupAndEnsureNatDex();
     window.addEventListener('lazy-sets-loaded', function () { dexIdx = null; cbAllIdx = null; onData(); });
+    window.addEventListener('mydeck-data-loaded', onData);
     setTimeout(banner, 2500);
-    window.__fn = { st: st, renderAll: renderAll, mark: mark };
+    window.__fn = { st: st, renderAll: renderAll, mark: mark, onData: onData };
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
