@@ -332,6 +332,61 @@ if(sbClient){
 }
 
 // ── IMAGENS ──────────────────────────────────────────────────────
+// FONTE ÚNICA (19/11/2026): imagens de carta vêm da Limitless (CDN do limitlesstcg.com), pasta "tpci" (internacional),
+// com arte em PT e EN para todas as coleções abaixo — antes eram 4 fontes (scrydex, pokemontcg.io, tcgdex, pkmncards).
+//   padrão: .../tpci/<SET>/<SET>_<NNN>_R_<PT|EN>_<XS|SM|MD|LG>.png  (XS 18 KB · SM 60 KB · MD 92 KB · LG 150 KB)
+// Verificado carta a carta (scripts/limitless_check.js): 100% das cartas das coleções mapeadas respondem 200 em PT e EN,
+// exceto MEP 093/140 e SVP 085 (a Limitless não tem) e SVP 102 só em PT. A numeração é a mesma da fonte antiga
+// (comparado visualmente). O que NÃO está no mapa (legados SM/XY/BW…, cel30) segue na fonte antiga.
+// FALLBACK: se uma imagem da Limitless falha, o listener 'error' lá embaixo tenta EN e depois a fonte antiga (imgLmt devolve
+// null enquanto LMT_OFF=true, então getBinderImg percorre o caminho antigo sem mexer nele).
+const LMT_BASE='https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/';
+const LMT_CODES={me06:'DLR',me05:'PBL',me04:'CRI',me03:'POR',me02:'PFL',meg:'MEG',me2pt5:'ASC',mep:'MEP',
+  zsv10pt5:'BLK',rsv10pt5:'WHT',pgo:'PGO',svp:'SVP',sv10:'DRI',sv9:'JTG',sv8pt5:'PRE',sv8:'SSP',sv7:'SCR',
+  sv6pt5:'SFA',sv6:'TWM',sv5:'TEF',sv4pt5:'PAF',sv4:'PAR',sv3pt5:'MEW',sv3:'OBF',sv2:'PAL',sv1:'SVI'};
+const LMT_REV=Object.fromEntries(Object.entries(LMT_CODES).map(([k,v])=>[v,k]));
+const LMT_SKIP={mep:new Set([93,140]),svp:new Set([85])}; // cartas que a Limitless não tem
+let LMT_OFF=false;
+// lang: 'pt' => arte PT; qualquer outra coisa => EN. size: XS|SM|MD|LG (padrão LG; imgThumb/imgMedium trocam).
+function imgLmt(setId,n,lang,size){
+  if(LMT_OFF)return null;
+  const code=LMT_CODES[setId];if(!code)return null;
+  const s=String(n==null?'':n).trim();if(!s)return null;
+  const isNum=/^\d+$/.test(s);
+  if(isNum&&LMT_SKIP[setId]&&LMT_SKIP[setId].has(parseInt(s,10)))return null;
+  const nn=isNum?String(parseInt(s,10)).padStart(3,'0'):s;
+  return`${LMT_BASE}${code}/${code}_${nn}_R_${lang==='pt'?'PT':'EN'}_${size||'LG'}.png`;
+}
+// Caminho antigo (scrydex/pokemontcg.io/tcgdex/pkmncards) para uma carta — usado só como último fallback.
+function imgLegacy(setId,n,lang){
+  LMT_OFF=true;
+  try{return getBinderImg({n:String(n)},setId,lang)||'';}catch(e){return '';}
+  finally{LMT_OFF=false;}
+}
+// A CDN da Limitless NÃO envia CORS (Access-Control-Allow-Origin): serve pra <img>, mas fetch()/canvas falham.
+// Quem precisa baixar a imagem como blob (compartilhar leilão) usa esta função pra achar a URL da fonte antiga (que tem CORS).
+function imgLegacyFromLmt(url){
+  const m=/\/tpci\/([A-Z0-9]+)\/\1_([^_\/]+)_R_(PT|EN)_(XS|SM|MD|LG)\.png/.exec(url||'');
+  if(!m||!LMT_REV[m[1]])return null;
+  return imgLegacy(LMT_REV[m[1]],m[2],m[3].toLowerCase())||null;
+}
+window.addEventListener('error',function(e){
+  const img=e.target;
+  if(!img||img.tagName!=='IMG')return;
+  const m=/\/tpci\/([A-Z0-9]+)\/\1_([^_\/]+)_R_(PT|EN)_(XS|SM|MD|LG)\.png/.exec(img.src||'');
+  if(!m)return;
+  const setId=LMT_REV[m[1]];if(!setId)return;
+  if(!img.dataset.lmLang)img.dataset.lmLang=m[3].toLowerCase();
+  let next=null;
+  if(m[3]==='PT'){next=img.src.replace('_R_PT_','_R_EN_');}                       // 1º: arte EN da própria Limitless
+  else{
+    let u=imgLegacy(setId,m[2],img.dataset.lmLang);                                  // 2º: fonte antiga
+    if(u){next=m[4]==='SM'?imgThumb(u):(m[4]==='MD'?imgMedium(u):u);}
+  }
+  if(!next||next===img.src)return;
+  e.stopImmediatePropagation();                                                      // não deixa o onerror inline esconder a imagem
+  img.src=next;
+},true);
 // me04: 04/10/2026 — mesmo padrão do me05/me2pt5 (arte por idioma, tcgdex slug "me04"; jp = `img` da carta,
 // set JP M4 "Ninja Spinner", 3 cartas vêm do MP — ver cards_me04.js). Aceita `n` OU a carta inteira; sem
 // `lang` cai no scrydex EN de antes (chamadores genéricos, hero card, etc.).
@@ -339,6 +394,7 @@ function imgMe04(nOrCard,lang){
   const isCard=nOrCard&&typeof nOrCard==='object';
   const n=isCard?nOrCard.n:nOrCard;
   if(lang==='jp')return(isCard&&nOrCard.img)||'';
+  {const u=imgLmt('me04',n,lang);if(u)return u;}
   if(lang==='pt'||lang==='en'){
     return`https://assets.tcgdex.net/${lang}/me/me04/${String(parseInt(n,10)).padStart(3,'0')}/high.png`;
   }
@@ -350,12 +406,13 @@ function imgMe03(nOrCard,lang){
   const isCard=nOrCard&&typeof nOrCard==='object';
   const n=isCard?nOrCard.n:nOrCard;
   if(lang==='jp')return(isCard&&nOrCard.img)||'';
+  {const u=imgLmt('me03',n,lang);if(u)return u;}
   if(lang==='pt'||lang==='en'){
     return`https://assets.tcgdex.net/${lang}/me/me03/${String(parseInt(n,10)).padStart(3,'0')}/high.png`;
   }
   return`https://images.scrydex.com/pokemon/me3-${parseInt(n)}/large`;
 }
-function imgMe02(n){return`https://images.scrydex.com/pokemon/me2-${parseInt(n)}/large`;}
+function imgMe02(n,lang){return imgLmt('me02',n,lang)||`https://images.scrydex.com/pokemon/me2-${parseInt(n)}/large`;}
 // me05: 03/10/2026 — mesma estrutura do me2pt5 (arte por idioma, tcgdex slug "me05"):
 // pt = arte em português da Copag, en = arte americana, jp = URL pronta no campo `img`
 // da carta (limitlesstcg, set JP M5; 3 cartas vêm do set MP — ver cards_me05.js).
@@ -365,12 +422,13 @@ function imgMe05(nOrCard,lang){
   const isCard=nOrCard&&typeof nOrCard==='object';
   const n=isCard?nOrCard.n:nOrCard;
   if(lang==='jp')return(isCard&&nOrCard.img)||'';
+  {const u=imgLmt('me05',n,lang);if(u)return u;}
   if(lang==='pt'||lang==='en'){
     return`https://assets.tcgdex.net/${lang}/me/me05/${String(parseInt(n,10)).padStart(3,'0')}/high.png`;
   }
   return`https://images.scrydex.com/pokemon/me5-${parseInt(n)}/large`;
 }
-function imgMe06(n){return`https://images.scrydex.com/pokemon/me6-${parseInt(n)}/large`;}
+function imgMe06(n,lang){return imgLmt('me06',n,lang)||`https://images.scrydex.com/pokemon/me6-${parseInt(n)}/large`;}
 // me2pt5: CORRIGIDO 01/10/2026 (pedido do Eduardo: "fichário em português
 // mostrando foto em inglês") — trocado de scrydex (sem idioma, só arte EN)
 // pra tcgdex, que cataloga este set ("me02.5") com arte própria por idioma.
@@ -393,6 +451,7 @@ function imgMe2pt5(nOrCard,lang){
   }
   const l=lang==='en'?'en':'pt';
   const n=(nOrCard&&typeof nOrCard==='object')?nOrCard.n:nOrCard;
+  {const u=imgLmt('me2pt5',n,l);if(u)return u;}
   const id=String(parseInt(n,10)).padStart(3,'0');
   return`https://assets.tcgdex.net/${l}/me/me02.5/${id}/high.png`;
 }
@@ -406,7 +465,7 @@ function imgCel30Jp(n){
   const code=/^\d+$/.test(n)?parseInt(n,10):n;
   return`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpc/M6a/M6a_${code}_R_JP_LG.png`;
 }
-function imgMeg(n) {return`https://images.scrydex.com/pokemon/me1-${parseInt(n)}/large`;}
+function imgMeg(n,lang) {return imgLmt('meg',n,lang)||`https://images.scrydex.com/pokemon/me1-${parseInt(n)}/large`;}
 // LOGO DA COLEÇÃO (12/08/2026) — pedido do Eduardo: mostrar a arte oficial de
 // cada set em vez do código (ME06/SV10/etc). Confirmado na doc pública da
 // Scrydex (scrydex.com/docs/pokemon/expansions) que o logo sempre segue esse
@@ -480,12 +539,13 @@ const MEP_IMG_OVERRIDE={
   106:'https://static.tcgcollector.com/content/images/55/47/48/554748fad514a556add0c8180b9eb1a423ff876ab7440b93d0115f75bb4c348f.webp',
 };
 
-function imgMep(n) {
+function imgMep(n,lang) {
   const num=parseInt(n);
   // 140 (Snover IR) é entrada duplicada — a carta real já existe em cards_meg.js
   // com imagem funcionando via Scrydex (me1-140). Redireciona pra lá em vez de
   // procurar imagem própria pro "mep:140" que não existe de verdade.
-  if(num===140) return imgMeg(140);
+  if(num===140) return imgMeg(140,lang);
+  {const u=imgLmt('mep',n,lang);if(u)return u;}   // 19/11/2026: Limitless cobre a MEP quase inteira (falta 093) — overrides abaixo só são fallback
   if(MEP_IMG_OVERRIDE[num]) return MEP_IMG_OVERRIDE[num];
   // pkmncards.com tem a maioria das imagens MEP com URL previsível
   // formato: mebsp_en_{número_com_zeros}_std.jpg
@@ -544,6 +604,8 @@ function imgAltUrl(setId,n){
 // continuam com /large. pokemontcg.io já serve o tamanho pequeno por padrão.
 function imgThumb(url){
   if(typeof url!=='string')return url;
+  // 19/11/2026: Limitless — LG (150 KB) vira SM (60 KB, 274×381) nas grades/listas.
+  if(url.includes('/tpci/')&&/_LG\.png$/.test(url))return url.replace(/_LG\.png$/,'_SM.png');
   if(url.includes('images.scrydex.com'))return url.replace(/\/large$/,'/small');
   // 17/10/2026: ME2.5/ME03/ME04/ME05 vêm do tcgdex em /high.png (~320 KB por carta). /low.webp tem 245×337 e
   // ~15–25 KB (medido nas mesmas cartas) — mais que suficiente pro tamanho de grade/fichário. Impressão
@@ -557,6 +619,7 @@ function imgThumb(url){
 // virar PDF/impresso — grids continuam em /small.
 function imgMedium(url){
   if(typeof url!=='string')return url;
+  if(url.includes('/tpci/')&&/_LG\.png$/.test(url))return url.replace(/_LG\.png$/,'_MD.png');
   if(url.includes('images.scrydex.com'))return url.replace(/\/large$/,'/medium');
   return url;
 }
@@ -588,13 +651,18 @@ function getBinderImg(c,setId,lang){
   if(setId==='cel30jp') return imgCel30Jp(c.n);
   if(setId==='cel30cn') return c.img||'';
   const n=parseInt(c.n);
+  // 19/11/2026: Limitless primeiro (ver bloco LMT_* acima). JP/CN dos sets que têm print japonês seguem no caminho antigo (c.img).
+  if(!((lang==='jp'||lang==='cn')&&(setId==='me2pt5'||setId==='me05'||setId==='me04'||setId==='me03'))){
+    const lu=imgLmt(setId,c.n,lang||(setId==='me2pt5'?'pt':undefined));
+    if(lu)return lu;
+  }
   if(setId==='me2pt5') return imgMe2pt5(c,lang);
-  if(setId==='me06') return imgMe06(n);
+  if(setId==='me06') return imgMe06(n,lang);
   if(setId==='me05') return imgMe05(c,lang);
   if(setId==='me03') return imgMe03(c,lang);
-  if(setId==='me02') return imgMe02(n);
-  if(setId==='meg')  return imgMeg(n);
-  if(setId==='mep')  return imgMep(n);
+  if(setId==='me02') return imgMe02(n,lang);
+  if(setId==='meg')  return imgMeg(n,lang);
+  if(setId==='mep')  return imgMep(n,lang);
   // svp usa o fallback genérico sv* logo abaixo (pokemontcg.io CDN)
   if(setId==='me04') return imgMe04(c,lang);
   // Raio Preto (Black Bolt) e Fogo Branco (White Flare) — EV10.5, jul/2025.

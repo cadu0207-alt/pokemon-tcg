@@ -1786,14 +1786,20 @@ function aucRoundShareUrl(roundId){
 // cai de volta pro compartilhamento só com texto, sem travar nada.
 async function aucFetchImageBlob(url){
   if(!url)return null;
-  try{
-    const resp=await fetch(url,{mode:'cors'});
-    if(!resp.ok)return null;
-    return await resp.blob();
-  }catch(e){
-    console.warn('[leilao] não deu pra baixar a imagem pra compartilhar (CORS do CDN?)',e);
-    return null;
+  // 19/11/2026: imagens de carta agora vêm da Limitless, cuja CDN não libera CORS — pra baixar como blob usamos a
+  // fonte antiga (scrydex/pokemontcg.io, com CORS) da mesma carta; se não houver, tenta a URL original.
+  const tries=[];
+  try{if(typeof imgLegacyFromLmt==='function'){const alt=imgLegacyFromLmt(url);if(alt)tries.push(alt);}}catch(e){}
+  tries.push(url);
+  for(const u of tries){
+    try{
+      const resp=await fetch(u,{mode:'cors'});
+      if(resp.ok)return await resp.blob();
+    }catch(e){
+      console.warn('[leilao] não deu pra baixar a imagem pra compartilhar (CORS do CDN?)',e);
+    }
   }
+  return null;
 }
 
 // Clipboard.write() só aceita alguns tipos de imagem em navegadores mais
