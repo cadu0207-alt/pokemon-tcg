@@ -746,14 +746,14 @@
 
   // ── Personalizados (tela inicial) ──
   function lastSetId() { var l = LS.get('set', null); return l && SET_CATALOG.some(function (x) { return x.id === l; }) ? l : null; }
-  function renderHomeHero() {
+function renderHomeHero() {
     var n = cbSorted().length + pkBinders().length + dexBinders().length, last = lastSetId();
     var lastCat = last ? SET_CATALOG.filter(function (x) { return x.id === last; })[0] : null;
-    $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>📚 Personalizados</h1><p class="fn-hero-sub">' +
+    $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>📚 Meus fichários</h1><p class="fn-hero-sub">' +
       (loggedIn() || DEMO ? (n ? n + ' fichário' + (n === 1 ? '' : 's') + ' seu' + (n === 1 ? '' : 's') + ' · e todas as coleções do MyDeck' : 'Organize suas cartas do jeito que quiser · e veja todas as coleções do MyDeck') : 'Entre no MyDeck para ver os seus fichários.') + '</p></div></div>' +
       '<div class="fn-hero-links"><a href="#" data-act="cbnew">➕ Novo fichário</a><a href="#" data-act="dexnew">🌐 Criar Pokédex</a><a href="#" data-act="artists">🎨 Meus artistas</a>' +
       (lastCat ? '<a href="#" data-pick="' + esc(last) + '">▶ Continuar em ' + esc(((lastCat.label || '').split('—').slice(1).join('—').trim()) || lastCat.label) + '</a>' : '') + '</div>';
-    $('#fn-setbtn-emoji').textContent = '📚'; $('#fn-setbtn-code').textContent = 'Fichário'; $('#fn-setbtn-name').textContent = 'Personalizados';
+    $('#fn-setbtn-emoji').textContent = '📚'; $('#fn-setbtn-code').textContent = 'Fichário'; $('#fn-setbtn-name').textContent = 'Meus fichários';
   }
   function homeTile(pick, em, title, sub, pct) {
     return '<button type="button" class="fn-hcard" data-pick="' + esc(pick) + '"><span class="em">' + esc(em) + '</span><span class="tx"><b>' + esc(title) + '</b><small>' + esc(sub) + '</small></span>' +
