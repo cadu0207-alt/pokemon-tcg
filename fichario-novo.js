@@ -182,6 +182,7 @@
   var REGION_META = { 1: ['🔴', '#E53935'], 2: ['🟡', '#FDD835'], 3: ['🟢', '#43A047'], 4: ['💎', '#5C6BC0'], 5: ['⚫', '#424242'], 6: ['🌸', '#EC407A'], 7: ['🌺', '#FF7043'], 8: ['⚔️', '#7E57C2'], 9: ['🍇', '#8E24AA'] };
   function isDex(id) { return /^dex:/.test(String(id)); }
   function isRegionalDexBinder(b) { return !!(b && b.filter_config && (b.filter_config.dexFrom != null || b.filter_config.dexTo != null)); }
+  function binderCardCount(b) { return (b && Array.isArray(b.card_ids)) ? b.card_ids.length : 0; }
   var demoBinders = null, dexIdx = null, picker = null, dexLimit = 300;
   function normTxt(s) { return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
   function setLabelOf(sid) { var s = SET_CATALOG.filter(function (x) { return x.id === sid; })[0]; return s ? (s.label || sid) : sid; }
@@ -208,7 +209,16 @@
       }
       return demoBinders;
     }
-    try { return (customBinders || []).filter(function (b) { return b && b.filter_config && b.filter_config.type === 'masterdex'; }); } catch (e) { return []; }
+    try {
+      var list = (customBinders || []).filter(function (b) { return b && b.filter_config && b.filter_config.type === 'masterdex'; });
+      // se houver vários Master Set Nacionais, prioriza os que têm cartas registradas
+      list.sort(function (a, b) {
+        var aNat = !isRegionalDexBinder(a), bNat = !isRegionalDexBinder(b);
+        if (aNat && bNat) return binderCardCount(b) - binderCardCount(a);
+        return 0;
+      });
+      return list;
+    } catch (e) { return []; }
   }
   function dexBinder(id) { return dexBinders().filter(function (b) { return 'dex:' + b.id === String(id); })[0] || null; }
   function dexRange(b) { var f = b.filter_config || {}; return { from: f.dexFrom || 1, to: f.dexTo || (typeof POKEDEX_NACIONAL !== 'undefined' ? POKEDEX_NACIONAL.length : 1025) }; }
@@ -235,12 +245,30 @@
     if (DEMO && !demoSet.size) cur.cards.forEach(function (c) { slotsOf(st.set, c).forEach(function (s) { if (window.__fnSeed() < 0.45) demoSet.add(keyOf(st.set, c, s.ver)); }); });
   }
   function dexOwned(c) { return !!c && stateOf(st.set, c).have > 0; }
+  function dexCalc(b) {
+    var r = dexResolve(b), rg = dexRange(b), totSp = rg.to - rg.from + 1, ownSp = 0, filled = 0, gotSlots = 0, totSlots = 0;
+    r.cards.forEach(function (c) {
+      filled++;
+      var sl = slotsOf('', c), any = false;
+      sl.forEach(function (s) { totSlots++; if (has(keyOf('', c, s.ver))) { gotSlots++; any = true; } });
+      if (any) ownSp++;
+    });
+    var pct = 0;
+    if (totSp > 0) {
+      // combina espécies coletadas e fração de vagas escolhidas que já têm carta coletada para não ficar em 0% quando há cartas marcadas
+      var spFrac = ownSp / totSp;
+      var slotFrac = filled > 0 ? (ownSp / filled) * (filled / totSp) : 0;
+      pct = Math.round(Math.max(spFrac * 100, slotFrac * 100));
+      if (ownSp > 0 && pct === 0) pct = 1;
+    }
+    return { got: ownSp, tot: totSp, filled: filled, gotSlots: gotSlots, totSlots: totSlots, pct: pct, pending: r.pending };
+  }
   function dexProg(b) {
     var key = 'dex:' + b.id; if (progCache[key] !== undefined) return progCache[key];
-    var r = dexResolve(b), rg = dexRange(b), tot = rg.to - rg.from + 1, got = 0;
-    r.cards.forEach(function (c) { var any = false; slotsOf('', c).forEach(function (s) { if (has(keyOf('', c, s.ver))) any = true; }); if (any) got++; });
-    if (r.pending) return { got: got, tot: tot, pct: tot ? Math.round(got / tot * 100) : 0 }; // incompleto: não guarda
-    return (progCache[key] = { got: got, tot: tot, pct: tot ? Math.round(got / tot * 100) : 0 });
+    var c = dexCalc(b);
+    var out = { got: c.got, tot: c.tot, filled: c.filled, gotSlots: c.gotSlots, totSlots: c.totSlots, pct: c.pct };
+    if (c.pending) return out; // incompleto: não guarda
+    return (progCache[key] = out);
   }
   function dexArt(d) { return d <= 151 ? 'assets/wild/' + d + '.webp' : 'https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/other/official-artwork/' + d + '.png'; }
   window.__fnArtFb = function (img, d) {
@@ -281,39 +309,48 @@
       (vis.length > shown.length ? '<div class="fn-more"><button type="button" class="fn-btn" data-act="dexmore">Mostrar mais (' + (vis.length - shown.length) + ' espécies)</button></div>' : '');
   }
   function renderDexHero() {
-    var b = cur.binder, t = cur.species.length, own = 0, missV = 0, empty = 0;
+    var b = cur.binder, t = cur.species.length, own = 0, missV = 0, empty = 0, gotSlots = 0, totSlots = 0;
     cur.species.forEach(function (sp) {
       var c = cur.byDex[sp.dex]; if (!c) { empty++; return; }
-      if (dexOwned(c)) own++; else { var sl = slotsOf(st.set, c)[0]; missV += (sl && sl.price) || c.price || 0; }
+      var sl = slotsOf(st.set, c), any = false;
+      sl.forEach(function (s) { totSlots++; if (has(keyOf(st.set, c, s.ver))) { gotSlots++; any = true; } });
+      if (any) own++; else { var sl0 = sl[0]; missV += (sl0 && sl0.price) || c.price || 0; }
     });
-    var pct = t ? Math.round(own / t * 100) : 0, name = b ? b.name.replace(/^[^\wÀ-ú(]+/, '') : 'Pokédex';
+    var chosen = t - empty;
+    var pct = t ? Math.round(Math.max((own / t) * 100, chosen > 0 ? (own / chosen) * (chosen / t) * 100 : 0)) : 0;
+    if (own > 0 && pct === 0) pct = 1;
+    var name = b ? b.name.replace(/^[^\wÀ-ú(]+/, '') : 'Pokédex';
+    var delLbl = b && isRegionalDexBinder(b) ? '🗑 Excluir região' : '🗑 Excluir Pokédex';
     $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>' + esc(name) + '</h1><p class="fn-hero-sub">Pokédex · ' + t + ' espécies · uma carta por vaga</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
-      '<div class="fn-stats">' + (b ? '<span><b>' + own + '</b>/' + t + ' espécies</span><span>Com carta escolhida <b>' + (t - empty) + '</b></span>' + (empty ? '<span>Vagas sem carta <b>' + empty + '</b></span>' : '') +
+      '<div class="fn-stats">' + (b ? '<span><b>' + own + '</b>/' + t + ' espécies</span><span>Com carta escolhida <b>' + chosen + '</b></span>' + (totSlots ? '<span>Slots coletados <b>' + gotSlots + '</b>/' + totSlots + '</span>' : '') + (empty ? '<span>Vagas sem carta <b>' + empty + '</b></span>' : '') +
         (missV > 0 ? '<span class="fn-miss">Faltam <b>' + esc(money0(missV)) + '</b> <small>(só nas vagas com carta)</small></span>' : '') : '<span>' + (loggedIn() || DEMO ? 'Carregando a sua Pokédex…' : 'Entre no MyDeck para carregar a sua Pokédex.') + '</span>') + '</div>' +
-      '<div class="fn-hero-links">' + (b && isRegionalDexBinder(b) ? '<a href="#" data-act="dexdelete" data-bid="' + esc(b.id) + '">🗑 Excluir região</a>' : '') + '<a href="./?classico#fichario">Abrir no fichário clássico</a></div>';
+      '<div class="fn-hero-links">' + (b ? '<a href="#" data-act="dexdelete" data-bid="' + esc(b.id) + '">' + delLbl + '</a>' : '') + '<a href="./?classico#fichario">Abrir no fichário clássico</a></div>';
     $('#fn-setbtn-emoji').textContent = (b && b.emoji) || '🌐'; $('#fn-setbtn-code').textContent = 'Pokédex'; $('#fn-setbtn-name').textContent = name;
   }
 
-  // Mostra apenas o Master Set Nacional (sempre presente) e eventuais regionais já criadas; demais ficam escondidas no botão de adicionar
+  // Mostra os Master Set Nacionais com cartas e eventuais regionais já criadas; demais ficam escondidas no botão de adicionar
   function dexTreeHtml() {
     var bs = dexBinders();
     var isOpen = openBlocks().indexOf('__dex') >= 0 || isDex(st.set);
     var isNat = function (b) { return !isRegionalDexBinder(b); };
-    var natBinder = bs.filter(isNat)[0] || null;
+    var natBinders = bs.filter(isNat);
     var genRanges = typeof POKEDEX_GEN_RANGES !== 'undefined' ? POKEDEX_GEN_RANGES : [];
 
     var rows = [];
 
-    if (natBinder) {
-      var pNat = dexProg(natBinder);
-      var nmNat = natBinder.name.replace(/^[^\wÀ-ú(]+/, '') || 'Master Set Nacional (#1–1025)';
-      rows.push('<button type="button" class="fn-set' + ('dex:' + natBinder.id === st.set ? ' is-cur' : '') +
-        '" data-pick="dex:' + esc(natBinder.id) + '" data-find="' + esc(normTxt(nmNat + ' nacional 1025 pokedex master set')) + '">' +
-        '<span class="em">' + esc(natBinder.emoji || '🌐') + '</span>' +
-        '<span class="tx"><b>' + esc(nmNat) + '</b><small>Nacional · 1025 espécies</small>' +
-        '<div class="mini"><i style="width:' + pNat.pct + '%"></i></div></span>' +
-        '<span class="pc' + (pNat.pct ? '' : ' z') + '">' + pNat.pct + '%</span></button>');
+    if (natBinders.length) {
+      natBinders.forEach(function (nb, idx) {
+        var pNat = dexProg(nb);
+        var nmNat = nb.name.replace(/^[^\wÀ-ú(]+/, '') || 'Master Set Nacional (#1–1025)';
+        var subNat = 'Nacional · 1025 espécies' + (natBinders.length > 1 ? ' · ' + binderCardCount(nb) + ' cartas' : '');
+        rows.push('<button type="button" class="fn-set' + ('dex:' + nb.id === st.set ? ' is-cur' : '') +
+          '" data-pick="dex:' + esc(nb.id) + '" data-find="' + esc(normTxt(nmNat + ' nacional 1025 pokedex master set ' + (idx + 1))) + '">' +
+          '<span class="em">' + esc(nb.emoji || '🌐') + '</span>' +
+          '<span class="tx"><b>' + esc(nmNat) + '</b><small>' + esc(subNat) + '</small>' +
+          '<div class="mini"><i style="width:' + pNat.pct + '%"></i></div></span>' +
+          '<span class="pc' + (pNat.pct ? '' : ' z') + '">' + pNat.pct + '%</span></button>');
+      });
     } else {
       rows.push('<button type="button" class="fn-set" data-act="dexcreate" data-kind="nat" data-find="master set nacional 1025 pokedex">' +
         '<span class="em">🌐</span><span class="tx"><b>Master Set Nacional (#1–1025)</b><small>Nacional · 1025 espécies</small></span><span class="pc z">0%</span></button>');
@@ -337,7 +374,7 @@
     rows.push('<button type="button" class="fn-set" data-act="dexnew" data-find="nova pokedex regiao criar kanto johto hoenn sinnoh unova kalos alola galar paldea">' +
       '<span class="em">➕</span><span class="tx"><b>Nova Pokédex regional</b><small>Criar por região</small></span></button>');
 
-    var countShown = (natBinder ? 1 : 0) + bs.filter(function (b) { return !isNat(b); }).length;
+    var countShown = natBinders.length + bs.filter(function (b) { return !isNat(b); }).length;
 
     return '<section class="fn-blk' + (isOpen ? ' is-open' : '') + '" data-blk-id="__dex">' +
       '<button type="button" class="fn-blk-h" data-blk="__dex" aria-expanded="' + isOpen + '">' +
@@ -349,14 +386,15 @@
   function openDexNew() {
     if (!DEMO && !loggedIn()) { toast('Entre no MyDeck para criar a sua Pokédex.'); return; }
     var have = dexBinders(), isNat = function (b) { return !isRegionalDexBinder(b); };
-    var opts = [{ k: 'nat', t: '🌐 Master Set Nacional', s: '1025 vagas (#1–#1025)', done: have.some(isNat), existing: null }];
+    var natList = have.filter(isNat);
+    var opts = [{ k: 'nat', t: '🌐 Master Set Nacional', s: '1025 vagas (#1–#1025)', done: natList.length > 0, existing: natList[0] || null }];
     (typeof POKEDEX_GEN_RANGES !== 'undefined' ? POKEDEX_GEN_RANGES : []).forEach(function (g) {
       var ex = have.filter(function (b) { return b.filter_config.dexFrom === g.from && b.filter_config.dexTo === g.to; })[0] || null;
       opts.push({ k: String(g.gen), t: (REGION_META[g.gen] || ['🗺️'])[0] + ' ' + g.label, s: (g.to - g.from + 1) + ' vagas (#' + g.from + '–#' + g.to + ')', done: !!ex, existing: ex });
     });
     openSheet('<p class="fn-note">Cada vaga começa com a arte do Pokémon. Você escolhe a carta que quer em cada uma.</p><div class="fn-acts">' + opts.map(function (o) {
-      var delBtn = o.existing && isRegionalDexBinder(o.existing)
-        ? '<button type="button" class="fn-ver" data-act="dexdelete" data-bid="' + esc(o.existing.id) + '" title="Excluir esta região">🗑 Excluir</button>'
+      var delBtn = o.existing
+        ? '<button type="button" class="fn-ver" data-act="dexdelete" data-bid="' + esc(o.existing.id) + '" title="Excluir esta Pokédex">🗑 Excluir</button>'
         : '';
       return '<div class="fn-dp-item' + (o.done ? ' is-on' : '') + '">' +
         '<button type="button" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;flex:1" data-act="dexcreate" data-kind="' + o.k + '"' + (o.done ? ' disabled' : '') + '>' +
@@ -379,35 +417,39 @@
     if (!saved) { toast('Não foi possível criar. Confira a conexão e tente de novo.'); return; }
     closeSheet(); progCache = {}; pickSet('dex:' + saved.id);
   }
+  async function dexRemoveRecord(b) {
+    if (DEMO) {
+      demoBinders = (demoBinders || []).filter(function (x) { return String(x.id) !== String(b.id); });
+      return true;
+    }
+    if (typeof sbClient !== 'undefined' && sbClient && loggedIn()) {
+      var r = await sbClient.from('custom_binders').delete().eq('id', b.id).eq('user_id', uid());
+      if (r.error) return false;
+    }
+    if (typeof customBinders !== 'undefined' && Array.isArray(customBinders)) {
+      var i = customBinders.findIndex(function (x) { return String(x.id) === String(b.id); });
+      if (i >= 0) customBinders.splice(i, 1);
+    }
+    try {
+      if (typeof pinnedBinders !== 'undefined' && Array.isArray(pinnedBinders)) {
+        var pi = pinnedBinders.indexOf(String(b.id));
+        if (pi >= 0) { pinnedBinders.splice(pi, 1); if (typeof savePinnedBinders === 'function') savePinnedBinders(); }
+      }
+    } catch (e) { }
+    return true;
+  }
   async function dexDelete(bid) {
     var b = dexBinders().filter(function (x) { return String(x.id) === String(bid); })[0];
     if (!b || dexBusy) return;
-    if (!isRegionalDexBinder(b)) { toast('O Master Set Nacional não pode ser excluído.'); return; }
-    var nm = b.name.replace(/^[^\wÀ-ú(]+/, '') || 'Pokédex regional';
-    if (!confirm('Excluir a Pokédex “' + nm + '”? As cartas escolhidas nela e as suas marcações na coleção não são apagadas.')) return;
+    var nm = b.name.replace(/^[^\wÀ-ú(]+/, '') || (isRegionalDexBinder(b) ? 'Pokédex regional' : 'Master Set Nacional');
+    if (!confirm('Excluir “' + nm + '”? As cartas escolhidas nela e as suas marcações na coleção não são apagadas.')) return;
     dexBusy = true;
     try {
-      if (DEMO) {
-        demoBinders = (demoBinders || []).filter(function (x) { return String(x.id) !== String(b.id); });
-      } else {
-        if (typeof sbClient !== 'undefined' && sbClient && loggedIn()) {
-          var r = await sbClient.from('custom_binders').delete().eq('id', b.id).eq('user_id', uid());
-          if (r.error) { toast('Não foi possível excluir. Tente de novo.'); return; }
-        }
-        if (typeof customBinders !== 'undefined' && Array.isArray(customBinders)) {
-          var i = customBinders.findIndex(function (x) { return String(x.id) === String(b.id); });
-          if (i >= 0) customBinders.splice(i, 1);
-        }
-        try {
-          if (typeof pinnedBinders !== 'undefined' && Array.isArray(pinnedBinders)) {
-            var pi = pinnedBinders.indexOf(String(b.id));
-            if (pi >= 0) { pinnedBinders.splice(pi, 1); if (typeof savePinnedBinders === 'function') savePinnedBinders(); }
-          }
-        } catch (e) { }
-      }
+      var ok = await dexRemoveRecord(b);
+      if (!ok) { toast('Não foi possível excluir. Tente de novo.'); return; }
       closeSheet();
       dropMultiProg();
-      toast('Pokédex “' + nm + '” excluída.');
+      toast('“' + nm + '” excluída.');
       if (String(st.set) === 'dex:' + String(b.id)) {
         pickSet('home');
       } else {
@@ -415,17 +457,29 @@
       }
     } finally { dexBusy = false; }
   }
-  var natAutoBusy = false;
-  async function ensureNatDex() {
-    if (DEMO || SHARE || !loggedIn() || natAutoBusy || typeof saveCustomBinder !== 'function') return;
+  var natCleanBusy = false;
+  async function cleanupAndEnsureNatDex() {
+    if (DEMO || SHARE || !loggedIn() || natCleanBusy) return;
     if (typeof customBinders === 'undefined' || !Array.isArray(customBinders)) return;
-    var hasNat = dexBinders().some(function (b) { return !isRegionalDexBinder(b); });
-    if (hasNat) return;
-    natAutoBusy = true;
+    natCleanBusy = true;
     try {
-      var saved = await saveCustomBinder({ name: '🌐 Master Set Nacional (1025)', emoji: '🌐', layout: 3, filter_config: { type: 'masterdex' }, card_ids: [], cover_color: '#118ab2' });
-      if (saved) { progCache = {}; renderSide(); renderBody(); }
-    } finally { natAutoBusy = false; }
+      var nats = customBinders.filter(function (b) { return b && b.filter_config && b.filter_config.type === 'masterdex' && !isRegionalDexBinder(b); });
+      var withCards = nats.filter(function (b) { return binderCardCount(b) > 0; });
+      // se existe pelo menos um Master Set Nacional com cartas registradas, remove os sobressalentes vazios
+      if (withCards.length > 0 && nats.length > withCards.length) {
+        var extras = nats.filter(function (b) { return binderCardCount(b) === 0; });
+        var removedAny = false;
+        for (var i = 0; i < extras.length; i++) {
+          var ok = await dexRemoveRecord(extras[i]);
+          if (ok) removedAny = true;
+        }
+        if (removedAny) {
+          dropMultiProg();
+          if (String(st.set) === 'dex:' + String(extras[0].id)) st.set = 'dex:' + String(withCards[0].id);
+          loadCur(); renderHero(); renderBody(); renderSide();
+        }
+      }
+    } finally { natCleanBusy = false; }
   }
 
   // ── escolher / trocar / tirar a carta de uma vaga ──
@@ -1435,14 +1489,15 @@
     var n = cur.view.length;
     if (isDex(st.set)) {
       var nv = dexVisible().length;
-      var regDelBtn = (cur.binder && isRegionalDexBinder(cur.binder))
-        ? '<button type="button" class="fn-act" data-act="dexdelete" data-bid="' + esc(cur.binder.id) + '"><span class="em">🗑</span><span><b>Excluir região</b><small>Remove esta Pokédex regional (as cartas e marcações não são apagadas)</small></span></button>'
+      var isReg = cur.binder && isRegionalDexBinder(cur.binder);
+      var dexDelBtn = cur.binder
+        ? '<button type="button" class="fn-act" data-act="dexdelete" data-bid="' + esc(cur.binder.id) + '"><span class="em">🗑</span><span><b>' + (isReg ? 'Excluir região' : 'Excluir Pokédex') + '</b><small>Remove esta Pokédex (as cartas escolhidas e suas marcações na coleção não são apagadas)</small></span></button>'
         : '';
       openSheet('<div class="fn-acts">' +
         '<button type="button" class="fn-act" data-act="share"><span class="em">🔗</span><span><b>Compartilhar Pokédex</b><small>Link e QR code só para ver; as vagas que faltam aparecem com a arte do Pokémon</small></span></button>' +
         '<button type="button" class="fn-act" data-act="copy"><span class="em">📋</span><span><b>Copiar lista (texto)</b><small>' + nv + ' espécie' + (nv === 1 ? '' : 's') + ' como estão na tela, com ✅ e ❌, pronto para colar no WhatsApp</small></span></button>' +
         '<button type="button" class="fn-act" data-act="dexfill"><span class="em">✨</span><span><b>Preencher vagas vazias</b><small>Escolhe uma carta para cada vaga sem carta (a mais valiosa que você tem, ou a mais barata). Não mexe nas que você já escolheu</small></span></button>' +
-        regDelBtn + extraTools() + '</div>', 'Ferramentas');
+        dexDelBtn + extraTools() + '</div>', 'Ferramentas');
       return;
     }
     if (isPk(st.set)) {
@@ -1838,7 +1893,7 @@
     }
   }
   var dataT;
-  function onData() { clearTimeout(dataT); dataT = setTimeout(function () { banner(); if (engineReady()) { ensureNatDex(); progCache = {}; loadCur(); renderHero(); renderBody(); renderSide(); } }, 60); }
+  function onData() { clearTimeout(dataT); dataT = setTimeout(function () { banner(); if (engineReady()) { cleanupAndEnsureNatDex(); progCache = {}; loadCur(); renderHero(); renderBody(); renderSide(); } }, 60); }
 
   var SHARE_TOKEN = (function () { try { var t = new URLSearchParams(location.search).get('s'); return t && /^[\w-]{6,100}$/.test(t) ? t : null; } catch (e) { return null; } })();
   // abre um link compartilhado: lê a coleção pelo token (função pública do banco) e monta a tela só para olhar
@@ -1886,7 +1941,7 @@
     }
     neutralizeOldRenderers();
     if (!isHome(st.set) && !isDex(st.set) && !isCb(st.set) && !isPk(st.set) && !SET_CATALOG.some(function (s) { return s.id === st.set; })) st.set = 'home';
-    bind(); banner(); renderAll();
+    bind(); banner(); renderAll(); cleanupAndEnsureNatDex();
     window.addEventListener('lazy-sets-loaded', function () { dexIdx = null; cbAllIdx = null; onData(); });
     setTimeout(banner, 2500);
     window.__fn = { st: st, renderAll: renderAll, mark: mark }; // útil para depurar no console
