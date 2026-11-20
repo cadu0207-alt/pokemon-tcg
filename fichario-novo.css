@@ -471,6 +471,13 @@ body.fn-home .fn-bar{display:none}
 .fn-hcard:hover{border-color:var(--accent)}
 .fn-hcard .em{font-size:24px;line-height:1}
 /* selo da coleção (substitui o emoji): altura fixa, largura natural, centralizado numa caixa que alinha com os outros ícones */
+/* ícones SVG (icones.js): herdam a cor do texto */
+.ico{display:block;flex:0 0 auto}
+.fn-set .em .ico,.fn-hcard .em .ico,.fn-dp-item .em .ico{margin:0 auto;color:var(--text2)}
+.fn-hcard .em:has(.ico){width:44px;height:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:var(--surface2)}
+.fn-setbtn-emoji .ico{color:var(--text2)}
+.fn-hero h1 .h-ico{display:inline-flex;vertical-align:-4px;margin-right:10px;color:var(--text2)}
+.fn-hero h1 .h-ico .ico{display:block}
 .set-ico{display:block;height:24px;width:auto;max-width:44px;object-fit:contain}
 .em.has-ico{display:flex;align-items:center;justify-content:center;width:46px;flex:0 0 46px}
 .fn-set .em.has-ico{width:42px;flex-basis:42px}

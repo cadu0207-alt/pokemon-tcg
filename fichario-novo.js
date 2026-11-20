@@ -12,6 +12,18 @@
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]; }); };
   // Selo da coleção (o mesmo código que vem impresso em cada carta: DLR, CRI, MEG…), em vez de emoji. Arquivos em site-imagens/colecoes/<id>.png.
   // Devolve HTML do <img>; sem selo conhecido devolve o emoji escapado.
+  // Ícone do fichário pelo TIPO (o emoji salvo no banco não aparece mais): a lista fica padronizada (repetição).
+  function bIco(b, size, tipo) {
+    var t = tipo || (typeof cbType === 'function' ? cbType(b) : ''), n;
+    if (b && b.filter_config && b.filter_config.favorites === true) n = 'star';
+    else if (t === 'artist') n = 'palette';
+    else if (t === 'pokemon') n = 'pokeball';
+    else if (t === 'masterdex') n = isRegionalDexBinder(b) ? 'map' : 'globe';
+    else if (t === 'preset') n = 'crown';
+    else n = 'book';
+    return MD_ICO(n, { size: size || 20 });
+  }
+  var isIcoHtml = function (x) { return /^<(img|svg)/.test(x); };
   function setIco(id, fallback) {
     var k = setKey(id); var ok = k === 'cel30' || (typeof LMT_CODES !== 'undefined' && LMT_CODES[k]);
     return ok ? '<img class="set-ico" src="site-imagens/colecoes/' + esc(k) + '.png" alt="" loading="lazy" decoding="async">' : esc(fallback || '🃏');
@@ -406,7 +418,7 @@
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats">' + (b ? '<span><b>' + own + '</b>/' + t + ' espécies</span><span>Com carta escolhida <b>' + chosen + '</b></span>' + (totSlots ? '<span>Slots coletados <b>' + gotSlots + '</b>/' + totSlots + '</span>' : '') + (empty ? '<span>Vagas sem carta <b>' + empty + '</b></span>' : '') : '<span>' + (loggedIn() || DEMO ? 'Carregando a sua Pokédex…' : 'Entre no MyDeck para carregar a sua Pokédex.') + '</span>') + '</div>' +
       (b ? '<div class="fn-hero-links"><a href="#" data-act="dexaskdelete" data-bid="' + esc(b.id) + '">' + delLbl + '</a></div>' : '');
-    $('#fn-setbtn-emoji').textContent = (b && b.emoji) || '🌐'; $('#fn-setbtn-code').textContent = 'Pokédex'; $('#fn-setbtn-name').textContent = name;
+    $('#fn-setbtn-emoji').innerHTML = b ? bIco(b, 22, 'masterdex') : MD_ICO('globe', { size: 22 }); $('#fn-setbtn-code').textContent = 'Pokédex'; $('#fn-setbtn-name').textContent = name;
   }
 
   function dexTreeHtml() {
@@ -425,14 +437,14 @@
         var subNat = 'Nacional · 1025 espécies' + (natBinders.length > 1 ? ' · ' + binderCardCount(nb) + ' cartas' : '');
         rows.push('<button type="button" class="fn-set' + ('dex:' + nb.id === st.set ? ' is-cur' : '') +
           '" data-pick="dex:' + esc(nb.id) + '" data-find="' + esc(normTxt(nmNat + ' nacional 1025 pokedex master set ' + (idx + 1))) + '">' +
-          '<span class="em">' + esc(nb.emoji || '🌐') + '</span>' +
+          '<span class="em">' + bIco(nb, 18, 'masterdex') + '</span>' +
           '<span class="tx"><b>' + esc(nmNat) + '</b><small>' + esc(subNat) + '</small>' +
           '<div class="mini"><i style="width:' + pNat.pct + '%"></i></div></span>' +
           '<span class="pc' + (pNat.pct ? '' : ' z') + '">' + pNat.pct + '%</span></button>');
       });
     } else {
       rows.push('<button type="button" class="fn-set" data-act="dexcreate" data-kind="nat" data-find="master set nacional 1025 pokedex">' +
-        '<span class="em">🌐</span><span class="tx"><b>Master Set Nacional (#1–1025)</b><small>Nacional · 1025 espécies</small></span><span class="pc z">0%</span></button>');
+        '<span class="em">' + MD_ICO('globe', { size: 18 }) + '</span><span class="tx"><b>Master Set Nacional (#1–1025)</b><small>Nacional · 1025 espécies</small></span><span class="pc z">0%</span></button>');
     }
 
     bs.filter(function (b) { return !isNat(b); }).forEach(function (b) {
@@ -444,14 +456,14 @@
       var sub = g ? (g.label + ' · ' + (g.to - g.from + 1) + ' espécies') : ('#' + rg.from + '–#' + rg.to);
       rows.push('<button type="button" class="fn-set' + ('dex:' + b.id === st.set ? ' is-cur' : '') +
         '" data-pick="dex:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' ' + sub + ' pokedex master set')) + '">' +
-        '<span class="em">' + esc(b.emoji || m[0]) + '</span>' +
+        '<span class="em">' + bIco(b, 18, 'masterdex') + '</span>' +
         '<span class="tx"><b>' + esc(nm) + '</b><small>' + esc(sub) + '</small>' +
         '<div class="mini"><i style="width:' + p.pct + '%"></i></div></span>' +
         '<span class="pc' + (p.pct ? '' : ' z') + '">' + p.pct + '%</span></button>');
     });
 
     rows.push('<button type="button" class="fn-set" data-act="dexnew" data-find="nova pokedex regiao criar kanto johto hoenn sinnoh unova kalos alola galar paldea">' +
-      '<span class="em">➕</span><span class="tx"><b>Nova Pokédex regional</b><small>Criar por região</small></span></button>');
+      '<span class="em">' + MD_ICO('plus', { size: 18 }) + '</span><span class="tx"><b>Nova Pokédex regional</b><small>Criar por região</small></span></button>');
 
     var countShown = natBinders.length + bs.filter(function (b) { return !isNat(b); }).length;
 
@@ -466,10 +478,10 @@
     if (!DEMO && !loggedIn()) { toast('Entre no MyDeck para criar a sua Pokédex.'); return; }
     var have = dexBinders(), isNat = function (b) { return !isRegionalDexBinder(b); };
     var natList = have.filter(isNat);
-    var opts = [{ k: 'nat', t: '🌐 Master Set Nacional', s: '1025 vagas (#1–#1025)', done: natList.length > 0, existing: natList[0] || null }];
+    var opts = [{ k: 'nat', t: 'Master Set Nacional', s: '1025 vagas (#1–#1025)', done: natList.length > 0, existing: natList[0] || null }];
     (typeof POKEDEX_GEN_RANGES !== 'undefined' ? POKEDEX_GEN_RANGES : []).forEach(function (g) {
       var ex = have.filter(function (b) { return b.filter_config.dexFrom === g.from && b.filter_config.dexTo === g.to; })[0] || null;
-      opts.push({ k: String(g.gen), t: (REGION_META[g.gen] || ['🗺️'])[0] + ' ' + g.label, s: (g.to - g.from + 1) + ' vagas (#' + g.from + '–#' + g.to + ')', done: !!ex, existing: ex });
+      opts.push({ k: String(g.gen), t: g.label, s: (g.to - g.from + 1) + ' vagas (#' + g.from + '–#' + g.to + ')', done: !!ex, existing: ex });
     });
     openSheet('<p class="fn-note">Cada vaga começa com a arte do Pokémon. Você escolhe a carta que quer em cada uma.</p><div class="fn-acts">' + opts.map(function (o) {
       var delBtn = o.existing
@@ -477,8 +489,8 @@
         : '';
       return '<div class="fn-dp-item' + (o.done ? ' is-on' : '') + '">' +
         '<button type="button" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;flex:1" data-act="dexcreate" data-kind="' + o.k + '"' + (o.done ? ' disabled' : '') + '>' +
-        '<span class="em" style="font-size:20px">' + esc(o.t.split(' ')[0]) + '</span>' +
-        '<span class="tx"><b>' + esc(o.t.split(' ').slice(1).join(' ')) + '</b><small>' + (o.done ? 'Você já tem esta Pokédex' : esc(o.s)) + '</small></span>' +
+        '<span class="em" style="width:30px;text-align:center">' + MD_ICO(o.k === 'nat' ? 'globe' : 'map', { size: 20 }) + '</span>' +
+        '<span class="tx"><b>' + esc(o.t) + '</b><small>' + (o.done ? 'Você já tem esta Pokédex' : esc(o.s)) + '</small></span>' +
         '</button>' + delBtn + '</div>';
     }).join('') + '</div>', 'Criar Pokédex');
   }
@@ -752,14 +764,14 @@
     var isOpen = openBlocks().indexOf('__cb') >= 0 || isCurCb || isPk(st.set);
     var rows = bs.map(function (b) {
       var p = cbProg(b), nm = plainName(b.name) || 'Sem nome';
-      return '<button type="button" class="fn-set' + ('cb:' + b.id === st.set ? ' is-cur' : '') + '" data-pick="cb:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' personalizados meus fichários favoritos')) + '"><span class="em">' + esc(b.emoji || '📚') + '</span><span class="tx"><b>' + esc(nm) + '</b><small>' + p.cards + ' carta' + (p.cards === 1 ? '' : 's') + (cbIsFav(b) ? ' · favoritas' : cbType(b) === 'preset' ? ' · temático' : '') + '</small>' +
+      return '<button type="button" class="fn-set' + ('cb:' + b.id === st.set ? ' is-cur' : '') + '" data-pick="cb:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' personalizados meus fichários favoritos')) + '"><span class="em">' + bIco(b, 18) + '</span><span class="tx"><b>' + esc(nm) + '</b><small>' + p.cards + ' carta' + (p.cards === 1 ? '' : 's') + (cbIsFav(b) ? ' · favoritas' : cbType(b) === 'preset' ? ' · temático' : '') + '</small>' +
         '<div class="mini"><i style="width:' + p.pct + '%"></i></div></span><span class="pc' + (p.pct ? '' : ' z') + '">' + p.pct + '%</span></button>';
     }).join('');
     rows += pks.map(function (b) {
       var p = pkProg(b), nm = plainName(b.name) || 'Sem nome';
-      return '<button type="button" class="fn-set' + ('pk:' + b.id === st.set ? ' is-cur' : '') + '" data-pick="pk:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' pokemon fichario personalizados ' + ((b.filter_config || {}).name || ''))) + '"><span class="em">📍</span><span class="tx"><b>' + esc(nm) + '</b><small>' + p.filled + ' carta' + (p.filled === 1 ? '' : 's') + ' · Pokémon</small><div class="mini"><i style="width:' + p.pct + '%"></i></div></span><span class="pc' + (p.pct ? '' : ' z') + '">' + p.pct + '%</span></button>';
+      return '<button type="button" class="fn-set' + ('pk:' + b.id === st.set ? ' is-cur' : '') + '" data-pick="pk:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' pokemon fichario personalizados ' + ((b.filter_config || {}).name || ''))) + '"><span class="em">' + MD_ICO('pokeball', { size: 18 }) + '</span><span class="tx"><b>' + esc(nm) + '</b><small>' + p.filled + ' carta' + (p.filled === 1 ? '' : 's') + ' · Pokémon</small><div class="mini"><i style="width:' + p.pct + '%"></i></div></span><span class="pc' + (p.pct ? '' : ' z') + '">' + p.pct + '%</span></button>';
     }).join('');
-    rows += '<button type="button" class="fn-set" data-act="cbnew" data-find="novo fichário criar personalizado"><span class="em">➕</span><span class="tx"><b>Novo fichário</b><small>Personalizado ou sugestão temática</small></span></button>';
+    rows += '<button type="button" class="fn-set" data-act="cbnew" data-find="novo fichário criar personalizado"><span class="em">' + MD_ICO('plus', { size: 18 }) + '</span><span class="tx"><b>Novo fichário</b><small>Personalizado ou sugestão temática</small></span></button>';
     return '<section class="fn-blk' + (isOpen ? ' is-open' : '') + '" data-blk-id="__cb">' +
       '<button type="button" class="fn-blk-h" data-blk="__cb" aria-expanded="' + isOpen + '">' +
       '<span class="ch">▸</span><span class="t">Personalizados</span>' +
@@ -774,10 +786,10 @@
     var rows = bs.map(function (b) {
       var p = cbProg(b), nm = plainName(b.name) || (b.filter_config && b.filter_config.artist) || 'Artista';
       return '<button type="button" class="fn-set' + ('cb:' + b.id === st.set ? ' is-cur' : '') + '" data-pick="cb:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' artista ilustrador')) + '">' +
-        '<span class="em">' + esc(b.emoji || '🎨') + '</span><span class="tx"><b>' + esc(nm) + '</b><small>' + p.cards + ' carta' + (p.cards === 1 ? '' : 's') + ' · ilustrador</small>' +
+        '<span class="em">' + bIco(b, 18, 'artist') + '</span><span class="tx"><b>' + esc(nm) + '</b><small>' + p.cards + ' carta' + (p.cards === 1 ? '' : 's') + ' · ilustrador</small>' +
         '<div class="mini"><i style="width:' + p.pct + '%"></i></div></span><span class="pc' + (p.pct ? '' : ' z') + '">' + p.pct + '%</span></button>';
     }).join('');
-    rows += '<button type="button" class="fn-set" data-act="artists" data-find="adicionar artista ilustrador meus artistas"><span class="em">➕</span><span class="tx"><b>Adicionar artista</b><small>Escolher ilustrador</small></span></button>';
+    rows += '<button type="button" class="fn-set" data-act="artists" data-find="adicionar artista ilustrador meus artistas"><span class="em">' + MD_ICO('plus', { size: 18 }) + '</span><span class="tx"><b>Adicionar artista</b><small>Escolher ilustrador</small></span></button>';
     return '<section class="fn-blk' + (isOpen ? ' is-open' : '') + '" data-blk-id="__art">' +
       '<button type="button" class="fn-blk-h" data-blk="__art" aria-expanded="' + isOpen + '">' +
       '<span class="ch">▸</span><span class="t">Artistas</span>' +
@@ -789,26 +801,26 @@
     var b = cur.binder;
     if (!b) {
       $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>Personalizados</h1><p class="fn-hero-sub">' + (loggedIn() || DEMO ? 'Carregando os seus fichários…' : 'Entre no MyDeck para ver os seus fichários.') + '</p></div></div>';
-      $('#fn-setbtn-emoji').textContent = '📚'; $('#fn-setbtn-code').textContent = 'Fichário'; $('#fn-setbtn-name').textContent = 'Personalizados'; return;
+      $('#fn-setbtn-emoji').innerHTML = MD_ICO('book', { size: 22 }); $('#fn-setbtn-code').textContent = 'Fichário'; $('#fn-setbtn-name').textContent = 'Personalizados'; return;
     }
     var t = totals(), pct = t.slots ? Math.round(t.got / t.slots * 100) : 0, nm = plainName(b.name) || 'Sem nome', nsets = (cur.d.sections || []).length, manual = cbType(b) === 'manual', isArtistBinder = cbType(b) === 'artist';
-    $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>' + esc((b.emoji || '📚') + ' ' + nm) + '</h1><p class="fn-hero-sub">' + esc(cbKind(b)) + ' · ' + t.cards + ' carta' + (t.cards === 1 ? '' : 's') + (nsets > 1 ? ' de ' + nsets + ' coleções' : '') + '</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
+    $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1><span class="h-ico">' + bIco(b, 26) + '</span>' + esc(nm) + '</h1><p class="fn-hero-sub">' + esc(cbKind(b)) + ' · ' + t.cards + ' carta' + (t.cards === 1 ? '' : 's') + (nsets > 1 ? ' de ' + nsets + ' coleções' : '') + '</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats">' + (t.slots ? '<span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' + (t.got >= t.slots ? '<span><b style="color:var(--teal)">Fichário completo 🎉</b></span>' : '<span><b>' + (t.slots - t.got) + '</b> slots restantes</span>')
         : '<span>' + (manual ? (cur.pending ? 'Carregando as cartas…' : 'Este fichário ainda não tem cartas. Use “Adicionar cartas” ou o botão “Guardar em fichário” de qualquer carta.') : 'Nenhuma carta nas suas coleções ativas para esta sugestão.') + '</span>') + '</div>' +
       '<div class="fn-hero-links">' + (manual ? '<a href="#" data-act="cbadd">➕ Adicionar cartas</a>' : '') + (isArtistBinder ? '<a href="#" data-act="artists">🎨 Outros artistas</a>' : '') + '<a href="#" data-act="cbedit">✏️ Editar fichário</a></div>';
-    $('#fn-setbtn-emoji').textContent = b.emoji || (isArtistBinder ? '🎨' : '📚'); $('#fn-setbtn-code').textContent = cbIsFav(b) ? 'Favoritos' : isArtistBinder ? 'Artista' : 'Personalizado'; $('#fn-setbtn-name').textContent = nm;
+    $('#fn-setbtn-emoji').innerHTML = bIco(b, 22); $('#fn-setbtn-code').textContent = cbIsFav(b) ? 'Favoritos' : isArtistBinder ? 'Artista' : 'Personalizado'; $('#fn-setbtn-name').textContent = nm;
   }
 
   // ── Personalizados (tela inicial) ──
   function renderHomeHero() {
     $('#fn-hero').innerHTML = '';
-    $('#fn-setbtn-emoji').textContent = '📚';
+    $('#fn-setbtn-emoji').innerHTML = MD_ICO('book', { size: 22 });
     $('#fn-setbtn-code').textContent = 'Fichário';
     $('#fn-setbtn-name').textContent = 'Meus fichários';
   }
   function homeTile(pick, em, title, sub, pct) {
-    return '<button type="button" class="fn-hcard" data-pick="' + esc(pick) + '"><span class="em' + (/^<img /.test(em) ? ' has-ico' : '') + '">' + (/^<img /.test(em) ? em : esc(em)) + '</span><span class="tx"><b>' + esc(title) + '</b><small>' + esc(sub) + '</small></span>' +
+    return '<button type="button" class="fn-hcard" data-pick="' + esc(pick) + '"><span class="em' + (isIcoHtml(em) ? ' has-ico' : '') + '">' + (isIcoHtml(em) ? em : esc(em)) + '</span><span class="tx"><b>' + esc(title) + '</b><small>' + esc(sub) + '</small></span>' +
       '<span class="pc' + (pct ? '' : ' z') + '">' + pct + '%</span><div class="mini"><i style="width:' + pct + '%"></i></div></button>';
   }
   function renderHome() {
@@ -817,11 +829,11 @@
     var tiles = '', fav = favBinder();
     cbSorted().forEach(function (b) {
       var p = cbProg(b), nm = plainName(b.name) || 'Sem nome';
-      tiles += homeTile('cb:' + b.id, b.emoji || (cbIsFav(b) ? '⭐' : '📚'), nm, p.cards + ' carta' + (p.cards === 1 ? '' : 's') + ' · ' + cbKind(b), p.pct);
+      tiles += homeTile('cb:' + b.id, bIco(b, 24), nm, p.cards + ' carta' + (p.cards === 1 ? '' : 's') + ' · ' + cbKind(b), p.pct);
     });
-    pkBinders().forEach(function (b) { var p = pkProg(b), nm = plainName(b.name) || 'Sem nome'; tiles += homeTile('pk:' + b.id, '📍', nm, p.filled + ' carta' + (p.filled === 1 ? '' : 's') + ' · Pokémon', p.pct); });
-    dexBinders().forEach(function (b) { var p = dexProg(b), nm = b.name.replace(/^[^\wÀ-ú(]+/, ''); tiles += homeTile('dex:' + b.id, b.emoji || '🌐', nm, 'Pokédex · ' + p.got + '/' + p.tot, p.pct); });
-    artBinders().forEach(function (b) { var p = cbProg(b), nm = plainName(b.name) || 'Artista'; tiles += homeTile('cb:' + b.id, b.emoji || '🎨', nm, p.cards + ' carta' + (p.cards === 1 ? '' : 's') + ' · Artista', p.pct); });
+    pkBinders().forEach(function (b) { var p = pkProg(b), nm = plainName(b.name) || 'Sem nome'; tiles += homeTile('pk:' + b.id, MD_ICO('pokeball', { size: 24 }), nm, p.filled + ' carta' + (p.filled === 1 ? '' : 's') + ' · Pokémon', p.pct); });
+    dexBinders().forEach(function (b) { var p = dexProg(b), nm = b.name.replace(/^[^\wÀ-ú(]+/, ''); tiles += homeTile('dex:' + b.id, bIco(b, 24, 'masterdex'), nm, 'Pokédex · ' + p.got + '/' + p.tot, p.pct); });
+    artBinders().forEach(function (b) { var p = cbProg(b), nm = plainName(b.name) || 'Artista'; tiles += homeTile('cb:' + b.id, bIco(b, 24, 'artist'), nm, p.cards + ' carta' + (p.cards === 1 ? '' : 's') + ' · Artista', p.pct); });
     if (!fav) tiles += '<div class="fn-hcard is-hint"><span class="em">⭐</span><span class="tx"><b>Favoritos</b><small>Abra uma carta e toque em “Favoritar”: o fichário Favoritos aparece aqui.</small></span></div>';
     out += '<h2 class="fn-home-h">Personalizados</h2><div class="fn-home-grid">' + tiles + '</div>';
     var sets = SET_CATALOG.map(function (x) { return { s: x, p: progOf(x.id) }; }).filter(function (o) { return o.p && o.p.pct > 0; }).sort(function (a, b) { return b.p.pct - a.p.pct; }).slice(0, 9);
@@ -882,7 +894,7 @@
     var sid = sidOf(st.set, c), list = cbSorted().filter(function (b) { return cbType(b) === 'manual'; });
     var rows = list.map(function (b) {
       var on = hasRef(b, sid, c.n);
-      return '<button type="button" class="fn-dp-item' + (on ? ' is-on' : '') + '" data-act="cbtoggle" data-bid="' + esc(b.id) + '" data-n="' + esc(ck(c)) + '"><span class="em" style="font-size:22px;width:30px;text-align:center">' + esc(b.emoji || '📚') + '</span><span class="tx"><b>' + esc(plainName(b.name) || 'Sem nome') + (on ? ' ✓' : '') + '</b><small>' + (b.card_ids || []).length + ' carta' + ((b.card_ids || []).length === 1 ? '' : 's') + (on ? ' · toque para tirar' : ' · toque para guardar') + '</small></span></button>';
+      return '<button type="button" class="fn-dp-item' + (on ? ' is-on' : '') + '" data-act="cbtoggle" data-bid="' + esc(b.id) + '" data-n="' + esc(ck(c)) + '"><span class="em" style="width:30px;text-align:center">' + bIco(b, 22) + '</span><span class="tx"><b>' + esc(plainName(b.name) || 'Sem nome') + (on ? ' ✓' : '') + '</b><small>' + (b.card_ids || []).length + ' carta' + ((b.card_ids || []).length === 1 ? '' : 's') + (on ? ' · toque para tirar' : ' · toque para guardar') + '</small></span></button>';
     }).join('');
     rows += '<button type="button" class="fn-dp-item is-clear" data-act="cbnew" data-withn="' + esc(ck(c)) + '"><span class="tx"><b>➕ Novo fichário com esta carta</b><small>cria e já guarda</small></span></button>';
     openSheet('<p class="fn-note">' + esc(i18n(c, st.set).name) + ' · #' + esc(c.n) + '</p><div class="fn-dp">' + rows + '</div>', 'Guardar em fichário');
@@ -906,14 +918,14 @@
       return '<button type="button" class="fn-act" data-act="cbpreset" data-key="' + esc(p.key) + '"' + (done ? ' disabled' : '') + '><span class="em">' + esc(p.emoji) + '</span><span><b>' + esc(p.name) + '</b><small>' + (done ? 'Você já tem este fichário' : esc(p.desc) + ' · ' + n + ' cartas') + '</small></span></button>';
     }).join('');
     openSheet((withN ? '' : '<div class="fn-acts"><button type="button" class="fn-act" data-act="pknew"><span class="em">📍</span><span><b>Fichário de um Pokémon</b><small>Cada carta na posição que você escolher, página a página</small></span></button></div><h3 class="fn-sub-h">Ou um fichário comum</h3>') + '<div class="fn-form"><label>Nome<input type="text" id="fn-cb-name" maxlength="40" placeholder="Ex.: Meus Pikachus" autocomplete="off"></label>' +
-      '<div class="fn-row"><label>Emoji<input type="text" id="fn-cb-emoji" maxlength="4" value="📚" autocomplete="off"></label><label>Cor<input type="color" id="fn-cb-color" value="#a855f7"></label></div>' +
+      '<div class="fn-row"><label>Cor<input type="color" id="fn-cb-color" value="#a855f7"></label></div>' +
       '<button type="button" class="fn-btn" data-act="cbcreate"' + (withN ? ' data-withn="' + esc(withN) + '"' : '') + '>Criar fichário vazio</button>' +
       '<p class="fn-note">Depois é só guardar as cartas nele: toque em uma carta e escolha “Guardar em fichário”, ou use “Adicionar cartas”.</p></div>' +
       (withN ? '' : '<h3 class="fn-sub-h">Ou comece por uma sugestão temática</h3><div class="fn-acts">' + presets + '</div>'), 'Novo fichário');
   }
   async function cbCreate(withN) {
     var name = (($('#fn-cb-name') || {}).value || '').trim(); if (!name) { toast('Dê um nome ao fichário.'); return; }
-    var payload = { name: name, emoji: (($('#fn-cb-emoji') || {}).value || '').trim() || '📚', layout: 3, filter_config: { type: 'manual' }, card_ids: [], cover_color: ($('#fn-cb-color') || {}).value || '#a855f7' };
+    var payload = { name: name, emoji: '📚', layout: 3, filter_config: { type: 'manual' }, card_ids: [], cover_color: ($('#fn-cb-color') || {}).value || '#a855f7' };
     if (withN) { var c = findCard(withN); if (c) payload.card_ids = [{ set: sidOf(st.set, c), n: String(c.n) }]; }
     if (cbBusy) return; cbBusy = true;
     try {
@@ -932,7 +944,7 @@
   function openCbEdit() {
     var b = cur.binder; if (!b || !(isCb(st.set) || isPk(st.set))) return;
     openSheet('<div class="fn-form"><label>Nome<input type="text" id="fn-cb-name" maxlength="40" value="' + esc(plainName(b.name)) + '" autocomplete="off"></label>' +
-      '<div class="fn-row"><label>Emoji<input type="text" id="fn-cb-emoji" maxlength="4" value="' + esc(b.emoji || '📚') + '" autocomplete="off"></label><label>Cor<input type="color" id="fn-cb-color" value="' + esc(/^#[0-9a-f]{6}$/i.test(b.cover_color || '') ? b.cover_color : '#a855f7') + '"></label></div>' +
+      '<div class="fn-row"><label>Cor<input type="color" id="fn-cb-color" value="' + esc(/^#[0-9a-f]{6}$/i.test(b.cover_color || '') ? b.cover_color : '#a855f7') + '"></label></div>' +
       (cbIsFav(b) ? '<p class="fn-note">⭐ Favoritos junta as favoritas de todas as coleções. Você pode renomear à vontade.</p>' : '') +
       '<button type="button" class="fn-btn" data-act="cbsave">Salvar</button><button type="button" class="fn-btn is-alt" data-act="cbaskdelete">🗑 Excluir fichário</button></div>', 'Editar fichário');
   }
@@ -941,7 +953,7 @@
     var name = (($('#fn-cb-name') || {}).value || '').trim(); if (!name) { toast('Dê um nome ao fichário.'); return; }
     cbBusy = true;
     try {
-      var saved = await cbSave(Object.assign({}, b, { name: name, emoji: (($('#fn-cb-emoji') || {}).value || '').trim() || '📚', cover_color: ($('#fn-cb-color') || {}).value || b.cover_color }));
+      var saved = await cbSave(Object.assign({}, b, { name: name, cover_color: ($('#fn-cb-color') || {}).value || b.cover_color }));
       if (!saved) { toast('Não foi possível salvar. Tente de novo.'); return; }
       closeSheet(); refreshAfterCb(); toast('Fichário atualizado.');
     } finally { cbBusy = false; }
@@ -1157,13 +1169,13 @@
   }
   function renderPkHero() {
     var b = cur.binder;
-    if (!b) { $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>Fichário de Pokémon</h1><p class="fn-hero-sub">' + (loggedIn() || DEMO ? 'Carregando…' : 'Entre no MyDeck para ver os seus fichários.') + '</p></div></div>'; $('#fn-setbtn-emoji').textContent = '📍'; $('#fn-setbtn-code').textContent = 'Pokémon'; $('#fn-setbtn-name').textContent = 'Personalizados'; return; }
+    if (!b) { $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>Fichário de Pokémon</h1><p class="fn-hero-sub">' + (loggedIn() || DEMO ? 'Carregando…' : 'Entre no MyDeck para ver os seus fichários.') + '</p></div></div>'; $('#fn-setbtn-emoji').innerHTML = MD_ICO('pokeball', { size: 22 }); $('#fn-setbtn-code').textContent = 'Pokémon'; $('#fn-setbtn-name').textContent = 'Personalizados'; return; }
     var r = cur.pk, pages = pkPages(b), per = pages[0].length, total = pages.length * per, pct = r.filled ? Math.round(r.got / r.filled * 100) : 0, sp = (b.filter_config || {}).name;
-    $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>📍 ' + esc(plainName(b.name) || 'Sem nome') + '</h1><p class="fn-hero-sub">Fichário de Pokémon' + (sp ? ' · ' + esc(sp) : '') + ' · ' + pages.length + ' página' + (pages.length === 1 ? '' : 's') + ' de ' + binderSizeLabel(b.layout || 3) + '</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
+    $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1><span class="h-ico">' + MD_ICO('pokeball', { size: 26 }) + '</span>' + esc(plainName(b.name) || 'Sem nome') + '</h1><p class="fn-hero-sub">Fichário de Pokémon' + (sp ? ' · ' + esc(sp) : '') + ' · ' + pages.length + ' página' + (pages.length === 1 ? '' : 's') + ' de ' + binderSizeLabel(b.layout || 3) + '</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
       '<div class="fn-progress"><i style="width:' + pct + '%"></i></div><div class="fn-stats"><span><b>' + r.got + '</b>/' + r.filled + ' cartas colocadas que você tem</span><span>Vagas preenchidas <b>' + r.filled + '</b>/' + total + '</span></div>' +
       '<div class="fn-hero-links"><a href="#" data-act="pkedit">' + (pkEdit ? '✔ Terminar edição' : '✏️ Editar posições') + '</a><a href="#" data-act="cbedit">⚙️ Nome / excluir</a></div>' +
       (pkEdit ? '<div class="fn-warn" style="margin-top:10px">Modo edição: toque numa vaga vazia para escolher a carta, ou numa carta para trocá-la ou tirá-la. Tudo é salvo na hora.</div>' : '');
-    $('#fn-setbtn-emoji').textContent = '📍'; $('#fn-setbtn-code').textContent = 'Pokémon'; $('#fn-setbtn-name').textContent = plainName(b.name) || 'Pokémon';
+    $('#fn-setbtn-emoji').innerHTML = MD_ICO('pokeball', { size: 22 }); $('#fn-setbtn-code').textContent = 'Pokémon'; $('#fn-setbtn-name').textContent = plainName(b.name) || 'Pokémon';
   }
   function renderPk() {
     var b = cur.binder; if (!b) return '<div class="fn-empty">' + (loggedIn() || DEMO ? 'Carregando o seu fichário…' : 'Entre no MyDeck para ver o seu fichário.') + '</div>';
@@ -1627,12 +1639,12 @@
     if (isCb(st.set)) {
       var cbm = cur.binder && cbType(cur.binder) === 'manual';
       openSheet('<div class="fn-acts">' +
-        (cbm ? '<button type="button" class="fn-act" data-act="cbadd"><span class="em">➕</span><span><b>Adicionar cartas</b><small>Busque no catálogo inteiro e guarde neste fichário</small></span></button>' : '') +
+        (cbm ? '<button type="button" class="fn-act" data-act="cbadd"><span class="em">' + MD_ICO('plus', { size: 18 }) + '</span><span><b>Adicionar cartas</b><small>Busque no catálogo inteiro e guarde neste fichário</small></span></button>' : '') +
         '<button type="button" class="fn-act" data-act="share"><span class="em">🔗</span><span><b>Compartilhar fichário</b><small>Gera um link (e QR code) só para ver, sem precisar de login</small></span></button>' +
         '<button type="button" class="fn-act" data-act="copy"><span class="em">📋</span><span><b>Copiar lista (texto)</b><small>' + n + ' carta' + (n === 1 ? '' : 's') + ' como estão na tela, pronto para colar no WhatsApp</small></span></button>' +
         '<button type="button" class="fn-act" data-act="print"><span class="em">🖨️</span><span><b>Imprimir PDF</b><small>Fichário em páginas, no tamanho escolhido</small></span></button>' +
         '<button type="button" class="fn-act" data-act="bulk"><span class="em">✅</span><span><b>Marcar várias de uma vez</b><small>Marca como coletadas as cartas visíveis deste fichário</small></span></button>' +
-        '<button type="button" class="fn-act" data-act="cbedit"><span class="em">✏️</span><span><b>Editar fichário</b><small>Nome, emoji, cor ou excluir</small></span></button>' + extraTools() + '</div>', 'Ferramentas');
+        '<button type="button" class="fn-act" data-act="cbedit"><span class="em">✏️</span><span><b>Editar fichário</b><small>Nome, cor ou excluir</small></span></button>' + extraTools() + '</div>', 'Ferramentas');
       return;
     }
     openSheet('<div class="fn-acts">' +
@@ -1822,7 +1834,7 @@
   }
   function blockTitle(k) {
     var meta = (typeof SERIES_META !== 'undefined' && SERIES_META && SERIES_META[k]) || null;
-    return meta ? (meta.sub || meta.t) : (GROUP_NAME[k] || k);
+    return plainName(meta ? (meta.sub || meta.t) : (GROUP_NAME[k] || k));
   }
   function openBlocks() { var v = LS.get('open', null); return v || [(SET_CATALOG.filter(function (s) { return s.id === st.set; })[0] || {}).series]; }
   function treeHtml() {
@@ -1843,7 +1855,7 @@
         '<button type="button" class="fn-blk-h" data-blk="' + esc(k) + '" aria-expanded="' + isOpen + '"><span class="ch">▸</span><span class="t">' + esc(blockTitle(k)) + '</span>' +
         '<span class="n">' + (bp != null ? '<b>' + bp + '%</b> · ' : '') + sets.length + '</span></button><div class="fn-blk-b">' + rows + '</div></section>';
     }).join('');
-    var homeRow = '<button type="button" class="fn-set fn-home-row' + (isHome(st.set) ? ' is-cur' : '') + '" data-pick="home" data-find="meus fichários personalizados início home"><span class="em">🏠</span><span class="tx"><b>Meus fichários</b><small>Visão geral</small></span></button>';
+    var homeRow = '<button type="button" class="fn-set fn-home-row' + (isHome(st.set) ? ' is-cur' : '') + '" data-pick="home" data-find="meus fichários personalizados início home"><span class="em">' + MD_ICO('home', { size: 18 }) + '</span><span class="tx"><b>Meus fichários</b><small>Visão geral</small></span></button>';
     return homeRow + cbTreeHtml() + dexTreeHtml() + artTreeHtml() + (html || '<div class="fn-tree-empty">Nenhuma coleção encontrada.</div>');
   }
   function sideHtml() { return '<input class="fn-tsearch" type="search" placeholder="Buscar coleção…" autocomplete="off" aria-label="Buscar coleção"><div class="fn-tree">' + treeHtml() + '</div>'; }
