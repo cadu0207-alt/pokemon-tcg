@@ -1398,7 +1398,7 @@
     var lbl = two ? 'Páginas ' + (p0 + 1) + (p0 + 2 <= pages ? '–' + (p0 + 2) : '') + ' de ' + pages : 'Página ' + (p0 + 1) + ' de ' + pages;
     return '<div class="fn-binder-nav"><button type="button" data-bnav="-1"' + (p0 <= 0 ? ' disabled' : '') + '>‹ Anterior</button>' +
       '<span class="fn-binder-pg">' + lbl + '</span><button type="button" data-bnav="1"' + (p0 + step >= pages ? ' disabled' : '') + '>Próxima ›</button>' +
-      '<div class="fn-seg" id="fn-pocket" role="group" aria-label="Bolsos por página">' + POCKETS.map(function (p) { return '<button type="button" data-pocket="' + p.id + '" class="' + (p.id === P.id ? 'is-on' : '') + '">' + p.label + '</button>'; }).join('') + '</div></div>' +
+      '<div class="fn-seg fn-seg-soft" id="fn-pocket" role="group" aria-label="Bolsos por página">' + POCKETS.map(function (p) { return '<button type="button" data-pocket="' + p.id + '" class="' + (p.id === P.id ? 'is-on' : '') + '">' + p.label + '</button>'; }).join('') + '</div></div>' +
       '<div class="fn-spread" style="--pr:' + Math.round(per / cols) + '">' + page(p0) + (two ? page(p0 + 1) : '') + '</div>';
   }
   function renderDashView() {
@@ -1476,7 +1476,7 @@
   function renderControls() {
     document.body.classList.toggle('fn-pk', isPk(st.set)); document.body.classList.toggle('fn-home', isHome(st.set));
     $$('.fn-chip[data-status]').forEach(function (b) { b.classList.toggle('is-on', b.dataset.status === st.status); });
-    var L = langsOf(st.set), lg = $('#fn-lang'); lg.hidden = !L || !!SHARE;
+    var L = langsOf(st.set), lg = $('#fn-lang'); lg.hidden = !L || !!SHARE; $('#fn-lang-grp').hidden = lg.hidden;
     if (L) $$('button', lg).forEach(function (b) { b.hidden = L.indexOf(b.dataset.lang) < 0; b.classList.toggle('is-on', b.dataset.lang === effLang(st.set)); });
     $$('#fn-view button').forEach(function (b) { b.classList.toggle('is-on', b.dataset.view === st.view); });
     $('#fn-sort').value = st.sort;
@@ -1488,7 +1488,7 @@
     else st.artist = '';
     applyFocus();
     $('#fn-cols-val').textContent = st.cols;
-    $('#fn-cols-wrap').style.display = st.view === 'grid' ? '' : 'none';
+    $('#fn-cols-grp').style.display = st.view === 'grid' ? '' : 'none';
     document.documentElement.style.setProperty('--cols', st.cols);
   }
   function applyFocus() {

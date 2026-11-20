@@ -70,10 +70,10 @@ button{cursor:pointer}
 .fn-bar.is-stuck{border-bottom-color:var(--border)}
 
 .fn-bar-top,
-.fn-bar-bottom{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 16px;width:100%}
+.fn-bar-bottom{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;width:100%}
 
 /* Linha 1: Barra de busca mais comprida para a direita */
-.fn-bar-top .fn-search{flex:2 1 380px;min-width:280px}
+.fn-bar-top .fn-search{flex:2 1 300px;min-width:240px}
 .fn-bar-top .fn-chips{flex:1 1 auto;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
 .fn-bar-top .fn-chips::-webkit-scrollbar{display:none}
 
@@ -84,15 +84,21 @@ button{cursor:pointer}
 .fn-chip.is-on{background:var(--text);border-color:var(--text);color:var(--bg)}
 
 /* Linha 2: Ferramentas e visualizações à esquerda, resto empurrado para a direita com espaçamento */
-.fn-bar-left-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.fn-bar-right{margin-left:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.fn-bar-left-tools{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap}
+.fn-bar-right{margin-left:auto;display:flex;align-items:center;gap:12px 14px;flex-wrap:wrap}
 
-.fn-sel{flex:0 0 auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+/* Grupos rotulados: itens do mesmo grupo ficam juntos (8px); entre grupos há mais espaço (20px). Rótulo = texto pequeno em caixa-alta. */
+.fn-grp{display:flex;align-items:center;gap:8px;min-width:0}
+.fn-lbl,.fn-sel span{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.fn-grp[hidden]{display:none}
+.fn-sel{flex:0 0 auto;display:flex;align-items:center;gap:8px}
 .fn-sel select{height:36px;padding:0 8px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text)}
 
 .fn-seg{display:inline-flex;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;background:var(--surface)}
-.fn-seg button{height:36px;padding:0 12px;border:0;background:transparent;font-weight:600;font-size:13px;color:var(--text2)}
+.fn-seg button{height:36px;padding:0 10px;border:0;background:transparent;font-weight:600;font-size:13px;color:var(--text2)}
 .fn-seg button.is-on{background:var(--accent);color:#fff}
+/* só UMA seleção forte (a visão, em vermelho); idioma e tamanho do fichário ficam discretos: texto escuro + sublinhado */
+.fn-seg.fn-seg-soft button.is-on{background:var(--surface2);color:var(--text);box-shadow:inset 0 -2px 0 var(--text)}
 
 .fn-step{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);overflow:hidden}
 .fn-step button{width:34px;height:36px;border:0;background:transparent;font-size:18px;font-weight:700}
@@ -233,7 +239,10 @@ button{cursor:pointer}
   .fn-bar-right{margin-left:0}
   .fn-search input{height:38px}
   .fn-chip{height:32px;padding:0 12px;font-size:13px}
-  .fn-sel span{display:none}
+  .fn-sel span,.fn-lbl{display:none}
+  .fn-bar-top,.fn-bar-bottom{gap:8px 14px}
+  .fn-bar-left-tools{gap:8px 14px}
+  .fn-bar-right{gap:8px 14px}
   .fn-sel select{height:32px;font-size:13px}
   .fn-seg button{height:34px;padding:0 10px;font-size:12.5px}
   .fn-step button{height:34px;width:32px}
@@ -370,7 +379,7 @@ button{cursor:pointer}
 /* ── Modo foco: fichário inteiro na tela ── */
 @media (min-width:700px){
   body.fn-focus{--top-h:46px}
-  .fn-focus .fn-banner,.fn-focus .fn-hero,.fn-focus .fn-side,.fn-focus .fn-bar-top,.fn-focus .fn-page-lbl,.fn-focus .fn-user,.fn-focus #fn-cols-wrap{display:none}
+  .fn-focus .fn-banner,.fn-focus .fn-hero,.fn-focus .fn-side,.fn-focus .fn-bar-top,.fn-focus .fn-page-lbl,.fn-focus .fn-user,.fn-focus #fn-cols-grp{display:none}
   .fn-focus .fn-layout{display:block;max-width:none}
   .fn-focus .fn-main{padding:6px 14px 10px;max-width:none}
   .fn-focus .fn-bar{position:static;margin:0 -14px;padding:8px 16px;transform:none}
