@@ -401,15 +401,22 @@ button{cursor:pointer}
 .fn-more{display:flex;justify-content:center;margin:18px 0 8px}
 .fn-more .fn-btn{padding:0 22px}
 .fn-dexact{margin-top:14px;display:grid;gap:8px}
-.fn-dp{display:grid;gap:8px;margin-top:10px}
-.fn-dp-item{display:flex;align-items:center;gap:10px;width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);text-align:left;cursor:pointer}
-.fn-dp-item img{width:44px;border-radius:3px;flex:none}
-.fn-dp-item .tx{flex:1;min-width:0;line-height:1.25}
+.fn-sheet.fn-sheet-wide{max-width:1040px}
+@media (min-width:700px){.fn-sheet.fn-sheet-wide{width:min(1040px,calc(100vw - 48px))}}
+.fn-dp{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:10px}
+.fn-dp-item{display:flex;flex-direction:column;gap:6px;width:100%;padding:8px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);text-align:left;cursor:pointer;min-width:0}
+.fn-dp-item:hover{border-color:var(--border2);transform:translateY(-2px);transition:transform .12s}
+.fn-dp-item .im{position:relative;display:block;aspect-ratio:5/7;background:var(--surface2);border-radius:6px;overflow:hidden}
+.fn-dp-item img{display:block;width:100%;height:100%;object-fit:contain;flex:none}
+.fn-dp-item .ok{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;font-style:normal;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.fn-dp-item .tx{display:block;min-width:0;line-height:1.25}
 .fn-dp-item .tx b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fn-dp-item .tx small{color:var(--muted);font-size:12px}
-.fn-dp-item .pr{font-weight:800;color:var(--accent);font-size:13.5px}
-.fn-dp-item.is-on{border-color:var(--teal);box-shadow:0 0 0 1px var(--teal) inset}
-.fn-dp-item.is-clear{border-style:dashed}
+.fn-dp-item .tx small{display:block;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fn-dp-item .pr{font-weight:800;color:var(--accent);font-size:14px}
+.fn-dp-item.is-on{border-color:var(--teal);box-shadow:0 0 0 2px var(--teal) inset}
+.fn-dp-item.is-clear{border-style:dashed;grid-column:1/-1;flex-direction:row;align-items:center}
+.fn-dp .fn-empty{grid-column:1/-1}
+@media (max-width:520px){.fn-dp{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}}
 .fn-act:disabled{opacity:.5;cursor:default}
 
 /* ── Meus fichários e Favoritos ── */

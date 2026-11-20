@@ -581,7 +581,7 @@
     if (cur.pending > 0) { toast('Ainda carregando todas as coleções. Tente de novo em instantes.'); return; }
     var sp = cur.species.filter(function (x) { return x.dex === d; })[0] || { dex: d, name: '#' + d };
     picker = { dex: d, list: dexCands(d), name: sp.name };
-    openSheet('<div class="fn-form"><label>Buscar nesta espécie<input id="fn-dp-q" type="search" placeholder="coleção, número, raridade…" autocomplete="off"></label></div><div class="fn-dp" id="fn-dp"></div>', '#' + d + ' ' + sp.name);
+    openSheet('<div class="fn-form"><label>Buscar nesta espécie<input id="fn-dp-q" type="search" placeholder="coleção, número, raridade…" autocomplete="off"></label></div><div class="fn-dp" id="fn-dp"></div>', '#' + d + ' ' + sp.name, function (ov) { var sh = ov.querySelector('.fn-sheet'); if (sh) sh.classList.add('fn-sheet-wide'); });
     renderDexPicker('');
   }
   function renderDexPicker(q) {
@@ -595,8 +595,10 @@
     html += items.slice(0, 80).map(function (x) {
       var c = Object.assign({}, x.c, { _set: x.set, _k: x.set + '~' + x.c.n }), on = cur0 && cur0._set === x.set && String(cur0.n) === String(x.c.n);
       var own = slotsOf('', c).some(function (s) { return hasDexSlot(bid, x.set, x.c.n, s.ver); });
-      return '<button type="button" class="fn-dp-item' + (on ? ' is-on' : '') + '" data-act="dexchoose" data-dex="' + picker.dex + '" data-dset="' + esc(x.set) + '" data-dn="' + esc(x.c.n) + '">' +
-        '<img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(null, '', c)) + '"><span class="tx"><b>' + esc(i18n(c, '').name) + (own ? ' ✓' : '') + '</b><small>' + esc(setLabelOf(x.set).split('—')[0].trim()) + ' · #' + esc(x.c.n) + ' · ' + esc(rareLabel(x.c.rare)) + '</small></span><span class="pr">' + esc(priceFmt(c, '')) + '</span></button>';
+      var im = ''; try { var raw = imgRaw(null, '', c); im = typeof imgMedium === 'function' ? imgMedium(raw) : raw; } catch (e) { im = imgSrc(null, '', c); }
+      return '<button type="button" class="fn-dp-item' + (on ? ' is-on' : '') + (own ? ' is-own' : '') + '" data-act="dexchoose" data-dex="' + picker.dex + '" data-dset="' + esc(x.set) + '" data-dn="' + esc(x.c.n) + '">' +
+        '<span class="im"><img loading="lazy" decoding="async" alt="' + esc(i18n(c, '').name) + '" src="' + esc(im) + '">' + (own ? '<i class="ok" aria-label="Você tem">✓</i>' : '') + '</span>' +
+        '<span class="tx"><b>' + esc(i18n(c, '').name) + '</b><small>' + esc(setLabelOf(x.set).split('—')[0].trim()) + ' · #' + esc(x.c.n) + '</small><small>' + esc(rareLabel(x.c.rare)) + '</small></span><span class="pr">' + esc(priceFmt(c, '')) + '</span></button>';
     }).join('');
     if (items.length > 80) html += '<div class="fn-empty">Mostrando 80 de ' + items.length + '. Refine a busca.</div>';
     box.innerHTML = html;
