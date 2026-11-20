@@ -1917,6 +1917,37 @@ function updateDashProgress(){
         <div style="height:100%;width:${pct}%;background:var(--teal);border-radius:3px"></div></div>
       <div class="bsl"><span style="color:var(--teal)">${pct}%</span> MASTER SET COMPLETO</div>
     </div>`;
+  try{ injectPatrimonioImpact(); }catch(e){}
+}
+
+// Caixa de impacto no Patrimônio (Dashboard): "se você completar os fichários ativos, a coleção valeria +R$X".
+// Cruza o preço das cartas faltantes com o painel de Patrimônio. Veio de fichario_melhorias_23jul.js (#36, 23/07/2026),
+// movida para cá em 20/11/2026 na retirada do fichário antigo. Roda a cada updateDashProgress().
+function injectPatrimonioImpact(){
+  const host=document.getElementById('chart-patrimonio');
+  if(!host||typeof getAllCardsWithSet!=='function'||typeof getSlots!=='function'||typeof collected==='undefined')return;
+  const parent=host.parentElement;
+  if(!parent)return;
+  const all=getAllCardsWithSet();
+  if(!all.length)return;
+  let missingValue=0,missingCount=0,ownedValue=0;
+  all.forEach(c=>{
+    getSlots(c,c._setId).forEach(s=>{
+      const v=c.price||0;
+      if(collected.has(`${c._setId}:${c.n}:${s.ver}`))ownedValue+=v;
+      else{missingValue+=v;missingCount++;}
+    });
+  });
+  let box=document.getElementById('fm-patrimonio-impact');
+  if(missingCount===0){if(box)box.remove();return;}
+  if(!box){
+    box=document.createElement('div');
+    box.id='fm-patrimonio-impact';
+    box.style.cssText="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-family:'Space Mono',monospace;font-size:11px;display:flex;gap:18px;flex-wrap:wrap;align-items:center";
+    parent.appendChild(box);
+  }
+  box.innerHTML=`<span>Se completar os fichários ativos: <b style="color:var(--teal)">+R$${fmtR(missingValue)}</b></span>
+    <span style="color:var(--muted)">${missingCount} slots faltando · valor já coletado R$${fmtR(ownedValue)}</span>`;
 }
 
 // ── GASTOS ──────────────────────────────────────────────────────
@@ -3690,6 +3721,16 @@ function getBinderCards(binder){
     const preset=BINDER_PRESETS.find(p=>p.key===cfg.key);
     return preset?all.filter(preset.filter):[];
   }
+  if(cfg.type==='artist'){
+    // varre TODO o catálogo (como o Master Set Nacional) — antes vinha de fichario_melhorias_23jul.js
+    const out=[];
+    Object.keys(SET_CARDS_MAP).forEach(setId=>{
+      let cards=[];
+      try{cards=SET_CARDS_MAP[setId]()||[];}catch(e){return;}
+      cards.forEach(c=>{if(c.artist===cfg.artist)out.push({...c,_setId:setId});});
+    });
+    return out;
+  }
   return[];
 }
 
@@ -4574,6 +4615,7 @@ function initGlobalSearch(){
   header.insertBefore(wrap,st||null);
 
   const inp=wrap.querySelector('#gsearch'),dd=wrap.querySelector('#gsearch-dd');
+  try{new MutationObserver(()=>{try{gsInjectChecks(dd);}catch(e){}}).observe(dd,{childList:true});}catch(e){}
   let deb=null;
   // Visitante anônimo na Início não recebe o auto-load dos sets SV/legados
   // (ver gate perto de loadLazySets) — a busca global é a única coisa
@@ -4617,6 +4659,53 @@ function initGlobalSearch(){
       </div>`).join('');
     dd.style.display='block';
   }
+}
+// Aviso quando uma coleção que era "em breve" passa a estar ativa (1x por navegador). Veio de fichario_melhorias_23jul.js (#18).
+// Na 1ª execução só grava a lista atual como referência (não avisa sobre o que já existia).
+function checkNewlyActiveSets(){
+  try{
+    if(typeof SET_META==='undefined'||typeof SET_CATALOG==='undefined')return;
+    const seenRaw=localStorage.getItem('fm_seen_active_sets');
+    const seen=seenRaw?JSON.parse(seenRaw):null;
+    const activeIds=[];
+    Object.keys(SET_META).forEach(id=>{if(!SET_META[id].upcoming)activeIds.push(id);});
+    SET_CATALOG.forEach(s=>{if(!s.upcoming&&!activeIds.includes(s.id))activeIds.push(s.id);});
+    if(seen===null){localStorage.setItem('fm_seen_active_sets',JSON.stringify(activeIds));return;}
+    const newOnes=activeIds.filter(id=>!seen.includes(id));
+    if(newOnes.length){
+      newOnes.forEach(id=>{
+        const label=SET_META[id]?.label||SET_CATALOG.find(s=>s.id===id)?.label||id.toUpperCase();
+        toast(`${label} já está disponível para colecionar!`);
+      });
+      localStorage.setItem('fm_seen_active_sets',JSON.stringify(activeIds));
+    }
+  }catch(e){}
+}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(checkNewlyActiveSets,1500));
+
+// Selo ✓ (tem todas as versões) / ½ (tem parte) nos resultados da busca global — só aparece se você tem a carta.
+// Veio de fichario_melhorias_23jul.js; reaproveita collected/getSlots (mesma fonte do fichário).
+function gsInjectChecks(dd){
+  if(!dd||typeof getSlots!=='function'||typeof collected==='undefined'||typeof SET_CARDS_MAP==='undefined')return;
+  dd.querySelectorAll('.gs-item').forEach(el=>{
+    if(el.querySelector('.fm-gs-check'))return;
+    const m=(el.getAttribute('onclick')||'').match(/gsGo\('([^']+)','([^']+)'\)/);
+    if(!m)return;
+    const setId=m[1],n=m[2];
+    const card=(SET_CARDS_MAP[setId]?.()||[]).find(c=>String(parseInt(c.n,10))===String(parseInt(n,10)));
+    if(!card)return;
+    const slots=getSlots(card,setId);
+    if(!slots.length)return;
+    const has=s=>collected.has(`${setId}:${card.n}:${s.ver}`);
+    if(!slots.some(has))return;
+    const all=slots.every(has);
+    const chk=document.createElement('div');
+    chk.className='fm-gs-check';
+    chk.textContent=all?'✓':'½';
+    chk.title=all?'Você já tem essa carta':'Você tem parte das versões dessa carta';
+    chk.style.cssText=`flex-shrink:0;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:var(--bg);background:${all?'var(--teal)':'var(--gold)'};margin-left:6px`;
+    el.appendChild(chk);
+  });
 }
 function gsGo(setId,n){
   const dd=document.getElementById('gsearch-dd');if(dd)dd.style.display='none';
