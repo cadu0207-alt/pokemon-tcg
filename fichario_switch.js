@@ -22,13 +22,31 @@
   var t0 = targetFromHash(location.hash);
   if (t0) { location.replace(t0); return; }
 
-  function loggedIn() { try { return typeof uid === 'function' && !!uid(); } catch (e) { return false; } }
+  // Abre o fichário novo (com a coleção/fichário pedido, se houver): sid = 'me04', '__cb__<id>' ou '__custom__'.
+  function openNovo(sid) {
+    var h = '';
+    if (sid && sid !== '__custom__') { var m = /^__cb__(.+)$/.exec(String(sid)); h = m ? '#cb:' + m[1] : '#' + sid; }
+    location.href = TARGET + h;
+  }
+  // go()/goToTab()/mNav() com 'fichario' viram atalho para o fichário novo (logado ou não: a página nova trata o login).
   function wrap(name) {
     var orig = window[name]; if (typeof orig !== 'function' || orig.__fs) return;
-    var w = function (id) { if (id === 'fichario' && loggedIn()) { location.href = TARGET; return; } return orig.apply(this, arguments); };
+    var w = function (id) { if (id === 'fichario') { location.href = TARGET; return; } return orig.apply(this, arguments); };
     w.__fs = true; window[name] = w;
   }
   function install() { wrap('go'); wrap('goToTab'); wrap('mNav'); }
   install(); window.addEventListener('DOMContentLoaded', install); window.addEventListener('load', install);
-  window.addEventListener('hashchange', function () { var t = targetFromHash(location.hash); if (t && loggedIn()) location.href = t; });
+  window.addEventListener('hashchange', function () { var t = targetFromHash(location.hash); if (t) location.href = t; });
+
+  // 19/11/2026 — o painel do fichário antigo não é mais usado. Depois que TODOS os scripts rodaram (DOMContentLoaded),
+  // as funções que desenhavam o painel viram "não faz nada" e as que navegavam para uma coleção abrem o fichário novo.
+  // (Cartões do Dashboard, busca global e leilão ainda chamam essas funções.) Sai junto com o código antigo.
+  function neutralizeOld() {
+    ['renderBinder', 'renderTabs', 'renderCustomBindersHome', 'renderSharedCustomBinder', 'openCustomBinderView',
+      'updateFicLangVisibility', 'ficToggleOpts', 'ficUpdateFilterBadge', 'fmMdexRender', 'fmMdexInjectHomeEntry'].forEach(function (n) {
+      if (typeof window[n] === 'function') window[n] = function () { };
+    });
+    if (typeof window.switchSet === 'function') window.switchSet = function (sid) { openNovo(sid); };
+  }
+  window.addEventListener('DOMContentLoaded', neutralizeOld);
 })();
