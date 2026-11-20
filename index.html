@@ -276,22 +276,6 @@
   function openNewFichario(e){
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
     if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
-
-    if (/[?&]classico\b/i.test(window.location.search)) {
-      try { localStorage.setItem('mydeck_fichario_ui', 'classico'); } catch (_) {}
-      if (typeof goToTab === 'function') goToTab('fichario');
-      return;
-    }
-
-    try {
-      localStorage.setItem('mydeck_fichario_ui', 'novo');
-      ['mydeck-fichario-mode','mydeck_fichario_mode','fichario_mode','fichario-view-mode','mydeck-binder-ui'].forEach(function(k){
-        if (localStorage.getItem(k) === 'classico' || localStorage.getItem(k) === 'classic') {
-          localStorage.setItem(k, 'novo');
-        }
-      });
-    } catch (_) {}
-
     window.location.href = 'fichario-novo.html';
   }
   function mNav(id){
@@ -300,7 +284,6 @@
     goToTab(id);
   }
   document.addEventListener('click', function(e){
-    if (/[?&]classico\b/i.test(window.location.search)) return;
     var target = e.target && e.target.closest ? e.target.closest('[data-tab="fichario"], #nav-tab-fichario, #mnav-tab-fichario') : null;
     if (!target) return;
     openNewFichario(e);

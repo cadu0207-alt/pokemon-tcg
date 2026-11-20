@@ -1,22 +1,11 @@
-/* Fichário novo x clássico — implantação gradual (18/11/2026).
+/* Redireciona o Fichário para o fichário novo (fichario-novo.html).
  *
- * Desde 18/11/2026 o padrão é o fichário NOVO (a aba "Fichário" e os links de fichário levam para fichario-novo.html).
- * Com  ?classico  o aparelho volta ao clássico (e  ?novo  desfaz). A escolha fica guardada neste aparelho.
- * Para voltar o padrão de TODO MUNDO ao clássico, é só trocar DEFAULT_UI para 'classico' (uma palavra).
- * Os dados são os mesmos nos dois (tabela collection e custom_binders): nada se perde indo e voltando. */
+ * 18/11/2026: o fichário novo virou o padrão de todos. 19/11/2026: o atalho ?classico/?novo foi retirado
+ * (o fichário antigo está sendo removido do site aos poucos). Os dados são os mesmos (tabelas collection e
+ * custom_binders). Este arquivo só mantém os links antigos funcionando: ?share=<token>, #fichario, #fichario/<set>. */
 (function () {
   'use strict';
-  var DEFAULT_UI = 'novo'; // 18/11/2026: fichário novo é o padrão de todos (decisão do Eduardo); ?classico volta ao antigo neste aparelho
-  var KEY = 'mydeck_fichario_ui';
-  var ui = DEFAULT_UI;
-  try {
-    var q = new URLSearchParams(location.search);
-    if (q.has('novo')) localStorage.setItem(KEY, 'novo');
-    else if (q.has('classico')) localStorage.setItem(KEY, 'classico');
-    ui = localStorage.getItem(KEY) || DEFAULT_UI;
-  } catch (e) { ui = DEFAULT_UI; }
-  window.MYDECK_FICHARIO_UI = ui;
-  if (ui !== 'novo') return;
+  window.MYDECK_FICHARIO_UI = 'novo';
 
   var TARGET = 'fichario-novo.html';
   // link público de coleção compartilhada: abre no visualizador novo
