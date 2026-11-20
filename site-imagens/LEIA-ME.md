@@ -10,6 +10,7 @@ Para trocar uma imagem sem mexer no código, substitua o arquivo mantendo o **me
 | Subpasta / arquivo | O que é | Onde aparece | Situação |
 |---|---|---|---|
 | `iniciantes/` (7 jpg) | infográficos da aba Iniciantes | `iniciantes.js` | **movido** |
+| `colecoes/` (27 png, `<id da coleção>.png`) | selo de cada coleção (o código impresso na carta: DLR, CRI, MEG…), 38×23 px, vindo da Limitless (`s3.limitlesstcg.com/sets/en/<CÓDIGO>.png`) | fichário novo: início, lista e botão da coleção (`setIco()` em `fichario-novo.js`) | **novo** — coleção nova = baixar o selo e salvar com o id dela |
 | `logo-mydeck.png/.webp`, `logo-mydeck-dark.png/.webp` | logotipo (claro/escuro) | topo do site (`index.html`), fichário novo e caixa de opiniões | ainda na raiz do repositório |
 | `icon-192.png`, `icon-512.png`, `icon-maskable-512.png` | ícones do app (PWA) | `manifest.json`, `sw.js`, `index.html` | ainda na raiz (o navegador procura por esses nomes) |
 | `og-image.jpg` | imagem de compartilhamento (WhatsApp, redes) | `index.html` (meta tags) | ainda na raiz |

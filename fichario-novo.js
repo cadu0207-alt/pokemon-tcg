@@ -10,6 +10,12 @@
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]; }); };
+  // Selo da coleção (o mesmo código que vem impresso em cada carta: DLR, CRI, MEG…), em vez de emoji. Arquivos em site-imagens/colecoes/<id>.png.
+  // Devolve HTML do <img>; sem selo conhecido devolve o emoji escapado.
+  function setIco(id, fallback) {
+    var k = setKey(id); var ok = k === 'cel30' || (typeof LMT_CODES !== 'undefined' && LMT_CODES[k]);
+    return ok ? '<img class="set-ico" src="site-imagens/colecoes/' + esc(k) + '.png" alt="" loading="lazy" decoding="async">' : esc(fallback || '🃏');
+  }
   var LS = {
     get: function (k, d) { try { var v = localStorage.getItem('fn_' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set: function (k, v) { try { localStorage.setItem('fn_' + k, JSON.stringify(v)); } catch (e) { } }
@@ -802,7 +808,7 @@
     $('#fn-setbtn-name').textContent = 'Meus fichários';
   }
   function homeTile(pick, em, title, sub, pct) {
-    return '<button type="button" class="fn-hcard" data-pick="' + esc(pick) + '"><span class="em">' + esc(em) + '</span><span class="tx"><b>' + esc(title) + '</b><small>' + esc(sub) + '</small></span>' +
+    return '<button type="button" class="fn-hcard" data-pick="' + esc(pick) + '"><span class="em' + (/^<img /.test(em) ? ' has-ico' : '') + '">' + (/^<img /.test(em) ? em : esc(em)) + '</span><span class="tx"><b>' + esc(title) + '</b><small>' + esc(sub) + '</small></span>' +
       '<span class="pc' + (pct ? '' : ' z') + '">' + pct + '%</span><div class="mini"><i style="width:' + pct + '%"></i></div></button>';
   }
   function renderHome() {
@@ -824,7 +830,7 @@
     if (sets.length) {
       out += '<h2 class="fn-home-h">' + (started ? 'Coleções em andamento' : 'Coleções') + '</h2><div class="fn-home-grid">' + sets.map(function (o) {
         var nm = (o.s.label || '').split('—').slice(1).join('—').trim() || o.s.label, code = (o.s.label || '').split('—')[0].trim();
-        return homeTile(o.s.id, o.s.emoji || '🃏', nm, o.p.tot ? code + ' · ' + o.p.got + '/' + o.p.tot + ' slots' : code, o.p.pct);
+        return homeTile(o.s.id, setIco(o.s.id, o.s.emoji), nm, o.p.tot ? code + ' · ' + o.p.got + '/' + o.p.tot + ' slots' : code, o.p.pct);
       }).join('') + '</div>';
     }
     return out;
@@ -1463,7 +1469,7 @@
       (t.sT ? '<span>Base <b>' + t.bG + '</b>/' + t.bT + '</span><span>Secretas <b>' + t.sG + '</b>/' + t.sT + '</span>' : '') +
       (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : t.got >= t.slots ? '<span><b style="color:var(--teal)">Coleção completa 🎉</b></span>' : '<span><b>' + (t.slots - t.got) + '</b> slots restantes</span>') + '</div>' +
       infoHtml();
-    $('#fn-setbtn-emoji').textContent = cat.emoji || '🃏';
+    $('#fn-setbtn-emoji').innerHTML = setIco(st.set, cat.emoji);
     $('#fn-setbtn-code').textContent = label.split('—')[0].trim();
     $('#fn-setbtn-name').textContent = nameOnly;
   }
@@ -1828,7 +1834,7 @@
         var p = progOf(s.id); if (p) { got += p.got; tot += p.tot; }
         var nm = (s.label || '').split('—').slice(1).join('—').trim() || s.label, code = (s.label || '').split('—')[0].trim();
         return '<button type="button" class="fn-set' + (s.id === setKey(st.set) ? ' is-cur' : '') + '" data-pick="' + esc(s.id) + '" data-find="' + esc((nm + ' ' + code).toLowerCase()) + '">' +
-          '<span class="em">' + esc(s.emoji || '🃏') + '</span><span class="tx"><b>' + esc(nm) + '</b><small>' + esc(code) + (s.upcoming ? ' · em breve' : '') + '</small>' +
+          '<span class="em has-ico">' + setIco(s.id, s.emoji) + '</span><span class="tx"><b>' + esc(nm) + '</b><small>' + esc(code) + (s.upcoming ? ' · em breve' : '') + '</small>' +
           (p ? '<div class="mini"><i style="width:' + p.pct + '%"></i></div>' : '') + '</span>' +
           '<span class="pc' + (p && p.pct ? '' : ' z') + '">' + (p ? p.pct + '%' : '—') + '</span></button>';
       }).join('');

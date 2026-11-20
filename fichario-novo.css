@@ -470,6 +470,12 @@ body.fn-home .fn-bar{display:none}
 .fn-hcard{position:relative;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;text-align:left;width:100%;padding:12px 12px 14px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);color:var(--text);cursor:pointer;font:inherit}
 .fn-hcard:hover{border-color:var(--accent)}
 .fn-hcard .em{font-size:24px;line-height:1}
+/* selo da coleção (substitui o emoji): altura fixa, largura natural, centralizado numa caixa que alinha com os outros ícones */
+.set-ico{display:block;height:24px;width:auto;max-width:44px;object-fit:contain}
+.em.has-ico{display:flex;align-items:center;justify-content:center;width:46px;flex:0 0 46px}
+.fn-set .em.has-ico{width:42px;flex-basis:42px}
+.fn-setbtn-emoji .set-ico{height:20px}
+.fn-setbtn-emoji:has(.set-ico){display:flex;align-items:center}
 .fn-hcard .tx{min-width:0;display:flex;flex-direction:column}
 .fn-hcard .tx b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fn-hcard .tx small{font-size:11.5px;color:var(--muted);line-height:1.3;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
