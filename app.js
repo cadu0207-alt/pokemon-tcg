@@ -1161,7 +1161,7 @@ async function toggleSlot(key){
 function applyThemeIcon(t){
   const icon=document.getElementById('theme-toggle-icon');
   const meta=document.querySelector('meta[name="theme-color"]');
-  if(icon) icon.textContent = t==='dark' ? '☀️' : '🌙';
+  if(icon) icon.innerHTML = (typeof MD_ICO==='function') ? MD_ICO(t==='dark' ? 'sun' : 'moon',{size:15}) : (t==='dark' ? '☀️' : '🌙');
   if(meta) meta.setAttribute('content', t==='dark' ? '#0d0f18' : '#f7f7fa');
 }
 function toggleTheme(){

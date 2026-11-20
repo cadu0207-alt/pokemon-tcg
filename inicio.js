@@ -37,7 +37,11 @@
 // novas em pokemon_news — rodar depois do setup original).
 // ================================================================
 
-const INICIO_MEDIA_LABEL = { image: '🖼 imagem', video: '🎥 vídeo', none: '' };
+const INICIO_MEDIA_LABEL = { image: 'imagem', video: 'vídeo', none: '' };
+// Ícone SVG padrão do site (icones.js); sem o conjunto carregado devolve vazio.
+const inicioIco = (n, sz) => (typeof MD_ICO === 'function' ? MD_ICO(n, { size: sz || 16 }) : '');
+// Títulos cadastrados no painel podem começar com emoji (ex.: "🔔 Avisos do Leilão"): o site não mostra mais emoji de enfeite.
+const inicioClean = (t) => String(t == null ? '' : t).replace(/^[\p{Extended_Pictographic}\uFE0F\u200D\s]+/u, '');
 
 // ── SEGURANÇA — escape de HTML (corrige XSS 24/08/2026) ────────────
 // Qualquer texto que veio do banco (usuário comum inclui: comentário;
@@ -205,9 +209,9 @@ function renderInicioWelcome(me) {
       '<div class="inicio-welcome-eyebrow">Bem-vindo ao MyDeck</div>' +
       '<h2 class="inicio-welcome-title">Sua coleção de Pokémon TCG organizada, com preço de verdade</h2>' +
       '<ul class="inicio-welcome-list">' +
-        '<li><span>📚</span><b>Fichário e master set</b> — marque cada carta e veja quanto falta para completar.</li>' +
-        '<li><span>📊</span><b>Dashboard e gastos</b> — quanto vale a coleção e quanto você já investiu.</li>' +
-        '<li><span>💰</span><b>Preço justo</b> — compare o preço de uma carta antes de comprar ou vender.</li>' +
+        '<li><span>' + inicioIco('book', 18) + '</span><b>Fichário e master set</b> — marque cada carta e veja quanto falta para completar.</li>' +
+        '<li><span>' + inicioIco('chart', 18) + '</span><b>Dashboard e gastos</b> — quanto vale a coleção e quanto você já investiu.</li>' +
+        '<li><span>' + inicioIco('coins', 18) + '</span><b>Preço justo</b> — compare o preço de uma carta antes de comprar ou vender.</li>' +
       '</ul>' +
       '<div class="inicio-welcome-actions">' +
         '<button type="button" class="inicio-welcome-cta" onclick="inicioWelcomeAuth(\'signup\')">Criar minha conta</button>' +
@@ -252,7 +256,7 @@ async function renderInicioHero() {
   holder.innerHTML =
     '<div class="inicio-hero">' +
       '<div class="inicio-hero-eyebrow">' + inicioEsc(a.tag || 'Destaque') + ' · Revista MyDeck</div>' +
-      '<h2 class="inicio-hero-title">' + inicioEsc(a.title) + '</h2>' +
+      '<h2 class="inicio-hero-title">' + inicioEsc(inicioClean(a.title)) + '</h2>' +
       (a.subtitle ? '<div class="inicio-hero-sub">' + inicioEsc(a.subtitle) + '</div>' : '') +
       '<div class="inicio-hero-meta">' + dt + '</div>' +
     '</div>';
@@ -283,7 +287,7 @@ async function loadInicioUpdates() {
     const dt = inicioDateLabel(u.created_at);
     return (
       '<div class="inicio-update-card">' +
-        '<div class="inicio-update-title">🆕 ' + inicioEsc(u.title) + '</div>' +
+        '<div class="inicio-update-title">' + inicioEsc(inicioClean(u.title)) + '</div>' +
         '<div class="inicio-update-date">' + dt + '</div>' +
       '</div>'
     );
@@ -463,7 +467,7 @@ function inicioFeedNewsCard(n) {
     ? '<img class="inicio-news-media" src="' + inicioSafeUrl(n.media_url) + '" alt="' + inicioEsc(n.title || '') + '" ' + inicioImgLoadAttrs() + ' decoding="async">'
     : '';
   const commentN = INICIO_FEED_COMMENT_COUNTS[n.id] || 0;
-  const title = n.title ? inicioEsc(n.title) : inicioEsc(inicioTruncate(n.body, 70));
+  const title = n.title ? inicioEsc(inicioClean(n.title)) : inicioEsc(inicioTruncate(n.body, 70));
 
   // 25/08/2026 (pedido do Eduardo — "deixar mais texto ... leia mais com
   // botão discreto"): antes cortava em 110 caracteres sem jeito de ler o
@@ -494,7 +498,7 @@ function inicioFeedNewsCard(n) {
       snippetBlock +
       '<div class="inicio-news-foot">' +
         '<span class="inicio-news-date"' + inicioDateTitle(n.published_at) + '>' + dt + '</span>' +
-        '<span class="inicio-news-comment-toggle">💬 ' + commentN + ' comentário' + (commentN === 1 ? '' : 's') + '</span>' +
+        '<span class="inicio-news-comment-toggle">' + inicioIco('message', 14) + ' ' + commentN + ' comentário' + (commentN === 1 ? '' : 's') + '</span>' +
       '</div>' +
     '</div>'
   );
@@ -539,7 +543,7 @@ function inicioFeedLinkCard(l) {
   const dt = inicioDateLabel(l.created_at);
   return (
     '<a class="inicio-feed-link-card" href="' + inicioSafeUrl(l.url) + '" target="_blank" rel="noopener">' +
-      '<span class="inicio-chip-ic">' + inicioEsc(l.icon || '🔗') + '</span>' +
+      '<span class="inicio-chip-ic">' + (l.icon ? inicioEsc(l.icon) : inicioIco('link', 16)) + '</span>' +
       '<span class="inicio-feed-link-main">' +
         '<span class="inicio-feed-link-title">' + inicioEsc(l.title) + '</span>' +
         (l.category ? '<span class="inicio-feed-link-cat">' + inicioEsc(l.category) + '</span>' : '') +
@@ -553,8 +557,8 @@ function inicioFeedArticleCard(a) {
   const dt = inicioDateLabel(a.published_at);
   return (
     '<div class="inicio-article-row inicio-feed-article-card' + (a.is_featured ? ' inicio-article-featured' : '') + '">' +
-      '<div class="inicio-article-tag">📖 ' + inicioEsc(a.tag || 'Revista') + (a.is_featured ? ' · Capa' : '') + '</div>' +
-      '<div class="inicio-article-title">' + inicioEsc(a.title) + '</div>' +
+      '<div class="inicio-article-tag">' + inicioEsc(a.tag || 'Revista') + (a.is_featured ? ' · Capa' : '') + '</div>' +
+      '<div class="inicio-article-title">' + inicioEsc(inicioClean(a.title)) + '</div>' +
       (a.subtitle ? '<div class="inicio-article-sub">' + inicioEsc(a.subtitle) + '</div>' : '') +
       '<div class="inicio-article-date">' + dt + '</div>' +
     '</div>'
@@ -572,7 +576,7 @@ async function inicioRefreshNewsCommentCount(newsId) {
   } catch (e) { return; }
   INICIO_FEED_COMMENT_COUNTS[newsId] = n;
   const el = document.querySelector('.inicio-news-card[data-news-id="' + newsId + '"] .inicio-news-comment-toggle');
-  if (el) el.textContent = '💬 ' + n + ' comentário' + (n === 1 ? '' : 's');
+  if (el) el.innerHTML = inicioIco('message', 14) + ' ' + n + ' comentário' + (n === 1 ? '' : 's');
 }
 
 // ── MODAL DE MATÉRIA — leitura completa + comentários ───────────────
@@ -601,13 +605,13 @@ async function openInicioArticle(newsId) {
     '<div class="inicio-modal-backdrop" onclick="closeInicioArticle()"></div>' +
     '<div class="inicio-modal-card" role="dialog" aria-modal="true">' +
       '<button type="button" class="inicio-modal-close" onclick="closeInicioArticle()" title="Fechar" aria-label="Fechar">✕</button>' +
-      '<div class="inicio-article-tag-row">📰 Notícia do Mundo Pokémon · ' + dt + '</div>' +
-      '<h2 class="inicio-article-full-title">' + inicioEsc(n.title || 'Notícia') + '</h2>' +
+      '<div class="inicio-article-tag-row">Notícia do Mundo Pokémon · ' + dt + '</div>' +
+      '<h2 class="inicio-article-full-title">' + inicioEsc(inicioClean(n.title) || 'Notícia') + '</h2>' +
       (n.subtitle ? '<div class="inicio-article-full-sub">' + inicioEsc(n.subtitle) + '</div>' : '') +
       (mediaBlock ? '<div class="inicio-article-media-wrap">' + mediaBlock + '</div>' : '') +
       '<div class="inicio-article-full-body">' + inicioEscML(n.body) + '</div>' +
       '<div class="inicio-comments-section">' +
-        '<div class="inicio-comments-heading">💬 Comentários</div>' +
+        '<div class="inicio-comments-heading">' + inicioIco('message', 16) + ' Comentários</div>' +
         '<div class="inicio-comments" id="inicio-comments-' + n.id + '"></div>' +
       '</div>' +
     '</div>';
