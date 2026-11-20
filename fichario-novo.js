@@ -18,10 +18,17 @@
     if (b && b.filter_config && b.filter_config.favorites === true) n = 'star';
     else if (t === 'artist') n = 'palette';
     else if (t === 'pokemon') n = 'pokeball';
-    else if (t === 'masterdex') n = isRegionalDexBinder(b) ? 'map' : 'globe';
+    else if (t === 'masterdex') n = 'pokedex';
     else if (t === 'preset') n = 'crown';
     else n = 'book';
     return MD_ICO(n, { size: size || 20 });
+  }
+  // Fichário de um Pokémon: com o Pokémon já escolhido mostra a miniatura dele (arte oficial); sem escolha, pokébola.
+  function pkIco(b, size) {
+    var d = b && b.filter_config && b.filter_config.dex;
+    if (!d) return MD_ICO('pokeball', { size: size });
+    var s = Math.round(size * 1.3);
+    return '<img class="ico pk-ico" width="' + s + '" height="' + s + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" alt="" src="' + esc(dexArt(d)) + '"' + (d > 151 ? ' onerror="__fnArtFb(this,' + d + ')"' : '') + '>';
   }
   var isIcoHtml = function (x) { return /^<(img|svg)/.test(x); };
   function setIco(id, fallback) {
@@ -418,7 +425,7 @@
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats">' + (b ? '<span><b>' + own + '</b>/' + t + ' espécies</span><span>Com carta escolhida <b>' + chosen + '</b></span>' + (totSlots ? '<span>Slots coletados <b>' + gotSlots + '</b>/' + totSlots + '</span>' : '') + (empty ? '<span>Vagas sem carta <b>' + empty + '</b></span>' : '') : '<span>' + (loggedIn() || DEMO ? 'Carregando a sua Pokédex…' : 'Entre no MyDeck para carregar a sua Pokédex.') + '</span>') + '</div>' +
       (b ? '<div class="fn-hero-links"><a href="#" data-act="dexaskdelete" data-bid="' + esc(b.id) + '">' + delLbl + '</a></div>' : '');
-    $('#fn-setbtn-emoji').innerHTML = b ? bIco(b, 22, 'masterdex') : MD_ICO('globe', { size: 22 }); $('#fn-setbtn-code').textContent = 'Pokédex'; $('#fn-setbtn-name').textContent = name;
+    $('#fn-setbtn-emoji').innerHTML = b ? bIco(b, 22, 'masterdex') : MD_ICO('pokedex', { size: 22 }); $('#fn-setbtn-code').textContent = 'Pokédex'; $('#fn-setbtn-name').textContent = name;
   }
 
   function dexTreeHtml() {
@@ -444,7 +451,7 @@
       });
     } else {
       rows.push('<button type="button" class="fn-set" data-act="dexcreate" data-kind="nat" data-find="master set nacional 1025 pokedex">' +
-        '<span class="em">' + MD_ICO('globe', { size: 18 }) + '</span><span class="tx"><b>Master Set Nacional (#1–1025)</b><small>Nacional · 1025 espécies</small></span><span class="pc z">0%</span></button>');
+        '<span class="em">' + MD_ICO('pokedex', { size: 18 }) + '</span><span class="tx"><b>Master Set Nacional (#1–1025)</b><small>Nacional · 1025 espécies</small></span><span class="pc z">0%</span></button>');
     }
 
     bs.filter(function (b) { return !isNat(b); }).forEach(function (b) {
@@ -489,7 +496,7 @@
         : '';
       return '<div class="fn-dp-item' + (o.done ? ' is-on' : '') + '">' +
         '<button type="button" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;flex:1" data-act="dexcreate" data-kind="' + o.k + '"' + (o.done ? ' disabled' : '') + '>' +
-        '<span class="em" style="width:30px;text-align:center">' + MD_ICO(o.k === 'nat' ? 'globe' : 'map', { size: 20 }) + '</span>' +
+        '<span class="em" style="width:30px;text-align:center">' + MD_ICO('pokedex', { size: 20 }) + '</span>' +
         '<span class="tx"><b>' + esc(o.t) + '</b><small>' + (o.done ? 'Você já tem esta Pokédex' : esc(o.s)) + '</small></span>' +
         '</button>' + delBtn + '</div>';
     }).join('') + '</div>', 'Criar Pokédex');
@@ -769,7 +776,7 @@
     }).join('');
     rows += pks.map(function (b) {
       var p = pkProg(b), nm = plainName(b.name) || 'Sem nome';
-      return '<button type="button" class="fn-set' + ('pk:' + b.id === st.set ? ' is-cur' : '') + '" data-pick="pk:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' pokemon fichario personalizados ' + ((b.filter_config || {}).name || ''))) + '"><span class="em">' + MD_ICO('pokeball', { size: 18 }) + '</span><span class="tx"><b>' + esc(nm) + '</b><small>' + p.filled + ' carta' + (p.filled === 1 ? '' : 's') + ' · Pokémon</small><div class="mini"><i style="width:' + p.pct + '%"></i></div></span><span class="pc' + (p.pct ? '' : ' z') + '">' + p.pct + '%</span></button>';
+      return '<button type="button" class="fn-set' + ('pk:' + b.id === st.set ? ' is-cur' : '') + '" data-pick="pk:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' pokemon fichario personalizados ' + ((b.filter_config || {}).name || ''))) + '"><span class="em">' + pkIco(b, 18) + '</span><span class="tx"><b>' + esc(nm) + '</b><small>' + p.filled + ' carta' + (p.filled === 1 ? '' : 's') + ' · Pokémon</small><div class="mini"><i style="width:' + p.pct + '%"></i></div></span><span class="pc' + (p.pct ? '' : ' z') + '">' + p.pct + '%</span></button>';
     }).join('');
     rows += '<button type="button" class="fn-set" data-act="cbnew" data-find="novo fichário criar personalizado"><span class="em">' + MD_ICO('plus', { size: 18 }) + '</span><span class="tx"><b>Novo fichário</b><small>Personalizado ou sugestão temática</small></span></button>';
     return '<section class="fn-blk' + (isOpen ? ' is-open' : '') + '" data-blk-id="__cb">' +
@@ -831,7 +838,7 @@
       var p = cbProg(b), nm = plainName(b.name) || 'Sem nome';
       tiles += homeTile('cb:' + b.id, bIco(b, 24), nm, p.cards + ' carta' + (p.cards === 1 ? '' : 's') + ' · ' + cbKind(b), p.pct);
     });
-    pkBinders().forEach(function (b) { var p = pkProg(b), nm = plainName(b.name) || 'Sem nome'; tiles += homeTile('pk:' + b.id, MD_ICO('pokeball', { size: 24 }), nm, p.filled + ' carta' + (p.filled === 1 ? '' : 's') + ' · Pokémon', p.pct); });
+    pkBinders().forEach(function (b) { var p = pkProg(b), nm = plainName(b.name) || 'Sem nome'; tiles += homeTile('pk:' + b.id, pkIco(b, 24), nm, p.filled + ' carta' + (p.filled === 1 ? '' : 's') + ' · Pokémon', p.pct); });
     dexBinders().forEach(function (b) { var p = dexProg(b), nm = b.name.replace(/^[^\wÀ-ú(]+/, ''); tiles += homeTile('dex:' + b.id, bIco(b, 24, 'masterdex'), nm, 'Pokédex · ' + p.got + '/' + p.tot, p.pct); });
     artBinders().forEach(function (b) { var p = cbProg(b), nm = plainName(b.name) || 'Artista'; tiles += homeTile('cb:' + b.id, bIco(b, 24, 'artist'), nm, p.cards + ' carta' + (p.cards === 1 ? '' : 's') + ' · Artista', p.pct); });
     if (!fav) tiles += '<div class="fn-hcard is-hint"><span class="em">⭐</span><span class="tx"><b>Favoritos</b><small>Abra uma carta e toque em “Favoritar”: o fichário Favoritos aparece aqui.</small></span></div>';
@@ -1171,11 +1178,11 @@
     var b = cur.binder;
     if (!b) { $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>Fichário de Pokémon</h1><p class="fn-hero-sub">' + (loggedIn() || DEMO ? 'Carregando…' : 'Entre no MyDeck para ver os seus fichários.') + '</p></div></div>'; $('#fn-setbtn-emoji').innerHTML = MD_ICO('pokeball', { size: 22 }); $('#fn-setbtn-code').textContent = 'Pokémon'; $('#fn-setbtn-name').textContent = 'Personalizados'; return; }
     var r = cur.pk, pages = pkPages(b), per = pages[0].length, total = pages.length * per, pct = r.filled ? Math.round(r.got / r.filled * 100) : 0, sp = (b.filter_config || {}).name;
-    $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1><span class="h-ico">' + MD_ICO('pokeball', { size: 26 }) + '</span>' + esc(plainName(b.name) || 'Sem nome') + '</h1><p class="fn-hero-sub">Fichário de Pokémon' + (sp ? ' · ' + esc(sp) : '') + ' · ' + pages.length + ' página' + (pages.length === 1 ? '' : 's') + ' de ' + binderSizeLabel(b.layout || 3) + '</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
+    $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1><span class="h-ico">' + pkIco(b, 26) + '</span>' + esc(plainName(b.name) || 'Sem nome') + '</h1><p class="fn-hero-sub">Fichário de Pokémon' + (sp ? ' · ' + esc(sp) : '') + ' · ' + pages.length + ' página' + (pages.length === 1 ? '' : 's') + ' de ' + binderSizeLabel(b.layout || 3) + '</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
       '<div class="fn-progress"><i style="width:' + pct + '%"></i></div><div class="fn-stats"><span><b>' + r.got + '</b>/' + r.filled + ' cartas colocadas que você tem</span><span>Vagas preenchidas <b>' + r.filled + '</b>/' + total + '</span></div>' +
       '<div class="fn-hero-links"><a href="#" data-act="pkedit">' + (pkEdit ? '✔ Terminar edição' : '✏️ Editar posições') + '</a><a href="#" data-act="cbedit">⚙️ Nome / excluir</a></div>' +
       (pkEdit ? '<div class="fn-warn" style="margin-top:10px">Modo edição: toque numa vaga vazia para escolher a carta, ou numa carta para trocá-la ou tirá-la. Tudo é salvo na hora.</div>' : '');
-    $('#fn-setbtn-emoji').innerHTML = MD_ICO('pokeball', { size: 22 }); $('#fn-setbtn-code').textContent = 'Pokémon'; $('#fn-setbtn-name').textContent = plainName(b.name) || 'Pokémon';
+    $('#fn-setbtn-emoji').innerHTML = pkIco(b, 22); $('#fn-setbtn-code').textContent = 'Pokémon'; $('#fn-setbtn-name').textContent = plainName(b.name) || 'Pokémon';
   }
   function renderPk() {
     var b = cur.binder; if (!b) return '<div class="fn-empty">' + (loggedIn() || DEMO ? 'Carregando o seu fichário…' : 'Entre no MyDeck para ver o seu fichário.') + '</div>';
@@ -1247,7 +1254,7 @@
   }
   async function pkPickSpecies(dex, name) {
     var b = cur.binder; if (!b) return; pkSpecies = false;
-    if (Number((b.filter_config || {}).dex) !== Number(dex)) { var ok = await pkSavePages(pkPages(b), { filter_config: Object.assign({}, b.filter_config, { dex: dex, name: name }) }); if (!ok) return; loadCur(); renderHero(); }
+    if (Number((b.filter_config || {}).dex) !== Number(dex)) { var ok = await pkSavePages(pkPages(b), { filter_config: Object.assign({}, b.filter_config, { dex: dex, name: name }) }); if (!ok) return; loadCur(); renderHero(); renderSide(); }
     openPkPicker();
   }
   async function pkPlace(set, n, ver) {

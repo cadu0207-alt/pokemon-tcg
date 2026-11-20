@@ -476,6 +476,9 @@ body.fn-home .fn-bar{display:none}
 .fn-set .em .ico,.fn-hcard .em .ico,.fn-dp-item .em .ico{margin:0 auto;color:var(--text2)}
 .fn-hcard .em:has(.ico){width:44px;height:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:var(--surface2)}
 .fn-setbtn-emoji .ico{color:var(--text2)}
+/* miniatura do Pokémon escolhido (colorida de propósito): cabe na mesma caixa dos outros ícones */
+img.pk-ico{object-fit:contain;color:transparent}
+.fn-hero h1 .h-ico img.pk-ico{margin-top:-6px}
 .fn-hero h1 .h-ico{display:inline-flex;vertical-align:-4px;margin-right:10px;color:var(--text2)}
 .fn-hero h1 .h-ico .ico{display:block}
 .set-ico{display:block;height:24px;width:auto;max-width:44px;object-fit:contain}

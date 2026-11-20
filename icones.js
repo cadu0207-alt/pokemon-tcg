@@ -13,6 +13,7 @@
     folder: '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9L9.6 3.9A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"/>',
     book: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
     pin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/>',
+    pokedex: '<rect x="4" y="2" width="16" height="20" rx="3"/><rect x="7.5" y="5.5" width="9" height="6.5" rx="1"/><circle cx="8.5" cy="17" r="1.5"/><path d="M13 16.2h4"/><path d="M13 18.8h2.5"/>',
     pokeball: '<circle cx="12" cy="12" r="10"/><path d="M2 12h6.5"/><path d="M15.5 12H22"/><circle cx="12" cy="12" r="3.5"/>',
     plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
