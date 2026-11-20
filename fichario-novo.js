@@ -30,6 +30,7 @@
     var s = Math.round(size * 1.3);
     return '<img class="ico pk-ico" width="' + s + '" height="' + s + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" alt="" src="' + esc(dexArt(d)) + '"' + (d > 151 ? ' onerror="__fnArtFb(this,' + d + ')"' : '') + '>';
   }
+  var I = function (n, sz, o) { return MD_ICO(n, Object.assign({ size: sz || 16 }, o || {})); };
   var isIcoHtml = function (x) { return /^<(img|svg)/.test(x); };
   function setIco(id, fallback) {
     var k = setKey(id); var ok = k === 'cel30' || (typeof LMT_CODES !== 'undefined' && LMT_CODES[k]);
@@ -259,7 +260,7 @@
     var html = '<div class="fn-form">' +
       '<div class="fn-warn"><b>' + esc(kind) + ':</b> ' + esc(name) + '<br><small>' + esc(note) + '</small></div>' +
       '<p class="fn-note">Tem certeza de que deseja excluir este fichário? Essa ação não pode ser desfeita.</p>' +
-      '<button type="button" class="fn-btn is-alt" data-act="' + esc(confirmAct) + '"' + bidAttr + '>🗑 Confirmar exclusão</button>' +
+      '<button type="button" class="fn-btn is-alt" data-act="' + esc(confirmAct) + '"' + bidAttr + '>' + I('trash', 14) + ' Confirmar exclusão</button>' +
       '<button type="button" class="fn-btn" data-close>Cancelar</button>' +
       '</div>';
     openSheet(html, title);
@@ -420,7 +421,7 @@
     var pct = t ? Math.round(Math.max((own / t) * 100, chosen > 0 ? (own / chosen) * (chosen / t) * 100 : 0)) : 0;
     if (own > 0 && pct === 0) pct = 1;
     var name = b ? b.name.replace(/^[^\wÀ-ú(]+/, '') : 'Pokédex';
-    var delLbl = b && isRegionalDexBinder(b) ? '🗑 Excluir região' : '🗑 Excluir Pokédex';
+    var delLbl = b && isRegionalDexBinder(b) ? I('trash') + ' Excluir região' : I('trash') + ' Excluir Pokédex';
     $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>' + esc(name) + '</h1><p class="fn-hero-sub">Pokédex · ' + t + ' espécies · progresso isolado desta Pokédex</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats">' + (b ? '<span><b>' + own + '</b>/' + t + ' espécies</span><span>Com carta escolhida <b>' + chosen + '</b></span>' + (totSlots ? '<span>Slots coletados <b>' + gotSlots + '</b>/' + totSlots + '</span>' : '') + (empty ? '<span>Vagas sem carta <b>' + empty + '</b></span>' : '') : '<span>' + (loggedIn() || DEMO ? 'Carregando a sua Pokédex…' : 'Entre no MyDeck para carregar a sua Pokédex.') + '</span>') + '</div>' +
@@ -492,7 +493,7 @@
     });
     openSheet('<p class="fn-note">Cada vaga começa com a arte do Pokémon. Você escolhe a carta que quer em cada uma.</p><div class="fn-acts">' + opts.map(function (o) {
       var delBtn = o.existing
-        ? '<button type="button" class="fn-ver" data-act="dexaskdelete" data-bid="' + esc(o.existing.id) + '" title="Excluir esta Pokédex">🗑 Excluir</button>'
+        ? '<button type="button" class="fn-ver" data-act="dexaskdelete" data-bid="' + esc(o.existing.id) + '" title="Excluir esta Pokédex">' + I('trash', 14) + ' Excluir</button>'
         : '';
       return '<div class="fn-dp-item' + (o.done ? ' is-on' : '') + '">' +
         '<button type="button" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;flex:1" data-act="dexcreate" data-kind="' + o.k + '"' + (o.done ? ' disabled' : '') + '>' +
@@ -646,7 +647,7 @@
     if (items.length > 120) html += '<div class="fn-empty">Mostrando 120 de ' + items.length + '. Refine a busca.</div>';
     box.innerHTML = html;
     var foot = $('#fn-dp-foot');
-    if (foot) foot.innerHTML = cur0 ? '<button type="button" class="fn-dp-clear" data-act="dexclear" data-dex="' + picker.dex + '">🗑️ deixar esta vaga vazia (volta para a imagem padrão)</button>' : '';
+    if (foot) foot.innerHTML = cur0 ? '<button type="button" class="fn-dp-clear" data-act="dexclear" data-dex="' + picker.dex + '">' + I('trash', 14) + ' deixar esta vaga vazia (volta para a imagem padrão)</button>' : '';
   }
   var dexBusy = false;
   async function dexAssign(d, set, n) {
@@ -813,9 +814,9 @@
     var t = totals(), pct = t.slots ? Math.round(t.got / t.slots * 100) : 0, nm = plainName(b.name) || 'Sem nome', nsets = (cur.d.sections || []).length, manual = cbType(b) === 'manual', isArtistBinder = cbType(b) === 'artist';
     $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1><span class="h-ico">' + bIco(b, 26) + '</span>' + esc(nm) + '</h1><p class="fn-hero-sub">' + esc(cbKind(b)) + ' · ' + t.cards + ' carta' + (t.cards === 1 ? '' : 's') + (nsets > 1 ? ' de ' + nsets + ' coleções' : '') + '</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
-      '<div class="fn-stats">' + (t.slots ? '<span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' + (t.got >= t.slots ? '<span><b style="color:var(--teal)">Fichário completo 🎉</b></span>' : '<span><b>' + (t.slots - t.got) + '</b> slots restantes</span>')
+      '<div class="fn-stats">' + (t.slots ? '<span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' + (t.got >= t.slots ? '<span><b style="color:var(--teal)">Fichário completo</b></span>' : '<span><b>' + (t.slots - t.got) + '</b> slots restantes</span>')
         : '<span>' + (manual ? (cur.pending ? 'Carregando as cartas…' : 'Este fichário ainda não tem cartas. Use “Adicionar cartas” ou o botão “Guardar em fichário” de qualquer carta.') : 'Nenhuma carta nas suas coleções ativas para esta sugestão.') + '</span>') + '</div>' +
-      '<div class="fn-hero-links">' + (manual ? '<a href="#" data-act="cbadd">➕ Adicionar cartas</a>' : '') + (isArtistBinder ? '<a href="#" data-act="artists">🎨 Outros artistas</a>' : '') + '<a href="#" data-act="cbedit">✏️ Editar fichário</a></div>';
+      '<div class="fn-hero-links">' + (manual ? '<a href="#" data-act="cbadd">' + I('plus', 14) + ' Adicionar cartas</a>' : '') + (isArtistBinder ? '<a href="#" data-act="artists">' + I('palette', 14) + ' Outros artistas</a>' : '') + '<a href="#" data-act="cbedit">' + I('pencil', 14) + ' Editar fichário</a></div>';
     $('#fn-setbtn-emoji').innerHTML = bIco(b, 22); $('#fn-setbtn-code').textContent = cbIsFav(b) ? 'Favoritos' : isArtistBinder ? 'Artista' : 'Personalizado'; $('#fn-setbtn-name').textContent = nm;
   }
 
@@ -841,7 +842,7 @@
     pkBinders().forEach(function (b) { var p = pkProg(b), nm = plainName(b.name) || 'Sem nome'; tiles += homeTile('pk:' + b.id, pkIco(b, 24), nm, p.filled + ' carta' + (p.filled === 1 ? '' : 's') + ' · Pokémon', p.pct); });
     dexBinders().forEach(function (b) { var p = dexProg(b), nm = b.name.replace(/^[^\wÀ-ú(]+/, ''); tiles += homeTile('dex:' + b.id, bIco(b, 24, 'masterdex'), nm, 'Pokédex · ' + p.got + '/' + p.tot, p.pct); });
     artBinders().forEach(function (b) { var p = cbProg(b), nm = plainName(b.name) || 'Artista'; tiles += homeTile('cb:' + b.id, bIco(b, 24, 'artist'), nm, p.cards + ' carta' + (p.cards === 1 ? '' : 's') + ' · Artista', p.pct); });
-    if (!fav) tiles += '<div class="fn-hcard is-hint"><span class="em">⭐</span><span class="tx"><b>Favoritos</b><small>Abra uma carta e toque em “Favoritar”: o fichário Favoritos aparece aqui.</small></span></div>';
+    if (!fav) tiles += '<div class="fn-hcard is-hint"><span class="em">' + I('star', 24) + '</span><span class="tx"><b>Favoritos</b><small>Abra uma carta e toque em “Favoritar”: o fichário Favoritos aparece aqui.</small></span></div>';
     out += '<h2 class="fn-home-h">Personalizados</h2><div class="fn-home-grid">' + tiles + '</div>';
     var sets = SET_CATALOG.map(function (x) { return { s: x, p: progOf(x.id) }; }).filter(function (o) { return o.p && o.p.pct > 0; }).sort(function (a, b) { return b.p.pct - a.p.pct; }).slice(0, 9);
     var started = sets.length > 0;
@@ -889,7 +890,7 @@
       var b = await favEnsure(); if (!b) throw new Error('sem fichário');
       var res = await cbToggleRef(b, sidOf(st.set, c), c.n);
       if (!res) { toast('Não consegui salvar o favorito. Tente de novo.'); return; }
-      toast(res === 'removed' ? 'Removida dos Favoritos.' : '⭐ Adicionada aos Favoritos.');
+      toast(res === 'removed' ? 'Removida dos Favoritos.' : 'Adicionada aos Favoritos.');
       dropMultiProg();
       if (isCb(st.set) && cbIsFav(cur.binder) && res === 'removed') { closeSheet(); refreshAfterCb(); } else { patchOne(ck(c)); renderSide(); }
     } catch (e) { console.error('[favoritos]', e); toast('Não consegui salvar o favorito. Tente de novo.'); }
@@ -903,7 +904,7 @@
       var on = hasRef(b, sid, c.n);
       return '<button type="button" class="fn-dp-item' + (on ? ' is-on' : '') + '" data-act="cbtoggle" data-bid="' + esc(b.id) + '" data-n="' + esc(ck(c)) + '"><span class="em" style="width:30px;text-align:center">' + bIco(b, 22) + '</span><span class="tx"><b>' + esc(plainName(b.name) || 'Sem nome') + (on ? ' ✓' : '') + '</b><small>' + (b.card_ids || []).length + ' carta' + ((b.card_ids || []).length === 1 ? '' : 's') + (on ? ' · toque para tirar' : ' · toque para guardar') + '</small></span></button>';
     }).join('');
-    rows += '<button type="button" class="fn-dp-item is-clear" data-act="cbnew" data-withn="' + esc(ck(c)) + '"><span class="tx"><b>➕ Novo fichário com esta carta</b><small>cria e já guarda</small></span></button>';
+    rows += '<button type="button" class="fn-dp-item is-clear" data-act="cbnew" data-withn="' + esc(ck(c)) + '"><span class="tx"><b>' + I('plus', 14) + ' Novo fichário com esta carta</b><small>cria e já guarda</small></span></button>';
     openSheet('<p class="fn-note">' + esc(i18n(c, st.set).name) + ' · #' + esc(c.n) + '</p><div class="fn-dp">' + rows + '</div>', 'Guardar em fichário');
   }
   async function cbToggleFromSheet(bid, n) {
@@ -924,7 +925,7 @@
       var done = have.some(function (b) { return cbType(b) === 'preset' && b.filter_config.key === p.key; }), n = 0; try { n = all.filter(p.filter).length; } catch (e) { }
       return '<button type="button" class="fn-act" data-act="cbpreset" data-key="' + esc(p.key) + '"' + (done ? ' disabled' : '') + '><span class="em">' + esc(p.emoji) + '</span><span><b>' + esc(p.name) + '</b><small>' + (done ? 'Você já tem este fichário' : esc(p.desc) + ' · ' + n + ' cartas') + '</small></span></button>';
     }).join('');
-    openSheet((withN ? '' : '<div class="fn-acts"><button type="button" class="fn-act" data-act="pknew"><span class="em">📍</span><span><b>Fichário de um Pokémon</b><small>Cada carta na posição que você escolher, página a página</small></span></button></div><h3 class="fn-sub-h">Ou um fichário comum</h3>') + '<div class="fn-form"><label>Nome<input type="text" id="fn-cb-name" maxlength="40" placeholder="Ex.: Meus Pikachus" autocomplete="off"></label>' +
+    openSheet((withN ? '' : '<div class="fn-acts"><button type="button" class="fn-act" data-act="pknew"><span class="em">' + I('pokeball', 20) + '</span><span><b>Fichário de um Pokémon</b><small>Cada carta na posição que você escolher, página a página</small></span></button></div><h3 class="fn-sub-h">Ou um fichário comum</h3>') + '<div class="fn-form"><label>Nome<input type="text" id="fn-cb-name" maxlength="40" placeholder="Ex.: Meus Pikachus" autocomplete="off"></label>' +
       '<div class="fn-row"><label>Cor<input type="color" id="fn-cb-color" value="#a855f7"></label></div>' +
       '<button type="button" class="fn-btn" data-act="cbcreate"' + (withN ? ' data-withn="' + esc(withN) + '"' : '') + '>Criar fichário vazio</button>' +
       '<p class="fn-note">Depois é só guardar as cartas nele: toque em uma carta e escolha “Guardar em fichário”, ou use “Adicionar cartas”.</p></div>' +
@@ -953,7 +954,7 @@
     openSheet('<div class="fn-form"><label>Nome<input type="text" id="fn-cb-name" maxlength="40" value="' + esc(plainName(b.name)) + '" autocomplete="off"></label>' +
       '<div class="fn-row"><label>Cor<input type="color" id="fn-cb-color" value="' + esc(/^#[0-9a-f]{6}$/i.test(b.cover_color || '') ? b.cover_color : '#a855f7') + '"></label></div>' +
       (cbIsFav(b) ? '<p class="fn-note">⭐ Favoritos junta as favoritas de todas as coleções. Você pode renomear à vontade.</p>' : '') +
-      '<button type="button" class="fn-btn" data-act="cbsave">Salvar</button><button type="button" class="fn-btn is-alt" data-act="cbaskdelete">🗑 Excluir fichário</button></div>', 'Editar fichário');
+      '<button type="button" class="fn-btn" data-act="cbsave">Salvar</button><button type="button" class="fn-btn is-alt" data-act="cbaskdelete">' + I('trash', 14) + ' Excluir fichário</button></div>', 'Editar fichário');
   }
   async function cbSaveEdit() {
     var b = cur.binder; if (!b || cbBusy) return;
@@ -1059,7 +1060,7 @@
     box.innerHTML = items.slice(0, 80).map(function (a) {
       var pc = a.total ? Math.round(a.owned / a.total * 100) : 0, ex = have.filter(function (b) { return b.filter_config && b.filter_config.artist === a.name; })[0];
       return '<div class="fn-dp-item"><span class="tx"><b>' + esc(a.name) + '</b><small>' + a.owned + ' de ' + a.total + ' cartas · ' + pc + '%</small></span>' +
-        '<button type="button" class="fn-ver' + (ex ? ' is-on' : '') + '" data-act="artbinder" data-artist="' + esc(a.name) + '">' + (ex ? '📂 Abrir' : '+ Fichário') + '</button></div>';
+        '<button type="button" class="fn-ver' + (ex ? ' is-on' : '') + '" data-act="artbinder" data-artist="' + esc(a.name) + '">' + (ex ? 'Abrir' : '+ Fichário') + '</button></div>';
     }).join('') + (items.length > 80 ? '<div class="fn-empty">Mostrando 80 de ' + items.length + '. Use a busca.</div>' : '');
   }
   async function artistBinder(name) {
@@ -1105,7 +1106,7 @@
   function infoHtml() {
     if (isCb(st.set) || isDex(st.set)) return '';
     var id = setKey(st.set), bits = [];
-    try { if (typeof formatPriceUpdatedAt === 'function' && typeof PRICE_UPDATED_AT !== 'undefined' && Object.prototype.hasOwnProperty.call(PRICE_UPDATED_AT, id)) bits.push('🗓️ preços atualizados ' + esc(formatPriceUpdatedAt(id))); } catch (e) { }
+    try { if (typeof formatPriceUpdatedAt === 'function' && typeof PRICE_UPDATED_AT !== 'undefined' && Object.prototype.hasOwnProperty.call(PRICE_UPDATED_AT, id)) bits.push('Preços atualizados ' + esc(formatPriceUpdatedAt(id))); } catch (e) { }
     return bits.length ? '<div class="fn-stats fn-bridge" style="margin-top:6px">' + bits.map(function (b) { return '<span>' + b + '</span>'; }).join('') + '</div>' : '';
   }
   // Pokédex: preenche só as vagas vazias
@@ -1180,7 +1181,7 @@
     var r = cur.pk, pages = pkPages(b), per = pages[0].length, total = pages.length * per, pct = r.filled ? Math.round(r.got / r.filled * 100) : 0, sp = (b.filter_config || {}).name;
     $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1><span class="h-ico">' + pkIco(b, 26) + '</span>' + esc(plainName(b.name) || 'Sem nome') + '</h1><p class="fn-hero-sub">Fichário de Pokémon' + (sp ? ' · ' + esc(sp) : '') + ' · ' + pages.length + ' página' + (pages.length === 1 ? '' : 's') + ' de ' + binderSizeLabel(b.layout || 3) + '</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
       '<div class="fn-progress"><i style="width:' + pct + '%"></i></div><div class="fn-stats"><span><b>' + r.got + '</b>/' + r.filled + ' cartas colocadas que você tem</span><span>Vagas preenchidas <b>' + r.filled + '</b>/' + total + '</span></div>' +
-      '<div class="fn-hero-links"><a href="#" data-act="pkedit">' + (pkEdit ? '✔ Terminar edição' : '✏️ Editar posições') + '</a><a href="#" data-act="cbedit">⚙️ Nome / excluir</a></div>' +
+      '<div class="fn-hero-links"><a href="#" data-act="pkedit">' + (pkEdit ? I('check') + ' Terminar edição' : I('pencil') + ' Editar posições') + '</a><a href="#" data-act="cbedit">' + I('settings', 14) + ' Nome / excluir</a></div>' +
       (pkEdit ? '<div class="fn-warn" style="margin-top:10px">Modo edição: toque numa vaga vazia para escolher a carta, ou numa carta para trocá-la ou tirá-la. Tudo é salvo na hora.</div>' : '');
     $('#fn-setbtn-emoji').innerHTML = pkIco(b, 22); $('#fn-setbtn-code').textContent = 'Pokémon'; $('#fn-setbtn-name').textContent = plainName(b.name) || 'Pokémon';
   }
@@ -1199,7 +1200,7 @@
       }).join('') + '</div></div>';
     }
     var lbl = two ? 'Páginas ' + (p0 + 1) + (p0 + 2 <= np ? '–' + (p0 + 2) : '') + ' de ' + np : 'Página ' + (p0 + 1) + ' de ' + np;
-    return '<div class="fn-binder-nav"><button type="button" data-bnav="-1"' + (p0 <= 0 ? ' disabled' : '') + '>‹ Anterior</button><span class="fn-binder-pg">' + lbl + '</span><button type="button" data-bnav="1"' + (p0 + step >= np ? ' disabled' : '') + '>Próxima ›</button>' + (pkEdit ? '<button type="button" data-act="pkaddpage">➕ Página</button>' : '') + '</div>' +
+    return '<div class="fn-binder-nav"><button type="button" data-bnav="-1"' + (p0 <= 0 ? ' disabled' : '') + '>‹ Anterior</button><span class="fn-binder-pg">' + lbl + '</span><button type="button" data-bnav="1"' + (p0 + step >= np ? ' disabled' : '') + '>Próxima ›</button>' + (pkEdit ? '<button type="button" data-act="pkaddpage">' + I('plus', 14) + ' Página</button>' : '') + '</div>' +
       '<div class="fn-spread" style="--pr:' + d.rows + '">' + page(p0) + (two ? page(p0 + 1) : '') + '</div>';
   }
   async function pkSavePages(pages, extra) {
@@ -1220,9 +1221,9 @@
     if (!sl) { openPkPicker(); return; }
     var card = cur.pk.pages[pg][j] && cur.pk.pages[pg][j].c;
     openSheet('<p class="fn-note">' + esc(card ? i18n(card, '').name + ' · #' + card.n + ' · ' + sl.ver : 'Vaga ' + (j + 1)) + '</p><div class="fn-acts">' +
-      '<button type="button" class="fn-act" data-act="pkchange"><span class="em">🔁</span><span><b>Trocar a carta</b><small>Escolher outra carta ou versão para esta vaga</small></span></button>' +
-      '<button type="button" class="fn-act" data-act="pkremove"><span class="em">✖</span><span><b>Tirar da vaga</b><small>A vaga fica vazia (a sua marcação da carta não muda)</small></span></button>' +
-      (card ? '<button type="button" class="fn-act" data-open="' + esc(ck(card)) + '"><span class="em">🔎</span><span><b>Ver / marcar a carta</b><small>Quantidade, origem e versões</small></span></button>' : '') + '</div>', 'Vaga ' + (j + 1) + ' · página ' + (pg + 1));
+      '<button type="button" class="fn-act" data-act="pkchange"><span class="em">' + I('repeat', 20) + '</span><span><b>Trocar a carta</b><small>Escolher outra carta ou versão para esta vaga</small></span></button>' +
+      '<button type="button" class="fn-act" data-act="pkremove"><span class="em">' + I('x', 20) + '</span><span><b>Tirar da vaga</b><small>A vaga fica vazia (a sua marcação da carta não muda)</small></span></button>' +
+      (card ? '<button type="button" class="fn-act" data-open="' + esc(ck(card)) + '"><span class="em">' + I('search', 20) + '</span><span><b>Ver / marcar a carta</b><small>Quantidade, origem e versões</small></span></button>' : '') + '</div>', 'Vaga ' + (j + 1) + ' · página ' + (pg + 1));
   }
   function openPkPicker() {
     var b = cur.binder; if (!b || !pkTarget) return;
@@ -1360,7 +1361,7 @@
       '<button type="button" class="fn-img" data-open="' + esc(kId) + '" aria-label="Ver ' + esc(nm) + '">' +
       (c._dex ? '<span class="fn-dexn">#' + c._dex + '</span>' : '') +
       '<img loading="lazy" decoding="async" alt="' + esc(nm) + '" src="' + esc(imgSrc(cur.d, id, c)) + '">' +
-      (isFav(c) ? '<span class="fn-fav" title="Nos seus Favoritos" aria-hidden="true">⭐</span>' : '') +
+      (isFav(c) ? '<span class="fn-fav" title="Nos seus Favoritos" aria-hidden="true">' + I('star', 12, { fill: true }) + '</span>' : '') +
       '<span class="fn-tick" aria-hidden="true">' + (s.st === 'part' ? '½' : '✓') + '</span></button>' +
       '<div class="fn-meta"><span class="fn-name" title="' + esc(nm) + '">' + esc(nm) + '</span><span class="fn-price">' + esc(priceFmt(c, id)) + '</span></div>' +
       '<div class="fn-sub"><span>#' + esc(c.n) + '</span><span class="fn-rare ' + r + '">' + esc(rareLabel(c.rare)) + '</span></div>' +
@@ -1441,10 +1442,10 @@
     var kpi = function (cls, t, v, sub) { return '<div class="fn-kpi ' + cls + '"><small>' + t + '</small><b>' + esc(v) + '</b><span>' + esc(sub) + '</span></div>'; };
     var line = function (x) { return i18n(x.c, id).name + ' #' + x.c.n + ' · ' + x.v; };
     var html = '<div class="fn-dash"><div class="fn-kpis">' +
-      kpi('k-teal', '💰 Valor da coleção', money(own), ownN + ' slot' + (ownN === 1 ? '' : 's') + ' que você tem') +
-      kpi('k-gold', '📦 Valor total do set', money(tot), pv + '% do valor já é seu') +
-      (bestO ? kpi('k-blue', '⭐ Sua carta mais valiosa', money(bestO.p), line(bestO)) : '') +
-      (bestM ? kpi('k-red', '💸 Maior valor entre faltantes', money(bestM.p), line(bestM)) : '') + '</div>';
+      kpi('k-teal', 'Valor da coleção', money(own), ownN + ' slot' + (ownN === 1 ? '' : 's') + ' que você tem') +
+      kpi('k-gold', 'Valor total do set', money(tot), pv + '% do valor já é seu') +
+      (bestO ? kpi('k-blue', 'Sua carta mais valiosa', money(bestO.p), line(bestO)) : '') +
+      (bestM ? kpi('k-red', 'Maior valor entre faltantes', money(bestM.p), line(bestM)) : '') + '</div>';
     var rows = Object.keys(rar).map(function (k) { return { k: k, r: rar[k] }; }).sort(function (a, b) { return b.r.rank - a.r.rank; });
     html += '<h3>Por raridade</h3><div>' + rows.map(function (x) {
       var pc = x.r.tot ? Math.round(x.r.got / x.r.tot * 100) : 0;
@@ -1486,7 +1487,7 @@
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats"><span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' +
       (t.sT ? '<span>Base <b>' + t.bG + '</b>/' + t.bT + '</span><span>Secretas <b>' + t.sG + '</b>/' + t.sT + '</span>' : '') +
-      (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : t.got >= t.slots ? '<span><b style="color:var(--teal)">Coleção completa 🎉</b></span>' : '<span><b>' + (t.slots - t.got) + '</b> slots restantes</span>') + '</div>' +
+      (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : t.got >= t.slots ? '<span><b style="color:var(--teal)">Coleção completa</b></span>' : '<span><b>' + (t.slots - t.got) + '</b> slots restantes</span>') + '</div>' +
       infoHtml();
     $('#fn-setbtn-emoji').innerHTML = setIco(st.set, cat.emoji);
     $('#fn-setbtn-code').textContent = label.split('—')[0].trim();
@@ -1520,7 +1521,7 @@
     var can = st.view === 'binder' && innerWidth >= 700, on = can && st.focus;
     document.body.classList.toggle('fn-focus', on);
     var b = $('#fn-focus'); if (!b) return;
-    b.hidden = !can; b.classList.toggle('is-on', on); b.textContent = on ? '✕ Sair do foco' : '⛶ Foco';
+    b.hidden = !can; b.classList.toggle('is-on', on); b.innerHTML = on ? I('x') + ' Sair do foco' : I('maximize') + ' Foco';
   }
   function exitFocus() {
     st.focus = false;
@@ -1628,42 +1629,42 @@
       var nv = dexVisible().length;
       var isReg = cur.binder && isRegionalDexBinder(cur.binder);
       var dexDelBtn = cur.binder
-        ? '<button type="button" class="fn-act" data-act="dexaskdelete" data-bid="' + esc(cur.binder.id) + '"><span class="em">🗑</span><span><b>' + (isReg ? 'Excluir região' : 'Excluir Pokédex') + '</b><small>Remove esta Pokédex (as suas coleções normais e as cartas escolhidas não são apagadas)</small></span></button>'
+        ? '<button type="button" class="fn-act" data-act="dexaskdelete" data-bid="' + esc(cur.binder.id) + '"><span class="em">' + I('trash', 20) + '</span><span><b>' + (isReg ? 'Excluir região' : 'Excluir Pokédex') + '</b><small>Remove esta Pokédex (as suas coleções normais e as cartas escolhidas não são apagadas)</small></span></button>'
         : '';
       openSheet('<div class="fn-acts">' +
-        '<button type="button" class="fn-act" data-act="share"><span class="em">🔗</span><span><b>Compartilhar Pokédex</b><small>Link e QR code só para ver; as vagas que faltam aparecem com a arte do Pokémon</small></span></button>' +
-        '<button type="button" class="fn-act" data-act="copy"><span class="em">📋</span><span><b>Copiar lista (texto)</b><small>' + nv + ' espécie' + (nv === 1 ? '' : 's') + ' como estão na tela, com ✅ e ❌, pronto para colar no WhatsApp</small></span></button>' +
-        '<button type="button" class="fn-act" data-act="dexfill"><span class="em">✨</span><span><b>Preencher vagas vazias</b><small>Escolhe uma carta para cada vaga sem carta (a mais valiosa que você tem, ou a mais barata). Não mexe nas que você já escolheu</small></span></button>' +
+        '<button type="button" class="fn-act" data-act="share"><span class="em">' + I('link', 20) + '</span><span><b>Compartilhar Pokédex</b><small>Link e QR code só para ver; as vagas que faltam aparecem com a arte do Pokémon</small></span></button>' +
+        '<button type="button" class="fn-act" data-act="copy"><span class="em">' + I('clipboard', 20) + '</span><span><b>Copiar lista (texto)</b><small>' + nv + ' espécie' + (nv === 1 ? '' : 's') + ' como estão na tela, com ✅ e ❌, pronto para colar no WhatsApp</small></span></button>' +
+        '<button type="button" class="fn-act" data-act="dexfill"><span class="em">' + I('sparkles', 20) + '</span><span><b>Preencher vagas vazias</b><small>Escolhe uma carta para cada vaga sem carta (a mais valiosa que você tem, ou a mais barata). Não mexe nas que você já escolheu</small></span></button>' +
         dexDelBtn + extraTools() + '</div>', 'Ferramentas');
       return;
     }
     if (isPk(st.set)) {
-      openSheet('<div class="fn-acts"><button type="button" class="fn-act" data-act="pkedit"><span class="em">✏️</span><span><b>Editar posições</b><small>Escolher, trocar e tirar cartas das vagas, e adicionar páginas</small></span></button>' +
-        '<button type="button" class="fn-act" data-act="share"><span class="em">🔗</span><span><b>Compartilhar fichário</b><small>Gera um link (e QR code) só para ver, sem precisar de login</small></span></button>' +
-        '<button type="button" class="fn-act" data-act="cbedit"><span class="em">⚙️</span><span><b>Nome / excluir</b><small>Renomear ou excluir este fichário</small></span></button>' + extraTools() + '</div>', 'Ferramentas');
+      openSheet('<div class="fn-acts"><button type="button" class="fn-act" data-act="pkedit"><span class="em">' + I('pencil', 20) + '</span><span><b>Editar posições</b><small>Escolher, trocar e tirar cartas das vagas, e adicionar páginas</small></span></button>' +
+        '<button type="button" class="fn-act" data-act="share"><span class="em">' + I('link', 20) + '</span><span><b>Compartilhar fichário</b><small>Gera um link (e QR code) só para ver, sem precisar de login</small></span></button>' +
+        '<button type="button" class="fn-act" data-act="cbedit"><span class="em">' + I('settings', 20) + '</span><span><b>Nome / excluir</b><small>Renomear ou excluir este fichário</small></span></button>' + extraTools() + '</div>', 'Ferramentas');
       return;
     }
     if (isCb(st.set)) {
       var cbm = cur.binder && cbType(cur.binder) === 'manual';
       openSheet('<div class="fn-acts">' +
         (cbm ? '<button type="button" class="fn-act" data-act="cbadd"><span class="em">' + MD_ICO('plus', { size: 18 }) + '</span><span><b>Adicionar cartas</b><small>Busque no catálogo inteiro e guarde neste fichário</small></span></button>' : '') +
-        '<button type="button" class="fn-act" data-act="share"><span class="em">🔗</span><span><b>Compartilhar fichário</b><small>Gera um link (e QR code) só para ver, sem precisar de login</small></span></button>' +
-        '<button type="button" class="fn-act" data-act="copy"><span class="em">📋</span><span><b>Copiar lista (texto)</b><small>' + n + ' carta' + (n === 1 ? '' : 's') + ' como estão na tela, pronto para colar no WhatsApp</small></span></button>' +
-        '<button type="button" class="fn-act" data-act="print"><span class="em">🖨️</span><span><b>Imprimir PDF</b><small>Fichário em páginas, no tamanho escolhido</small></span></button>' +
-        '<button type="button" class="fn-act" data-act="bulk"><span class="em">✅</span><span><b>Marcar várias de uma vez</b><small>Marca como coletadas as cartas visíveis deste fichário</small></span></button>' +
-        '<button type="button" class="fn-act" data-act="cbedit"><span class="em">✏️</span><span><b>Editar fichário</b><small>Nome, cor ou excluir</small></span></button>' + extraTools() + '</div>', 'Ferramentas');
+        '<button type="button" class="fn-act" data-act="share"><span class="em">' + I('link', 20) + '</span><span><b>Compartilhar fichário</b><small>Gera um link (e QR code) só para ver, sem precisar de login</small></span></button>' +
+        '<button type="button" class="fn-act" data-act="copy"><span class="em">' + I('clipboard', 20) + '</span><span><b>Copiar lista (texto)</b><small>' + n + ' carta' + (n === 1 ? '' : 's') + ' como estão na tela, pronto para colar no WhatsApp</small></span></button>' +
+        '<button type="button" class="fn-act" data-act="print"><span class="em">' + I('printer', 20) + '</span><span><b>Imprimir PDF</b><small>Fichário em páginas, no tamanho escolhido</small></span></button>' +
+        '<button type="button" class="fn-act" data-act="bulk"><span class="em">' + I('check', 20) + '</span><span><b>Marcar várias de uma vez</b><small>Marca como coletadas as cartas visíveis deste fichário</small></span></button>' +
+        '<button type="button" class="fn-act" data-act="cbedit"><span class="em">' + I('pencil', 20) + '</span><span><b>Editar fichário</b><small>Nome, cor ou excluir</small></span></button>' + extraTools() + '</div>', 'Ferramentas');
       return;
     }
     openSheet('<div class="fn-acts">' +
-      '<button type="button" class="fn-act" data-act="share"><span class="em">🔗</span><span><b>Compartilhar coleção</b><small>Gera um link (e QR code) só para ver, sem precisar de login</small></span></button>' +
-      '<button type="button" class="fn-act" data-act="copy"><span class="em">📋</span><span><b>Copiar lista (texto)</b><small>' + n + ' carta' + (n === 1 ? '' : 's') + ' como estão na tela, pronto para colar no WhatsApp</small></span></button>' +
-      '<button type="button" class="fn-act" data-act="print"><span class="em">🖨️</span><span><b>Imprimir PDF</b><small>Fichário em páginas, no tamanho escolhido</small></span></button>' +
-      '<button type="button" class="fn-act" data-act="bulk"><span class="em">✅</span><span><b>Marcar várias de uma vez</b><small>Base set, secretas, tudo ou uma raridade: marca como coletadas as cartas visíveis (dá para desfazer)</small></span></button>' + extraTools() +
+      '<button type="button" class="fn-act" data-act="share"><span class="em">' + I('link', 20) + '</span><span><b>Compartilhar coleção</b><small>Gera um link (e QR code) só para ver, sem precisar de login</small></span></button>' +
+      '<button type="button" class="fn-act" data-act="copy"><span class="em">' + I('clipboard', 20) + '</span><span><b>Copiar lista (texto)</b><small>' + n + ' carta' + (n === 1 ? '' : 's') + ' como estão na tela, pronto para colar no WhatsApp</small></span></button>' +
+      '<button type="button" class="fn-act" data-act="print"><span class="em">' + I('printer', 20) + '</span><span><b>Imprimir PDF</b><small>Fichário em páginas, no tamanho escolhido</small></span></button>' +
+      '<button type="button" class="fn-act" data-act="bulk"><span class="em">' + I('check', 20) + '</span><span><b>Marcar várias de uma vez</b><small>Base set, secretas, tudo ou uma raridade: marca como coletadas as cartas visíveis (dá para desfazer)</small></span></button>' + extraTools() +
       '</div>', 'Ferramentas');
   }
   function extraTools() {
-    return '<button type="button" class="fn-act" data-act="progcard"><span class="em">🖼️</span><span><b>Cartão de progresso (imagem)</b><small>Uma imagem com a sua porcentagem, para mandar no grupo</small></span></button>' +
-      '<button type="button" class="fn-act" data-act="artists"><span class="em">🎨</span><span><b>Meus artistas</b><small>Quantas cartas você tem de cada ilustrador, e criar um fichário por artista</small></span></button>';
+    return '<button type="button" class="fn-act" data-act="progcard"><span class="em">' + I('image', 20) + '</span><span><b>Cartão de progresso (imagem)</b><small>Uma imagem com a sua porcentagem, para mandar no grupo</small></span></button>' +
+      '<button type="button" class="fn-act" data-act="artists"><span class="em">' + I('palette', 20) + '</span><span><b>Meus artistas</b><small>Quantas cartas você tem de cada ilustrador, e criar um fichário por artista</small></span></button>';
   }
   var shareUrl = '';
   function doShare() {
@@ -1677,9 +1678,9 @@
     var ln = (!dx && langSfx(st.set)) ? '<br>Este link mostra a coleção em <b>' + ({ en: 'inglês', jp: 'japonês', cn: 'chinês' }[effLang(st.set)] || '') + '</b>, com as marcações desse idioma.' : '';
     openSheet('<div class="fn-form"><p class="fn-note"><b>' + esc(dx ? cur.binder.name : (cat.label || st.set)) + '</b><br>Quem abrir o link vê sua coleção marcada, somente leitura. Mostra o que você tem agora.' + ln + '</p>' +
       (dx ? '' : '<label>Como mostrar<select id="fn-share-mode"><option value="grid">Grade</option><option value="binder"' + (st.view === 'binder' ? ' selected' : '') + '>Fichário (páginas)</option></select></label>') +
-      '<button type="button" class="fn-btn" id="fn-share-go" data-act="sharerun">🔗 Gerar link e QR code</button>' +
+      '<button type="button" class="fn-btn" id="fn-share-go" data-act="sharerun">' + I('link', 14) + ' Gerar link e QR code</button>' +
       '<div id="fn-share-out" hidden><input id="fn-share-url" type="text" readonly aria-label="Link"><canvas id="fn-share-qr" width="220" height="220"></canvas>' +
-      '<button type="button" class="fn-btn" data-act="sharecopy">📋 Copiar link</button><button type="button" class="fn-btn is-alt" data-act="sharewa">💬 Enviar pelo WhatsApp</button></div></div>', 'Compartilhar coleção');
+      '<button type="button" class="fn-btn" data-act="sharecopy">' + I('clipboard', 14) + ' Copiar link</button><button type="button" class="fn-btn is-alt" data-act="sharewa">' + I('message', 14) + ' Enviar pelo WhatsApp</button></div></div>', 'Compartilhar coleção');
   }
   async function runShare() {
     var go = $('#fn-share-go'); if (!go) return; go.disabled = true; go.textContent = 'Gerando…';
@@ -1696,7 +1697,7 @@
       $('#fn-share-url').value = shareUrl; $('#fn-share-out').hidden = false; go.hidden = true;
       var qr = $('#fn-share-qr'); if (qr && window.QRCode) QRCode.toCanvas(qr, shareUrl, { width: 220, margin: 1, color: { dark: '#1c1f2e', light: '#ffffff' } }, function () { });
       else if (qr) qr.hidden = true;
-    } catch (e) { go.disabled = false; go.textContent = '🔗 Gerar link e QR code'; toast('Não foi possível gerar o link. Tente de novo.'); }
+    } catch (e) { go.disabled = false; go.innerHTML = I('link') + ' Gerar link e QR code'; toast('Não foi possível gerar o link. Tente de novo.'); }
   }
   function copyShare() {
     var inp = $('#fn-share-url'); if (!inp || !inp.value) return;
@@ -1710,7 +1711,7 @@
   }
   function doCopy() {
     var t = isDex(st.set) ? dexListText() : listText();
-    openSheet('<div class="fn-form"><label>Lista pronta<textarea id="fn-copytxt" readonly>' + esc(t) + '</textarea></label><button type="button" class="fn-btn" data-act="copyrun">📋 Copiar</button></div>', 'Copiar lista');
+    openSheet('<div class="fn-form"><label>Lista pronta<textarea id="fn-copytxt" readonly>' + esc(t) + '</textarea></label><button type="button" class="fn-btn" data-act="copyrun">' + I('clipboard', 14) + ' Copiar</button></div>', 'Copiar lista');
     var ta = $('#fn-copytxt'); if (ta) { ta.focus(); ta.select(); }
   }
   function runCopy() {
@@ -1747,8 +1748,8 @@
     var nBase = cur.view.filter(bulkMatch('g:base')).length, nSec = cur.view.filter(bulkMatch('g:sec')).length;
     var pl = function (n) { return ' (' + n + ' carta' + (n > 1 ? 's' : '') + ')'; };
     var opts = '';
-    if (nBase && nSec) opts += '<option value="g:base">📄 Base set inteiro' + pl(nBase) + '</option><option value="g:sec">✨ Secretas' + pl(nSec) + '</option>';
-    opts += '<option value="g:all">📚 Tudo que está na tela' + pl(cur.view.length) + '</option>';
+    if (nBase && nSec) opts += '<option value="g:base">Base set inteiro' + pl(nBase) + '</option><option value="g:sec">Secretas' + pl(nSec) + '</option>';
+    opts += '<option value="g:all">Tudo que está na tela' + pl(cur.view.length) + '</option>';
     if (keys.length) opts += '<option disabled>— ou por raridade —</option>' + keys.map(function (k) { return '<option value="r:' + esc(k) + '">' + esc(rareLabel(k)) + pl(rs[k]) + '</option>'; }).join('');
     var body = '<div class="fn-form"><label>O que marcar<select id="fn-bulk-r">' + opts + '</select></label>' +
       '<div class="fn-warn" id="fn-bulk-info"></div><button type="button" class="fn-btn" id="fn-bulk-go" data-act="bulkrun">Marcar como coletadas</button><button type="button" class="fn-btn is-alt" data-close>Cancelar</button></div>';
@@ -1785,7 +1786,7 @@
     if (!okKeys.length) { toast('Não foi possível marcar. Tente de novo.'); return; }
     openSheet('<div class="fn-form"><p class="fn-note"><b>' + okKeys.length + (okKeys.length === 1 ? ' versão marcada' : ' versões marcadas') + ' como coletadas.</b>' + (failed ? '<br>Houve um erro e só marquei ' + okKeys.length + ' de ' + total + '. Você pode tentar de novo.' : '') +
       '<br>Se foi sem querer, dá para desfazer agora: só tira o que esta marcação adicionou.</p>' +
-      '<button type="button" class="fn-btn is-alt" data-act="bulkundo">↩ Desfazer esta marcação</button><button type="button" class="fn-btn" data-close>Fechar</button></div>', 'Marcação concluída');
+      '<button type="button" class="fn-btn is-alt" data-act="bulkundo">' + I('undo', 14) + ' Desfazer esta marcação</button><button type="button" class="fn-btn" data-close>Fechar</button></div>', 'Marcação concluída');
   }
   async function runUndoBulk() {
     var keys = lastBulk || []; if (!keys.length) { closeSheet(); return; }
@@ -1819,8 +1820,8 @@
     var html = '<div class="fn-detail"><div class="fn-detail-top"><div class="fn-detail-img"><img alt="' + esc(nm) + '" src="' + esc(imgSrc(cur.d, id, c, true)) + '"></div>' +
       '<div class="fn-detail-info"><h4>' + esc(nm) + '</h4><p>#' + esc(c.n) + ' · ' + esc(c.type || '') + '<br><span class="' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</span> · ' + esc(priceFmt(c, id)) + (c.artist ? '<br><small style="color:var(--muted)">Ilustrador: ' + esc(c.artist) + '</small>' : '') + '</p></div></div>' +
       (SHARE ? verRO(id, c) : verBlocks(id, c)) +
-      (!SHARE && (loggedIn() || DEMO) ? '<div class="fn-dexact"><button type="button" class="fn-btn is-alt" data-act="favtoggle" data-n="' + esc(kId) + '">' + (isFav(c) ? '⭐ Favorita — toque para tirar' : '☆ Favoritar') + '</button><button type="button" class="fn-btn is-alt" data-act="cbmember" data-n="' + esc(kId) + '">📁 Guardar em fichário…</button></div>' : '') +
-      (!SHARE && isDex(id) && c._dex ? '<div class="fn-dexact"><p class="fn-note">Vaga #' + c._dex + ' da Pokédex · ' + esc(setLabelOf(c._set).split('—')[0].trim()) + '</p><button type="button" class="fn-btn is-alt" data-dexpick="' + c._dex + '">🔁 Trocar a carta desta vaga</button></div>' : '') + '</div>';
+      (!SHARE && (loggedIn() || DEMO) ? '<div class="fn-dexact"><button type="button" class="fn-btn is-alt" data-act="favtoggle" data-n="' + esc(kId) + '">' + (isFav(c) ? I('star', 14, { fill: true }) + ' Favorita — toque para tirar' : I('star') + ' Favoritar') + '</button><button type="button" class="fn-btn is-alt" data-act="cbmember" data-n="' + esc(kId) + '">' + I('folder', 14) + ' Guardar em fichário…</button></div>' : '') +
+      (!SHARE && isDex(id) && c._dex ? '<div class="fn-dexact"><p class="fn-note">Vaga #' + c._dex + ' da Pokédex · ' + esc(setLabelOf(c._set).split('—')[0].trim()) + '</p><button type="button" class="fn-btn is-alt" data-dexpick="' + c._dex + '">' + I('repeat', 14) + ' Trocar a carta desta vaga</button></div>' : '') + '</div>';
     if (keep) { var b = $('#fn-overlay .fn-sheet-b'); if (b) { b.innerHTML = html; var h3 = $('#fn-overlay .fn-sheet-h h3'); if (h3) h3.textContent = title; return; } }
     openSheet(html, title, function (ov) { ov.dataset.detail = String(kId); });
     $('#fn-overlay').dataset.detail = String(kId);

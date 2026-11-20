@@ -472,6 +472,11 @@ body.fn-home .fn-bar{display:none}
 .fn-hcard .em{font-size:24px;line-height:1}
 /* selo da coleção (substitui o emoji): altura fixa, largura natural, centralizado numa caixa que alinha com os outros ícones */
 /* ícones SVG (icones.js): herdam a cor do texto */
+.fn-btn:has(>.ico),.fn-ver:has(>.ico),.fn-hero-links a:has(>.ico),.fn-binder-nav button:has(>.ico),.fn-chip:has(>.ico),.fn-dp-clear:has(>.ico),.fn-act-b:has(>.ico),.fn-open:has(>.ico){display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.fn-hero-links a:has(>.ico){gap:5px}
+.fn-act .em .ico{color:var(--text2)}
+.fn-fav .ico{color:#f5b301}
+.fn-top .fn-feedback .ico,a:has(>.ico){vertical-align:middle}
 .ico{display:block;flex:0 0 auto}
 .fn-set .em .ico,.fn-hcard .em .ico,.fn-dp-item .em .ico{margin:0 auto;color:var(--text2)}
 .fn-hcard .em:has(.ico){width:44px;height:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:var(--surface2)}
