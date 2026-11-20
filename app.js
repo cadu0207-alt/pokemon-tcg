@@ -483,10 +483,6 @@ function imgMeg(n,lang) {return imgLmt('meg',n,lang)||`https://images.scrydex.co
 // MEP não entram na exceção — o id interno já bate com o da Scrydex nesses
 // dois.
 const SET_LOGO_ID_OVERRIDES={me06:'me6',me05:'me5',me04:'me4',me03:'me3',me02:'me2',meg:'me1'};
-function imgSetLogo(id){
-  const sid=SET_LOGO_ID_OVERRIDES[id]||id;
-  return`https://images.scrydex.com/pokemon/${sid}-logo/logo`;
-}
 // Overrides pra cartas MEP que o pkmncards.com (URL genérica abaixo) não tem —
 // achadas individualmente em 16/07/2026 checando site por site (pkmncards não
 // cataloga essas ainda, provavelmente por serem promos muito recentes/exclusivas).
@@ -565,19 +561,6 @@ function getPurchaseImg(product){
   return imgMe04(22);
 }
 
-function getCardImg(card){
-  const num=(card.num||'').match(/(\d+)/);
-  if(!num) return null;
-  const n=num[1];const lote=(card.lote||'').toLowerCase();const ns=card.num||'';
-  if(lote.includes('me06')||lote.includes('reinado')||lote.includes('delta reign')||lote.includes('esmeralda')||lote.includes('storm'))  return imgMe06(n);
-  if(lote.includes('me05')||lote.includes('negrura')||lote.includes('pitch'))    return imgMe05(n);
-  if(lote.includes('me03')||lote.includes('ordem')||lote.includes('perfect'))    return imgMe03(n);
-  if(lote.includes('me02')||lote.includes('phantasmal')||lote.includes('fogo'))  return imgMe02(n);
-  if(lote.includes('meg')||lote.includes('me01')||ns.includes('/132'))           return imgMeg(n);
-  if(lote.includes('mep')||lote.includes('parceiros')||lote.includes('partner')) return imgMep(n);
-  if(lote.includes('me04')||lote.includes('caos')||lote.includes('chaos'))       return imgMe04(n);
-  return imgMe04(Math.min(parseInt(n)||1,122));
-}
 
 // Cadeia de fallback de imagem: quando o CDN principal (scrydex) ainda não tem
 // a carta (comum em sets recém-lançados, ex. ME05 Escuridão Absoluta em jul/2026,
@@ -872,12 +855,6 @@ function getSlots(c,setId){
 }
 
 function slotKey(pfx,n,ver){return`${pfx}${n}:${ver}`;}
-function getVerFromRar(rar){
-  if(rar.includes('SAR')||rar.includes('UR')||rar.includes('IR')||rar.includes('Promo')) return 'SP';
-  if(rar.includes('RR')||rar.includes('Dupla')||(rar.includes('Holo')&&rar.includes('Rara')&&!rar.includes('RH'))) return 'F';
-  if(rar.includes('RH')||rar.includes('Reverse')) return 'RH';
-  return 'N';
-}
 
 // ── OUTBOX (backup local + auto-sync) — fichário ────────────────────
 // 20/08/2026. Quando marcar/desmarcar carta falha por QUEDA DE CONEXÃO
@@ -2795,31 +2772,6 @@ function copyVendaMessageFromSelection(){
   copyVendaMessage(items);
 }
 
-// ── MODAL CARTA TIRADA EXPANDIDA ─────────────────────────────────
-function openCardModal(card){
-  if(typeof card==='string') card=JSON.parse(card);
-  const imgSrc=getCardImg(card);const ver=getVerFromRar(card.rar||'');
-  document.getElementById('card-modal-content').innerHTML=`
-    ${imgSrc?`<img class="cmc-img" src="${imgSrc}" alt="${card.name}" onerror="this.style.display='none'">`:
-      `<div style="height:180px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:40px">${card.icon||'🃏'}</div>`}
-    <div class="cmc-body">
-      <div class="cmc-title">${card.name}</div>
-      <div class="cmc-sub">${card.num||''} · ${card.rar||''}</div>
-      <div class="cmc-grid">
-        <div class="cmc-item"><label>Origem</label><span>${card.src||'—'}</span></div>
-        <div class="cmc-item"><label>Lote</label><span>${(card.lote||'—').split('—').pop().trim()}</span></div>
-        <div class="cmc-item"><label>Valor Médio</label><span style="color:var(--teal)">${card.price?'R$'+fmtR(card.price):'—'}</span></div>
-        <div class="cmc-item"><label>Fonte</label><span>${card.psrc||'—'}</span></div>
-        ${card.pmin&&card.pmax?`<div class="cmc-item"><label>Mínimo</label><span>R$${fmtR(card.pmin)}</span></div>
-          <div class="cmc-item"><label>Máximo</label><span>R$${fmtR(card.pmax)}</span></div>`:''}
-      </div>
-      <div class="cmc-vers">
-        <div class="cmc-dot" style="background:${VER_COLOR[ver]};border-radius:3px;width:12px;height:12px"></div>
-        <span style="font-family:'Space Mono',monospace;font-size:10px">${VER_LABEL[ver]}</span>
-      </div>
-    </div>`;
-  openModal('card-modal');
-}
 
 // ── FICHÁRIO ────────────────────────────────────────────────────
 let currentSet='me04';
@@ -2827,25 +2779,6 @@ let currentSet='me04';
 // ── NAVEGAÇÃO DE BUSCA ───────────────────────────────────────────
 let _binderNavIdx=0,_binderNavTotal=0,_lastBinderQuery='';
 
-function binderNavGo(dir){
-  if(_binderNavTotal===0)return;
-  _binderNavIdx=(_binderNavIdx+dir+_binderNavTotal)%_binderNavTotal;
-  _binderNavUpdate();
-  _binderNavScroll();
-}
-function _binderNavUpdate(){
-  const pos=document.querySelector('.bnav-pos');
-  if(pos)pos.textContent=`${_binderNavIdx+1} / ${_binderNavTotal}`;
-}
-function _binderNavScroll(){
-  const el=document.querySelector(`[data-nav-idx="${_binderNavIdx}"]`);
-  if(!el)return;
-  el.scrollIntoView({behavior:'smooth',block:'center'});
-  el.classList.remove('nav-focused');
-  void el.offsetWidth; // reflow para reiniciar animação
-  el.classList.add('nav-focused');
-  setTimeout(()=>el.classList.remove('nav-focused'),1500);
-}
 
 function renderTabs(){
   const container=document.getElementById('binder-tabs');
@@ -4927,21 +4860,6 @@ function renderSharedCustomBinder(cardIds, binderName){
     : `<div style="color:var(--muted);font-size:11px;padding:20px">Este fichário está vazio.</div>`;
 }
 
-function openShareModal(){
-  _shareCustomBinder=null;
-  const modeRow=document.getElementById('share-mode-row'); if(modeRow) modeRow.style.display='';
-  if(currentSet==='__custom__'){
-    alert('Pra compartilhar um fichário personalizado específico, use o botão 🔗 dentro do card dele em "Meus Fichários".');
-    return;
-  }
-  if(!uid()){ alert('Faça login para gerar um link de compartilhamento.'); return; }
-  const lbl=document.getElementById('share-set-label');
-  if(lbl){ const sd=getSetData(); lbl.textContent = (sd&&sd.label)||currentSet; }
-  const urlInp=document.getElementById('share-url'); if(urlInp) urlInp.value='';
-  const qr=document.getElementById('share-qr'); if(qr){ const ctx=qr.getContext&&qr.getContext('2d'); if(ctx) ctx.clearRect(0,0,qr.width,qr.height); }
-  const modeSel=document.getElementById('share-mode'); if(modeSel) modeSel.value=ficViewMode||'grid';
-  document.getElementById('mshare').classList.add('open');
-}
 
 // Compartilhar um fichário personalizado específico (chamado pelo botão 🔗 no card dele)
 function shareCustomBinderPrompt(binder){
