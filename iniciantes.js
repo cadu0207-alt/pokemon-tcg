@@ -73,7 +73,7 @@ const FAQ_INICIANTES = [
     resposta:
       'São coisas diferentes e se complementam: o <strong>sleeve</strong> (mangapote plástico fino) protege a superfície da carta contra risco, poeira e gordura da mão. O <strong>toploader</strong> (case rígido) protege contra dobra e impacto. Pra cartas do dia a dia, só o sleeve já resolve. Pra cartas caras ou raras que você quer guardar por muito tempo (ou vender), o ideal é <strong>sleeve + toploader juntos</strong> — o sleeve por dentro, o toploader por fora.',
     img: {
-      src: 'img/iniciantes/protecao-niveis.jpg',
+      src: 'site-imagens/iniciantes/protecao-niveis.jpg',
       alt: 'Níveis de proteção: sleeve fosco + pasta D-ring, sleeve + toploader rígido, perfect fit sleeve + one-touch magnético',
       cap: '3 níveis de proteção, do básico ao cofre:'
     }
@@ -92,7 +92,7 @@ const FAQ_INICIANTES = [
     resposta:
       '<strong>Círculo</strong> = Comum. <strong>Losango</strong> = Incomum. <strong>Estrela preta</strong> = Rara. <strong>Estrela preta com "PROMO"</strong> = carta promocional (distribuída em eventos/produtos especiais, não em booster normal). <strong>Estrela branca ou dourada</strong> = Ultra Rara (as mais valiosas da coleção, tipo os "ex", "Special Illustration Rare" etc).',
     img: {
-      src: 'img/iniciantes/raridade-piramide.jpg',
+      src: 'site-imagens/iniciantes/raridade-piramide.jpg',
       alt: 'Pirâmide de raridade informal: Bulk & Staples na base, depois Radiant, Mega ex, Gold e SIR (Special Illustration Rare) no topo',
       cap: 'Isso é o símbolo oficial impresso na carta. Só que entre colecionadores existe também uma hierarquia informal de "quanto vale", que mistura raridade com demanda de mercado:'
     }
@@ -111,7 +111,7 @@ const FAQ_INICIANTES = [
     resposta:
       'Longe de <strong>luz solar direta</strong> (desbota a arte), <strong>umidade</strong> (empena e mancha) e <strong>calor extremo</strong> (deforma o plástico do sleeve/toploader). Lugar fresco, seco e ao abrigo de luz é o ideal — dentro de casa, numa estante ou gaveta, já resolve na prática.',
     img: {
-      src: 'img/iniciantes/ameacas-ambientais.jpg',
+      src: 'site-imagens/iniciantes/ameacas-ambientais.jpg',
       alt: 'Três ameaças ambientais: umidade causa empenamento e mofo (use sílica gel), calor causa curvatura, luz solar causa desbotamento (use case com proteção UV)'
     }
   },
@@ -122,7 +122,7 @@ const FAQ_INICIANTES = [
     resposta:
       'Sinais de alerta: <strong>preço muito abaixo do mercado</strong>, textura do verso da carta diferente do padrão (deveria ser um pontilhado uniforme, sem manchas), cores muito saturadas ou baças, fonte de texto errada, e lacre de produto genérico ou mal aplicado. Na dúvida, compre de <strong>lojas com reputação</strong> — é por isso que recomendamos parceiros específicos na aba Lojas & Ofertas, em vez de qualquer anúncio aleatório.',
     img: {
-      src: 'img/iniciantes/triagem-falsificacao.jpg',
+      src: 'site-imagens/iniciantes/triagem-falsificacao.jpg',
       alt: 'Triagem sensorial: teste da luz (papel falso é translúcido), textura de impressão em relevo (falsificações são lisas e brilhantes), peso padrão de 1.7g por carta',
       cap: '3 testes rápidos pra checar uma carta suspeita:'
     }
@@ -134,7 +134,7 @@ const FAQ_INICIANTES = [
     resposta:
       'Gradar é mandar a carta pra uma empresa avaliar o estado de conservação e lacrar num case (slab) com uma nota — quanto mais alta, mais valoriza. Existem duas rotas: a <strong>internacional</strong> (PSA, BGS) é o padrão-ouro de reputação e liquidez pra revenda no mercado global, mas custa mais caro (cotado em dólar + frete internacional) e demora meses de fila de triagem. A <strong>nacional</strong> (empresas como MGS, Capy, GBA) é bem mais barata (em torno de R$ 85 por carta), fica pronta em semanas e não tem risco de extravio na alfândega — ótima pra proteger e valorizar os destaques da coleção dentro do Brasil. Na prática, o equilíbrio costuma ser: use a rota internacional pra ativos acima de uns R$ 500 (onde a liquidez global compensa o custo), e a nacional pro resto da coleção que você quer proteger e exibir.',
     img: {
-      src: 'img/iniciantes/gradacao.jpg',
+      src: 'site-imagens/iniciantes/gradacao.jpg',
       alt: 'Comparação PSA/BGS (padrão internacional, mais caro, meses de espera, máxima liquidez global) vs gradação nacional MGS/Capy/GBA (mais barata, semanas, sem risco alfandegário)'
     }
   },
@@ -152,7 +152,7 @@ const FAQ_INICIANTES = [
     resposta:
       'Pra produtos lacrados (booster, ETB, booster box), a fonte mais segura é a <strong>Copag</strong>, distribuidora oficial no Brasil — garante lançamento e produto 100% original, sem risco de adulteração. Pra cartas avulsas (singles), o <strong>marketplace da Liga Pokémon</strong> é o maior e mais curado do país — mas ainda assim, sempre confira a reputação do vendedor (procure lojistas com bastante avaliação, idealmente mais de 500) antes de comprar. E pra quem quer atendimento mais próximo e embalagem cuidadosa, lojas especializadas de renome (como Epic Game, Capitão Hunter, Freitas TCG e outras com histórico consolidado) costumam fornecer descrições detalhadas do estado da carta e um pós-venda mais confiável. Evite anúncio aleatório com preço muito abaixo do mercado — é o principal sinal de alerta de golpe ou falsificação.',
     img: {
-      src: 'img/iniciantes/rotas-compra.jpg',
+      src: 'site-imagens/iniciantes/rotas-compra.jpg',
       alt: 'Rotas comerciais seguras no Brasil: Copag como distribuidora oficial, marketplace da Liga Pokémon pra singles, e lojas especializadas de renome'
     }
   },
@@ -163,7 +163,7 @@ const FAQ_INICIANTES = [
     resposta:
       'Antes de descartar ou empilhar sem critério, vale separar o bulk em três grupos. Primeiro, veja se a carta <strong>é útil competitivamente</strong> (jogável no meta atual) — se for, separe como "staple" e venda ou ofereça no marketplace da Liga Pokémon, tem demanda de quem joga torneio. Segundo, veja se a <strong>ilustração chama atenção</strong> ou é de um artista específico que você goste — nesse caso, vale montar um fichário temático só com aquelas artes, em vez de misturar tudo. O que sobrar, que é volume puro sem valor aparente, é só armazenamento denso: guarde em caixas de papelão técnicas (tipo BCW, com capacidade de 800 ou 5.000 cartas) e mantenha longe de umidade com uns sachês de sílica gel — assim não ocupa espaço no fichário principal, mas também não se perde nem estraga.',
     img: {
-      src: 'img/iniciantes/bulk-fluxograma.jpg',
+      src: 'site-imagens/iniciantes/bulk-fluxograma.jpg',
       alt: 'Fluxograma de decisão pro bulk: é útil pro meta? venda como staple. A ilustração é boa? crie um binder temático. É só volume? guarde em caixa técnica com sílica'
     }
   }
