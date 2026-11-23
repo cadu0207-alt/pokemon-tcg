@@ -502,3 +502,77 @@ img.pk-ico{object-fit:contain;color:transparent}
 .fn-home-more{margin:20px 0 6px;display:flex;justify-content:center}
 .fn-home-more .fn-btn{padding:0 18px}
 .fn-home-row{margin-bottom:6px}
+
+/* Janela maior para adicionar cartas */
+.fn-sheet.fn-sheet-wide {
+  width: min(1040px, 94vw);
+  max-width: 1040px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.fn-sheet.fn-sheet-wide .fn-sheet-b {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Grade proporcional ao espaço disponível */
+#fn-cp.fn-dp {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+
+@media (min-width: 700px) {
+  #fn-cp.fn-dp {
+    grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+    gap: 14px;
+  }
+}
+
+/* Cada item em formato de carta proporcional */
+#fn-cp .fn-dp-item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
+  padding: 8px;
+  gap: 6px;
+  height: 100%;
+}
+
+#fn-cp .fn-dp-item img {
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  height: auto;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+#fn-cp .fn-dp-item .tx {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+#fn-cp .fn-dp-item .tx b {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#fn-cp .fn-dp-item .pr {
+  margin-top: auto;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+/* Mensagens de aviso/vazio ocupando todas as colunas */
+#fn-cp .fn-empty {
+  grid-column: 1 / -1;
+}
