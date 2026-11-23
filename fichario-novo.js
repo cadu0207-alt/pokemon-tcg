@@ -1102,13 +1102,7 @@
       toast('Imagem salva. Mande no grupo!');
     } catch (e) { console.error(e); toast('Não foi possível gerar a imagem agora.'); }
   }
-  // informações do set (apenas data dos preços)
-  function infoHtml() {
-    if (isCb(st.set) || isDex(st.set)) return '';
-    var id = setKey(st.set), bits = [];
-    try { if (typeof formatPriceUpdatedAt === 'function' && typeof PRICE_UPDATED_AT !== 'undefined' && Object.prototype.hasOwnProperty.call(PRICE_UPDATED_AT, id)) bits.push('Preços atualizados ' + esc(formatPriceUpdatedAt(id))); } catch (e) { }
-    return bits.length ? '<div class="fn-stats fn-bridge" style="margin-top:6px">' + bits.map(function (b) { return '<span>' + b + '</span>'; }).join('') + '</div>' : '';
-  }
+
   // Pokédex: preenche só as vagas vazias
   async function dexAutoFill() {
     var b = cur.binder; if (!b || !isDex(st.set) || dexBusy) return;
@@ -1488,10 +1482,7 @@
       '<div class="fn-stats"><span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' +
       (t.sT ? '<span>Base <b>' + t.bG + '</b>/' + t.bT + '</span><span>Secretas <b>' + t.sG + '</b>/' + t.sT + '</span>' : '') +
       (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : t.got >= t.slots ? '<span><b style="color:var(--teal)">Coleção completa</b></span>' : '<span><b>' + (t.slots - t.got) + '</b> slots restantes</span>') + '</div>' +
-      infoHtml();
-    $('#fn-setbtn-emoji').innerHTML = setIco(st.set, cat.emoji);
-    $('#fn-setbtn-code').textContent = label.split('—')[0].trim();
-    $('#fn-setbtn-name').textContent = nameOnly;
+
   }
   function renderBody() {
     computeView();
