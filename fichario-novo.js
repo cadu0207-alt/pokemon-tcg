@@ -1001,10 +1001,14 @@
     return (cbAllIdx = out);
   }
   var cbPickBid = null;
-  function openCbAdd() {
+function openCbAdd() {
     var b = cur.binder; if (!b || cbType(b) !== 'manual') return;
     cbPickBid = String(b.id);
-    openSheet('<div class="fn-form"><label>Buscar carta<input id="fn-cp-q" type="search" placeholder="nome, número ou coleção…" autocomplete="off"></label></div><div class="fn-dp" id="fn-cp"></div>', 'Adicionar a ' + plainName(b.name));
+    openSheet(
+      '<div class="fn-form"><label>Buscar carta<input id="fn-cp-q" type="search" placeholder="nome, número ou coleção…" autocomplete="off"></label></div><div class="fn-dp" id="fn-cp"></div>',
+      'Adicionar a ' + plainName(b.name),
+      function (ov) { var sh = ov.querySelector('.fn-sheet'); if (sh) sh.classList.add('fn-sheet-wide'); }
+    );
     renderCbAdd('');
   }
   function renderCbAdd(q) {
