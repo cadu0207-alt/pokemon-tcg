@@ -97,8 +97,6 @@ button{cursor:pointer}
 .fn-seg{display:inline-flex;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;background:var(--surface)}
 .fn-seg button{height:36px;padding:0 10px;border:0;background:transparent;font-weight:600;font-size:13px;color:var(--text2)}
 .fn-seg button.is-on{background:var(--accent);color:#fff}
-/* só UMA seleção forte (a visão, em vermelho); idioma e tamanho do fichário ficam discretos: texto escuro + sublinhado */
-.fn-seg.fn-seg-soft button.is-on{background:var(--surface2);color:var(--text);box-shadow:inset 0 -2px 0 var(--text)}
 
 .fn-step{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);overflow:hidden}
 .fn-step button{width:34px;height:36px;border:0;background:transparent;font-size:18px;font-weight:700}
