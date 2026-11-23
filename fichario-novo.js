@@ -1505,8 +1505,10 @@
     var L = langsOf(st.set), lg = $('#fn-lang'); lg.hidden = !L || !!SHARE; $('#fn-lang-grp').hidden = lg.hidden;
     if (L) $$('button', lg).forEach(function (b) { b.hidden = L.indexOf(b.dataset.lang) < 0; b.classList.toggle('is-on', b.dataset.lang === effLang(st.set)); });
     $$('#fn-view button').forEach(function (b) { b.classList.toggle('is-on', b.dataset.view === st.view); });
+    var sw = $('#fn-sort-wrap');
+    if (sw) sw.hidden = isDex(st.set);
     $('#fn-sort').value = st.sort;
-    $('#fn-sort').disabled = isDex(st.set) && (st.view === 'grid' || st.view === 'binder');
+    $('#fn-sort').disabled = isDex(st.set);
     var arts = []; cur.cards.forEach(function (c) { if (c.artist && arts.indexOf(c.artist) < 0) arts.push(c.artist); });
     arts.sort(function (a, b) { return a.localeCompare(b, 'pt'); });
     var aw = $('#fn-artist-wrap'), as = $('#fn-artist'); aw.hidden = !arts.length;
