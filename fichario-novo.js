@@ -151,6 +151,12 @@ function cardCondBadge(id, c) {
 
   if (!codes.length) return '';
 
+  // Ordena da melhor (M) até a pior (D) seguindo CARD_CONDITIONS
+  var rank = { M: 0, NM: 1, SP: 2, MP: 3, HP: 4, D: 5 };
+  codes.sort(function (a, b) {
+    return (rank[a] != null ? rank[a] : 99) - (rank[b] != null ? rank[b] : 99);
+  });
+
   return '<div class="fn-conds">' + codes.map(function (code) {
     return '<span class="fn-cond c-' + esc(code) + '" title="' + esc(condLabel(code)) + '">' + esc(code) + '</span>';
   }).join('') + '</div>';
