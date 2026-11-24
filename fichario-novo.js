@@ -1542,7 +1542,7 @@ function cardCondBadge(id, c, ver) {
           var c = it.c, on = has(keyOf(id, c, it.ver)), kId = ck(c);
           return '<button type="button" class="fn-pocket is-' + (on ? 'have' : 'miss') + '" data-n="' + esc(kId) + '" data-ver="' + esc(it.ver) + '" data-open="' + esc(kId) + '" aria-label="' + esc(i18n(c, id).name + ' — ' + (VERSION_NAME[it.ver] || it.ver) + (on ? ' (coletada)' : ' (faltando)')) + '">' +
             '<img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '"><span class="fn-slotn">#' + esc(c.n) + '</span><span class="fn-slotv v-' + esc(it.ver) + '">' + esc(it.ver) + '</span><span class="fn-tick">✓</span>' + cardCondBadge(id, c, it.ver) + '</button>';
-        }).join('')
+        }).join('') + '</div></div>';
     }
     var lbl = two ? 'Páginas ' + (p0 + 1) + (p0 + 2 <= pages ? '–' + (p0 + 2) : '') + ' de ' + pages : 'Página ' + (p0 + 1) + ' de ' + pages;
     return '<div class="fn-binder-nav"><button type="button" data-bnav="-1"' + (p0 <= 0 ? ' disabled' : '') + '>‹ Anterior</button>' +
