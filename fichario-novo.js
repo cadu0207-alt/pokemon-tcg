@@ -162,10 +162,29 @@ function cardCondBadge(id, c, ver) {
   }).join('') + '</div>';
 }
 
-  function tableCondsHtml(id, c, ver) {
-    var badge = cardCondBadge(id, c, ver);
-    if (!badge) return '';
-    return '<div class="fn-t-conds" style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">' + badge + '</div>';
+function tableCondsHtml(id, c, ver) {
+    var k = keyOf(id, c, ver);
+    var codes = [];
+
+    var cd = condOf(k);
+    if (cd && codes.indexOf(cd) < 0) codes.push(cd);
+
+    var lots = lotsOf(k);
+    for (var j = 0; j < lots.length; j++) {
+      var lcd = lots[j].cond;
+      if (lcd && codes.indexOf(lcd) < 0) codes.push(lcd);
+    }
+
+    if (!codes.length) return '';
+
+    var rank = { M: 0, NM: 1, SP: 2, MP: 3, HP: 4, D: 5 };
+    codes.sort(function (a, b) {
+      return (rank[a] != null ? rank[a] : 99) - (rank[b] != null ? rank[b] : 99);
+    });
+
+    return '<div class="fn-tconds">' + codes.map(function (code) {
+      return '<span class="fn-cond c-' + esc(code) + '" title="' + esc(condLabel(code)) + '">' + esc(code) + '</span>';
+    }).join('') + '</div>';
   }
 
   // ── estado ─────────────────────────────────────────────────
@@ -1517,7 +1536,7 @@ function renderTable(dexVis) {
     if (dexVis) {
       if (!dexVis.length) return '<div class="fn-empty">Nenhuma espécie com esse filtro.</div>';
       var shownDex = dexVis.slice(0, dexLimit);
-      return '<div class="fn-tablewrap"><table class="fn-table"><thead><tr><th></th><th>Dex</th><th>Espécie / Carta</th><th>Raridade</th><th>Preço</th><th>Versões</th></tr></thead><tbody>' +
+      return '<div class="fn-tablewrap"><table class="fn-table fn-table-lg"><thead><tr><th></th><th>Dex</th><th>Espécie / Carta</th><th>Raridade</th><th>Preço</th><th>Versões</th></tr></thead><tbody>' +
         shownDex.map(function (x) {
           var sp = x.sp, c = x.c;
           if (!c) {
@@ -1532,7 +1551,7 @@ function renderTable(dexVis) {
           var versHtml = '<div class="fn-vers" style="align-items:flex-start">' + sl.map(function (s) {
             var key = keyOf(id, c, s.ver), totQ = totalQtyOf(key), on = totQ > 0;
             var nm = VERSION_NAME[s.ver] || s.ver;
-            return '<div class="fn-t-ver-grp" style="display:inline-flex;flex-direction:column;align-items:flex-start">' +
+            return '<div class="fn-ver-col">' +
               '<button type="button" class="fn-ver' + (on ? ' is-on' : '') + '" data-mark="' + esc(kId) + '" data-ver="' + esc(s.ver) + '" aria-pressed="' + on + '" aria-label="' + esc(i18n(c, id).name + ' — ' + nm + (on ? ' (coletada' + (totQ > 1 ? ', ' + totQ + ' cópias' : '') + ')' : ' (faltando)')) + '">' +
                 (on ? '✓ ' : '') + s.ver + (totQ > 1 ? ' <span class="fn-x2">×' + totQ + '</span>' : '') +
               '</button>' +
@@ -1552,13 +1571,13 @@ function renderTable(dexVis) {
     }
 
     if (!cur.view.length) return emptyMsg();
-    return '<div class="fn-tablewrap"><table class="fn-table"><thead><tr><th></th><th>Nº</th><th>Nome</th><th>Raridade</th><th>Preço</th><th>Versões</th></tr></thead><tbody>' +
+    return '<div class="fn-tablewrap"><table class="fn-table fn-table-lg"><thead><tr><th></th><th>Nº</th><th>Nome</th><th>Raridade</th><th>Preço</th><th>Versões</th></tr></thead><tbody>' +
       cur.view.map(function (c) {
         var s = stateOf(id, c), kId = ck(c), sl = slotsOf(id, c), nm0 = i18n(c, id).name;
         var versHtml = '<div class="fn-vers" style="align-items:flex-start">' + sl.map(function (v) {
           var key = keyOf(id, c, v.ver), totQ = totalQtyOf(key), on = totQ > 0;
           var nm = VERSION_NAME[v.ver] || v.ver;
-          return '<div class="fn-t-ver-grp" style="display:inline-flex;flex-direction:column;align-items:flex-start">' +
+          return '<div class="fn-ver-col">' +
             '<button type="button" class="fn-ver' + (on ? ' is-on' : '') + '" data-mark="' + esc(kId) + '" data-ver="' + esc(v.ver) + '" aria-pressed="' + on + '" aria-label="' + esc(nm0 + ' — ' + nm + (on ? ' (coletada' + (totQ > 1 ? ', ' + totQ + ' cópias' : '') + ')' : ' (faltando)')) + '">' +
               (on ? '✓ ' : '') + v.ver + (totQ > 1 ? ' <span class="fn-x2">×' + totQ + '</span>' : '') +
             '</button>' +
