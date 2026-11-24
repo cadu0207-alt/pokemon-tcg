@@ -824,3 +824,50 @@ img.pk-ico{object-fit:contain;color:transparent}
   font-size: 9px;
   padding: 2px 5px;
 }
+
+.fn-table-matrix {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 780px;
+}
+
+.fn-table-matrix th,
+.fn-table-matrix td {
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.fn-table-matrix th:nth-child(3),
+.fn-table-matrix td:nth-child(3) {
+  text-align: left;
+}
+
+.fn-table-matrix thead th.t-grp-th {
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  font-weight: 700;
+}
+
+.fn-table-matrix thead tr.t-subhead th {
+  font-size: 0.78rem;
+  opacity: 0.85;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.fn-table-matrix tbody td:nth-child(5),
+.fn-table-matrix tbody td:nth-child(8),
+.fn-table-matrix tbody td:nth-child(11),
+.fn-table-matrix tbody td:nth-child(14),
+.fn-table-matrix thead th.t-grp-th {
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.fn-table-matrix .t-ver-empty {
+  color: var(--muted, #8b92a8);
+  opacity: 0.55;
+}
+
+.fn-table-matrix .t-price {
+  font-variant-numeric: tabular-nums;
+}
