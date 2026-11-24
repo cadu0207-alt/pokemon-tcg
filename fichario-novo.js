@@ -126,19 +126,35 @@
     setCond(key, nextCode);
     setEntry(n, ver, e.qty, nextOrigins);
   }
-  function cardCondBadge(id, c) {
-    var sl = slotsOf(id, c);
-    for (var i = 0; i < sl.length; i++) {
-      var k = keyOf(id, c, sl[i].ver);
-      var cd = condOf(k);
-      if (!cd) {
-        var hitLot = lotsOf(k).filter(function (l) { return !!l.cond; })[0];
-        if (hitLot) cd = hitLot.cond;
-      }
-      if (cd) return '<span class="fn-cond c-' + esc(cd) + '" title="' + esc(condLabel(cd)) + '">' + esc(cd) + '</span>';
+function cardCondBadge(id, c) {
+  var sl = slotsOf(id, c);
+  var codes = [];
+
+  for (var i = 0; i < sl.length; i++) {
+    var k = keyOf(id, c, sl[i].ver);
+
+    // 1. Condição da cópia principal da versão
+    var cd = condOf(k);
+    if (cd && codes.indexOf(cd) < 0) {
+      codes.push(cd);
     }
-    return '';
+
+    // 2. Condições das cópias extras (+1 cópia) desta versão
+    var lots = lotsOf(k);
+    for (var j = 0; j < lots.length; j++) {
+      var lcd = lots[j].cond;
+      if (lcd && codes.indexOf(lcd) < 0) {
+        codes.push(lcd);
+      }
+    }
   }
+
+  if (!codes.length) return '';
+
+  return '<div class="fn-conds">' + codes.map(function (code) {
+    return '<span class="fn-cond c-' + esc(code) + '" title="' + esc(condLabel(code)) + '">' + esc(code) + '</span>';
+  }).join('') + '</div>';
+}
 
   // ── estado ─────────────────────────────────────────────────
   var defCols = innerWidth < 480 ? 3 : innerWidth < 800 ? 4 : innerWidth < 1200 ? 6 : 7;
