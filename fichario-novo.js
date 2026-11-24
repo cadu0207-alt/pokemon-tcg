@@ -52,6 +52,8 @@
   var GROUP_NAME = { ME: 'Mega Evolução', SV: 'Escarlate & Violeta' };
 
   // ── qualidade / estado da carta ────────────────────────────
+// ── qualidade / estado da carta ────────────────────────────
+  var COND_PREFIX = 'cond:';
   var CARD_CONDITIONS = [
     { code: 'M',  label: 'Nova' },
     { code: 'NM', label: 'Praticamente Nova' },
@@ -62,6 +64,17 @@
   ];
   var condMap = LS.get('conds', {});
   function condOf(key) {
+    // 1. Lê primeiro do Supabase (via origins)
+    var e = entryOf(key);
+    if (e && Array.isArray(e.origins)) {
+      for (var i = 0; i < e.origins.length; i++) {
+        if (String(e.origins[i]).indexOf(COND_PREFIX) === 0) {
+          var code = String(e.origins[i]).slice(COND_PREFIX.length);
+          if (CARD_CONDITIONS.some(function (x) { return x.code === code; })) return code;
+        }
+      }
+    }
+    // 2. Fallback local
     var v = condMap && condMap[key];
     return CARD_CONDITIONS.some(function (x) { return x.code === v; }) ? v : '';
   }
@@ -74,6 +87,23 @@
     if (!code || condMap[key] === code) delete condMap[key];
     else condMap[key] = code;
     LS.set('conds', condMap);
+  }
+  function setCondSync(n, ver, code) {
+    var c = findCard(n); if (!c || SHARE) return;
+    var key = keyOf(st.set, c, ver);
+    var e = entryOf(key);
+    if (e.qty <= 0) return;
+
+    var curCode = condOf(key);
+    var nextCode = (!code || curCode === code) ? '' : code;
+
+    var nextOrigins = (e.origins || []).filter(function (o) {
+      return String(o).indexOf(COND_PREFIX) !== 0;
+    });
+    if (nextCode) nextOrigins.push(COND_PREFIX + nextCode);
+
+    setCond(key, nextCode);
+    setEntry(n, ver, e.qty, nextOrigins);
   }
   function cardCondBadge(id, c) {
     var sl = slotsOf(id, c);
@@ -152,38 +182,20 @@ var st = {
     var base = slotKey(sid + ':', n, ver);
     return 'dex-' + String(dexId || 'shared') + ':' + base;
   }
-  function hasDexSlot(dexId, sid, n, ver) {
-    var base = slotKey(sid + ':', n, ver);
-    if (dexId && has('dex-' + String(dexId) + ':' + base)) return true;
-    if (has('dex-shared:' + base)) return true;
-    if (has(base)) return true;
-
-    var suffix = ':' + base;
-    var checkSet = function (iter) {
-      if (!iter) return false;
-      var found = false;
-      iter.forEach(function (k) {
-        if (!found && typeof k === 'string' && k.indexOf('dex-') === 0 && k.slice(-suffix.length) === suffix) {
-          found = true;
-        }
-      });
-      return found;
-    };
-
-    if (DEMO) return checkSet(demoSet);
-    if (SHARE) return checkSet(SHARE.keys);
-    if (typeof collected !== 'undefined' && collected) return checkSet(collected);
-    return false;
+function hasDexSlot(dexId, sid, n, ver) {
+  var base = slotKey(sid + ':', n, ver);
+  if (dexId && has('dex-' + String(dexId) + ':' + base)) return true;
+  if (has('dex-shared:' + base)) return true;
+  return false;
+}
+function keyOf(id, c, ver) {
+  var sid = sidOf(id, c);
+  if (isDex(id)) {
+    var bid = (cur.binder && cur.binder.id) || String(id).replace(/^dex:/, '') || 'shared';
+    return dexSlotKey(bid, sid, String(c.n), ver);
   }
-  function keyOf(id, c, ver) {
-    var sid = sidOf(id, c);
-    var dupSuffix = (c && c._dupIdx > 0) ? ('-d' + c._dupIdx) : '';
-    if (isDex(id)) {
-      var bid = (cur.binder && cur.binder.id) || String(id).replace(/^dex:/, '') || 'shared';
-      return dexSlotKey(bid, sid, String(c.n) + dupSuffix, ver);
-    }
-    return slotKey(sid + (c._k ? '' : langSfx(sid)) + ':', String(c.n) + dupSuffix, ver);
-  }
+  return slotKey(sid + (c._k ? '' : langSfx(sid)) + ':', String(c.n), ver);
+}
   function priceOf(id, c, sl) {
     var base = (sl && sl.price != null) ? sl.price : c.price;
     if (c._k || effLang(sidOf(id, c)) === 'pt') return base || 0;
@@ -1669,10 +1681,13 @@ function verBlocks(id, c) {
           return '<button type="button" class="fn-cond-btn' + (isOn ? ' is-on' : '') + '" data-act="setcond"' + at + ' data-cond="' + esc(q.code) + '" title="' + esc(q.label) + '">' + esc(q.code) + '</button>';
         }).join('') +
       '</div></div>' : '';
+      var visibleOrigins = (e.origins || []).filter(function (o) {
+        return String(o).indexOf(COND_PREFIX) !== 0;
+      });
       return '<div class="fn-vb' + (on ? ' is-on' : '') + '"><div class="fn-vb-h"><span class="fn-vb-n"><b>' + esc(s.ver) + '</b>' + esc(VERSION_NAME[s.ver] || s.ver) + '</span>' +
         '<span class="fn-q"><button type="button" data-qty="-1"' + at + ' aria-label="Menos uma cópia">−</button><output aria-live="polite">' + e.qty + '</output><button type="button" data-qty="1"' + at + ' aria-label="Mais uma cópia">+</button></span></div>' +
         condBar +
-        (on ? '<div class="fn-orig">' + (e.origins.length ? e.origins.map(function (o, i) { return '<span class="fn-ochip">' + esc(o) + '<button type="button" data-delorig="' + i + '"' + at + ' aria-label="Remover origem">×</button></span>'; }).join('') : '<small>Sem origem informada</small>') +
+        (on ? '<div class="fn-orig">' + (visibleOrigins.length ? visibleOrigins.map(function (o) { return '<span class="fn-ochip">' + esc(o) + '<button type="button" data-delorig="' + esc(o) + '"' + at + ' aria-label="Remover origem">×</button></span>'; }).join('') : '<small>Sem origem informada</small>') +
           '<div class="fn-oadd"><select aria-label="Origem"><option value="">— de onde veio? —</option>' + originOptions() + '</select><button type="button" data-addorig="1"' + at + '>+ origem</button></div></div>' : '') + '</div>';
     }).join('') + '</div>';
   }
@@ -2060,9 +2075,14 @@ function progOf(id) {
         var sel = t.parentNode.querySelector('select'), cc2 = findCard(t.dataset.n);
         if (sel && sel.value && cc2) { var e2 = entryOf(keyOf(st.set, cc2, t.dataset.ver)); if (e2.origins.indexOf(sel.value) < 0) e2.origins.push(sel.value); setEntry(t.dataset.n, t.dataset.ver, Math.max(1, e2.qty), e2.origins); }
       }
-      else if (t.dataset.delorig != null) {
+else if (t.dataset.delorig != null) {
         var cc3 = findCard(t.dataset.n);
-        if (cc3) { var e3 = entryOf(keyOf(st.set, cc3, t.dataset.ver)); e3.origins.splice(Number(t.dataset.delorig), 1); setEntry(t.dataset.n, t.dataset.ver, e3.qty, e3.origins); }
+        if (cc3) {
+          var e3 = entryOf(keyOf(st.set, cc3, t.dataset.ver));
+          var targetOrig = t.dataset.delorig;
+          var nextOrig = (e3.origins || []).filter(function (o) { return o !== targetOrig; });
+          setEntry(t.dataset.n, t.dataset.ver, e3.qty, nextOrig);
+        }
       }
       else if (t.dataset.act) { var a = t.dataset.act; e.preventDefault(); if (a === 'share') doShare(); else if (a === 'sharerun') runShare(); else if (a === 'sharecopy') copyShare(); else if (a === 'sharewa') waShare(); else if (a === 'copy') doCopy(); else if (a === 'copyrun') runCopy(); else if (a === 'print') doPrint(); else if (a === 'bulk') doBulk(); else if (a === 'bulkrun') runBulk(); else if (a === 'bulkundo') runUndoBulk();
         else if (a === 'dexmore') { dexLimit += 300; renderBody(); }
@@ -2101,11 +2121,7 @@ function progOf(id) {
         else if (a === 'pkspecpick') pkPickSpecies(Number(t.dataset.dex), t.dataset.name);
         else if (a === 'pkplace') pkPlace(t.dataset.set, t.dataset.cn, t.dataset.ver); 
         else if (a === 'setcond') {
-          var ccCond = findCard(t.dataset.n);
-          if (ccCond) {
-            setCond(keyOf(st.set, ccCond, t.dataset.ver), t.dataset.cond);
-            patchOne(ck(ccCond));
-          }
+          setCondSync(t.dataset.n, t.dataset.ver, t.dataset.cond);
         }
       }
       else if (t.dataset.blk) toggleBlock(t.dataset.blk);
