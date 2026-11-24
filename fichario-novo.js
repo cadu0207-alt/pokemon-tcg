@@ -1693,14 +1693,14 @@
       return '<div class="fn-vb' + (on ? ' is-on' : '') + '"><div class="fn-vb-h"><span class="fn-vb-n"><b>' + esc(s.ver) + '</b>' + esc(VERSION_NAME[s.ver] || s.ver) + '</span><span class="fn-q"><output>' + (on ? '✓ Tem' : 'Falta') + '</output></span></div></div>';
     }).join('') + '</div>';
   }
-  function renderCondBar(curCond, extraAttrs) {
-    return '<div class="fn-cond-box" style="margin-top:8px"><span class="fn-cond-lbl">Qualidade</span><div class="fn-cond-list">' +
-      CARD_CONDITIONS.map(function (q) {
-        var isOn = curCond === q.code;
-        return '<button type="button" class="fn-cond-btn' + (isOn ? ' is-on' : '') + '" data-act="setcond"' + extraAttrs + ' data-cond="' + esc(q.code) + '" title="' + esc(q.label) + '">' + esc(q.code) + '</button>';
-      }).join('') +
-      '</div></div>';
-  }
+function renderCondBar(curCond, extraAttrs) {
+  return '<div class="fn-cond-box"><div class="fn-cond-list">' +
+    CARD_CONDITIONS.map(function (q) {
+      var isOn = curCond === q.code;
+      return '<button type="button" class="fn-cond-btn' + (isOn ? ' is-on' : '') + '" data-act="setcond"' + extraAttrs + ' data-cond="' + esc(q.code) + '" title="' + esc(q.label) + '">' + esc(q.code) + '</button>';
+    }).join('') +
+    '</div></div>';
+}
   function renderOriginBar(origins, extraAttrs) {
     var curOrig = '';
     for (var i = 0; i < (origins || []).length; i++) {
