@@ -780,3 +780,29 @@ img.pk-ico{object-fit:contain;color:transparent}
   color: #ffffff;
   font-weight: 500;
 }
+
+.fn-table-lg tbody tr {
+  height: auto;
+}
+
+.fn-table-lg tbody td {
+  vertical-align: middle;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.fn-table-lg .t-thumb img {
+  width: 72px;
+  height: 100px;
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+@media (min-width: 900px) {
+  .fn-table-lg .t-thumb img {
+    width: 88px;
+    height: 122px;
+  }
+}
