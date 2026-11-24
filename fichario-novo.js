@@ -1687,28 +1687,6 @@
     if (busy[key]) return; busy[key] = true;
     Promise.resolve(saveSlot(key, qty, origins)).then(function () { patchOne(kId); }, function () { toast('Não foi possível salvar. Tente de novo.'); }).then(function () { busy[key] = false; });
   }
-  function originOptions(selectedVal) {
-    var seen = {};
-    var opts = [];
-    function pushOpt(val, lbl) {
-      if (val == null || val === '' || seen[val]) return;
-      seen[val] = true;
-      var sel = String(selectedVal || '') === String(val) ? ' selected' : '';
-      opts.push('<option value="' + esc(val) + '"' + sel + '>' + esc(lbl || val) + '</option>');
-    }
-    try {
-      (purchases || []).forEach(function (p) {
-        var d = '';
-        try { d = new Date(p.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); } catch (e) { }
-        pushOpt(p.product, (d ? d + ' — ' : '') + String(p.product).substring(0, 40));
-      });
-    } catch (e) { }
-    pushOpt('Troca', 'Troca');
-    pushOpt('Presente', 'Presente');
-    pushOpt('Avulso', 'Avulso (loja)');
-    if (selectedVal) pushOpt(selectedVal, selectedVal);
-    return opts.join('');
-  }
   function verRO(id, c) {
     return '<div class="fn-vblocks">' + slotsOf(id, c).map(function (s) {
       var on = has(keyOf(id, c, s.ver));
@@ -1723,56 +1701,56 @@
       }).join('') +
       '</div></div>';
   }
-function renderOriginBar(origins, extraAttrs) {
-  var curOrig = '';
-  for (var i = 0; i < (origins || []).length; i++) {
-    if (String(origins[i]).indexOf(COND_PREFIX) !== 0) {
-      curOrig = String(origins[i]);
-      break;
+  function renderOriginBar(origins, extraAttrs) {
+    var curOrig = '';
+    for (var i = 0; i < (origins || []).length; i++) {
+      if (String(origins[i]).indexOf(COND_PREFIX) !== 0) {
+        curOrig = String(origins[i]);
+        break;
+      }
     }
+
+    var seen = {};
+    var options = [{ value: '', label: '— origem (sem origem) —' }];
+
+    function addOpt(val, lbl) {
+      if (val == null || val === '' || seen[val]) return;
+      seen[val] = true;
+      options.push({ value: String(val), label: String(lbl || val) });
+    }
+
+    try {
+      (purchases || []).forEach(function (p) {
+        var d = '';
+        try {
+          d = new Date(p.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        } catch (e) { }
+        addOpt(p.product, (d ? d + ' — ' : '') + String(p.product).substring(0, 40));
+      });
+    } catch (e) { }
+
+    addOpt('Troca', 'Troca');
+    addOpt('Presente', 'Presente');
+    addOpt('Avulso', 'Avulso (loja)');
+    if (curOrig) addOpt(curOrig, curOrig);
+
+    var activeOpt = options.filter(function (o) { return o.value === curOrig; })[0] || options[0];
+
+    var menuHtml = options.map(function (o) {
+      var isSel = o.value === activeOpt.value;
+      return '<li class="origem-opcao' + (isSel ? ' is-selected' : '') + '" role="option" aria-selected="' + isSel + '" data-value="' + esc(o.value) + '"' + (extraAttrs || '') + '>' + esc(o.label) + '</li>';
+    }).join('');
+
+    return '<div class="fn-orig" style="margin-top:8px">' +
+      '<div class="origem-control" data-origem-select>' +
+        '<button type="button" class="origem-trigger" aria-haspopup="listbox" aria-expanded="false"' + (extraAttrs || '') + '>' +
+          '<span class="origem-valor">' + esc(activeOpt.label) + '</span>' +
+          '<span class="origem-chevron" aria-hidden="true">⌄</span>' +
+        '</button>' +
+        '<ul class="origem-menu" role="listbox" hidden>' + menuHtml + '</ul>' +
+      '</div>' +
+    '</div>';
   }
-
-  var seen = {};
-  var options = [{ value: '', label: '— origem (sem origem) —' }];
-
-  function addOpt(val, lbl) {
-    if (val == null || val === '' || seen[val]) return;
-    seen[val] = true;
-    options.push({ value: String(val), label: String(lbl || val) });
-  }
-
-  try {
-    (purchases || []).forEach(function (p) {
-      var d = '';
-      try {
-        d = new Date(p.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-      } catch (e) { }
-      addOpt(p.product, (d ? d + ' — ' : '') + String(p.product).substring(0, 40));
-    });
-  } catch (e) { }
-
-  addOpt('Troca', 'Troca');
-  addOpt('Presente', 'Presente');
-  addOpt('Avulso', 'Avulso (loja)');
-  if (curOrig) addOpt(curOrig, curOrig);
-
-  var activeOpt = options.filter(function (o) { return o.value === curOrig; })[0] || options[0];
-
-  var menuHtml = options.map(function (o) {
-    var isSel = o.value === activeOpt.value;
-    return '<li class="origem-opcao' + (isSel ? ' is-selected' : '') + '" role="option" aria-selected="' + isSel + '" data-value="' + esc(o.value) + '"' + (extraAttrs || '') + '>' + esc(o.label) + '</li>';
-  }).join('');
-
-  return '<div class="fn-orig" style="margin-top:8px">' +
-    '<div class="origem-control" data-origem-select>' +
-      '<button type="button" class="origem-trigger" aria-haspopup="listbox" aria-expanded="false"' + (extraAttrs || '') + '>' +
-        '<span class="origem-valor">' + esc(activeOpt.label) + '</span>' +
-        '<span class="origem-chevron" aria-hidden="true">⌄</span>' +
-      '</button>' +
-      '<ul class="origem-menu" role="listbox" hidden>' + menuHtml + '</ul>' +
-    '</div>' +
-  '</div>';
-}
 
   function verBlocks(id, c) {
     var kId = ck(c);
@@ -2153,6 +2131,33 @@ function renderOriginBar(origins, extraAttrs) {
     var u = $('#fn-user'); try { var cu = currentUser; u.textContent = cu ? ((cu.user_metadata && (cu.user_metadata.name || cu.user_metadata.full_name)) || (cu.email || '').split('@')[0]) : ''; } catch (e) { }
   }
 
+  // ── helper origem ──────────────────────────────────────────
+  function applyOriginValue(dataset, chosenVal) {
+    var cSel = findCard(dataset.n);
+    if (!cSel) return;
+    var val = chosenVal || '';
+    if (dataset.lot != null) {
+      var kLotO = keyOf(st.set, cSel, dataset.ver);
+      var listO = lotsOf(kLotO);
+      var idxO = Number(dataset.lot);
+      if (listO[idxO]) {
+        listO[idxO].origins = val ? [val] : [];
+        saveLots(kLotO, listO);
+        patchOne(ck(cSel));
+      }
+    } else {
+      var eBase = entryOf(keyOf(st.set, cSel, dataset.ver));
+      var keptConds = (eBase.origins || []).filter(function (o) { return String(o).indexOf(COND_PREFIX) === 0; });
+      var nextOrigins = val ? keptConds.concat([val]) : keptConds;
+      setEntry(dataset.n, dataset.ver, Math.max(1, eBase.qty), nextOrigins);
+    }
+  }
+
+  function closeAllOriginMenus() {
+    $$('.origem-menu').forEach(function (m) { m.hidden = true; });
+    $$('.origem-trigger').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
+  }
+
   // ── eventos ────────────────────────────────────────────────
   var qT;
   function bind() {
@@ -2186,6 +2191,51 @@ function renderOriginBar(origins, extraAttrs) {
     }, true);
 
     document.addEventListener('click', function (e) {
+      // 1. Tratamento do dropdown customizado de origem
+      var origTrigger = e.target.closest ? e.target.closest('.origem-trigger') : null;
+      var origOpcao = e.target.closest ? e.target.closest('.origem-opcao') : null;
+
+      if (origTrigger) {
+        e.preventDefault();
+        e.stopPropagation();
+        var box = origTrigger.closest('.origem-control');
+        var menu = box ? box.querySelector('.origem-menu') : null;
+        var willOpen = menu ? menu.hidden : false;
+
+        closeAllOriginMenus();
+
+        if (menu && willOpen) {
+          menu.hidden = false;
+          origTrigger.setAttribute('aria-expanded', 'true');
+        }
+        return;
+      }
+
+      if (origOpcao) {
+        e.preventDefault();
+        e.stopPropagation();
+        var boxOp = origOpcao.closest('.origem-control');
+        var menuOp = boxOp ? boxOp.querySelector('.origem-menu') : null;
+        var trigOp = boxOp ? boxOp.querySelector('.origem-trigger') : null;
+        var chosenVal = origOpcao.dataset.value != null ? origOpcao.dataset.value : '';
+        var chosenLabel = (origOpcao.textContent || '').trim() || '— origem (sem origem) —';
+
+        if (menuOp) menuOp.hidden = true;
+        if (trigOp) {
+          trigOp.setAttribute('aria-expanded', 'false');
+          var lblEl = trigOp.querySelector('.origem-valor');
+          if (lblEl) lblEl.textContent = chosenLabel;
+        }
+
+        applyOriginValue(origOpcao.dataset, chosenVal);
+        return;
+      }
+
+      if (!e.target.closest || !e.target.closest('.origem-control')) {
+        closeAllOriginMenus();
+      }
+
+      // 2. Tratamento dos demais controles da interface
       var t = e.target.closest('[data-mark],[data-open],[data-pick],[data-close],[data-bnav],[data-pocket],[data-blk],[data-qty],[data-act],[data-dexpick],[data-progmode],[data-lotqty],[data-dellot]');
       if (!t) { if (e.target.id === 'fn-overlay') closeSheet(); return; }
       if (t.dataset.progmode != null) { st.progMode = t.dataset.progmode; LS.set('progMode', st.progMode); progCache = {}; renderHero(); renderSide(); if (isHome(st.set)) renderBody(); return; }
@@ -2309,28 +2359,6 @@ function renderOriginBar(origins, extraAttrs) {
     });
 
     document.addEventListener('change', function (e) {
-      var el = e.target;
-      if (el && el.dataset && el.dataset.origselect) {
-        var cSel = findCard(el.dataset.n);
-        if (!cSel) return;
-        var chosenVal = el.value || '';
-        if (el.dataset.lot != null) {
-          var kLotO = keyOf(st.set, cSel, el.dataset.ver);
-          var listO = lotsOf(kLotO);
-          var idxO = Number(el.dataset.lot);
-          if (listO[idxO]) {
-            listO[idxO].origins = chosenVal ? [chosenVal] : [];
-            saveLots(kLotO, listO);
-            patchOne(ck(cSel));
-          }
-        } else {
-          var eBase = entryOf(keyOf(st.set, cSel, el.dataset.ver));
-          var keptConds = (eBase.origins || []).filter(function (o) { return String(o).indexOf(COND_PREFIX) === 0; });
-          var nextOrigins = chosenVal ? keptConds.concat([chosenVal]) : keptConds;
-          setEntry(el.dataset.n, el.dataset.ver, Math.max(1, eBase.qty), nextOrigins);
-        }
-        return;
-      }
       if (!picker) return;
       if (e.target.id === 'fn-dp-sort') { picker.sort = e.target.value; }
       else if (e.target.id === 'fn-dp-own') { picker.own = e.target.checked; }
@@ -2340,7 +2368,14 @@ function renderOriginBar(origins, extraAttrs) {
 
     document.addEventListener('input', function (e) { if (e.target.id === 'fn-dp-q') { renderDexPicker(e.target.value); return; } if (e.target.id === 'fn-cp-q') { renderCbAdd(e.target.value); return; } if (e.target.id === 'fn-ar-q') { renderArtists(e.target.value); return; } if (e.target.id === 'fn-pks-q') { renderPkSpecies(e.target.value); return; } if (e.target.classList && e.target.classList.contains('fn-tsearch')) applyTreeFilter(e.target.closest('.fn-side,.fn-drawer')); });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') { var ov = $('#fn-overlay'); if (ov && !ov.hidden) closeSheet(); else if (document.body.classList.contains('fn-focus')) exitFocus(); return; }
+      if (e.key === 'Escape') {
+        var openMenu = $('.origem-menu:not([hidden])');
+        if (openMenu) { closeAllOriginMenus(); return; }
+        var ov = $('#fn-overlay');
+        if (ov && !ov.hidden) closeSheet();
+        else if (document.body.classList.contains('fn-focus')) exitFocus();
+        return;
+      }
       var tg = e.target && e.target.tagName; if (/INPUT|SELECT|TEXTAREA/.test(tg || '')) return;
       if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && document.body.classList.contains('fn-focus') && $('#fn-overlay').hidden) { var nb = $('[data-bnav="' + (e.key === 'ArrowRight' ? 1 : -1) + '"]'); if (nb && !nb.disabled) nb.click(); }
     });
