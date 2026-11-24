@@ -1723,21 +1723,56 @@
       }).join('') +
       '</div></div>';
   }
-  function renderOriginBar(origins, extraAttrs) {
-    var curOrig = '';
-    for (var i = 0; i < (origins || []).length; i++) {
-      if (String(origins[i]).indexOf(COND_PREFIX) !== 0) {
-        curOrig = String(origins[i]);
-        break;
-      }
+function renderOriginBar(origins, extraAttrs) {
+  var curOrig = '';
+  for (var i = 0; i < (origins || []).length; i++) {
+    if (String(origins[i]).indexOf(COND_PREFIX) !== 0) {
+      curOrig = String(origins[i]);
+      break;
     }
-    return '<div class="fn-orig" style="margin-top:8px">' +
-      '<select data-origselect="1"' + extraAttrs + ' aria-label="Origem" style="width:100%">' +
-      '<option value="">— origem (sem origem) —</option>' +
-      originOptions(curOrig) +
-      '</select>' +
-      '</div>';
   }
+
+  var seen = {};
+  var options = [{ value: '', label: '— origem (sem origem) —' }];
+
+  function addOpt(val, lbl) {
+    if (val == null || val === '' || seen[val]) return;
+    seen[val] = true;
+    options.push({ value: String(val), label: String(lbl || val) });
+  }
+
+  try {
+    (purchases || []).forEach(function (p) {
+      var d = '';
+      try {
+        d = new Date(p.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      } catch (e) { }
+      addOpt(p.product, (d ? d + ' — ' : '') + String(p.product).substring(0, 40));
+    });
+  } catch (e) { }
+
+  addOpt('Troca', 'Troca');
+  addOpt('Presente', 'Presente');
+  addOpt('Avulso', 'Avulso (loja)');
+  if (curOrig) addOpt(curOrig, curOrig);
+
+  var activeOpt = options.filter(function (o) { return o.value === curOrig; })[0] || options[0];
+
+  var menuHtml = options.map(function (o) {
+    var isSel = o.value === activeOpt.value;
+    return '<li class="origem-opcao' + (isSel ? ' is-selected' : '') + '" role="option" aria-selected="' + isSel + '" data-value="' + esc(o.value) + '"' + (extraAttrs || '') + '>' + esc(o.label) + '</li>';
+  }).join('');
+
+  return '<div class="fn-orig" style="margin-top:8px">' +
+    '<div class="origem-control" data-origem-select>' +
+      '<button type="button" class="origem-trigger" aria-haspopup="listbox" aria-expanded="false"' + (extraAttrs || '') + '>' +
+        '<span class="origem-valor">' + esc(activeOpt.label) + '</span>' +
+        '<span class="origem-chevron" aria-hidden="true">⌄</span>' +
+      '</button>' +
+      '<ul class="origem-menu" role="listbox" hidden>' + menuHtml + '</ul>' +
+    '</div>' +
+  '</div>';
+}
 
   function verBlocks(id, c) {
     var kId = ck(c);
