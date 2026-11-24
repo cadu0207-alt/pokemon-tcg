@@ -51,6 +51,39 @@
   var VERSION_NAME = { N: 'Normal', RH: 'Reverse Holo', RH2: 'Reverse Holo 2', F: 'Foil / Holo', SP: 'Especial' };
   var GROUP_NAME = { ME: 'Mega Evolução', SV: 'Escarlate & Violeta' };
 
+  // ── qualidade / estado da carta ────────────────────────────
+  var CARD_CONDITIONS = [
+    { code: 'M',  label: 'Nova' },
+    { code: 'NM', label: 'Praticamente Nova' },
+    { code: 'SP', label: 'Usada Levemente' },
+    { code: 'MP', label: 'Usada Moderadamente' },
+    { code: 'HP', label: 'Muito Usada' },
+    { code: 'D',  label: 'Danificada' }
+  ];
+  var condMap = LS.get('conds', {});
+  function condOf(key) {
+    var v = condMap && condMap[key];
+    return CARD_CONDITIONS.some(function (x) { return x.code === v; }) ? v : '';
+  }
+  function condLabel(code) {
+    var hit = CARD_CONDITIONS.filter(function (x) { return x.code === code; })[0];
+    return hit ? (hit.code + ' · ' + hit.label) : '';
+  }
+  function setCond(key, code) {
+    if (!condMap || typeof condMap !== 'object') condMap = {};
+    if (!code || condMap[key] === code) delete condMap[key];
+    else condMap[key] = code;
+    LS.set('conds', condMap);
+  }
+  function cardCondBadge(id, c) {
+    var sl = slotsOf(id, c);
+    for (var i = 0; i < sl.length; i++) {
+      var cd = condOf(keyOf(id, c, sl[i].ver));
+      if (cd) return '<span class="fn-cond c-' + esc(cd) + '" title="' + esc(condLabel(cd)) + '">' + esc(cd) + '</span>';
+    }
+    return '';
+  }
+  
   // ── estado ─────────────────────────────────────────────────
   var defCols = innerWidth < 480 ? 3 : innerWidth < 800 ? 4 : innerWidth < 1200 ? 6 : 7;
 var st = {
@@ -1378,14 +1411,15 @@ function totals() {
         (on ? '✓ ' : '') + s.ver + (e.qty > 1 ? ' <span class="fn-x2">×' + e.qty + '</span>' : '') + '</button>';
     }).join('') + '</div>';
   }
-  function cardHtml(c) {
+function cardHtml(c) {
     var id = st.set, s = stateOf(id, c), r = rareCls(c.rare), nm = i18n(c, id).name, kId = ck(c);
     return '<article class="fn-card is-' + s.st + '" data-n="' + esc(kId) + '">' +
       '<button type="button" class="fn-img" data-open="' + esc(kId) + '" aria-label="Ver ' + esc(nm) + '">' +
       (c._dex ? '<span class="fn-dexn">#' + c._dex + '</span>' : '') +
       '<img loading="lazy" decoding="async" alt="' + esc(nm) + '" src="' + esc(imgSrc(cur.d, id, c)) + '">' +
       (isFav(c) ? '<span class="fn-fav" title="Nos seus Favoritos" aria-hidden="true">' + I('star', 12, { fill: true }) + '</span>' : '') +
-      '<span class="fn-tick" aria-hidden="true">' + (s.st === 'part' ? '½' : '✓') + '</span></button>' +
+      '<span class="fn-tick" aria-hidden="true">' + (s.st === 'part' ? '½' : '✓') + '</span>' +
+      cardCondBadge(id, c) + '</button>' +
       '<div class="fn-meta"><span class="fn-name" title="' + esc(nm) + '">' + esc(nm) + '</span><span class="fn-price">' + esc(priceFmt(c, id)) + '</span></div>' +
       '<div class="fn-sub"><span>#' + esc(c.n) + '</span><span class="fn-rare ' + r + '">' + esc(rareLabel(c.rare)) + '</span></div>' +
       verButtons(id, c) + '</article>';
@@ -1576,15 +1610,16 @@ function renderHeroCore() {
 
   // ── marcar ─────────────────────────────────────────────────
   var busy = {};
-  function mark(n, ver) {
+function mark(n, ver) {
     var c = findCard(n); if (!c) return;
     var kId = ck(c);
     if (SHARE) { toast('Somente leitura: este link só mostra a coleção.'); openDetail(kId); return; }
     var key = keyOf(st.set, c, ver), cur1 = entryOf(key);
     if (cur1.qty > 1) { toast('Você tem ' + cur1.qty + ' cópias. Ajuste a quantidade no detalhe da carta.'); openDetail(kId); return; }
-    if (DEMO) { if (demoSet.has(key)) { demoSet.delete(key); demoQty.delete(key); } else demoSet.add(key); patchOne(kId); return; }
+    if (DEMO) { if (demoSet.has(key)) { demoSet.delete(key); demoQty.delete(key); setCond(key, ''); } else demoSet.add(key); patchOne(kId); return; }
     if (!loggedIn()) { toast('Entre no MyDeck para marcar suas cartas.'); return; }
     if (busy[key]) return; busy[key] = true;
+    if (has(key)) setCond(key, '');
     var p; try { p = toggleSlot(key); } catch (e) { busy[key] = false; toast('Não foi possível marcar. Tente de novo.'); return; }
     patchOne(kId);
     Promise.resolve(p).then(function () { patchOne(kId); }, function () { toast('Não foi possível salvar. Tente de novo.'); patchOne(kId); }).then(function () { busy[key] = false; });
@@ -1623,12 +1658,20 @@ function renderHeroCore() {
       return '<div class="fn-vb' + (on ? ' is-on' : '') + '"><div class="fn-vb-h"><span class="fn-vb-n"><b>' + esc(s.ver) + '</b>' + esc(VERSION_NAME[s.ver] || s.ver) + '</span><span class="fn-q"><output>' + (on ? '✓ Tem' : 'Falta') + '</output></span></div></div>';
     }).join('') + '</div>';
   }
-  function verBlocks(id, c) {
+function verBlocks(id, c) {
     var kId = ck(c);
     return '<div class="fn-vblocks">' + slotsOf(id, c).map(function (s) {
-      var e = entryOf(keyOf(id, c, s.ver)), on = e.qty > 0, at = ' data-n="' + esc(kId) + '" data-ver="' + esc(s.ver) + '"';
+      var key = keyOf(id, c, s.ver), e = entryOf(key), on = e.qty > 0, at = ' data-n="' + esc(kId) + '" data-ver="' + esc(s.ver) + '"';
+      var curCond = condOf(key);
+      var condBar = on ? '<div class="fn-cond-box" style="margin-top:8px"><span class="fn-cond-lbl">Qualidade</span><div class="fn-cond-list">' +
+        CARD_CONDITIONS.map(function (q) {
+          var isOn = curCond === q.code;
+          return '<button type="button" class="fn-cond-btn' + (isOn ? ' is-on' : '') + '" data-act="setcond"' + at + ' data-cond="' + esc(q.code) + '" title="' + esc(q.label) + '">' + esc(q.code) + '</button>';
+        }).join('') +
+      '</div></div>' : '';
       return '<div class="fn-vb' + (on ? ' is-on' : '') + '"><div class="fn-vb-h"><span class="fn-vb-n"><b>' + esc(s.ver) + '</b>' + esc(VERSION_NAME[s.ver] || s.ver) + '</span>' +
         '<span class="fn-q"><button type="button" data-qty="-1"' + at + ' aria-label="Menos uma cópia">−</button><output aria-live="polite">' + e.qty + '</output><button type="button" data-qty="1"' + at + ' aria-label="Mais uma cópia">+</button></span></div>' +
+        condBar +
         (on ? '<div class="fn-orig">' + (e.origins.length ? e.origins.map(function (o, i) { return '<span class="fn-ochip">' + esc(o) + '<button type="button" data-delorig="' + i + '"' + at + ' aria-label="Remover origem">×</button></span>'; }).join('') : '<small>Sem origem informada</small>') +
           '<div class="fn-oadd"><select aria-label="Origem"><option value="">— de onde veio? —</option>' + originOptions() + '</select><button type="button" data-addorig="1"' + at + '>+ origem</button></div></div>' : '') + '</div>';
     }).join('') + '</div>';
@@ -1999,7 +2042,7 @@ function progOf(id) {
       else if (t.dataset.open != null) openDetail(t.dataset.open);
       else if (t.dataset.dexpick != null) { if (!SHARE) openDexPicker(Number(t.dataset.dexpick)); }
       else if (t.dataset.qty != null) {
-        var cc = findCard(t.dataset.n); if (cc) { var ee = entryOf(keyOf(st.set, cc, t.dataset.ver)), q = Math.max(0, ee.qty + Number(t.dataset.qty)); setEntry(t.dataset.n, t.dataset.ver, q, q > 0 ? ee.origins : []); }
+        var cc = findCard(t.dataset.n); if (cc) { var kQty = keyOf(st.set, cc, t.dataset.ver), ee = entryOf(kQty), q = Math.max(0, ee.qty + Number(t.dataset.qty)); if (q === 0) setCond(kQty, ''); setEntry(t.dataset.n, t.dataset.ver, q, q > 0 ? ee.origins : []); }
       }
       else if (t.dataset.addorig != null) {
         var sel = t.parentNode.querySelector('select'), cc2 = findCard(t.dataset.n);
@@ -2044,7 +2087,15 @@ function progOf(id) {
         else if (a === 'pkremove') pkRemove();
         else if (a === 'pkspecies') openPkSpecies();
         else if (a === 'pkspecpick') pkPickSpecies(Number(t.dataset.dex), t.dataset.name);
-        else if (a === 'pkplace') pkPlace(t.dataset.set, t.dataset.cn, t.dataset.ver); }
+        else if (a === 'pkplace') pkPlace(t.dataset.set, t.dataset.cn, t.dataset.ver); 
+        else if (a === 'setcond') {
+          var ccCond = findCard(t.dataset.n);
+          if (ccCond) {
+            setCond(keyOf(st.set, ccCond, t.dataset.ver), t.dataset.cond);
+            patchOne(ck(ccCond));
+          }
+        }
+      }
       else if (t.dataset.blk) toggleBlock(t.dataset.blk);
       else if (t.dataset.pick) pickSet(t.dataset.pick);
       else if (t.dataset.close != null) closeSheet();
