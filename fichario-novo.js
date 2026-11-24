@@ -1532,85 +1532,97 @@ function renderDex() {
     }).join('');
   }
 function verCondsHtml(id, c, ver) {
-    var k = keyOf(id, c, ver);
-    var codes = [];
+  var k = keyOf(id, c, ver);
+  var codes = [];
 
-    var cd = condOf(k);
-    if (cd && codes.indexOf(cd) < 0) codes.push(cd);
+  var cd = condOf(k);
+  if (cd && codes.indexOf(cd) < 0) codes.push(cd);
 
-    var lots = lotsOf(k);
-    for (var j = 0; j < lots.length; j++) {
-      var lcd = lots[j].cond;
-      if (lcd && codes.indexOf(lcd) < 0) codes.push(lcd);
-    }
-
-    if (!codes.length) return '<span style="color:var(--muted)">—</span>';
-
-    var rank = { M: 0, NM: 1, SP: 2, MP: 3, HP: 4, D: 5 };
-    codes.sort(function (a, b) {
-      return (rank[a] != null ? rank[a] : 99) - (rank[b] != null ? rank[b] : 99);
-    });
-
-    return '<div class="fn-tconds">' + codes.map(function (code) {
-      return '<span class="fn-cond c-' + esc(code) + '" title="' + esc(condLabel(code)) + '">' + esc(code) + '</span>';
-    }).join('') + '</div>';
+  var lots = lotsOf(k);
+  for (var j = 0; j < lots.length; j++) {
+    var lcd = lots[j].cond;
+    if (lcd && codes.indexOf(lcd) < 0) codes.push(lcd);
   }
 
-  function verPriceFmt(id, c, sl) {
-    var val = priceOf(id, c, sl);
-    if (val == null || isNaN(Number(val)) || Number(val) <= 0) return priceFmt(c, id);
-    var i = i18n(c, id);
-    if (i.symbol === '$') {
-      return '$ ' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-    return money0(Number(val));
+  if (!codes.length) return '<span class="t-dash">—</span>';
+
+  var rank = { M: 0, NM: 1, SP: 2, MP: 3, HP: 4, D: 5 };
+  codes.sort(function (a, b) {
+    return (rank[a] != null ? rank[a] : 99) - (rank[b] != null ? rank[b] : 99);
+  });
+
+  return '<div class="fn-tconds fn-tconds-lg">' + codes.map(function (code) {
+    return '<span class="fn-cond c-' + esc(code) + '" title="' + esc(condLabel(code)) + '">' + esc(code) + '</span>';
+  }).join('') + '</div>';
+}
+
+function verPriceFmt(id, c, sl) {
+  var val = priceOf(id, c, sl);
+  if (val == null || isNaN(Number(val)) || Number(val) <= 0) return priceFmt(c, id);
+  var i = i18n(c, id);
+  if (i.symbol === '$') {
+    return '$ ' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
+  return money0(Number(val));
+}
 
-  function collectVerCols(id, cards) {
-    var seen = {}, list = [];
-    (cards || []).forEach(function (c) {
-      if (!c) return;
-      slotsOf(id, c).forEach(function (s) {
-        if (!seen[s.ver]) {
-          seen[s.ver] = true;
-          list.push(s.ver);
-        }
-      });
-    });
-    return list.length ? list : ['N'];
-  }
-
-  function renderVersionCells(id, c, kId, nm0, versList) {
-    var sl = slotsOf(id, c);
-    var byVer = {};
-    sl.forEach(function (s) { byVer[s.ver] = s; });
-
-    return versList.map(function (ver) {
-      var slot = byVer[ver];
-      if (!slot) {
-        return '<td class="t-ver-empty">—</td><td class="t-ver-empty">—</td><td class="t-ver-empty">—</td>';
+function collectVerCols(id, cards) {
+  var seen = {}, list = [];
+  (cards || []).forEach(function (c) {
+    if (!c) return;
+    slotsOf(id, c).forEach(function (s) {
+      if (!seen[s.ver]) {
+        seen[s.ver] = true;
+        list.push(s.ver);
       }
-      var key = keyOf(id, c, ver);
-      var totQ = totalQtyOf(key);
-      var on = totQ > 0;
-      var vName = VERSION_NAME[ver] || ver;
-      var qLabel = on
-        ? ('✓ ' + ver + (totQ > 1 ? ' ×' + totQ : ''))
-        : ('+ ' + ver);
+    });
+  });
+  return list.length ? list : ['N'];
+}
 
-      var qtyCell = '<td><button type="button" class="fn-ver' + (on ? ' is-on' : '') + '"' +
-        ' data-mark="' + esc(kId) + '"' +
-        ' data-ver="' + esc(ver) + '"' +
-        ' aria-pressed="' + on + '"' +
-        ' aria-label="' + esc(nm0 + ' — ' + vName + (on ? ' (coletada' + (totQ > 1 ? ', ' + totQ + ' cópias' : '') + ')' : ' (faltando)')) + '">' +
-        qLabel + '</button></td>';
+function renderVersionCells(id, c, kId, nm0, versList) {
+  var sl = slotsOf(id, c);
+  var byVer = {};
+  sl.forEach(function (s) { byVer[s.ver] = s; });
 
-      var condCell = '<td>' + verCondsHtml(id, c, ver) + '</td>';
-      var priceCell = '<td class="t-price">' + esc(verPriceFmt(id, c, slot)) + '</td>';
+  return versList.map(function (ver) {
+    var slot = byVer[ver];
+    if (!slot) {
+      return (
+        '<td class="t-ver-empty t-grp-start t-col-cond"><span class="t-dash">—</span></td>' +
+        '<td class="t-ver-empty t-col-qty"><span class="t-dash">—</span></td>' +
+        '<td class="t-ver-empty t-col-price"><span class="t-dash">—</span></td>'
+      );
+    }
 
-      return condCell + qtyCell + priceCell;
-    }).join('');
-  }
+    var key = keyOf(id, c, ver);
+    var totQ = totalQtyOf(key);
+    var on = totQ > 0;
+    var vName = VERSION_NAME[ver] || ver;
+    var qtyNum = on ? totQ : 0;
+
+    var condCell = '<td class="t-grp-start t-col-cond">' + verCondsHtml(id, c, ver) + '</td>';
+
+    var qtyCell =
+      '<td class="t-col-qty">' +
+      '<div class="t-qty-box">' +
+      '<span class="t-qty-num' + (on ? ' is-have' : ' is-zero') + '">' + qtyNum + '</span>' +
+      '<button type="button" class="fn-ver t-ver-btn' + (on ? ' is-on' : '') + '"' +
+      ' data-mark="' + esc(kId) + '"' +
+      ' data-ver="' + esc(ver) + '"' +
+      ' aria-pressed="' + on + '"' +
+      ' title="' + esc(on ? 'Coletada (' + qtyNum + ' cópia' + (qtyNum === 1 ? '' : 's') + ')' : 'Marcar ' + vName) + '"' +
+      ' aria-label="' + esc(nm0 + ' — ' + vName + (on ? ' (coletada, ' + qtyNum + ' cópias)' : ' (faltando)')) + '">' +
+      (on ? '✓ ' + esc(ver) : '+ ' + esc(ver)) +
+      '</button>' +
+      '</div>' +
+      '</td>';
+
+    var priceCell = '<td class="t-price t-col-price">' + esc(verPriceFmt(id, c, slot)) + '</td>';
+
+    return condCell + qtyCell + priceCell;
+  }).join('');
+}
 
   function renderTable(dexVis) {
     var id = st.set;
@@ -1628,13 +1640,15 @@ function verCondsHtml(id, c, ver) {
         '<th rowspan="2">Raridade</th>' +
         dVers.map(function (v) {
           var vLbl = VERSION_NAME[v] ? (v + ' · ' + VERSION_NAME[v]) : v;
-          return '<th colspan="3" class="t-grp-th">' + esc(vLbl) + '</th>';
+          return '<th colspan="3" class="t-grp-th t-grp-start">' + esc(vLbl) + '</th>';
         }).join('') +
         '</tr>';
 
       var dHead2 = '<tr class="t-subhead">' +
         dVers.map(function () {
-          return '<th>Qualidade</th><th>Quantidade</th><th>Preço</th>';
+          return '<th class="t-grp-start t-col-cond">Qualidade</th>' +
+                 '<th class="t-col-qty">Quantidade</th>' +
+                 '<th class="t-col-price">Preço</th>';
         }).join('') +
         '</tr>';
 
@@ -1649,7 +1663,7 @@ function verCondsHtml(id, c, ver) {
               '<td>#' + sp.dex + '</td>' +
               '<td><button type="button" style="all:unset;cursor:pointer;font-weight:700" data-dexpick="' + sp.dex + '">' + esc(sp.name) + '</button><br><small style="color:var(--muted)">sem carta escolhida</small></td>' +
               '<td>—</td>' +
-              '<td colspan="' + (dVers.length * 3) + '"><button type="button" class="fn-ver" data-dexpick="' + sp.dex + '">+ Escolher carta</button></td></tr>';
+              '<td colspan="' + (dVers.length * 3) + '" class="t-grp-start"><button type="button" class="fn-ver" data-dexpick="' + sp.dex + '">+ Escolher carta</button></td></tr>';
           }
           var own = dexOwned(c), kId = ck(c), nm0 = i18n(c, id).name;
           return '<tr data-n="' + esc(kId) + '" class="' + (!own ? 't-miss' : '') + '">' +
@@ -1673,13 +1687,15 @@ function verCondsHtml(id, c, ver) {
       '<th rowspan="2">Raridade</th>' +
       vers.map(function (v) {
         var vLbl = VERSION_NAME[v] ? (v + ' · ' + VERSION_NAME[v]) : v;
-        return '<th colspan="3" class="t-grp-th">' + esc(vLbl) + '</th>';
+        return '<th colspan="3" class="t-grp-th t-grp-start">' + esc(vLbl) + '</th>';
       }).join('') +
       '</tr>';
 
     var head2 = '<tr class="t-subhead">' +
       vers.map(function () {
-        return '<th>Qualidade</th><th>Quantidade</th><th>Preço</th>';
+        return '<th class="t-grp-start t-col-cond">Qualidade</th>' +
+               '<th class="t-col-qty">Quantidade</th>' +
+               '<th class="t-col-price">Preço</th>';
       }).join('') +
       '</tr>';
 
