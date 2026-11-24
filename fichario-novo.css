@@ -595,3 +595,46 @@ img.pk-ico{object-fit:contain;color:transparent}
 .fn-cond-list{display:flex;flex-wrap:wrap;gap:6px}
 .fn-cond-btn{height:32px;padding:0 10px;border-radius:var(--r-sm);border:1px solid var(--border2);background:var(--surface);color:var(--text2);font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:5px}
 .fn-cond-btn.is-on{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* Janela de detalhe / configuração no mesmo tamanho da seleção de cartas */
+.fn-sheet.fn-sheet-detail {
+  width: min(1040px, 94vw);
+  max-width: 1040px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.fn-sheet.fn-sheet-detail .fn-sheet-b {
+  flex: 1;
+  overflow-y: auto;
+}
+
+@media (min-width: 700px) {
+  .fn-sheet.fn-sheet-detail .fn-detail {
+    grid-template-columns: 240px minmax(0, 1fr);
+    align-items: start;
+    gap: 18px 22px;
+  }
+
+  .fn-sheet.fn-sheet-detail .fn-detail-top {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .fn-sheet.fn-sheet-detail .fn-detail-top .fn-detail-img {
+    width: 100%;
+    max-width: 220px;
+  }
+
+  .fn-sheet.fn-sheet-detail .fn-detail-top h4,
+  .fn-sheet.fn-sheet-detail .fn-detail-top p {
+    text-align: center;
+  }
+
+  .fn-sheet.fn-sheet-detail .fn-vblocks {
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    align-items: start;
+  }
+}
