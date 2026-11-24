@@ -825,174 +825,117 @@ img.pk-ico{object-fit:contain;color:transparent}
   padding: 2px 5px;
 }
 
+/* Tabela mais compacta para puxar versões para a esquerda e caber mais colunas */
 .fn-table-matrix {
-  border-collapse: separate;
-  border-spacing: 0;
-  min-width: 780px;
+  width: auto;
+  min-width: 100%;
+  font-size: 13.5px; /* levemente maior que o padrão */
+  border-collapse: collapse;
 }
 
 .fn-table-matrix th,
 .fn-table-matrix td {
-  text-align: center;
-  vertical-align: middle;
+  padding: 6px 7px; /* reduzido para ganhar largura horizontal */
   white-space: nowrap;
-}
-
-.fn-table-matrix th:nth-child(3),
-.fn-table-matrix td:nth-child(3) {
-  text-align: left;
-}
-
-.fn-table-matrix thead th.t-grp-th {
-  border-left: 1px solid rgba(255, 255, 255, 0.14);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  font-weight: 700;
-}
-
-.fn-table-matrix thead tr.t-subhead th {
-  font-size: 0.78rem;
-  opacity: 0.85;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
-}
-
-.fn-table-matrix tbody td:nth-child(5),
-.fn-table-matrix tbody td:nth-child(8),
-.fn-table-matrix tbody td:nth-child(11),
-.fn-table-matrix tbody td:nth-child(14),
-.fn-table-matrix thead th.t-grp-th {
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.fn-table-matrix .t-ver-empty {
-  color: var(--muted, #8b92a8);
-  opacity: 0.55;
-}
-
-.fn-table-matrix .t-price {
-  font-variant-numeric: tabular-nums;
-}
-
-.fn-tablewrap {
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.fn-table-matrix {
-  width: 100%;
-  min-width: 980px;
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
-.fn-table-matrix th,
-.fn-table-matrix td {
   vertical-align: middle;
-  text-align: center;
-  padding: 10px 10px;
-  box-sizing: border-box;
 }
 
-/* Colunas fixas iniciais */
-.fn-table-matrix th:nth-child(3),
-.fn-table-matrix td:nth-child(3) {
-  text-align: left;
-  min-width: 145px;
-}
-
-.fn-table-matrix th:nth-child(4),
-.fn-table-matrix td:nth-child(4) {
+/* Diminui bem a distância entre Nome e Raridade */
+.fn-table-matrix .t-col-name {
   min-width: 120px;
+  max-width: 175px;
+  padding-right: 10px;
 }
 
-/* Separador visual nítido entre grupos de versão */
-.fn-table-matrix .t-grp-start {
-  border-left: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.fn-table-matrix thead tr:first-child .t-grp-th {
-  text-align: center;
+.fn-table-matrix .t-name-btn {
+  all: unset;
+  cursor: pointer;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.03);
+  font-size: 14px;
 }
 
-.fn-table-matrix thead tr.t-subhead th {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 8px 8px;
+.fn-table-matrix .t-col-rare {
+  padding-left: 6px;
+  padding-right: 10px;
+  font-size: 13px;
 }
 
-/* Larguras proporcionais das subcolunas */
+.fn-table-matrix .t-col-img {
+  width: 48px;
+  padding-left: 8px;
+  padding-right: 6px;
+}
+
+.fn-table-matrix .t-col-num {
+  width: 62px;
+  padding-left: 6px;
+  padding-right: 8px;
+  font-size: 13px;
+}
+
+/* Larguras enxutas por versão (Qualidade | Quantidade | Preço) */
 .fn-table-matrix .t-col-cond {
-  min-width: 96px;
+  min-width: 66px;
+  text-align: center;
+  padding-left: 6px;
+  padding-right: 6px;
 }
 
 .fn-table-matrix .t-col-qty {
-  min-width: 108px;
+  min-width: 78px;
+  text-align: center;
+  padding-left: 5px;
+  padding-right: 5px;
 }
 
 .fn-table-matrix .t-col-price {
-  min-width: 84px;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Tags de qualidade maiores e centralizadas */
-.fn-tconds-lg {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.fn-tconds-lg .fn-cond {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 30px;
-  height: 24px;
-  padding: 0 8px;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-  border-radius: 6px;
-}
-
-/* Quantidade numérica + botão proporcional */
-.t-qty-box {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-}
-
-.t-qty-num {
-  min-width: 20px;
-  text-align: center;
+  min-width: 66px;
+  text-align: right;
+  padding-left: 5px;
+  padding-right: 8px;
   font-size: 13px;
+}
+
+/* Qualidade empilhada uma embaixo da outra com quantidade (ex.: SP ×1, NM ×3) */
+.fn-qcond-stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.fn-qcond-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  line-height: 1.15;
+}
+
+.fn-qcond-x {
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  opacity: 0.92;
 }
 
-.t-qty-num.is-have {
-  color: var(--teal, #2dd4bf);
-}
-
-.t-qty-num.is-zero {
-  color: var(--muted, #94a3b8);
-  opacity: 0.7;
-}
-
-.t-ver-btn {
-  padding: 4px 8px;
-  font-size: 11px;
-  line-height: 1.2;
-}
-
-.t-dash {
-  color: var(--muted, #94a3b8);
+.fn-cond.c-none {
   opacity: 0.55;
 }
+
+/* Ajuste interno de quantidade e botão da versão */
+.fn-table-matrix .t-qty-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.fn-table-matrix .t-qty-num {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.fn-table-matrix .t-ver-btn {
+  padding: 3px 6px;
+  font-size: 12px;
+}
+
