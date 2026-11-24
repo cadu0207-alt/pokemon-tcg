@@ -607,6 +607,8 @@ img.pk-ico{object-fit:contain;color:transparent}
 }
 
 .fn-cond {
+  display: block;
+  width: max-content;
   font-size: 10px;
   font-weight: 800;
   line-height: 1;
