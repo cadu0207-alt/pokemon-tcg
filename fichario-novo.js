@@ -1895,8 +1895,20 @@ function verBlocks(id, c) {
       (SHARE ? verRO(id, c) : verBlocks(id, c)) +
       (!SHARE && (loggedIn() || DEMO) ? '<div class="fn-dexact"><button type="button" class="fn-btn is-alt" data-act="favtoggle" data-n="' + esc(kId) + '">' + (isFav(c) ? I('star', 14, { fill: true }) + ' Favorita — toque para tirar' : I('star') + ' Favoritar') + '</button><button type="button" class="fn-btn is-alt" data-act="cbmember" data-n="' + esc(kId) + '">' + I('folder', 14) + ' Guardar em fichário…</button></div>' : '') +
       (!SHARE && isDex(id) && c._dex ? '<div class="fn-dexact"><p class="fn-note">Vaga #' + c._dex + ' da Pokédex · ' + esc(setLabelOf(c._set).split('—')[0].trim()) + '</p><button type="button" class="fn-btn is-alt" data-dexpick="' + c._dex + '">' + I('repeat', 14) + ' Trocar a carta desta vaga</button></div>' : '') + '</div>';
-    if (keep) { var b = $('#fn-overlay .fn-sheet-b'); if (b) { b.innerHTML = html; var h3 = $('#fn-overlay .fn-sheet-h h3'); if (h3) h3.textContent = title; return; } }
-    openSheet(html, title, function (ov) { ov.dataset.detail = String(kId); });
+if (keep) {
+      var b = $('#fn-overlay .fn-sheet-b');
+      if (b) {
+        b.innerHTML = html;
+        var h3 = $('#fn-overlay .fn-sheet-h h3'); if (h3) h3.textContent = title;
+        var shKeep = $('#fn-overlay .fn-sheet'); if (shKeep) shKeep.classList.add('fn-sheet-detail');
+        return;
+      }
+    }
+    openSheet(html, title, function (ov) {
+      ov.dataset.detail = String(kId);
+      var sh = ov.querySelector('.fn-sheet');
+      if (sh) sh.classList.add('fn-sheet-detail');
+    });
     $('#fn-overlay').dataset.detail = String(kId);
   }
   // ── navegação por blocos (eras) e expansões ──────────────
