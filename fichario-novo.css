@@ -590,10 +590,9 @@ img.pk-ico{object-fit:contain;color:transparent}
 .fn-cond.c-HP{background:#b91c1c;border-color:#f87171}
 .fn-cond.c-D{background:#450a0a;border-color:#ef4444}
 
-.fn-cond-box{display:grid;gap:8px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface2)}
-.fn-cond-lbl{font-size:12px;font-weight:700;color:var(--text2)}
-.fn-cond-list{display:flex;flex-wrap:wrap;gap:6px}
-.fn-cond-btn{height:32px;padding:0 10px;border-radius:var(--r-sm);border:1px solid var(--border2);background:var(--surface);color:var(--text2);font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:5px}
+.fn-cond-box{display:grid;justify-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface2)}
+.fn-cond-list{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;width:100%}
+.fn-cond-btn{width:100%;height:32px;padding:0 4px;border-radius:var(--r-sm);border:1px solid var(--border2);background:var(--surface);color:var(--text2);font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
 .fn-cond-btn.is-on{background:var(--accent);border-color:var(--accent);color:#fff}
 
 /* Janela de detalhe / configuração no mesmo tamanho da seleção de cartas */
