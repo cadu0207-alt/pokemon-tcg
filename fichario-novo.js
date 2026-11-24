@@ -1331,9 +1331,9 @@ function openCbAdd() {
     cur.view = arr;
   }
   function totals() {
-    var id = st.set, t = { slots: 0, got: 0, bT: 0, bG: 0, sT: 0, sG: 0, cards: 0, cardsHave: 0 };
+    var id = st.set, t = { slots: 0, got: 0, bT: 0, bG: 0, sT: 0, sG: 0, cards: 0, cardsHave: 0, cardsAny: 0 };
     cur.cards.forEach(function (c) {
-      var s = stateOf(id, c); t.cards++; if (s.st === 'have') t.cardsHave++;
+      var s = stateOf(id, c); t.cards++; if (s.st === 'have') t.cardsHave++; if (s.have > 0) t.cardsAny++;
       s.sl.forEach(function (x) {
         var k = has(keyOf(id, c, x.ver)); t.slots++; if (k) t.got++;
         if (c.base) { t.bT++; if (k) t.bG++; } else { t.sT++; if (k) t.sG++; }
@@ -1483,6 +1483,7 @@ function openCbAdd() {
       '<div class="fn-pct">' + pct + '<small>%</small></div></div>' +
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats"><span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' +
+      '<span><b>' + t.cardsAny + '</b>/' + t.cards + ' cartas</span>' +
       (t.sT ? '<span>Base <b>' + t.bG + '</b>/' + t.bT + '</span><span>Secretas <b>' + t.sG + '</b>/' + t.sT + '</span>' : '') +
       (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : t.got >= t.slots ? '<span><b style="color:var(--teal)">Coleção completa</b></span>' : '<span><b>' + (t.slots - t.got) + '</b> slots restantes</span>') + '</div>';
   }
