@@ -1533,26 +1533,56 @@ function renderDex() {
   }
 function verCondsHtml(id, c, ver) {
   var k = keyOf(id, c, ver);
-  var codes = [];
-
-  var cd = condOf(k);
-  if (cd && codes.indexOf(cd) < 0) codes.push(cd);
-
+  var e = entryOf(k);
   var lots = lotsOf(k);
-  for (var j = 0; j < lots.length; j++) {
-    var lcd = lots[j].cond;
-    if (lcd && codes.indexOf(lcd) < 0) codes.push(lcd);
+  var rank = { M: 0, NM: 1, SP: 2, MP: 3, HP: 4, D: 5 };
+
+  var entries = [];
+
+  if (e.qty > 0) {
+    entries.push({
+      cond: condOf(k) || '',
+      qty: e.qty
+    });
   }
 
-  if (!codes.length) return '<span class="t-dash">—</span>';
+  for (var j = 0; j < lots.length; j++) {
+    var lq = Number(lots[j].qty) || 0;
+    if (lq > 0) {
+      entries.push({
+        cond: lots[j].cond || '',
+        qty: lq
+      });
+    }
+  }
 
-  var rank = { M: 0, NM: 1, SP: 2, MP: 3, HP: 4, D: 5 };
-  codes.sort(function (a, b) {
-    return (rank[a] != null ? rank[a] : 99) - (rank[b] != null ? rank[b] : 99);
+  if (!entries.length) return '<span class="t-dash">—</span>';
+
+  // Agrupa por condição para ficar ex.: SP ×1, NM ×3
+  var grouped = {};
+  var orderKeys = [];
+  entries.forEach(function (it) {
+    var grpKey = it.cond || '__NONE__';
+    if (!grouped[grpKey]) {
+      grouped[grpKey] = { cond: it.cond, qty: 0 };
+      orderKeys.push(grpKey);
+    }
+    grouped[grpKey].qty += it.qty;
   });
 
-  return '<div class="fn-tconds fn-tconds-lg">' + codes.map(function (code) {
-    return '<span class="fn-cond c-' + esc(code) + '" title="' + esc(condLabel(code)) + '">' + esc(code) + '</span>';
+  var rows = orderKeys.map(function (gk) { return grouped[gk]; });
+  rows.sort(function (a, b) {
+    if (!a.cond && !b.cond) return 0;
+    if (!a.cond) return 1;
+    if (!b.cond) return -1;
+    return (rank[a.cond] != null ? rank[a.cond] : 99) - (rank[b.cond] != null ? rank[b.cond] : 99);
+  });
+
+  return '<div class="fn-qcond-stack">' + rows.map(function (r) {
+    var badge = r.cond
+      ? '<span class="fn-cond c-' + esc(r.cond) + '" title="' + esc(condLabel(r.cond)) + '">' + esc(r.cond) + '</span>'
+      : '<span class="fn-cond c-none" title="Sem qualidade definida">—</span>';
+    return '<div class="fn-qcond-row">' + badge + '<span class="fn-qcond-x">×' + r.qty + '</span></div>';
   }).join('') + '</div>';
 }
 
@@ -1624,93 +1654,91 @@ function renderVersionCells(id, c, kId, nm0, versList) {
   }).join('');
 }
 
-  function renderTable(dexVis) {
-    var id = st.set;
+function renderTable(dexVis) {
+  var id = st.set;
 
-    if (dexVis) {
-      if (!dexVis.length) return '<div class="fn-empty">Nenhuma espécie com esse filtro.</div>';
-      var shownDex = dexVis.slice(0, dexLimit);
-      var dexCards = shownDex.map(function (x) { return x.c; }).filter(Boolean);
-      var dVers = collectVerCols(id, dexCards);
+  if (dexVis) {
+    if (!dexVis.length) return '<div class="fn-empty">Nenhuma espécie com esse filtro.</div>';
+    var shownDex = dexVis.slice(0, dexLimit);
+    var dexCards = shownDex.map(function (x) { return x.c; }).filter(Boolean);
+    var dVers = collectVerCols(id, dexCards);
 
-      var dHead1 = '<tr>' +
-        '<th rowspan="2">Imagem</th>' +
-        '<th rowspan="2">Dex</th>' +
-        '<th rowspan="2">Espécie / Carta</th>' +
-        '<th rowspan="2">Raridade</th>' +
-        dVers.map(function (v) {
-          var vLbl = VERSION_NAME[v] ? (v + ' · ' + VERSION_NAME[v]) : v;
-          return '<th colspan="3" class="t-grp-th t-grp-start">' + esc(vLbl) + '</th>';
-        }).join('') +
-        '</tr>';
-
-      var dHead2 = '<tr class="t-subhead">' +
-        dVers.map(function () {
-          return '<th class="t-grp-start t-col-cond">Qualidade</th>' +
-                 '<th class="t-col-qty">Quantidade</th>' +
-                 '<th class="t-col-price">Preço</th>';
-        }).join('') +
-        '</tr>';
-
-      var dSpan = 4 + dVers.length * 3;
-
-      return '<div class="fn-tablewrap"><table class="fn-table fn-table-lg fn-table-matrix"><thead>' + dHead1 + dHead2 + '</thead><tbody>' +
-        shownDex.map(function (x) {
-          var sp = x.sp, c = x.c;
-          if (!c) {
-            return '<tr class="t-miss fn-ph" data-dexph="' + sp.dex + '">' +
-              '<td class="t-thumb">' + artImg(sp.dex) + '</td>' +
-              '<td>#' + sp.dex + '</td>' +
-              '<td><button type="button" style="all:unset;cursor:pointer;font-weight:700" data-dexpick="' + sp.dex + '">' + esc(sp.name) + '</button><br><small style="color:var(--muted)">sem carta escolhida</small></td>' +
-              '<td>—</td>' +
-              '<td colspan="' + (dVers.length * 3) + '" class="t-grp-start"><button type="button" class="fn-ver" data-dexpick="' + sp.dex + '">+ Escolher carta</button></td></tr>';
-          }
-          var own = dexOwned(c), kId = ck(c), nm0 = i18n(c, id).name;
-          return '<tr data-n="' + esc(kId) + '" class="' + (!own ? 't-miss' : '') + '">' +
-            '<td class="t-thumb"><img loading="lazy" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '"></td>' +
-            '<td>#' + sp.dex + '</td>' +
-            '<td><button type="button" style="all:unset;cursor:pointer;font-weight:700" data-open="' + esc(kId) + '">' + esc(sp.name) + '</button><br><small style="color:var(--muted)">' + esc(nm0) + ' · #' + esc(c.n) + '</small></td>' +
-            '<td class="' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</td>' +
-            renderVersionCells(id, c, kId, nm0, dVers) +
-            '</tr>';
-        }).join('') + '</tbody></table></div>' +
-        (dexVis.length > shownDex.length ? '<div class="fn-more"><button type="button" class="fn-btn" data-act="dexmore">Mostrar mais (' + (dexVis.length - shownDex.length) + ' espécies)</button></div>' : '');
-    }
-
-    if (!cur.view.length) return emptyMsg();
-
-    var vers = collectVerCols(id, cur.view);
-    var head1 = '<tr>' +
-      '<th rowspan="2">Imagem</th>' +
-      '<th rowspan="2">Número</th>' +
-      '<th rowspan="2">Nome</th>' +
-      '<th rowspan="2">Raridade</th>' +
-      vers.map(function (v) {
+    var dHead1 = '<tr>' +
+      '<th rowspan="2" class="t-col-img">Imagem</th>' +
+      '<th rowspan="2" class="t-col-num">Dex</th>' +
+      '<th rowspan="2" class="t-col-name">Espécie / Carta</th>' +
+      '<th rowspan="2" class="t-col-rare">Raridade</th>' +
+      dVers.map(function (v) {
         var vLbl = VERSION_NAME[v] ? (v + ' · ' + VERSION_NAME[v]) : v;
         return '<th colspan="3" class="t-grp-th t-grp-start">' + esc(vLbl) + '</th>';
       }).join('') +
       '</tr>';
 
-    var head2 = '<tr class="t-subhead">' +
-      vers.map(function () {
+    var dHead2 = '<tr class="t-subhead">' +
+      dVers.map(function () {
         return '<th class="t-grp-start t-col-cond">Qualidade</th>' +
                '<th class="t-col-qty">Quantidade</th>' +
                '<th class="t-col-price">Preço</th>';
       }).join('') +
       '</tr>';
 
-    return '<div class="fn-tablewrap"><table class="fn-table fn-table-lg fn-table-matrix"><thead>' + head1 + head2 + '</thead><tbody>' +
-      cur.view.map(function (c) {
-        var s = stateOf(id, c), kId = ck(c), nm0 = i18n(c, id).name;
-        return '<tr data-n="' + esc(kId) + '" class="' + (s.st === 'miss' ? 't-miss' : '') + '">' +
-          '<td class="t-thumb"><img loading="lazy" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '"></td>' +
-          '<td>#' + esc(c.n) + '</td>' +
-          '<td><button type="button" style="all:unset;cursor:pointer;font-weight:700" data-open="' + esc(kId) + '">' + esc(nm0) + '</button></td>' +
-          '<td class="' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</td>' +
-          renderVersionCells(id, c, kId, nm0, vers) +
+    return '<div class="fn-tablewrap"><table class="fn-table fn-table-lg fn-table-matrix"><thead>' + dHead1 + dHead2 + '</thead><tbody>' +
+      shownDex.map(function (x) {
+        var sp = x.sp, c = x.c;
+        if (!c) {
+          return '<tr class="t-miss fn-ph" data-dexph="' + sp.dex + '">' +
+            '<td class="t-thumb t-col-img">' + artImg(sp.dex) + '</td>' +
+            '<td class="t-col-num">#' + sp.dex + '</td>' +
+            '<td class="t-col-name"><button type="button" class="t-name-btn" data-dexpick="' + sp.dex + '">' + esc(sp.name) + '</button><br><small style="color:var(--muted)">sem carta escolhida</small></td>' +
+            '<td class="t-col-rare">—</td>' +
+            '<td colspan="' + (dVers.length * 3) + '" class="t-grp-start"><button type="button" class="fn-ver" data-dexpick="' + sp.dex + '">+ Escolher carta</button></td></tr>';
+        }
+        var own = dexOwned(c), kId = ck(c), nm0 = i18n(c, id).name;
+        return '<tr data-n="' + esc(kId) + '" class="' + (!own ? 't-miss' : '') + '">' +
+          '<td class="t-thumb t-col-img"><img loading="lazy" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '"></td>' +
+          '<td class="t-col-num">#' + sp.dex + '</td>' +
+          '<td class="t-col-name"><button type="button" class="t-name-btn" data-open="' + esc(kId) + '">' + esc(sp.name) + '</button><br><small style="color:var(--muted)">' + esc(nm0) + ' · #' + esc(c.n) + '</small></td>' +
+          '<td class="t-col-rare ' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</td>' +
+          renderVersionCells(id, c, kId, nm0, dVers) +
           '</tr>';
-      }).join('') + '</tbody></table></div>';
+      }).join('') + '</tbody></table></div>' +
+      (dexVis.length > shownDex.length ? '<div class="fn-more"><button type="button" class="fn-btn" data-act="dexmore">Mostrar mais (' + (dexVis.length - shownDex.length) + ' espécies)</button></div>' : '');
   }
+
+  if (!cur.view.length) return emptyMsg();
+
+  var vers = collectVerCols(id, cur.view);
+  var head1 = '<tr>' +
+    '<th rowspan="2" class="t-col-img">Imagem</th>' +
+    '<th rowspan="2" class="t-col-num">Número</th>' +
+    '<th rowspan="2" class="t-col-name">Nome</th>' +
+    '<th rowspan="2" class="t-col-rare">Raridade</th>' +
+    vers.map(function (v) {
+      var vLbl = VERSION_NAME[v] ? (v + ' · ' + VERSION_NAME[v]) : v;
+      return '<th colspan="3" class="t-grp-th t-grp-start">' + esc(vLbl) + '</th>';
+    }).join('') +
+    '</tr>';
+
+  var head2 = '<tr class="t-subhead">' +
+    vers.map(function () {
+      return '<th class="t-grp-start t-col-cond">Qualidade</th>' +
+             '<th class="t-col-qty">Quantidade</th>' +
+             '<th class="t-col-price">Preço</th>';
+    }).join('') +
+    '</tr>';
+
+  return '<div class="fn-tablewrap"><table class="fn-table fn-table-lg fn-table-matrix"><thead>' + head1 + head2 + '</thead><tbody>' +
+    cur.view.map(function (c) {
+      var s = stateOf(id, c), kId = ck(c), nm0 = i18n(c, id).name;
+      return '<tr data-n="' + esc(kId) + '" class="' + (s.st === 'miss' ? 't-miss' : '') + '">' +
+        '<td class="t-thumb t-col-img"><img loading="lazy" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '"></td>' +
+        '<td class="t-col-num">#' + esc(c.n) + '</td>' +
+        '<td class="t-col-name"><button type="button" class="t-name-btn" data-open="' + esc(kId) + '">' + esc(nm0) + '</button></td>' +
+        '<td class="t-col-rare ' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</td>' +
+        renderVersionCells(id, c, kId, nm0, vers) +
+        '</tr>';
+    }).join('') + '</tbody></table></div>';
+}
   function renderBinder(dexVis) {
     var id = st.set, P = pocketCfg(), per = P.per, cols = P.cols, items = [];
     if (dexVis) {
