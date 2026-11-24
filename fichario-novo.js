@@ -162,6 +162,12 @@ function cardCondBadge(id, c, ver) {
   }).join('') + '</div>';
 }
 
+  function tableCondsHtml(id, c, ver) {
+    var badge = cardCondBadge(id, c, ver);
+    if (!badge) return '';
+    return '<div class="fn-t-conds" style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">' + badge + '</div>';
+  }
+
   // ── estado ─────────────────────────────────────────────────
   var defCols = innerWidth < 480 ? 3 : innerWidth < 800 ? 4 : innerWidth < 1200 ? 6 : 7;
   var st = {
@@ -487,10 +493,11 @@ function cardCondBadge(id, c, ver) {
       '<span class="fn-dexn">#' + sp.dex + '</span></button><div class="fn-meta"><span class="fn-name">' + esc(sp.name) + '</span></div>' +
       '<div class="fn-sub"><span>sem carta escolhida</span></div><div class="fn-vers"><button type="button" class="fn-ver" data-dexpick="' + sp.dex + '">+ Escolher carta</button></div></article>';
   }
-  function renderDex() {
+function renderDex() {
     if (!cur.binder) return '<div class="fn-empty">' + (loggedIn() || DEMO ? 'Carregando a sua Pokédex…' : 'Entre no MyDeck para ver a sua Pokédex.') + '</div>';
     var vis = dexVisible(); if (!vis.length) return '<div class="fn-empty">Nenhuma espécie com esse filtro.</div>';
     if (st.view === 'binder') return renderBinder(vis);
+    if (st.view === 'table') return renderTable(vis);
     var shown = vis.slice(0, dexLimit);
     return '<div class="fn-grid">' + shown.map(dexTile).join('') + '</div>' +
       (vis.length > shown.length ? '<div class="fn-more"><button type="button" class="fn-btn" data-act="dexmore">Mostrar mais (' + (vis.length - shown.length) + ' espécies)</button></div>' : '');
@@ -1505,15 +1512,63 @@ function cardCondBadge(id, c, ver) {
         '<div class="fn-grid">' + s.items.map(cardHtml).join('') + '</div>';
     }).join('');
   }
-  function renderTable() {
+function renderTable(dexVis) {
     var id = st.set;
+    if (dexVis) {
+      if (!dexVis.length) return '<div class="fn-empty">Nenhuma espécie com esse filtro.</div>';
+      var shownDex = dexVis.slice(0, dexLimit);
+      return '<div class="fn-tablewrap"><table class="fn-table"><thead><tr><th></th><th>Dex</th><th>Espécie / Carta</th><th>Raridade</th><th>Preço</th><th>Versões</th></tr></thead><tbody>' +
+        shownDex.map(function (x) {
+          var sp = x.sp, c = x.c;
+          if (!c) {
+            return '<tr class="t-miss fn-ph" data-dexph="' + sp.dex + '">' +
+              '<td class="t-thumb">' + artImg(sp.dex) + '</td>' +
+              '<td>#' + sp.dex + '</td>' +
+              '<td><button type="button" style="all:unset;cursor:pointer;font-weight:700" data-dexpick="' + sp.dex + '">' + esc(sp.name) + '</button><br><small style="color:var(--muted)">sem carta escolhida</small></td>' +
+              '<td>—</td><td>—</td>' +
+              '<td><button type="button" class="fn-ver" data-dexpick="' + sp.dex + '">+ Escolher carta</button></td></tr>';
+          }
+          var own = dexOwned(c), kId = ck(c), sl = slotsOf(id, c);
+          var versHtml = '<div class="fn-vers" style="align-items:flex-start">' + sl.map(function (s) {
+            var key = keyOf(id, c, s.ver), totQ = totalQtyOf(key), on = totQ > 0;
+            var nm = VERSION_NAME[s.ver] || s.ver;
+            return '<div class="fn-t-ver-grp" style="display:inline-flex;flex-direction:column;align-items:flex-start">' +
+              '<button type="button" class="fn-ver' + (on ? ' is-on' : '') + '" data-mark="' + esc(kId) + '" data-ver="' + esc(s.ver) + '" aria-pressed="' + on + '" aria-label="' + esc(i18n(c, id).name + ' — ' + nm + (on ? ' (coletada' + (totQ > 1 ? ', ' + totQ + ' cópias' : '') + ')' : ' (faltando)')) + '">' +
+                (on ? '✓ ' : '') + s.ver + (totQ > 1 ? ' <span class="fn-x2">×' + totQ + '</span>' : '') +
+              '</button>' +
+              tableCondsHtml(id, c, s.ver) +
+            '</div>';
+          }).join('') + '</div>';
+
+          return '<tr data-n="' + esc(kId) + '" class="' + (!own ? 't-miss' : '') + '">' +
+            '<td class="t-thumb"><img loading="lazy" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '"></td>' +
+            '<td>#' + sp.dex + '</td>' +
+            '<td><button type="button" style="all:unset;cursor:pointer;font-weight:700" data-open="' + esc(kId) + '">' + esc(sp.name) + '</button><br><small style="color:var(--muted)">' + esc(i18n(c, id).name) + ' · #' + esc(c.n) + '</small></td>' +
+            '<td class="' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</td>' +
+            '<td>' + esc(priceFmt(c, id)) + '</td>' +
+            '<td>' + versHtml + '</td></tr>';
+        }).join('') + '</tbody></table></div>' +
+        (dexVis.length > shownDex.length ? '<div class="fn-more"><button type="button" class="fn-btn" data-act="dexmore">Mostrar mais (' + (dexVis.length - shownDex.length) + ' espécies)</button></div>' : '');
+    }
+
     if (!cur.view.length) return emptyMsg();
     return '<div class="fn-tablewrap"><table class="fn-table"><thead><tr><th></th><th>Nº</th><th>Nome</th><th>Raridade</th><th>Preço</th><th>Versões</th></tr></thead><tbody>' +
       cur.view.map(function (c) {
-        var s = stateOf(id, c), kId = ck(c);
+        var s = stateOf(id, c), kId = ck(c), sl = slotsOf(id, c), nm0 = i18n(c, id).name;
+        var versHtml = '<div class="fn-vers" style="align-items:flex-start">' + sl.map(function (v) {
+          var key = keyOf(id, c, v.ver), totQ = totalQtyOf(key), on = totQ > 0;
+          var nm = VERSION_NAME[v.ver] || v.ver;
+          return '<div class="fn-t-ver-grp" style="display:inline-flex;flex-direction:column;align-items:flex-start">' +
+            '<button type="button" class="fn-ver' + (on ? ' is-on' : '') + '" data-mark="' + esc(kId) + '" data-ver="' + esc(v.ver) + '" aria-pressed="' + on + '" aria-label="' + esc(nm0 + ' — ' + nm + (on ? ' (coletada' + (totQ > 1 ? ', ' + totQ + ' cópias' : '') + ')' : ' (faltando)')) + '">' +
+              (on ? '✓ ' : '') + v.ver + (totQ > 1 ? ' <span class="fn-x2">×' + totQ + '</span>' : '') +
+            '</button>' +
+            tableCondsHtml(id, c, v.ver) +
+          '</div>';
+        }).join('') + '</div>';
+
         return '<tr data-n="' + esc(kId) + '" class="' + (s.st === 'miss' ? 't-miss' : '') + '"><td class="t-thumb"><img loading="lazy" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '"></td><td>#' + esc(c.n) + '</td>' +
-          '<td><button type="button" style="all:unset;cursor:pointer;font-weight:700" data-open="' + esc(kId) + '">' + esc(i18n(c, id).name) + '</button></td>' +
-          '<td class="' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</td><td>' + esc(priceFmt(c, id)) + '</td><td>' + verButtons(id, c) + '</td></tr>';
+          '<td><button type="button" style="all:unset;cursor:pointer;font-weight:700" data-open="' + esc(kId) + '">' + esc(nm0) + '</button></td>' +
+          '<td class="' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</td><td>' + esc(priceFmt(c, id)) + '</td><td>' + versHtml + '</td></tr>';
       }).join('') + '</tbody></table></div>';
   }
   function renderBinder(dexVis) {
@@ -1621,9 +1676,9 @@ function cardCondBadge(id, c, ver) {
       (t.sT ? '<span>Base <b>' + t.bG + '</b>/' + t.bT + '</span><span>Secretas <b>' + t.sG + '</b>/' + t.sT + '</span>' : '') +
       (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : done ? '<span><b style="color:var(--teal)">Coleção completa</b></span>' : '<span><b>' + rem + '</b> ' + (isCardMode ? 'cartas restantes' : 'slots restantes') + '</span>') + '</div>';
   }
-  function renderBody() {
+function renderBody() {
     computeView();
-    var html = isHome(st.set) ? renderHome() : isPk(st.set) ? renderPk() : isDex(st.set) && (st.view === 'grid' || st.view === 'binder') ? renderDex() :
+    var html = isHome(st.set) ? renderHome() : isPk(st.set) ? renderPk() : isDex(st.set) && (st.view === 'grid' || st.view === 'binder' || st.view === 'table') ? renderDex() :
       st.view === 'table' ? renderTable() : st.view === 'binder' ? renderBinder() : st.view === 'dash' ? renderDashView() : renderGrid();
     $('#fn-body').innerHTML = html;
   }
@@ -1660,15 +1715,19 @@ function cardCondBadge(id, c, ver) {
   }
   function renderAll() { loadCur(); renderHero(); renderControls(); renderBody(); renderSide(); }
 
-  function patchOne(n) {
+function patchOne(n) {
     var c = findCard(n); if (!c) return;
     var kId = ck(c);
     if (st.status !== 'all') { renderBody(); renderHero(); delete progCache[st.set]; dropMultiProg(); renderSide(); return; }
     $$('[data-n="' + CSS.escape(String(kId)) + '"]', $('#fn-body')).forEach(function (el) {
       var tmp = document.createElement('div');
       if (el.matches('article.fn-card')) { tmp.innerHTML = cardHtml(c); el.replaceWith(tmp.firstChild); }
-      else if (el.matches('tr')) { var holder = document.createElement('table'); holder.innerHTML = renderTable(); var nr = $('tr[data-n="' + CSS.escape(String(kId)) + '"]', holder); if (nr) el.replaceWith(nr); }
-      else if (el.matches('.fn-pocket')) {
+      else if (el.matches('tr')) {
+        var holder = document.createElement('table');
+        holder.innerHTML = isDex(st.set) ? renderTable(dexVisible()) : renderTable();
+        var nr = $('tr[data-n="' + CSS.escape(String(kId)) + '"]', holder);
+        if (nr) el.replaceWith(nr);
+      } else {
         var ver = el.dataset.ver;
         el.className = 'fn-pocket is-' + ((ver ? has(keyOf(st.set, c, ver)) : dexOwned(c)) ? 'have' : 'miss');
         var oldBdg = el.querySelector('.fn-conds');
