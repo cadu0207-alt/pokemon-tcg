@@ -126,8 +126,8 @@
     setCond(key, nextCode);
     setEntry(n, ver, e.qty, nextOrigins);
   }
-function cardCondBadge(id, c) {
-  var sl = slotsOf(id, c);
+function cardCondBadge(id, c, ver) {
+  var sl = ver ? [{ ver: ver }] : slotsOf(id, c);
   var codes = [];
 
   for (var i = 0; i < sl.length; i++) {
@@ -151,7 +151,7 @@ function cardCondBadge(id, c) {
 
   if (!codes.length) return '';
 
-  // Ordena da melhor (M) até a pior (D) seguindo CARD_CONDITIONS
+  // Ordena da melhor (M) até a pior (D)
   var rank = { M: 0, NM: 1, SP: 2, MP: 3, HP: 4, D: 5 };
   codes.sort(function (a, b) {
     return (rank[a] != null ? rank[a] : 99) - (rank[b] != null ? rank[b] : 99);
@@ -1313,7 +1313,7 @@ function cardCondBadge(id, c) {
         if (!sl) return '<button type="button" class="fn-pocket is-empty' + (pkEdit ? ' is-edit' : '') + '"' + (pkEdit ? at + ' data-act="pkslot"' : ' disabled') + ' aria-label="Vaga vazia ' + (j + 1) + '"><span class="fn-slotn">' + (j + 1) + '</span>' + (pkEdit ? '<span class="fn-plus">+</span>' : '') + '</button>';
         if (!sl.c) return '<button type="button" class="fn-pocket is-miss"' + at + ' disabled><span class="fn-slotn">…</span></button>';
         var on = has(keyOf('', sl.c, sl.r.ver)), c = sl.c;
-        return '<button type="button" class="fn-pocket is-' + (on ? 'have' : 'miss') + '" data-n="' + esc(ck(c)) + '"' + (pkEdit ? at + ' data-act="pkslot"' : ' data-open="' + esc(ck(c)) + '"') + ' aria-label="' + esc(i18n(c, '').name + ' — ' + (VERSION_NAME[sl.r.ver] || sl.r.ver)) + '"><img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(null, '', c)) + '"><span class="fn-slotn">#' + esc(c.n) + '</span><span class="fn-slotv v-' + esc(sl.r.ver) + '">' + esc(sl.r.ver) + '</span><span class="fn-tick">✓</span></button>';
+        return '<button type="button" class="fn-pocket is-' + (on ? 'have' : 'miss') + '" data-n="' + esc(ck(c)) + '"' + (pkEdit ? at + ' data-act="pkslot"' : ' data-open="' + esc(ck(c)) + '"') + ' aria-label="' + esc(i18n(c, '').name + ' — ' + (VERSION_NAME[sl.r.ver] || sl.r.ver)) + '"><img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(null, '', c)) + '"><span class="fn-slotn">#' + esc(c.n) + '</span><span class="fn-slotv v-' + esc(sl.r.ver) + '">' + esc(sl.r.ver) + '</span><span class="fn-tick">✓</span>' + cardCondBadge('', c, sl.r.ver) + '</button>';
       }).join('') + '</div></div>';
     }
     var lbl = two ? 'Páginas ' + (p0 + 1) + (p0 + 2 <= np ? '–' + (p0 + 2) : '') + ' de ' + np : 'Página ' + (p0 + 1) + ' de ' + np;
@@ -1533,13 +1533,16 @@ function cardCondBadge(id, c) {
       if (i >= pages) return '<div></div>';
       var chunk = items.slice(i * per, i * per + per);
       return '<div class="fn-page"><div class="fn-page-lbl">Página ' + (i + 1) + '</div><div class="fn-pocket-grid" style="--pc:' + cols + '">' +
-        chunk.map(function (it) {
+          chunk.map(function (it) {
           if (dexVis && !it.c) return '<button type="button" class="fn-pocket is-miss fn-ph" data-dexpick="' + it.sp.dex + '" aria-label="Escolher a carta de ' + esc(it.sp.name) + '">' + artImg(it.sp.dex) + '<span class="fn-slotn">#' + it.sp.dex + '</span></button>';
-          if (dexVis) { var cd = it.c; return '<button type="button" class="fn-pocket is-' + (dexOwned(cd) ? 'have' : 'miss') + '" data-n="' + esc(ck(cd)) + '" data-open="' + esc(ck(cd)) + '" aria-label="' + esc(i18n(cd, id).name) + '"><img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(cur.d, id, cd)) + '"><span class="fn-slotn">#' + it.sp.dex + '</span><span class="fn-tick">✓</span></button>'; }
+          if (dexVis) {
+            var cd = it.c;
+            return '<button type="button" class="fn-pocket is-' + (dexOwned(cd) ? 'have' : 'miss') + '" data-n="' + esc(ck(cd)) + '" data-open="' + esc(ck(cd)) + '" aria-label="' + esc(i18n(cd, id).name) + '"><img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(cur.d, id, cd)) + '"><span class="fn-slotn">#' + it.sp.dex + '</span><span class="fn-tick">✓</span>' + cardCondBadge(id, cd) + '</button>';
+          }
           var c = it.c, on = has(keyOf(id, c, it.ver)), kId = ck(c);
           return '<button type="button" class="fn-pocket is-' + (on ? 'have' : 'miss') + '" data-n="' + esc(kId) + '" data-ver="' + esc(it.ver) + '" data-open="' + esc(kId) + '" aria-label="' + esc(i18n(c, id).name + ' — ' + (VERSION_NAME[it.ver] || it.ver) + (on ? ' (coletada)' : ' (faltando)')) + '">' +
-            '<img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '"><span class="fn-slotn">#' + esc(c.n) + '</span><span class="fn-slotv v-' + esc(it.ver) + '">' + esc(it.ver) + '</span><span class="fn-tick">✓</span></button>';
-        }).join('') + '</div></div>';
+            '<img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '"><span class="fn-slotn">#' + esc(c.n) + '</span><span class="fn-slotv v-' + esc(it.ver) + '">' + esc(it.ver) + '</span><span class="fn-tick">✓</span>' + cardCondBadge(id, c, it.ver) + '</button>';
+        }).join('')
     }
     var lbl = two ? 'Páginas ' + (p0 + 1) + (p0 + 2 <= pages ? '–' + (p0 + 2) : '') + ' de ' + pages : 'Página ' + (p0 + 1) + ' de ' + pages;
     return '<div class="fn-binder-nav"><button type="button" data-bnav="-1"' + (p0 <= 0 ? ' disabled' : '') + '>‹ Anterior</button>' +
@@ -1665,7 +1668,14 @@ function cardCondBadge(id, c) {
       var tmp = document.createElement('div');
       if (el.matches('article.fn-card')) { tmp.innerHTML = cardHtml(c); el.replaceWith(tmp.firstChild); }
       else if (el.matches('tr')) { var holder = document.createElement('table'); holder.innerHTML = renderTable(); var nr = $('tr[data-n="' + CSS.escape(String(kId)) + '"]', holder); if (nr) el.replaceWith(nr); }
-      else if (el.matches('.fn-pocket')) { el.className = 'fn-pocket is-' + ((el.dataset.ver ? has(keyOf(st.set, c, el.dataset.ver)) : dexOwned(c)) ? 'have' : 'miss'); }
+      else if (el.matches('.fn-pocket')) {
+        var ver = el.dataset.ver;
+        el.className = 'fn-pocket is-' + ((ver ? has(keyOf(st.set, c, ver)) : dexOwned(c)) ? 'have' : 'miss');
+        var oldBdg = el.querySelector('.fn-conds');
+        if (oldBdg) oldBdg.remove();
+        var bdgHtml = ver ? cardCondBadge(st.set, c, ver) : cardCondBadge(st.set, c);
+        if (bdgHtml) el.insertAdjacentHTML('beforeend', bdgHtml);
+      }
     });
     renderHero(); delete progCache[st.set]; dropMultiProg(); renderSide();
     var ov = $('#fn-overlay'); if (!ov.hidden && ov.dataset.detail === String(kId)) openDetail(kId, true);
