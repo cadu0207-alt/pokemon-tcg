@@ -638,3 +638,62 @@ img.pk-ico{object-fit:contain;color:transparent}
     align-items: start;
   }
 }
+
+.origem-control {
+  position: relative;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.origem-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 11px;
+  border-radius: 7px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: #141923;
+  color: #e6edf7;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.origem-trigger:hover {
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+.origem-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 40;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: #111622;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.origem-opcao {
+  padding: 7px 11px;
+  font-size: 12.5px;
+  color: #e6edf7;
+  cursor: pointer;
+}
+
+.origem-opcao:hover {
+  background: rgba(59, 130, 246, 0.22);
+}
+
+.origem-opcao.is-selected {
+  background: #1d6ef5;
+  color: #ffffff;
+  font-weight: 500;
+}
