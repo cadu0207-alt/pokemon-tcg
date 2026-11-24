@@ -53,12 +53,13 @@
 
   // ── estado ─────────────────────────────────────────────────
   var defCols = innerWidth < 480 ? 3 : innerWidth < 800 ? 4 : innerWidth < 1200 ? 6 : 7;
-  var st = {
+var st = {
     set: (location.hash || '').replace('#', '') || 'home',
     q: '', status: 'all', sort: 'num',
     view: LS.get('view', 'grid'),
     cols: LS.get('cols', defCols),
     lang: LS.get('lang', 'pt'),
+    progMode: LS.get('progMode', 'slots'), // 'slots' (versões F/RH) ou 'cards' (1 por carta)
     pocket: (function () { var p = String(LS.get('pocket', '9')); return p === '20a' ? '20b' : p; })(),
     focus: false,
     artist: '',
@@ -550,24 +551,25 @@
       bid: b.id
     });
   }
-  async function dexDelete(bid) {
-    var b = dexBinders().filter(function (x) { return String(x.id) === String(bid); })[0];
-    if (!b || dexBusy) return;
-    var nm = b.name.replace(/^[^\wÀ-ú(]+/, '') || (isReg ? 'Pokédex regional' : 'Master Set Nacional');
-    dexBusy = true;
-    try {
-      var ok = await dexRemoveRecord(b);
-      if (!ok) { toast('Não foi possível excluir. Tente de novo.'); return; }
-      closeSheet();
-      dropMultiProg();
-      toast('“' + nm + '” excluída.');
-      if (String(st.set) === 'dex:' + String(b.id)) {
-        pickSet('home');
-      } else {
-        loadCur(); renderHero(); renderBody(); renderSide();
-      }
-    } finally { dexBusy = false; }
-  }
+async function dexDelete(bid) {
+  var b = dexBinders().filter(function (x) { return String(x.id) === String(bid); })[0];
+  if (!b || dexBusy) return;
+  var isReg = isRegionalDexBinder(b);
+  var nm = b.name.replace(/^[^\wÀ-ú(]+/, '') || (isReg ? 'Pokédex regional' : 'Master Set Nacional');
+  dexBusy = true;
+  try {
+    var ok = await dexRemoveRecord(b);
+    if (!ok) { toast('Não foi possível excluir. Tente de novo.'); return; }
+    closeSheet();
+    dropMultiProg();
+    toast('“' + nm + '” excluída.');
+    if (String(st.set) === 'dex:' + String(b.id)) {
+      pickSet('home');
+    } else {
+      loadCur(); renderHero(); renderBody(); renderSide();
+    }
+  } finally { dexBusy = false; }
+}
   var natCleanBusy = false;
   async function cleanupAndEnsureNatDex() {
     if (DEMO || SHARE || !loggedIn() || natCleanBusy) return;
@@ -753,11 +755,17 @@
     cur.d = { label: b.name, cards: r.cards, sections: cbSections(r.cards), cb: true };
     if (DEMO && !demoSet.size && cur.cards.length) cur.cards.forEach(function (c) { slotsOf(st.set, c).forEach(function (s) { if (window.__fnSeed() < 0.4) demoSet.add(keyOf(st.set, c, s.ver)); }); });
   }
-  function cbProg(b) {
-    var key = 'cb:' + b.id; if (progCache[key] !== undefined) return progCache[key];
-    var r = cbResolve(b), tot = 0, got = 0;
-    r.cards.forEach(function (c) { slotsOf('', c).forEach(function (s) { tot++; if (has(keyOf('', c, s.ver))) got++; }); });
-    var out = { got: got, tot: tot, cards: r.cards.length, pct: tot ? Math.round(got / tot * 100) : 0 };
+function cbProg(b) {
+    var key = 'cb:' + b.id + ':' + st.progMode; if (progCache[key] !== undefined) return progCache[key];
+    var r = cbResolve(b), tot = 0, got = 0, cardsAny = 0;
+    r.cards.forEach(function (c) {
+      var any = false;
+      slotsOf('', c).forEach(function (s) { tot++; if (has(keyOf('', c, s.ver))) { got++; any = true; } });
+      if (any) cardsAny++;
+    });
+    var num = st.progMode === 'cards' ? cardsAny : got;
+    var den = st.progMode === 'cards' ? r.cards.length : tot;
+    var out = { got: got, tot: tot, cards: r.cards.length, cardsAny: cardsAny, pct: den ? Math.round(num / den * 100) : 0 };
     if (r.pending) return out;
     return (progCache[key] = out);
   }
@@ -810,10 +818,17 @@
       $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>Personalizados</h1><p class="fn-hero-sub">' + (loggedIn() || DEMO ? 'Carregando os seus fichários…' : 'Entre no MyDeck para ver os seus fichários.') + '</p></div></div>';
       $('#fn-setbtn-emoji').innerHTML = MD_ICO('book', { size: 22 }); $('#fn-setbtn-code').textContent = 'Fichário'; $('#fn-setbtn-name').textContent = 'Personalizados'; return;
     }
-    var t = totals(), pct = t.slots ? Math.round(t.got / t.slots * 100) : 0, nm = plainName(b.name) || 'Sem nome', nsets = (cur.d.sections || []).length, manual = cbType(b) === 'manual', isArtistBinder = cbType(b) === 'artist';
-    $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1><span class="h-ico">' + bIco(b, 26) + '</span>' + esc(nm) + '</h1><p class="fn-hero-sub">' + esc(cbKind(b)) + ' · ' + t.cards + ' carta' + (t.cards === 1 ? '' : 's') + (nsets > 1 ? ' de ' + nsets + ' coleções' : '') + '</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
+    var t = totals(), isCardMode = st.progMode === 'cards';
+    var pct = isCardMode ? (t.cards ? Math.round(t.cardsAny / t.cards * 100) : 0) : (t.slots ? Math.round(t.got / t.slots * 100) : 0);
+    var nm = plainName(b.name) || 'Sem nome', nsets = (cur.d.sections || []).length, manual = cbType(b) === 'manual', isArtistBinder = cbType(b) === 'artist';
+    $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1><span class="h-ico">' + bIco(b, 26) + '</span>' + esc(nm) + '</h1><p class="fn-hero-sub">' + esc(cbKind(b)) + ' · ' + t.cards + ' carta' + (t.cards === 1 ? '' : 's') + (nsets > 1 ? ' de ' + nsets + ' coleções' : '') + '</p></div>' +
+      '<div class="fn-hero-right"><div class="fn-pct">' + pct + '<small>%</small></div>' +
+      '<div class="fn-seg fn-seg-mini" role="group" aria-label="Base do progresso">' +
+      '<button type="button" data-progmode="slots" class="' + (!isCardMode ? 'is-on' : '') + '">Slots</button>' +
+      '<button type="button" data-progmode="cards" class="' + (isCardMode ? 'is-on' : '') + '">Cartas</button>' +
+      '</div></div></div>' +
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
-      '<div class="fn-stats">' + (t.slots ? '<span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' + (t.got >= t.slots ? '<span><b style="color:var(--teal)">Fichário completo</b></span>' : '<span><b>' + (t.slots - t.got) + '</b> slots restantes</span>')
+      '<div class="fn-stats">' + (t.slots ? '<span' + (!isCardMode ? ' class="is-active-metric"' : '') + '><b>' + t.got + '</b>/' + t.slots + ' slots</span><span' + (isCardMode ? ' class="is-active-metric"' : '') + '><b>' + t.cardsAny + '</b>/' + t.cards + ' cartas</span>' + ((isCardMode ? t.cardsAny >= t.cards : t.got >= t.slots) ? '<span><b style="color:var(--teal)">Fichário completo</b></span>' : '<span><b>' + (isCardMode ? (t.cards - t.cardsAny) + '</b> cartas restantes' : (t.slots - t.got) + '</b> slots restantes') + '</span>')
         : '<span>' + (manual ? (cur.pending ? 'Carregando as cartas…' : 'Este fichário ainda não tem cartas. Use “Adicionar cartas” ou o botão “Guardar em fichário” de qualquer carta.') : 'Nenhuma carta nas suas coleções ativas para esta sugestão.') + '</span>') + '</div>' +
       '<div class="fn-hero-links">' + (manual ? '<a href="#" data-act="cbadd">' + I('plus', 14) + ' Adicionar cartas</a>' : '') + (isArtistBinder ? '<a href="#" data-act="artists">' + I('palette', 14) + ' Outros artistas</a>' : '') + '<a href="#" data-act="cbedit">' + I('pencil', 14) + ' Editar fichário</a></div>';
     $('#fn-setbtn-emoji').innerHTML = bIco(b, 22); $('#fn-setbtn-code').textContent = cbIsFav(b) ? 'Favoritos' : isArtistBinder ? 'Artista' : 'Personalizado'; $('#fn-setbtn-name').textContent = nm;
@@ -1080,10 +1095,13 @@ function openCbAdd() {
 
   // ── Cartão de progresso (PNG para compartilhar) ──
   function rrect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
-  async function progressCard() {
+async function progressCard() {
     try {
       if (document.fonts && document.fonts.ready) await document.fonts.ready;
-      var t = totals(), pct = t.slots ? Math.round(t.got / t.slots * 100) : 0;
+      var t = totals(), isCardMode = st.progMode === 'cards';
+      var curGot = isCardMode ? t.cardsAny : t.got;
+      var curTot = isCardMode ? t.cards : t.slots;
+      var pct = curTot ? Math.round(curGot / curTot * 100) : 0;
       var sub = (isCb(st.set) || isDex(st.set)) ? (t.cards + ' cartas') : '';
       var label = isCb(st.set) || isDex(st.set) ? (cur.binder ? cur.binder.name : 'Meu fichário') : ((SET_CATALOG.filter(function (x) { return x.id === setKey(st.set); })[0] || {}).label || st.set);
       var cw = 680, chh = 360, pad = 28, cv = document.createElement('canvas'); cv.width = cw; cv.height = chh;
@@ -1095,7 +1113,7 @@ function openCbAdd() {
       var by = pad + 150, bw = cw - pad * 2, bh = 16;
       rrect(ctx, pad, by, bw, bh, 8); ctx.fillStyle = '#242840'; ctx.fill();
       rrect(ctx, pad, by, Math.max(bh, bw * pct / 100), bh, 8); ctx.fillStyle = pc; ctx.fill();
-      ctx.fillStyle = '#c7cbe0'; ctx.font = "700 18px 'Space Mono', monospace"; ctx.fillText(t.got + '/' + t.slots + ' slots coletados', pad, by + 34);
+      ctx.fillStyle = '#c7cbe0'; ctx.font = "700 18px 'Space Mono', monospace"; ctx.fillText(curGot + '/' + curTot + (isCardMode ? ' cartas coletadas' : ' slots coletados'), pad, by + 34);
       if (sub) { ctx.fillStyle = '#118ab2'; ctx.font = "700 15px 'Space Mono', monospace"; ctx.fillText(sub.slice(0, 60), pad, by + 64); }
       ctx.fillStyle = '#565d74'; ctx.font = "14px 'Space Mono', monospace"; ctx.fillText('mydecktcg.com.br', pad, chh - pad - 14);
       var blob = await new Promise(function (r) { cv.toBlob(r, 'image/png'); }); if (!blob) throw new Error('png');
@@ -1122,10 +1140,16 @@ function openCbAdd() {
     });
     if (!added) { toast('Nenhuma vaga vazia com carta disponível para preencher.'); return; }
     if (!confirm('Preencher ' + added + ' vaga' + (added > 1 ? 's' : '') + ' vazia' + (added > 1 ? 's' : '') + '? Em cada uma entra a carta mais valiosa que você já tem daquela espécie ou, se não tiver nenhuma, a mais barata. As vagas que você já escolheu não mudam.')) return;
-    dexBusy = true;
+dexBusy = true;
     try {
       var nb = Object.assign({}, b, { card_ids: ids });
-      if (DEMO) demoBinders[0] = nb; else { var saved = await saveCustomBinder(nb); if (!saved) { toast('Não foi possível salvar. Tente de novo.'); return; } }
+      if (DEMO) {
+        var di = (demoBinders || []).findIndex(function (x) { return String(x.id) === String(b.id); });
+        if (di >= 0) demoBinders[di] = nb;
+      } else {
+        var saved = await saveCustomBinder(nb);
+        if (!saved) { toast('Não foi possível salvar. Tente de novo.'); return; }
+      }
       closeSheet(); progCache = {}; loadCur(); renderHero(); renderBody(); renderSide(); toast(added + ' vaga' + (added > 1 ? 's preenchidas.' : ' preenchida.'));
     } finally { dexBusy = false; }
   }
@@ -1330,10 +1354,12 @@ function openCbAdd() {
     arr.sort(by[st.sort] || by.num);
     cur.view = arr;
   }
-  function totals() {
-    var id = st.set, t = { slots: 0, got: 0, bT: 0, bG: 0, sT: 0, sG: 0, cards: 0, cardsHave: 0, cardsAny: 0 };
+function totals() {
+    var id = st.set, t = { slots: 0, got: 0, bT: 0, bG: 0, sT: 0, sG: 0, cards: 0, cardsHave: 0, cardsAny: 0, bCardsT: 0, bCardsAny: 0, sCardsT: 0, sCardsAny: 0 };
     cur.cards.forEach(function (c) {
-      var s = stateOf(id, c); t.cards++; if (s.st === 'have') t.cardsHave++; if (s.have > 0) t.cardsAny++;
+      var s = stateOf(id, c), any = s.have > 0;
+      t.cards++; if (s.st === 'have') t.cardsHave++; if (any) t.cardsAny++;
+      if (c.base) { t.bCardsT++; if (any) t.bCardsAny++; } else { t.sCardsT++; if (any) t.sCardsAny++; }
       s.sl.forEach(function (x) {
         var k = has(keyOf(id, c, x.ver)); t.slots++; if (k) t.got++;
         if (c.base) { t.bT++; if (k) t.bG++; } else { t.sT++; if (k) t.sG++; }
@@ -1469,23 +1495,31 @@ function openCbAdd() {
     renderHeroCore();
     if (SHARE) { var l = $('#fn-hero .fn-hero-links'); if (!l) { l = document.createElement('div'); l.className = 'fn-hero-links'; $('#fn-hero').appendChild(l); } l.innerHTML = '<a href="./">Montar a minha coleção no MyDeck</a>'; }
   }
-  function renderHeroCore() {
+function renderHeroCore() {
     if (isHome(st.set)) { renderHomeHero(); return; }
     if (isDex(st.set)) { renderDexHero(); return; }
     if (isCb(st.set)) { renderCbHero(); return; }
     if (isPk(st.set)) { renderPkHero(); return; }
     var d = cur.d, meta = (typeof SET_META !== 'undefined' && SET_META[setKey(st.set)]) || {}, cat = SET_CATALOG.filter(function (s) { return s.id === setKey(st.set); })[0] || {};
-    var t = totals(), pct = t.slots ? Math.round(t.got / t.slots * 100) : 0;
+    var t = totals();
+    var isCardMode = st.progMode === 'cards';
+    var pct = isCardMode ? (t.cards ? Math.round(t.cardsAny / t.cards * 100) : 0) : (t.slots ? Math.round(t.got / t.slots * 100) : 0);
+    var rem = isCardMode ? (t.cards - t.cardsAny) : (t.slots - t.got);
+    var done = isCardMode ? (t.cards > 0 && t.cardsAny >= t.cards) : (t.slots > 0 && t.got >= t.slots);
     var label = (cat.label || (d && d.label) || st.set);
     var nameOnly = label.indexOf('—') >= 0 ? label.split('—')[1].trim() : label;
     $('#fn-hero').innerHTML =
       '<div class="fn-hero-top"><div><h1>' + esc(nameOnly) + '</h1><p class="fn-hero-sub">' + esc(label.split('—')[0].trim()) + (meta.releaseDate ? ' · lançada em ' + esc(meta.releaseDate) : '') + ' · ' + t.cards + ' cartas' + langNote() + '</p></div>' +
-      '<div class="fn-pct">' + pct + '<small>%</small></div></div>' +
+      '<div class="fn-hero-right"><div class="fn-pct">' + pct + '<small>%</small></div>' +
+      '<div class="fn-seg fn-seg-mini" role="group" aria-label="Base do progresso">' +
+      '<button type="button" data-progmode="slots" class="' + (!isCardMode ? 'is-on' : '') + '" title="Contar cada versão (F e RH)">Slots</button>' +
+      '<button type="button" data-progmode="cards" class="' + (isCardMode ? 'is-on' : '') + '" title="Contar 1 por carta, independente da versão">Cartas</button>' +
+      '</div></div></div>' +
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
-      '<div class="fn-stats"><span><b>' + t.got + '</b>/' + t.slots + ' slots</span>' +
-      '<span><b>' + t.cardsAny + '</b>/' + t.cards + ' cartas</span>' +
+      '<div class="fn-stats"><span' + (!isCardMode ? ' class="is-active-metric"' : '') + '><b>' + t.got + '</b>/' + t.slots + ' slots</span>' +
+      '<span' + (isCardMode ? ' class="is-active-metric"' : '') + '><b>' + t.cardsAny + '</b>/' + t.cards + ' cartas</span>' +
       (t.sT ? '<span>Base <b>' + t.bG + '</b>/' + t.bT + '</span><span>Secretas <b>' + t.sG + '</b>/' + t.sT + '</span>' : '') +
-      (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : t.got >= t.slots ? '<span><b style="color:var(--teal)">Coleção completa</b></span>' : '<span><b>' + (t.slots - t.got) + '</b> slots restantes</span>') + '</div>';
+      (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : done ? '<span><b style="color:var(--teal)">Coleção completa</b></span>' : '<span><b>' + rem + '</b> ' + (isCardMode ? 'cartas restantes' : 'slots restantes') + '</span>') + '</div>';
   }
   function renderBody() {
     computeView();
@@ -1824,12 +1858,20 @@ function openCbAdd() {
   }
   // ── navegação por blocos (eras) e expansões ──────────────
   var progCache = {};
-  function progOf(id) {
-    if (progCache[id] !== undefined) return progCache[id];
+function progOf(id) {
+    var cacheKey = id + ':' + st.progMode;
+    if (progCache[cacheKey] !== undefined) return progCache[cacheKey];
     var d = setData(id); if (!d || !d.cards || !d.cards.length) return null;
     var tot = 0, got = 0;
-    d.cards.forEach(function (c) { slotsOf(id, c).forEach(function (x) { tot++; if (has(keyOf(id, c, x.ver))) got++; }); });
-    return (progCache[id] = tot ? { got: got, tot: tot, pct: Math.round(got / tot * 100) } : null);
+    if (st.progMode === 'cards') {
+      d.cards.forEach(function (c) {
+        tot++;
+        if (slotsOf(id, c).some(function (x) { return has(keyOf(id, c, x.ver)); })) got++;
+      });
+    } else {
+      d.cards.forEach(function (c) { slotsOf(id, c).forEach(function (x) { tot++; if (has(keyOf(id, c, x.ver))) got++; }); });
+    }
+    return (progCache[cacheKey] = tot ? { got: got, tot: tot, pct: Math.round(got / tot * 100) } : null);
   }
   function seriesOrder() {
     var meta = (typeof SERIES_META !== 'undefined' && SERIES_META) || {}, keys = Object.keys(meta);
@@ -1951,7 +1993,8 @@ function openCbAdd() {
     }, true);
 
     document.addEventListener('click', function (e) {
-      var t = e.target.closest('[data-mark],[data-open],[data-pick],[data-close],[data-bnav],[data-pocket],[data-blk],[data-qty],[data-addorig],[data-delorig],[data-act],[data-dexpick]'); if (!t) { if (e.target.id === 'fn-overlay') closeSheet(); return; }
+      var t = e.target.closest('[data-mark],[data-open],[data-pick],[data-close],[data-bnav],[data-pocket],[data-blk],[data-qty],[data-addorig],[data-delorig],[data-act],[data-dexpick],[data-progmode]'); if (!t) { if (e.target.id === 'fn-overlay') closeSheet(); return; }
+      if (t.dataset.progmode != null) { st.progMode = t.dataset.progmode; LS.set('progMode', st.progMode); progCache = {}; renderHero(); renderSide(); if (isHome(st.set)) renderBody(); return; }
       if (t.dataset.mark != null) { e.preventDefault(); mark(t.dataset.mark, t.dataset.ver); }
       else if (t.dataset.open != null) openDetail(t.dataset.open);
       else if (t.dataset.dexpick != null) { if (!SHARE) openDexPicker(Number(t.dataset.dexpick)); }
