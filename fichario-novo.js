@@ -3033,28 +3033,45 @@
       loadShare(tok).then(function (ok) { banner(); if (ok) renderAll(); else $('#fn-body').innerHTML = '<div class="fn-empty">Este link de compartilhamento não é válido ou foi apagado. <a href="./">Ir para o MyDeck</a></div>'; });
       return;
     }
-    var saved = LS.get('set', 'home');
-    if (!location.hash && (saved === 'home' || SET_CATALOG.some(function (s) { return s.id === saved; }))) st.set = saved;
+
+    // 1. Sempre abre em "Meus fichários" (home) se não houver #hash na URL
+    if (!location.hash) {
+      st.set = 'home';
+    }
+
     if (FAMILY.indexOf(st.set) >= 0) {
       try { var fl = localStorage.getItem('ficLang'); if (fl === 'en' || fl === 'pt') st.lang = fl; } catch (e) { }
     }
     if (!SET_CATALOG.some(function (s) { return s.id === setKey(st.set); }) && !isDex(st.set) && !isCb(st.set) && !isPk(st.set) && !isHome(st.set)) st.set = 'home';
+    
     bind(); banner(); renderAll();
+
+    // 2. Monitora a chegada tanto da coleção quanto dos fichários personalizados
     var tries = 0;
+    var lastColSize = -1;
+    var lastCbCount = -1;
+
     var poll = setInterval(function () {
       tries++;
       banner();
-      var ready = loggedIn() && (typeof collected !== 'undefined') && (collected.size > 0 || (typeof customBinders !== 'undefined' && customBinders.length > 0) || tries > 20);
-      if (ready) {
-        progCache = {};
-        renderAll();
-        cleanupAndEnsureNatDex();
-        clearInterval(poll);
-      } else if (tries > 60) {
+
+      if (loggedIn()) {
+        var colSize = (typeof collected !== 'undefined' && collected) ? collected.size : 0;
+        var cbCount = (typeof customBinders !== 'undefined' && Array.isArray(customBinders)) ? customBinders.length : 0;
+
+        // Sempre que o tamanho da coleção OU a quantidade de fichários mudar, re-renderiza
+        if (colSize !== lastColSize || cbCount !== lastCbCount) {
+          lastColSize = colSize;
+          lastCbCount = cbCount;
+          progCache = {};
+          renderAll();
+          if (cbCount > 0) cleanupAndEnsureNatDex();
+        }
+      }
+
+      // Continua observando nos primeiros ~9 segundos (30 * 300ms) para pegar cargas assíncronas tardias
+      if (tries >= 30) {
         clearInterval(poll);
       }
     }, 300);
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
-})();
