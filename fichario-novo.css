@@ -957,3 +957,76 @@ img.pk-ico{object-fit:contain;color:transparent}
  .fn-table-focus .fn-body{margin-top:8px}
  .fn-table-focus .fn-tablewrap{max-height:calc(100vh - var(--top-h) - 86px);overflow:auto}
 }
+
+.fn-sheet-detail .fn-vblocks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+/* ── Ajustes de sincronia com o JS atual ───────────────────────────── */
+
+/* Hero: alinhamento da porcentagem + seletor Slots/Cartas */
+.fn-hero-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.fn-seg-mini button {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+.fn-stats .is-active-metric {
+  color: var(--text);
+}
+
+/* Tabela matricial: cabeçalhos agrupados, divisórias e estados */
+.fn-table-matrix thead tr:first-child th {
+  top: 0;
+  z-index: 3;
+}
+.fn-table-matrix thead tr.t-subhead th {
+  top: 31px; /* evita sobreposição com a 1ª linha sticky do thead */
+  z-index: 2;
+  font-size: 10.5px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+.fn-table-matrix .t-grp-th {
+  text-align: center;
+  color: var(--text);
+  background: var(--surface2);
+}
+.fn-table-matrix .t-grp-start {
+  border-left: 1px solid var(--border2);
+}
+.fn-table-matrix .t-dash {
+  color: var(--muted);
+  opacity: 0.55;
+}
+.fn-table-matrix .t-qty-num.is-have {
+  color: var(--teal);
+}
+.fn-table-matrix .t-qty-num.is-zero {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* Detalhe da carta: sub-lotes de condição (+1 cópia) */
+.fn-vb-sub {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border2) !important; /* corrige contraste no tema claro */
+}
+.fn-vb-sub .fn-q button {
+  width: 34px;
+  height: 34px;
+  font-size: 17px;
+}
+.fn-vb-sub .fn-q button[data-dellot] {
+  color: var(--accent);
+  border-left: 1px solid var(--border);
+}
