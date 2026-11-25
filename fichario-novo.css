@@ -1131,3 +1131,24 @@ img.pk-ico{object-fit:contain;color:transparent}
 .fn-detail p [class^="rr-"] {
   font-weight: 700;
 }
+
+/* Evita quebra de linha em nomes longos de compras no dropdown de origem */
+.origem-valor {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.origem-chevron {
+  flex: 0 0 auto;
+  opacity: 0.7;
+}
+
+/* Garante cursor pointer nas vagas vazias clicáveis */
+button.fn-pocket.is-empty {
+  cursor: pointer;
+}
+button.fn-pocket.is-empty:hover {
+  border-color: var(--accent);
+}
