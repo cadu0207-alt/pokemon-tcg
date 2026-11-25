@@ -2336,15 +2336,49 @@ function setEntry(n, ver, qty, origins) {
     if (extra) extra(ov);
   }
   function closeSheet() { var ov = $('#fn-overlay'); ov.hidden = true; ov.innerHTML = ''; ov.dataset.detail = ''; ov.classList.remove('is-drawer'); document.body.style.overflow = ''; }
-  function openDetail(n, keep) {
+ function openDetail(n, keep) {
     var c = findCard(n); if (!c) return;
-    var kId = ck(c), id = st.set, s = stateOf(id, c), nm = i18n(c, id).name;
-    var title = s.st === 'have' ? 'Coletada ✓' : s.st === 'part' ? 'Parcial' : 'Faltando';
-    var html = '<div class="fn-detail"><div class="fn-detail-top"><div class="fn-detail-img"><img alt="' + esc(nm) + '" src="' + esc(imgSrc(cur.d, id, c, true)) + '"></div>' +
-      '<div class="fn-detail-info"><h4>' + esc(nm) + '</h4><p>#' + esc(c.n) + ' · ' + esc(c.type || '') + '<br><span class="' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</span> · ' + esc(priceFmt(c, id)) + (c.artist ? '<br><small style="color:var(--muted)">Ilustrador: ' + esc(c.artist) + '</small>' : '') + '</p></div></div>' +
+    var id = st.set, kId = ck(c), info = i18n(c, id), r = rareCls(c.rare), title = info.name + ' · #' + c.n;
+    var sub = [rareLabel(c.rare), c.type, c.artist ? 'ilustração: ' + c.artist : ''].filter(Boolean).join(' · ');
+
+    var isManualBinder = isCb(id) && cur.binder && cbType(cur.binder) === 'manual';
+    var isArtistBinder = isCb(id) && cur.binder && cbType(cur.binder) === 'artist';
+    var isDexBinder = isDex(id) && cur.binder && c._dex != null;
+    var canRemoveFromBinder = isManualBinder || isArtistBinder || isDexBinder;
+
+    var favBtnHtml = '<button type="button" class="fn-btn is-alt" data-act="favtoggle" data-n="' + esc(kId) + '">' +
+      (isFav(c) ? I('star', 14, { fill: true }) + ' Favorita — toque para tirar' : I('star') + ' Favoritar') +
+    '</button>';
+
+    var secondaryBtnHtml = canRemoveFromBinder
+      ? '<button type="button" class="fn-btn is-alt" data-act="binderremove" data-n="' + esc(kId) + '"' +
+          (isDexBinder ? ' data-dex="' + esc(c._dex) + '"' : '') + '>' +
+          I('trash', 14) + ' Tirar deste fichário' +
+        '</button>'
+      : '<button type="button" class="fn-btn is-alt" data-act="cbmember" data-n="' + esc(kId) + '">' +
+          I('folder', 14) + ' Guardar em fichário…' +
+        '</button>';
+
+    var detailActionsHtml = (!SHARE && (loggedIn() || DEMO))
+      ? '<div class="fn-dexact">' + favBtnHtml + secondaryBtnHtml + '</div>'
+      : '';
+
+    var html = '<div class="fn-detail">' +
+      '<div class="fn-detail-top">' +
+        '<div class="fn-detail-img"><img alt="' + esc(info.name) + '" src="' + esc(imgSrc(cur.d, id, c, true)) + '"></div>' +
+        '<div class="fn-detail-info">' +
+          '<h4>' + esc(info.name) + '</h4>' +
+          '<p>' + (sub ? '<span class="' + r + '">' + esc(sub) + '</span><br>' : '') +
+            'Preço de referência: <b>' + esc(priceFmt(c, id)) + '</b>' +
+            (isCb(id) ? '<br>Coleção: <b>' + esc(setLabelOf(c._set)) + '</b>' : '') +
+          '</p>' +
+        '</div>' +
+      '</div>' +
       (SHARE ? verRO(id, c) : verBlocks(id, c)) +
-      (!SHARE && (loggedIn() || DEMO) ? '<div class="fn-dexact"><button type="button" class="fn-btn is-alt" data-act="favtoggle" data-n="' + esc(kId) + '">' + (isFav(c) ? I('star', 14, { fill: true }) + ' Favorita — toque para tirar' : I('star') + ' Favoritar') + '</button><button type="button" class="fn-btn is-alt" data-act="cbmember" data-n="' + esc(kId) + '">' + I('folder', 14) + ' Guardar em fichário…</button></div>' : '') +
-      (!SHARE && isDex(id) && c._dex ? '<div class="fn-dexact"><p class="fn-note">Vaga #' + c._dex + ' da Pokédex · ' + esc(setLabelOf(c._set).split('—')[0].trim()) + '</p><button type="button" class="fn-btn is-alt" data-dexpick="' + c._dex + '">' + I('repeat', 14) + ' Trocar a carta desta vaga</button></div>' : '') + '</div>';
+      detailActionsHtml +
+      (!SHARE && isDex(id) && c._dex ? '<div class="fn-dexact"><p class="fn-note">Vaga #' + c._dex + ' da Pokédex · ' + esc(setLabelOf(c._set).split('—')[0].trim()) + '</p><button type="button" class="fn-btn is-alt" data-dexpick="' + c._dex + '">' + I('repeat', 14) + ' Trocar a carta desta vaga</button></div>' : '') +
+    '</div>';
+
     if (keep) {
       var b = $('#fn-overlay .fn-sheet-b');
       if (b) {
@@ -2581,6 +2615,74 @@ function setEntry(n, ver, qty, origins) {
         closeAllOriginMenus();
       }
 
+     async function removeFromCurrentBinder(n, dexNum) {
+  var c = findCard(n);
+  if (!c || !cur.binder || cbBusy || dexBusy) return;
+  if (!DEMO && !loggedIn()) {
+    toast('Entre no MyDeck para alterar seus fichários.');
+    return;
+  }
+
+  var id = st.set;
+  var b = cur.binder;
+
+  // Caso 1: Pokédex (deixa a vaga sem carta escolhida)
+  if (isDex(id)) {
+    var d = dexNum != null && dexNum !== '' ? Number(dexNum) : Number(c._dex);
+    if (!d) return;
+    dexBusy = true;
+    try {
+      var idsDex = (b.card_ids || []).filter(function (r) {
+        return Number(r.dex) !== d;
+      });
+      var nb = Object.assign({}, b, { card_ids: idsDex });
+      if (!DEMO) {
+        var savedDex = await saveCustomBinder(nb);
+        if (!savedDex) {
+          toast('Não foi possível salvar. Tente de novo.');
+          return;
+        }
+        var idxB = (customBinders || []).findIndex(function (x) { return String(x.id) === String(b.id); });
+        if (idxB >= 0) customBinders[idxB] = nb;
+      } else if (Array.isArray(demoBinders) && demoBinders[0]) {
+        demoBinders[0] = nb;
+      }
+      closeSheet();
+      progCache = {};
+      loadCur();
+      renderHero();
+      renderBody();
+      renderSide();
+      toast('Carta removida da vaga da Pokédex.');
+    } finally {
+      dexBusy = false;
+    }
+    return;
+  }
+
+  // Caso 2: Fichário manual ou de artista
+  if (isCb(id) && (cbType(b) === 'manual' || cbType(b) === 'artist')) {
+    cbBusy = true;
+    try {
+      var sid = sidOf(id, c);
+      var nextIds = (b.card_ids || []).filter(function (r) {
+        return !(r.set === sid && String(r.n) === String(c.n));
+      });
+      var savedCb = await cbSave(Object.assign({}, b, { card_ids: nextIds }));
+      if (!savedCb) {
+        toast('Não foi possível salvar. Tente de novo.');
+        return;
+      }
+      closeSheet();
+      dropMultiProg();
+      refreshAfterCb();
+      toast('Carta tirada de “' + plainName(b.name) + '”.');
+    } finally {
+      cbBusy = false;
+    }
+  }
+}
+
       // 2. Tratamento dos demais controles da interface
       var t = e.target.closest('[data-mark],[data-open],[data-pick],[data-close],[data-bnav],[data-pocket],[data-blk],[data-qty],[data-act],[data-dexpick],[data-progmode],[data-lotqty],[data-dellot]');
       if (!t) { if (e.target.id === 'fn-overlay') closeSheet(); return; }
@@ -2682,6 +2784,7 @@ function setEntry(n, ver, qty, origins) {
         else if (a === 'dexaskdelete') askDexDelete(t.dataset.bid);
         else if (a === 'dexdelete') dexDelete(t.dataset.bid);
         else if (a === 'favtoggle') toggleFav(t.dataset.n);
+        else if (a === 'binderremove') removeFromCurrentBinder(t.dataset.n, t.dataset.dex);
         else if (a === 'cbmember') openCbMember(t.dataset.n);
         else if (a === 'cbtoggle') cbToggleFromSheet(t.dataset.bid, t.dataset.n);
         else if (a === 'cbnew') openCbNew(t.dataset.withn);
