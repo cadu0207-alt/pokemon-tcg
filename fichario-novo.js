@@ -1,8 +1,7 @@
 /* Fichário (beta) — interface nova do MyDeck.
- - Usa o MESMO motor do site (app.js): login, leitura da coleção, toggleSlot() e catálogos.
- - Esta página só troca o visual. Nada aqui grava no banco por conta própria: toda marcação passa
- - por toggleSlot(), a mesma função do fichário atual — então o que se marca aqui aparece lá e vice-versa.
- - Modo demonstração (?demo): coleção fictícia só na tela, não grava nada. */
+- Usa o MESMO motor do site (app.js): login, leitura da coleção, toggleSlot(), saveSlot() e catálogos.
+- Nenhuma marcação, qualidade, lote ou progresso é salvo no localStorage: tudo vai para o banco (Supabase).
+- Modo demonstração (?demo): coleção fictícia só na tela, não grava nada. */
 (function () {
   'use strict';
 
@@ -32,6 +31,8 @@
     var k = setKey(id); var ok = k === 'cel30' || (typeof LMT_CODES !== 'undefined' && LMT_CODES[k]);
     return ok ? '<img class="set-ico" src="site-imagens/colecoes/' + esc(k) + '.png" alt="" loading="lazy" decoding="async">' : esc(fallback || '🃏');
   }
+  // Apenas preferências de interface (visualização, colunas, idioma, abas abertas).
+  // Nenhuma marcação, progresso, qualidade ou lote de carta é salvo aqui.
   var LS = {
     get: function (k, d) { try { var v = localStorage.getItem('fn_' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set: function (k, v) { try { localStorage.setItem('fn_' + k, JSON.stringify(v)); } catch (e) { } }
@@ -47,8 +48,9 @@
   var VERSION_NAME = { N: 'Normal', RH: 'Reverse Holo', RH2: 'Reverse Holo 2', F: 'Foil / Holo', SP: 'Especial' };
   var GROUP_NAME = { ME: 'Mega Evolução', SV: 'Escarlate & Violeta' };
 
-  // ── qualidade / estado da carta ────────────────────────────
+  // ── qualidade / estado da carta (100% via banco / origins) ──
   var COND_PREFIX = 'cond:';
+  var LOT_PREFIX = 'lot:';
   var CARD_CONDITIONS = [
     { code: 'M', label: 'Nova' },
     { code: 'NM', label: 'Praticamente Nova' },
@@ -57,61 +59,73 @@
     { code: 'HP', label: 'Muito Usada' },
     { code: 'D', label: 'Danificada' }
   ];
-  var condMap = LS.get('conds', {});
-  var extraLotsMap = LS.get('ver_lots', {});
- var cbDataMap = LS.get('cb_slots', {});
-  var cbLotsMap = LS.get('cb_lots', {});
 
-  function isCbKey(key) {
-    return typeof key === 'string' && key.indexOf('cb-') === 0;
+  function isValidCond(code) {
+    return CARD_CONDITIONS.some(function (x) { return x.code === code; });
   }
 
-  function saveCbSlot(key, qty, origins) {
-    if (!cbDataMap || typeof cbDataMap !== 'object') cbDataMap = {};
-    var cleanOrig = (origins || []).filter(function (o) {
-      return String(o).indexOf(COND_PREFIX) !== 0;
-    });
-    var condTag = '';
-    for (var i = 0; i < (origins || []).length; i++) {
-      if (String(origins[i]).indexOf(COND_PREFIX) === 0) condTag = String(origins[i]);
-    }
-    if (qty <= 0) {
-      delete cbDataMap[key];
-    } else {
-      cbDataMap[key] = {
-        qty: Number(qty) || 1,
-        origins: condTag ? cleanOrig.concat([condTag]) : cleanOrig
-      };
-    }
-    LS.set('cb_slots', cbDataMap);
+  function isMetaOrigin(o) {
+    var s = String(o || '');
+    return s.indexOf(COND_PREFIX) === 0 || s.indexOf(LOT_PREFIX) === 0;
   }
 
- function lotsOf(baseKey) {
-    if (SHARE) return [];
-    var src = isCbKey(baseKey) ? cbLotsMap : extraLotsMap;
-    var list = src && Array.isArray(src[baseKey]) ? src[baseKey] : [];
-    return list.map(function (it) {
-      return {
-        qty: Math.max(1, Number(it.qty) || 1),
-        cond: CARD_CONDITIONS.some(function (x) { return x.code === it.cond; }) ? it.cond : '',
-        origins: Array.isArray(it.origins) ? it.origins.slice() : []
-      };
+  function parseOriginsMeta(origins) {
+    var plain = [];
+    var cond = '';
+    var lots = [];
+    (origins || []).forEach(function (o) {
+      var s = String(o || '');
+      if (!s) return;
+      if (s.indexOf(COND_PREFIX) === 0) {
+        var cd = s.slice(COND_PREFIX.length);
+        if (isValidCond(cd)) cond = cd;
+      } else if (s.indexOf(LOT_PREFIX) === 0) {
+        try {
+          var obj = JSON.parse(s.slice(LOT_PREFIX.length));
+          if (obj && (Number(obj.q) || 0) > 0) {
+            lots.push({
+              qty: Math.max(1, Number(obj.q) || 1),
+              cond: isValidCond(obj.c) ? obj.c : '',
+              origins: Array.isArray(obj.o) ? obj.o.filter(function (x) { return x && !isMetaOrigin(x); }) : []
+            });
+          }
+        } catch (e) { }
+      } else {
+        plain.push(s);
+      }
     });
+    return { plain: plain, cond: cond, lots: lots };
+  }
+
+  function buildOriginsMeta(plainOrigins, cond, lots) {
+    var out = (plainOrigins || []).filter(function (o) { return o && !isMetaOrigin(o); });
+    if (isValidCond(cond)) out.push(COND_PREFIX + cond);
+    (lots || []).forEach(function (it) {
+      var q = Number(it.qty) || 0;
+      if (q <= 0) return;
+      var payload = { q: q };
+      if (isValidCond(it.cond)) payload.c = it.cond;
+      var po = (it.origins || []).filter(function (x) { return x && !isMetaOrigin(x); });
+      if (po.length) payload.o = po;
+      out.push(LOT_PREFIX + JSON.stringify(payload));
+    });
+    return out;
+  }
+
+  function lotsOf(baseKey) {
+    var e = entryOf(baseKey);
+    if (!e || e.qty <= 0) return [];
+    return parseOriginsMeta(e.origins).lots;
   }
 
   function saveLots(baseKey, list) {
-    var clean = (list || []).filter(function (it) { return (Number(it.qty) || 0) > 0; });
-    if (isCbKey(baseKey)) {
-      if (!cbLotsMap || typeof cbLotsMap !== 'object') cbLotsMap = {};
-      if (clean.length) cbLotsMap[baseKey] = clean;
-      else delete cbLotsMap[baseKey];
-      LS.set('cb_lots', cbLotsMap);
-      return;
-    }
-    if (!extraLotsMap || typeof extraLotsMap !== 'object') extraLotsMap = {};
-    if (clean.length) extraLotsMap[baseKey] = clean;
-    else delete extraLotsMap[baseKey];
-    LS.set('ver_lots', extraLotsMap);
+    if (SHARE) return;
+    var e = entryOf(baseKey);
+    if (!e || e.qty <= 0) return;
+    var meta = parseOriginsMeta(e.origins);
+    var cleanLots = (list || []).filter(function (it) { return (Number(it.qty) || 0) > 0; });
+    var nextOrigins = buildOriginsMeta(meta.plain, meta.cond, cleanLots);
+    setEntryByKey(baseKey, e.qty, nextOrigins);
   }
 
   function totalQtyOf(baseKey) {
@@ -123,46 +137,28 @@
   }
 
   function condOf(key) {
-    if (SHARE) return '';
     var e = entryOf(key);
-    if (e && Array.isArray(e.origins)) {
-      for (var i = 0; i < e.origins.length; i++) {
-        if (String(e.origins[i]).indexOf(COND_PREFIX) === 0) {
-          var code = String(e.origins[i]).slice(COND_PREFIX.length);
-          if (CARD_CONDITIONS.some(function (x) { return x.code === code; })) return code;
-        }
-      }
-    }
-    var v = condMap && condMap[key];
-    return CARD_CONDITIONS.some(function (x) { return x.code === v; }) ? v : '';
+    if (!e || e.qty <= 0) return '';
+    return parseOriginsMeta(e.origins).cond;
   }
+
   function condLabel(code) {
     var hit = CARD_CONDITIONS.filter(function (x) { return x.code === code; })[0];
     return hit ? (hit.code + ' · ' + hit.label) : '';
   }
-  function setCond(key, code) {
-    if (!condMap || typeof condMap !== 'object') condMap = {};
-    if (!code || condMap[key] === code) delete condMap[key];
-    else condMap[key] = code;
-    LS.set('conds', condMap);
-  }
+
   function setCondSync(n, ver, code) {
     var c = findCard(n); if (!c || SHARE) return;
     var key = keyOf(st.set, c, ver);
     var e = entryOf(key);
     if (e.qty <= 0) return;
 
-    var curCode = condOf(key);
-    var nextCode = (!code || curCode === code) ? '' : code;
-
-    var nextOrigins = (e.origins || []).filter(function (o) {
-      return String(o).indexOf(COND_PREFIX) !== 0;
-    });
-    if (nextCode) nextOrigins.push(COND_PREFIX + nextCode);
-
-    setCond(key, nextCode);
+    var meta = parseOriginsMeta(e.origins);
+    var nextCode = (!code || meta.cond === code) ? '' : code;
+    var nextOrigins = buildOriginsMeta(meta.plain, nextCode, meta.lots);
     setEntry(n, ver, e.qty, nextOrigins);
   }
+
   function cardCondBadge(id, c, ver) {
     var sl = ver ? [{ ver: ver }] : slotsOf(id, c);
     var codes = [];
@@ -196,7 +192,7 @@
     }).join('') + '</div>';
   }
 
- function condCountsHtml(scope) {
+  function condCountsHtml(scope) {
     var counts = {};
     CARD_CONDITIONS.forEach(function (q) { counts[q.code] = 0; });
 
@@ -206,15 +202,14 @@
       counts[code] += qNum;
     }
 
-    function tallySlot(id, c, ver) {
-      var key = keyOf(id, c, ver);
+    function tallyByKey(key) {
       var e = entryOf(key);
       if (e && e.qty > 0) {
         addQty(condOf(key), e.qty);
-      }
-      var lots = lotsOf(key);
-      for (var i = 0; i < lots.length; i++) {
-        addQty(lots[i].cond, lots[i].qty);
+        var lots = lotsOf(key);
+        for (var i = 0; i < lots.length; i++) {
+          addQty(lots[i].cond, lots[i].qty);
+        }
       }
     }
 
@@ -225,16 +220,15 @@
         if (!c) return;
         slotsOf(scope.id, c).forEach(function (s) {
           var sid = c._set || sidOf(scope.id, c);
-          if (hasDexSlot(bid, sid, c.n, s.ver) || has(keyOf(scope.id, c, s.ver))) {
-            tallySlot(scope.id, c, s.ver);
-          }
+          var k = resolveDexKey(bid, sid, c.n, s.ver);
+          if (k) tallyByKey(k);
         });
       });
     } else if (scope && scope.kind === 'pk') {
       (scope.pages || []).forEach(function (pg) {
         (pg || []).forEach(function (sl) {
           if (!sl || !sl.c || !sl.r) return;
-          tallySlot('', sl.c, sl.r.ver);
+          tallyByKey(keyOf('', sl.c, sl.r.ver));
         });
       });
     } else {
@@ -242,7 +236,7 @@
       var cards = (scope && scope.cards) || cur.cards || [];
       cards.forEach(function (c) {
         slotsOf(id, c).forEach(function (s) {
-          tallySlot(id, c, s.ver);
+          tallyByKey(keyOf(id, c, s.ver));
         });
       });
     }
@@ -310,12 +304,11 @@
   function engineReady() { return typeof getSetData === 'function' && typeof getSlots === 'function' && typeof SET_CATALOG !== 'undefined'; }
   function loggedIn() { try { return !!uid(); } catch (e) { return false; } }
   var SHARE = null;
- function has(key) {
-    if (isCbKey(key)) {
-      if (SHARE) return SHARE.keys.has(key);
-      return !!(cbDataMap && cbDataMap[key] && (Number(cbDataMap[key].qty) || 0) > 0);
-    }
-    return DEMO ? demoSet.has(key) : SHARE ? SHARE.keys.has(key) : (typeof collected !== 'undefined' && collected.has(key));
+
+  function has(key) {
+    if (DEMO) return demoSet.has(key);
+    if (SHARE) return SHARE.keys.has(key);
+    return typeof collected !== 'undefined' && collected.has(key);
   }
   function ck(c) { return c._k || c.n; }
   function sidOf(id, c) { return (c && (c._set || c._setId)) || id; }
@@ -332,29 +325,32 @@
     var base = slotKey(sid + ':', n, ver);
     return 'dex-' + String(dexId || 'shared') + ':' + base;
   }
-  function hasDexSlot(dexId, sid, n, ver) {
+  function resolveDexKey(dexId, sid, n, ver) {
     var base = slotKey(sid + ':', n, ver);
-    if (dexId && has('dex-' + String(dexId) + ':' + base)) return true;
-    if (has('dex-shared:' + base)) return true;
-    return false;
+    if (dexId && has('dex-' + String(dexId) + ':' + base)) return 'dex-' + String(dexId) + ':' + base;
+    if (has('dex-shared:' + base)) return 'dex-shared:' + base;
+    if (SHARE && SHARE.dexAnyKeys) {
+      var hit = SHARE.dexAnyKeys.get(base);
+      if (hit) return hit;
+    }
+    return null;
   }
-function cbSlotKey(cbId, sid, n, ver) {
-  var base = slotKey(sid + ':', String(n), ver);
-  return 'cb-' + String(cbId || 'shared') + ':' + base;
-}
-
-function keyOf(id, c, ver) {
-  var sid = sidOf(id, c);
-  if (isDex(id)) {
-    var bid = (cur.binder && cur.binder.id) || String(id).replace(/^dex:/, '') || 'shared';
-    return dexSlotKey(bid, sid, String(c.n), ver);
+  function hasDexSlot(dexId, sid, n, ver) {
+    return !!resolveDexKey(dexId, sid, n, ver);
   }
-  if (isCb(id)) {
-    var cbId = (cur.binder && cur.binder.id) || String(id).replace(/^cb:/, '') || 'shared';
-    return cbSlotKey(cbId, sid, String(c.n), ver);
+  function keyOf(id, c, ver) {
+    var sid = sidOf(id, c);
+    if (isDex(id)) {
+      var bid = (cur.binder && cur.binder.id) || String(id).replace(/^dex:/, '') || 'shared';
+      var resolved = resolveDexKey(bid, sid, String(c.n), ver);
+      return resolved || dexSlotKey(bid, sid, String(c.n), ver);
+    }
+    // Fichários personalizados (cb:*) e de Pokémon (pk:*) usam a mesma chave da coleção principal
+    if (isCb(id) || isPk(id)) {
+      return slotKey(sid + ':', String(c.n), ver);
+    }
+    return slotKey(sid + (c._k ? '' : langSfx(sid)) + ':', String(c.n), ver);
   }
-  return slotKey(sid + (c._k ? '' : langSfx(sid)) + ':', String(c.n), ver);
-}
   function priceOf(id, c, sl) {
     var base = (sl && sl.price != null) ? sl.price : c.price;
     if (c._k || effLang(sidOf(id, c)) === 'pt') return base || 0;
@@ -405,11 +401,13 @@ function keyOf(id, c, ver) {
     } catch (e) { }
     return c.img || '';
   }
-function entryOf(key) {
-    if (SHARE) return { qty: SHARE.keys.has(key) ? 1 : 0, origins: [] };
-    if (isCbKey(key)) {
-      var rec = cbDataMap && cbDataMap[key];
-      return rec ? { qty: Number(rec.qty) || 1, origins: (rec.origins || []).slice() } : { qty: 0, origins: [] };
+  function entryOf(key) {
+    if (SHARE) {
+      if (SHARE.entries && SHARE.entries.has(key)) {
+        var se = SHARE.entries.get(key);
+        return { qty: se.qty || 1, origins: (se.origins || []).slice() };
+      }
+      return { qty: SHARE.keys.has(key) ? 1 : 0, origins: [] };
     }
     if (DEMO) return demoSet.has(key) ? (demoQty.get(key) || { qty: 1, origins: [] }) : { qty: 0, origins: [] };
     if (typeof collectedQty !== 'undefined' && collectedQty.has(key)) { var e = collectedQty.get(key); return { qty: e.qty || 1, origins: (e.origins || []).slice() }; }
@@ -634,7 +632,8 @@ function entryOf(key) {
     var delLbl = b && isRegionalDexBinder(b) ? I('trash') + ' Excluir região' : I('trash') + ' Excluir Pokédex';
     $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>' + esc(name) + '</h1><p class="fn-hero-sub">Pokédex · ' + t + ' espécies · progresso isolado desta Pokédex</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
-'<div class="fn-stats">' + (b ? '<span><b>' + own + '</b>/' + t + ' espécies</span><span>Com carta escolhida <b>' + chosen + '</b></span>' + (empty ? '<span>Vagas sem carta <b>' + empty + '</b></span>' : '') : '<span>' + (loggedIn() || DEMO ? 'Carregando a sua Pokédex…' : 'Entre no MyDeck para carregar a sua Pokédex.') + '</span>') + condCountsHtml({ kind: 'dex', id: st.set, bid: bid, species: cur.species, byDex: cur.byDex }) + '</div>' +      (b ? '<div class="fn-hero-links"><a href="#" data-act="dexaskdelete" data-bid="' + esc(b.id) + '">' + delLbl + '</a></div>' : '');
+      '<div class="fn-stats">' + (b ? '<span><b>' + own + '</b>/' + t + ' espécies</span><span>Com carta escolhida <b>' + chosen + '</b></span>' + (empty ? '<span>Vagas sem carta <b>' + empty + '</b></span>' : '') : '<span>' + (loggedIn() || DEMO ? 'Carregando a sua Pokédex…' : 'Entre no MyDeck para carregar a sua Pokédex.') + '</span>') + condCountsHtml({ kind: 'dex', id: st.set, bid: bid, species: cur.species, byDex: cur.byDex }) + '</div>' +
+      (b && !SHARE ? '<div class="fn-hero-links"><a href="#" data-act="dexaskdelete" data-bid="' + esc(b.id) + '">' + delLbl + '</a></div>' : '');
     $('#fn-setbtn-emoji').innerHTML = b ? bIco(b, 22, 'masterdex') : MD_ICO('pokedex', { size: 22 }); $('#fn-setbtn-code').textContent = 'Pokédex'; $('#fn-setbtn-name').textContent = name;
   }
 
@@ -966,12 +965,11 @@ function entryOf(key) {
   function cbProg(b) {
     var key = 'cb:' + b.id + ':' + st.progMode; if (progCache[key] !== undefined) return progCache[key];
     var r = cbResolve(b), tot = 0, got = 0, cardsAny = 0;
-r.cards.forEach(function (c) {
+    r.cards.forEach(function (c) {
       var any = false;
       slotsOf('', c).forEach(function (s) {
         tot++;
-        var kCb = cbSlotKey(b.id, c._set || sidOf('', c), c.n, s.ver);
-        if (has(kCb)) { got++; any = true; }
+        if (has(keyOf('', c, s.ver))) { got++; any = true; }
       });
       if (any) cardsAny++;
     });
@@ -981,7 +979,7 @@ r.cards.forEach(function (c) {
     if (r.pending) return out;
     return (progCache[key] = out);
   }
-  function dropMultiProg() { Object.keys(progCache).forEach(function (k) { if (/^(dex|cb):/.test(k)) delete progCache[k]; }); }
+  function dropMultiProg() { Object.keys(progCache).forEach(function (k) { if (/^(dex|cb|pk):/.test(k)) delete progCache[k]; }); }
   function cbKind(b) { return cbIsFav(b) ? 'Favoritas de todas as coleções' : cbType(b) === 'preset' ? 'Sugestão temática' : cbType(b) === 'artist' ? 'Fichário por artista' : 'Fichário personalizado'; }
 
   function cbTreeHtml() {
@@ -1041,7 +1039,7 @@ r.cards.forEach(function (c) {
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats">' + (t.slots ? '<span' + (!isCardMode ? ' class="is-active-metric"' : '') + '><b>' + t.got + '</b>/' + t.slots + ' slots</span><span' + (isCardMode ? ' class="is-active-metric"' : '') + '><b>' + t.cardsAny + '</b>/' + t.cards + ' cartas</span>' + ((isCardMode ? t.cardsAny >= t.cards : t.got >= t.slots) ? '<span><b style="color:var(--teal)">Fichário completo</b></span>' : '<span><b>' + (isCardMode ? (t.cards - t.cardsAny) + '</b> cartas restantes' : (t.slots - t.got) + '</b> slots restantes') + '</span>')
         : '<span>' + (manual ? (cur.pending ? 'Carregando as cartas…' : 'Este fichário ainda não tem cartas. Use “Adicionar cartas” ou o botão “Guardar em fichário” de qualquer carta.') : 'Nenhuma carta nas suas coleções ativas para esta sugestão.') + '</span>') + condCountsHtml({ kind: 'set', id: st.set, cards: cur.cards }) + '</div>' +
-      '<div class="fn-hero-links">' + (manual ? '<a href="#" data-act="cbadd">' + I('plus', 14) + ' Adicionar cartas</a>' : '') + (isArtistBinder ? '<a href="#" data-act="artists">' + I('palette', 14) + ' Outros artistas</a>' : '') + '<a href="#" data-act="cbedit">' + I('pencil', 14) + ' Editar fichário</a></div>';
+      (!SHARE ? '<div class="fn-hero-links">' + (manual ? '<a href="#" data-act="cbadd">' + I('plus', 14) + ' Adicionar cartas</a>' : '') + (isArtistBinder ? '<a href="#" data-act="artists">' + I('palette', 14) + ' Outros artistas</a>' : '') + '<a href="#" data-act="cbedit">' + I('pencil', 14) + ' Editar fichário</a></div>' : '');
     $('#fn-setbtn-emoji').innerHTML = bIco(b, 22); $('#fn-setbtn-code').textContent = cbIsFav(b) ? 'Favoritos' : isArtistBinder ? 'Artista' : 'Personalizado'; $('#fn-setbtn-name').textContent = nm;
   }
 
@@ -1416,7 +1414,8 @@ r.cards.forEach(function (c) {
     if (!b) { $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>Fichário de Pokémon</h1><p class="fn-hero-sub">' + (loggedIn() || DEMO ? 'Carregando…' : 'Entre no MyDeck para ver os seus fichários.') + '</p></div></div>'; $('#fn-setbtn-emoji').innerHTML = MD_ICO('pokeball', { size: 22 }); $('#fn-setbtn-code').textContent = 'Pokémon'; $('#fn-setbtn-name').textContent = 'Personalizados'; return; }
     var r = cur.pk, pages = pkPages(b), per = pages[0].length, total = pages.length * per, pct = r.filled ? Math.round(r.got / r.filled * 100) : 0, sp = (b.filter_config || {}).name;
     $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1><span class="h-ico">' + pkIco(b, 26) + '</span>' + esc(plainName(b.name) || 'Sem nome') + '</h1><p class="fn-hero-sub">Fichário de Pokémon' + (sp ? ' · ' + esc(sp) : '') + ' · ' + pages.length + ' página' + (pages.length === 1 ? '' : 's') + ' de ' + binderSizeLabel(b.layout || 3) + '</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
-'<div class="fn-progress"><i style="width:' + pct + '%"></i></div><div class="fn-stats"><span><b>' + r.got + '</b>/' + r.filled + ' cartas colocadas que você tem</span><span>Vagas preenchidas <b>' + r.filled + '</b>/' + total + '</span>' + condCountsHtml({ kind: 'pk', pages: r.pages }) + '</div>' +      '<div class="fn-hero-links"><a href="#" data-act="pkedit">' + (pkEdit ? I('check') + ' Terminar edição' : I('pencil') + ' Editar posições') + '</a><a href="#" data-act="cbedit">' + I('settings', 14) + ' Nome / excluir</a></div>' +
+      '<div class="fn-progress"><i style="width:' + pct + '%"></i></div><div class="fn-stats"><span><b>' + r.got + '</b>/' + r.filled + ' cartas colocadas que você tem</span><span>Vagas preenchidas <b>' + r.filled + '</b>/' + total + '</span>' + condCountsHtml({ kind: 'pk', pages: r.pages }) + '</div>' +
+      (!SHARE ? '<div class="fn-hero-links"><a href="#" data-act="pkedit">' + (pkEdit ? I('check') + ' Terminar edição' : I('pencil') + ' Editar posições') + '</a><a href="#" data-act="cbedit">' + I('settings', 14) + ' Nome / excluir</a></div>' : '') +
       (pkEdit ? '<div class="fn-warn" style="margin-top:10px">Modo edição: toque numa vaga vazia para escolher a carta, ou numa carta para trocá-la ou tirá-la. Tudo é salvo na hora.</div>' : '');
     $('#fn-setbtn-emoji').innerHTML = pkIco(b, 22); $('#fn-setbtn-code').textContent = 'Pokémon'; $('#fn-setbtn-name').textContent = plainName(b.name) || 'Pokémon';
   }
@@ -1426,17 +1425,31 @@ r.cards.forEach(function (c) {
     if (st.bpage >= np) st.bpage = Math.max(0, np - 1); st.bpage = st.bpage - (st.bpage % step); var p0 = st.bpage;
     function page(i) {
       if (i >= np) return '<div></div>';
-      return '<div class="fn-page"><div class="fn-page-lbl">Página ' + (i + 1) + '</div><div class="fn-pocket-grid" style="--pc:' + d.cols + '">' + pages[i].map(function (sl, j) {
-        var at = ' data-pkpage="' + i + '" data-pkslot="' + j + '"';
-        if (!sl) return '<button type="button" class="fn-pocket is-empty' + (pkEdit ? ' is-edit' : '') + '"' + (pkEdit ? at + ' data-act="pkslot"' : ' disabled') + ' aria-label="Vaga vazia ' + (j + 1) + '"><span class="fn-slotn">' + (j + 1) + '</span>' + (pkEdit ? '<span class="fn-plus">+</span>' : '') + '</button>';
-        if (!sl.c) return '<button type="button" class="fn-pocket is-miss"' + at + ' disabled><span class="fn-slotn">…</span></button>';
-        var on = has(keyOf('', sl.c, sl.r.ver)), c = sl.c;
-        return '<button type="button" class="fn-pocket is-' + (on ? 'have' : 'miss') + '" data-n="' + esc(ck(c)) + '"' + (pkEdit ? at + ' data-act="pkslot"' : ' data-open="' + esc(ck(c)) + '"') + ' aria-label="' + esc(i18n(c, '').name + ' — ' + (VERSION_NAME[sl.r.ver] || sl.r.ver)) + '"><img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(null, '', c)) + '"><span class="fn-slotn">#' + esc(c.n) + '</span><span class="fn-slotv v-' + esc(sl.r.ver) + '">' + esc(sl.r.ver) + '</span><span class="fn-tick">✓</span>' + cardCondBadge('', c, sl.r.ver) + '</button>';
-      }).join('') + '</div></div>';
+      var pg = pages[i];
+      return '<div class="fn-page"><div class="fn-page-lbl">Página ' + (i + 1) + '</div><div class="fn-pocket-grid" style="--pc:' + d.cols + '">' +
+        pg.map(function (sl, j) {
+          if (!sl) {
+            return pkEdit
+              ? '<button type="button" class="fn-pocket is-empty" data-act="pkslot" data-pkpage="' + i + '" data-pkslot="' + j + '" aria-label="Vaga ' + (j + 1) + ' vazia"><span class="fn-slotn">' + (j + 1) + '</span><span>+</span></button>'
+              : '<div class="fn-pocket is-empty is-placeholder" aria-hidden="true"><span class="fn-slotn">' + (j + 1) + '</span></div>';
+          }
+          var c = sl.c;
+          if (!c) return '<div class="fn-pocket is-miss"><span class="fn-slotn">#' + esc(sl.r.n) + '</span></div>';
+          var on = has(keyOf('', c, sl.r.ver)), kId = ck(c);
+          var attrs = pkEdit
+            ? 'data-act="pkslot" data-pkpage="' + i + '" data-pkslot="' + j + '"'
+            : 'data-n="' + esc(kId) + '" data-ver="' + esc(sl.r.ver) + '" data-open="' + esc(kId) + '"';
+          return '<button type="button" class="fn-pocket is-' + (on ? 'have' : 'miss') + '" ' + attrs + ' aria-label="' + esc(i18n(c, '').name) + '">' +
+            '<img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(null, '', c)) + '">' +
+            '<span class="fn-slotn">#' + esc(c.n) + '</span><span class="fn-slotv v-' + esc(sl.r.ver) + '">' + esc(sl.r.ver) + '</span>' +
+            '<span class="fn-tick">✓</span>' + cardCondBadge('', c, sl.r.ver) + '</button>';
+        }).join('') + '</div></div>';
     }
     var lbl = two ? 'Páginas ' + (p0 + 1) + (p0 + 2 <= np ? '–' + (p0 + 2) : '') + ' de ' + np : 'Página ' + (p0 + 1) + ' de ' + np;
-    return '<div class="fn-binder-nav"><button type="button" data-bnav="-1"' + (p0 <= 0 ? ' disabled' : '') + '>‹ Anterior</button><span class="fn-binder-pg">' + lbl + '</span><button type="button" data-bnav="1"' + (p0 + step >= np ? ' disabled' : '') + '>Próxima ›</button>' + (pkEdit ? '<button type="button" data-act="pkaddpage">' + I('plus', 14) + ' Página</button>' : '') + '</div>' +
-      '<div class="fn-spread" style="--pr:' + d.rows + '">' + page(p0) + (two ? page(p0 + 1) : '') + '</div>';
+    return '<div class="fn-binder-nav"><button type="button" data-bnav="-1"' + (p0 <= 0 ? ' disabled' : '') + '>‹ Anterior</button>' +
+      '<span class="fn-binder-pg">' + lbl + '</span><button type="button" data-bnav="1"' + (p0 + step >= np ? ' disabled' : '') + '>Próxima ›</button>' +
+      (pkEdit ? '<button type="button" class="fn-btn" data-act="pkaddpage">+ Página</button>' : '') +
+      '</div><div class="fn-spread" style="--pr:' + d.rows + '">' + page(p0) + (two ? page(p0 + 1) : '') + '</div>';
   }
   async function pkSavePages(pages, extra) {
     var b = cur.binder; if (!b || cbBusy) return false; cbBusy = true;
@@ -1839,30 +1852,52 @@ r.cards.forEach(function (c) {
       cur.view.forEach(function (c) { slotsOf(id, c).forEach(function (s) { items.push({ c: c, ver: s.ver }); }); });
       if (!items.length) return emptyMsg();
     }
-    var pages = Math.ceil(items.length / per), two = innerWidth >= 700, step = two ? 2 : 1;
+
+    var pages = Math.max(1, Math.ceil(items.length / per));
+    var two = innerWidth >= 700, step = two ? 2 : 1;
     if (st.bpage >= pages) st.bpage = Math.max(0, pages - 1);
     st.bpage = st.bpage - (st.bpage % step);
     var p0 = st.bpage;
+
+    function emptyPocket(idx) {
+      return '<div class="fn-pocket is-empty is-placeholder" aria-hidden="true">' +
+        '<span class="fn-slotn">' + (idx + 1) + '</span>' +
+        '</div>';
+    }
+
     function page(i) {
       if (i >= pages) return '<div></div>';
       var chunk = items.slice(i * per, i * per + per);
+      while (chunk.length < per) chunk.push(null);
+
       return '<div class="fn-page"><div class="fn-page-lbl">Página ' + (i + 1) + '</div><div class="fn-pocket-grid" style="--pc:' + cols + '">' +
-        chunk.map(function (it) {
-          if (dexVis && !it.c) return '<button type="button" class="fn-pocket is-miss fn-ph" data-dexpick="' + it.sp.dex + '" aria-label="Escolher a carta de ' + esc(it.sp.name) + '">' + artImg(it.sp.dex) + '<span class="fn-slotn">#' + it.sp.dex + '</span></button>';
+        chunk.map(function (it, idx) {
+          if (!it) return emptyPocket(idx);
+          if (dexVis && !it.c) {
+            return '<button type="button" class="fn-pocket is-miss fn-ph" data-dexpick="' + it.sp.dex + '" aria-label="Escolher a carta de ' + esc(it.sp.name) + '">' +
+              artImg(it.sp.dex) + '<span class="fn-slotn">#' + it.sp.dex + '</span></button>';
+          }
           if (dexVis) {
             var cd = it.c;
-            return '<button type="button" class="fn-pocket is-' + (dexOwned(cd) ? 'have' : 'miss') + '" data-n="' + esc(ck(cd)) + '" data-open="' + esc(ck(cd)) + '" aria-label="' + esc(i18n(cd, id).name) + '"><img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(cur.d, id, cd)) + '"><span class="fn-slotn">#' + it.sp.dex + '</span><span class="fn-tick">✓</span>' + cardCondBadge(id, cd) + '</button>';
+            return '<button type="button" class="fn-pocket is-' + (dexOwned(cd) ? 'have' : 'miss') + '" data-n="' + esc(ck(cd)) + '" data-open="' + esc(ck(cd)) + '" aria-label="' + esc(i18n(cd, id).name) + '">' +
+              '<img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(cur.d, id, cd)) + '">' +
+              '<span class="fn-slotn">#' + it.sp.dex + '</span><span class="fn-tick">✓</span>' + cardCondBadge(id, cd) + '</button>';
           }
           var c = it.c, on = has(keyOf(id, c, it.ver)), kId = ck(c);
           return '<button type="button" class="fn-pocket is-' + (on ? 'have' : 'miss') + '" data-n="' + esc(kId) + '" data-ver="' + esc(it.ver) + '" data-open="' + esc(kId) + '" aria-label="' + esc(i18n(c, id).name + ' — ' + (VERSION_NAME[it.ver] || it.ver) + (on ? ' (coletada)' : ' (faltando)')) + '">' +
-            '<img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '"><span class="fn-slotn">#' + esc(c.n) + '</span><span class="fn-slotv v-' + esc(it.ver) + '">' + esc(it.ver) + '</span><span class="fn-tick">✓</span>' + cardCondBadge(id, c, it.ver) + '</button>';
+            '<img loading="lazy" decoding="async" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '">' +
+            '<span class="fn-slotn">#' + esc(c.n) + '</span><span class="fn-slotv v-' + esc(it.ver) + '">' + esc(it.ver) + '</span>' +
+            '<span class="fn-tick">✓</span>' + cardCondBadge(id, c, it.ver) + '</button>';
         }).join('') + '</div></div>';
     }
+
     var lbl = two ? 'Páginas ' + (p0 + 1) + (p0 + 2 <= pages ? '–' + (p0 + 2) : '') + ' de ' + pages : 'Página ' + (p0 + 1) + ' de ' + pages;
     return '<div class="fn-binder-nav"><button type="button" data-bnav="-1"' + (p0 <= 0 ? ' disabled' : '') + '>‹ Anterior</button>' +
       '<span class="fn-binder-pg">' + lbl + '</span><button type="button" data-bnav="1"' + (p0 + step >= pages ? ' disabled' : '') + '>Próxima ›</button>' +
-      '<div class="fn-seg fn-seg-soft" id="fn-pocket" role="group" aria-label="Bolsos por página">' + POCKETS.map(function (p) { return '<button type="button" data-pocket="' + p.id + '" class="' + (p.id === P.id ? 'is-on' : '') + '">' + p.label + '</button>'; }).join('') + '</div></div>' +
-      '<div class="fn-spread" style="--pr:' + Math.round(per / cols) + '">' + page(p0) + (two ? page(p0 + 1) : '') + '</div>';
+      '<div class="fn-seg fn-seg-soft" id="fn-pocket" role="group" aria-label="Bolsos por página">' +
+      POCKETS.map(function (p) { return '<button type="button" data-pocket="' + p.id + '" class="' + (p.id === P.id ? 'is-on' : '') + '">' + p.label + '</button>'; }).join('') +
+      '</div></div>' +
+      '<div class="fn-spread" style="--pr:' + Math.ceil(per / cols) + '">' + page(p0) + (two ? page(p0 + 1) : '') + '</div>';
   }
   function renderDashView() {
     var id = st.set, own = 0, miss = 0, ownN = 0, missN = 0, bestO = null, bestM = null, ver = {}, rar = {}, missing = [];
@@ -2036,23 +2071,15 @@ r.cards.forEach(function (c) {
     var kId = ck(c);
     if (SHARE) { toast('Somente leitura: este link só mostra a coleção.'); openDetail(kId); return; }
     var key = keyOf(st.set, c, ver), totQ = totalQtyOf(key);
-   if (isCbKey(key)) {
-      if (totQ > 1) { toast('Você tem ' + totQ + ' cópias. Ajuste a quantidade no detalhe da carta.'); openDetail(kId); return; }
-      if (totQ > 0) {
-        saveCbSlot(key, 0, []);
-        saveLots(key, []);
-        setCond(key, '');
-      } else {
-        saveCbSlot(key, 1, []);
-      }
+    if (totQ > 1) { toast('Você tem ' + totQ + ' cópias. Ajuste a quantidade no detalhe da carta.'); openDetail(kId); return; }
+    if (DEMO) {
+      if (demoSet.has(key)) { demoSet.delete(key); demoQty.delete(key); }
+      else { demoSet.add(key); demoQty.set(key, { qty: 1, origins: [] }); }
       patchOne(kId);
       return;
     }
-    if (totQ > 1) { toast('Você tem ' + totQ + ' cópias. Ajuste a quantidade no detalhe da carta.'); openDetail(kId); return; }
-    if (DEMO) { if (demoSet.has(key)) { demoSet.delete(key); demoQty.delete(key); setCond(key, ''); } else demoSet.add(key); patchOne(kId); return; }
     if (!loggedIn()) { toast('Entre no MyDeck para marcar suas cartas.'); return; }
     if (busy[key]) return; busy[key] = true;
-    if (has(key)) setCond(key, '');
     var p; try { p = toggleSlot(key); } catch (e) { busy[key] = false; toast('Não foi possível marcar. Tente de novo.'); return; }
     patchOne(kId);
     Promise.resolve(p).then(function () { patchOne(kId); }, function () { toast('Não foi possível salvar. Tente de novo.'); patchOne(kId); }).then(function () { busy[key] = false; });
@@ -2070,24 +2097,55 @@ r.cards.forEach(function (c) {
     renderAll();
   }
 
-function setEntry(n, ver, qty, origins) {
-  var c = findCard(n); if (!c || SHARE) return;
-  var kId = ck(c), key = keyOf(st.set, c, ver);
-  if (isCbKey(key)) {
-    saveCbSlot(key, qty, origins);
-    patchOne(kId);
-    return;
+  function setEntryByKey(key, qty, origins, kIdOpt) {
+    if (SHARE) return;
+    if (DEMO) {
+      if (qty <= 0) { demoSet.delete(key); demoQty.delete(key); }
+      else { demoSet.add(key); demoQty.set(key, { qty: qty, origins: origins || [] }); }
+      if (kIdOpt) patchOne(kIdOpt);
+      return;
+    }
+    if (!loggedIn()) { toast('Entre no MyDeck para salvar suas cartas.'); return; }
+    if (typeof saveSlot !== 'function') { toast('Não foi possível salvar agora. Recarregue a página.'); return; }
+    if (busy[key]) return; busy[key] = true;
+    Promise.resolve(saveSlot(key, qty, origins || [])).then(function () {
+      if (kIdOpt) patchOne(kIdOpt);
+    }, function () {
+      toast('Não foi possível salvar. Tente de novo.');
+    }).then(function () { busy[key] = false; });
   }
-  if (DEMO) { if (qty <= 0) { demoSet.delete(key); demoQty.delete(key); } else { demoSet.add(key); demoQty.set(key, { qty: qty, origins: origins }); } patchOne(kId); return; }
-  if (!loggedIn()) { toast('Entre no MyDeck para salvar suas cartas.'); return; }
-  if (typeof saveSlot !== 'function') { toast('Não foi possível salvar agora. Recarregue a página.'); return; }
-  if (busy[key]) return; busy[key] = true;
-  Promise.resolve(saveSlot(key, qty, origins)).then(function () { patchOne(kId); }, function () { toast('Não foi possível salvar. Tente de novo.'); }).then(function () { busy[key] = false; });
-}
+
+  function setEntry(n, ver, qty, origins) {
+    var c = findCard(n); if (!c || SHARE) return;
+    var kId = ck(c), key = keyOf(st.set, c, ver);
+    setEntryByKey(key, qty, origins, kId);
+  }
+
   function verRO(id, c) {
     return '<div class="fn-vblocks">' + slotsOf(id, c).map(function (s) {
-      var on = has(keyOf(id, c, s.ver));
-      return '<div class="fn-vb' + (on ? ' is-on' : '') + '"><div class="fn-vb-h"><span class="fn-vb-n"><b>' + esc(s.ver) + '</b>' + esc(VERSION_NAME[s.ver] || s.ver) + '</span><span class="fn-q"><output>' + (on ? '✓ Tem' : 'Falta') + '</output></span></div></div>';
+      var key = keyOf(id, c, s.ver);
+      var e = entryOf(key);
+      var lots = lotsOf(key);
+      var totQ = totalQtyOf(key);
+      var on = totQ > 0;
+
+      var lines = [];
+      if (e.qty > 0) {
+        var cd0 = condOf(key);
+        lines.push({ cond: cd0, qty: e.qty });
+      }
+      lots.forEach(function (l) {
+        if ((Number(l.qty) || 0) > 0) lines.push({ cond: l.cond || '', qty: Number(l.qty) });
+      });
+
+      var detailsHtml = lines.length ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">' + lines.map(function (it) {
+        var bdg = it.cond
+          ? '<span class="fn-cond c-' + esc(it.cond) + '" title="' + esc(condLabel(it.cond)) + '">' + esc(it.cond) + '</span>'
+          : '<span class="fn-cond c-none">Sem qualidade</span>';
+        return '<span style="display:inline-flex;align-items:center;gap:4px">' + bdg + '<small>×' + it.qty + '</small></span>';
+      }).join('') + '</div>' : '';
+
+      return '<div class="fn-vb' + (on ? ' is-on' : '') + '"><div class="fn-vb-h"><span class="fn-vb-n"><b>' + esc(s.ver) + '</b>' + esc(VERSION_NAME[s.ver] || s.ver) + '</span><span class="fn-q"><output>' + (on ? ('✓ ' + (totQ > 1 ? totQ + ' cópias' : 'Tem')) : 'Falta') + '</output></span></div>' + detailsHtml + '</div>';
     }).join('') + '</div>';
   }
   function renderCondBar(curCond, extraAttrs) {
@@ -2101,7 +2159,7 @@ function setEntry(n, ver, qty, origins) {
   function renderOriginBar(origins, extraAttrs) {
     var curOrig = '';
     for (var i = 0; i < (origins || []).length; i++) {
-      if (String(origins[i]).indexOf(COND_PREFIX) !== 0) {
+      if (!isMetaOrigin(origins[i])) {
         curOrig = String(origins[i]);
         break;
       }
@@ -2398,15 +2456,14 @@ function setEntry(n, ver, qty, origins) {
     if (extra) extra(ov);
   }
   function closeSheet() { var ov = $('#fn-overlay'); ov.hidden = true; ov.innerHTML = ''; ov.dataset.detail = ''; ov.classList.remove('is-drawer'); document.body.style.overflow = ''; }
- function openDetail(n, keep) {
+  function openDetail(n, keep) {
     var c = findCard(n); if (!c) return;
     var id = st.set, kId = ck(c), info = i18n(c, id), r = rareCls(c.rare), title = info.name + ' · #' + c.n;
     var sub = [rareLabel(c.rare), c.type, c.artist ? 'ilustração: ' + c.artist : ''].filter(Boolean).join(' · ');
 
     var isManualBinder = isCb(id) && cur.binder && cbType(cur.binder) === 'manual';
-    var isArtistBinder = isCb(id) && cur.binder && cbType(cur.binder) === 'artist';
     var isDexBinder = isDex(id) && cur.binder && c._dex != null;
-    var canRemoveFromBinder = isManualBinder || isArtistBinder || isDexBinder;
+    var canRemoveFromBinder = isManualBinder || isDexBinder;
 
     var favBtnHtml = '<button type="button" class="fn-btn is-alt" data-act="favtoggle" data-n="' + esc(kId) + '">' +
       (isFav(c) ? I('star', 14, { fill: true }) + ' Favorita — toque para tirar' : I('star') + ' Favoritar') +
@@ -2577,9 +2634,10 @@ function setEntry(n, ver, qty, origins) {
         patchOne(ck(cSel));
       }
     } else {
-      var eBase = entryOf(keyOf(st.set, cSel, dataset.ver));
-      var keptConds = (eBase.origins || []).filter(function (o) { return String(o).indexOf(COND_PREFIX) === 0; });
-      var nextOrigins = val ? keptConds.concat([val]) : keptConds;
+      var kBase = keyOf(st.set, cSel, dataset.ver);
+      var eBase = entryOf(kBase);
+      var meta = parseOriginsMeta(eBase.origins);
+      var nextOrigins = buildOriginsMeta(val ? [val] : [], meta.cond, meta.lots);
       setEntry(dataset.n, dataset.ver, Math.max(1, eBase.qty), nextOrigins);
     }
   }
@@ -2677,73 +2735,71 @@ function setEntry(n, ver, qty, origins) {
         closeAllOriginMenus();
       }
 
-     async function removeFromCurrentBinder(n, dexNum) {
-  var c = findCard(n);
-  if (!c || !cur.binder || cbBusy || dexBusy) return;
-  if (!DEMO && !loggedIn()) {
-    toast('Entre no MyDeck para alterar seus fichários.');
-    return;
-  }
-
-  var id = st.set;
-  var b = cur.binder;
-
-  // Caso 1: Pokédex (deixa a vaga sem carta escolhida)
-  if (isDex(id)) {
-    var d = dexNum != null && dexNum !== '' ? Number(dexNum) : Number(c._dex);
-    if (!d) return;
-    dexBusy = true;
-    try {
-      var idsDex = (b.card_ids || []).filter(function (r) {
-        return Number(r.dex) !== d;
-      });
-      var nb = Object.assign({}, b, { card_ids: idsDex });
-      if (!DEMO) {
-        var savedDex = await saveCustomBinder(nb);
-        if (!savedDex) {
-          toast('Não foi possível salvar. Tente de novo.');
+      async function removeFromCurrentBinder(n, dexNum) {
+        var c = findCard(n);
+        if (!c || !cur.binder || cbBusy || dexBusy) return;
+        if (!DEMO && !loggedIn()) {
+          toast('Entre no MyDeck para alterar seus fichários.');
           return;
         }
-        var idxB = (customBinders || []).findIndex(function (x) { return String(x.id) === String(b.id); });
-        if (idxB >= 0) customBinders[idxB] = nb;
-      } else if (Array.isArray(demoBinders) && demoBinders[0]) {
-        demoBinders[0] = nb;
-      }
-      closeSheet();
-      progCache = {};
-      loadCur();
-      renderHero();
-      renderBody();
-      renderSide();
-      toast('Carta removida da vaga da Pokédex.');
-    } finally {
-      dexBusy = false;
-    }
-    return;
-  }
 
-  // Caso 2: Fichário manual ou de artista
-  if (isCb(id) && (cbType(b) === 'manual' || cbType(b) === 'artist')) {
-    cbBusy = true;
-    try {
-      var sid = sidOf(id, c);
-      var nextIds = (b.card_ids || []).filter(function (r) {
-        return !(r.set === sid && String(r.n) === String(c.n));
-      });
-      var savedCb = await cbSave(Object.assign({}, b, { card_ids: nextIds }));
-      if (!savedCb) {
-        toast('Não foi possível salvar. Tente de novo.');
-        return;
+        var id = st.set;
+        var b = cur.binder;
+
+        if (isDex(id)) {
+          var d = dexNum != null && dexNum !== '' ? Number(dexNum) : Number(c._dex);
+          if (!d) return;
+          dexBusy = true;
+          try {
+            var idsDex = (b.card_ids || []).filter(function (r) {
+              return Number(r.dex) !== d;
+            });
+            var nb = Object.assign({}, b, { card_ids: idsDex });
+            if (!DEMO) {
+              var savedDex = await saveCustomBinder(nb);
+              if (!savedDex) {
+                toast('Não foi possível salvar. Tente de novo.');
+                return;
+              }
+              var idxB = (customBinders || []).findIndex(function (x) { return String(x.id) === String(b.id); });
+              if (idxB >= 0) customBinders[idxB] = nb;
+            } else if (Array.isArray(demoBinders) && demoBinders[0]) {
+              demoBinders[0] = nb;
+            }
+            closeSheet();
+            progCache = {};
+            loadCur();
+            renderHero();
+            renderBody();
+            renderSide();
+            toast('Carta removida da vaga da Pokédex.');
+          } finally {
+            dexBusy = false;
+          }
+          return;
+        }
+
+        if (isCb(id) && cbType(b) === 'manual') {
+          cbBusy = true;
+          try {
+            var sid = sidOf(id, c);
+            var nextIds = (b.card_ids || []).filter(function (r) {
+              return !(r.set === sid && String(r.n) === String(c.n));
+            });
+            var savedCb = await cbSave(Object.assign({}, b, { card_ids: nextIds }));
+            if (!savedCb) {
+              toast('Não foi possível salvar. Tente de novo.');
+              return;
+            }
+            closeSheet();
+            dropMultiProg();
+            refreshAfterCb();
+            toast('Carta tirada de “' + plainName(b.name) + '”.');
+          } finally {
+            cbBusy = false;
+          }
+        }
       }
-      closeSheet();
-      dropMultiProg();
-      refreshAfterCb();
-      toast('Carta tirada de “' + plainName(b.name) + '”.');
-    } finally {
-      cbBusy = false;
-    }
-  }
-}
 
       // 2. Tratamento dos demais controles da interface
       var t = e.target.closest('[data-mark],[data-open],[data-pick],[data-close],[data-bnav],[data-pocket],[data-blk],[data-qty],[data-act],[data-dexpick],[data-progmode],[data-lotqty],[data-dellot]');
@@ -2756,17 +2812,14 @@ function setEntry(n, ver, qty, origins) {
         var cc = findCard(t.dataset.n);
         if (cc) {
           var kQty = keyOf(st.set, cc, t.dataset.ver), ee = entryOf(kQty), q = Math.max(0, ee.qty + Number(t.dataset.qty));
-          var curLots = lotsOf(kQty);
-          if (q === 0 && curLots.length > 0) {
-            var promoted = curLots.shift();
-            saveLots(kQty, curLots);
-            setCond(kQty, promoted.cond || '');
-            var nextOrig = (promoted.origins || []).slice();
-            if (promoted.cond) nextOrig.push(COND_PREFIX + promoted.cond);
+          var metaQ = parseOriginsMeta(ee.origins);
+          if (q === 0 && metaQ.lots.length > 0) {
+            var promoted = metaQ.lots.shift();
+            var nextOrig = buildOriginsMeta(promoted.origins, promoted.cond, metaQ.lots);
             setEntry(t.dataset.n, t.dataset.ver, promoted.qty, nextOrig);
           } else {
-            if (q === 0) { setCond(kQty, ''); saveLots(kQty, []); }
-            setEntry(t.dataset.n, t.dataset.ver, q, q > 0 ? ee.origins : []);
+            var nextOrigQ = q > 0 ? buildOriginsMeta(metaQ.plain, metaQ.cond, metaQ.lots) : [];
+            setEntry(t.dataset.n, t.dataset.ver, q, nextOrigQ);
           }
         }
       }
@@ -2802,11 +2855,10 @@ function setEntry(n, ver, qty, origins) {
           if (cAdd) {
             var kAdd = keyOf(st.set, cAdd, t.dataset.ver);
             var eAdd = entryOf(kAdd);
-            var curLots = lotsOf(kAdd);
-            if (eAdd.qty <= 0) setEntry(t.dataset.n, t.dataset.ver, 1, eAdd.origins || []);
-            curLots.push({ qty: 1, cond: '', origins: [] });
-            saveLots(kAdd, curLots);
-            patchOne(ck(cAdd));
+            var metaAdd = parseOriginsMeta(eAdd.origins);
+            metaAdd.lots.push({ qty: 1, cond: '', origins: [] });
+            var nextOrigAdd = buildOriginsMeta(metaAdd.plain, metaAdd.cond, metaAdd.lots);
+            setEntry(t.dataset.n, t.dataset.ver, Math.max(1, eAdd.qty), nextOrigAdd);
           }
         }
         else if (a === 'setcond') {
@@ -2863,7 +2915,7 @@ function setEntry(n, ver, qty, origins) {
         else if (a === 'pknew') openPkNew();
         else if (a === 'pksize') { $$('#fn-pk-size button').forEach(function (b) { b.classList.toggle('is-on', b === t); }); }
         else if (a === 'pkcreate') pkCreate();
-        else if (a === 'pkedit') { pkEdit = !pkEdit; renderHero(); renderBody(); }
+        else if (a === 'pkedit') { pkEdit = !pkEdit; closeSheet(); renderHero(); renderBody(); }
         else if (a === 'pkaddpage') pkAddPage();
         else if (a === 'pkslot') pkSlotTap(Number(t.dataset.pkpage), Number(t.dataset.pkslot));
         else if (a === 'pkchange') openPkPicker();
@@ -2872,120 +2924,137 @@ function setEntry(n, ver, qty, origins) {
         else if (a === 'pkspecpick') pkPickSpecies(Number(t.dataset.dex), t.dataset.name);
         else if (a === 'pkplace') pkPlace(t.dataset.set, t.dataset.cn, t.dataset.ver);
       }
-      else if (t.dataset.blk) toggleBlock(t.dataset.blk);
-      else if (t.dataset.pick) pickSet(t.dataset.pick);
+      else if (t.dataset.pick != null) pickSet(t.dataset.pick);
+      else if (t.dataset.blk != null) toggleBlock(t.dataset.blk);
       else if (t.dataset.close != null) closeSheet();
-      else if (t.dataset.bnav) { st.bpage = Math.max(0, st.bpage + Number(t.dataset.bnav) * (innerWidth >= 700 ? 2 : 1)); renderBody(); }
-      else if (t.dataset.pocket) { st.pocket = String(t.dataset.pocket); LS.set('pocket', st.pocket); st.bpage = 0; renderBody(); }
+      else if (t.dataset.bnav != null) { var step = innerWidth >= 700 ? 2 : 1; st.bpage = Math.max(0, st.bpage + Number(t.dataset.bnav) * step); renderBody(); }
+      else if (t.dataset.pocket != null) { st.pocket = t.dataset.pocket; LS.set('pocket', st.pocket); st.bpage = 0; renderBody(); }
     });
-
-    document.addEventListener('change', function (e) {
-      if (!picker) return;
-      if (e.target.id === 'fn-dp-sort') { picker.sort = e.target.value; }
-      else if (e.target.id === 'fn-dp-own') { picker.own = e.target.checked; }
-      else return;
-      var qi = $('#fn-dp-q'); renderDexPicker(qi ? qi.value : '');
-    });
-
-    document.addEventListener('input', function (e) { if (e.target.id === 'fn-dp-q') { renderDexPicker(e.target.value); return; } if (e.target.id === 'fn-cp-q') { renderCbAdd(e.target.value); return; } if (e.target.id === 'fn-ar-q') { renderArtists(e.target.value); return; } if (e.target.id === 'fn-pks-q') { renderPkSpecies(e.target.value); return; } if (e.target.classList && e.target.classList.contains('fn-tsearch')) applyTreeFilter(e.target.closest('.fn-side,.fn-drawer')); });
+    document.addEventListener('change', function (e) { if (e.target && e.target.id === 'fn-dp-sort' && picker) { picker.sort = e.target.value; renderDexPicker(($('#fn-dp-q') || {}).value || ''); } else if (e.target && e.target.id === 'fn-dp-own' && picker) { picker.own = e.target.checked; renderDexPicker(($('#fn-dp-q') || {}).value || ''); } });
+    document.addEventListener('input', function (e) { if (e.target && e.target.classList && e.target.classList.contains('fn-tsearch')) applyTreeFilter(e.target.closest('.fn-drawer') || $('#fn-side')); else if (e.target && e.target.id === 'fn-dp-q') renderDexPicker(e.target.value); else if (e.target && e.target.id === 'fn-cp-q') renderCbAdd(e.target.value); else if (e.target && e.target.id === 'fn-ar-q') renderArtists(e.target.value); else if (e.target && e.target.id === 'fn-pks-q') renderPkSpecies(e.target.value); });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') {
-        var openMenu = $('.origem-menu:not([hidden])');
-        if (openMenu) { closeAllOriginMenus(); return; }
-        var ov = $('#fn-overlay');
-        if (ov && !ov.hidden) closeSheet();
-        else if (document.body.classList.contains('fn-focus') || document.body.classList.contains('fn-table-focus')) exitFocus();
-        return;
+        var hasOpenOrig = $$('.origem-menu').some(function (m) { return !m.hidden; });
+        if (hasOpenOrig) {
+          closeAllOriginMenus();
+          return;
+        }
+        if (!$('#fn-overlay').hidden) { closeSheet(); return; }
+        if (document.body.classList.contains('fn-focus') || document.body.classList.contains('fn-table-focus')) { exitFocus(); return; }
       }
-      var tg = e.target && e.target.tagName; if (/INPUT|SELECT|TEXTAREA/.test(tg || '')) return;
-      if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && document.body.classList.contains('fn-focus') && $('#fn-overlay').hidden) { var nb = $('[data-bnav="' + (e.key === 'ArrowRight' ? 1 : -1) + '"]'); if (nb && !nb.disabled) nb.click(); }
+      if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && st.view === 'binder' && $('#fn-overlay').hidden && document.activeElement.tagName !== 'INPUT') {
+        var step = innerWidth >= 700 ? 2 : 1; st.bpage = Math.max(0, st.bpage + (e.key === 'ArrowRight' ? step : -step)); renderBody();
+      }
     });
-    var bar = $('#fn-bar'), top = function () { return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--top-h')) || 52; };
-    var lastY = scrollY;
-    addEventListener('scroll', function () {
-      bar.classList.toggle('is-stuck', bar.getBoundingClientRect().top <= top() + 1);
-      var y = scrollY, dy = y - lastY;
-      if (innerWidth < 700 && Math.abs(dy) > 6) { bar.classList.toggle('is-hidden', dy > 0 && y > 260); lastY = y; }
-      else if (innerWidth >= 700) bar.classList.remove('is-hidden');
-    }, { passive: true });
-    var lastW = innerWidth; addEventListener('resize', function () { if ((lastW >= 700) !== (innerWidth >= 700)) { lastW = innerWidth; if (st.view === 'binder') renderBody(); } });
-    addEventListener('error', function (e) { toast('Algo deu errado nesta tela. Se repetir, mande um print.'); try { console.error(e.message); } catch (x) { } });
   }
 
-  function neutralizeOldRenderers() {
-    ['renderBinder', 'updateDashProgress', 'renderFicDashboard'].forEach(function (n) {
-      if (typeof window[n] === 'function') window[n] = function () { };
-    });
-    ['renderAll', 'renderDash', 'renderGastos', 'renderCartas', 'renderTabs', 'renderEvolucao', 'renderPatrimonio', 'renderCustomBindersHome'].forEach(function (n) {
-      if (typeof window[n] === 'function') window[n] = function () { onData(); };
-    });
-    if (typeof window.loadAll === 'function') {
-      var orig = window.loadAll;
-      window.loadAll = function () { var r = orig.apply(this, arguments); Promise.resolve(r).then(onData, onData); return r; };
-    }
-  }
-  var dataT;
-  function onData() { clearTimeout(dataT); dataT = setTimeout(function () { banner(); if (engineReady()) { cleanupAndEnsureNatDex(); progCache = {}; loadCur(); renderHero(); renderBody(); renderSide(); } }, 60); }
+  // ── carregamento de link compartilhado (?s=token) ──────────
+  async function loadShare(tok) {
+    try {
+      var r = await sbClient.rpc('get_share_collection', { share_token: tok });
+      var row = Array.isArray(r.data) ? r.data[0] : r.data;
+      if (r.error || !row) { toast('Este link não existe ou foi removido.'); return false; }
 
-  var SHARE_TOKEN = (function () { try { var t = new URLSearchParams(location.search).get('s'); return t && /^[\w-]{6,100}$/.test(t) ? t : null; } catch (e) { return null; } })();
-  function demoShareRow(kind) {
-    kind = String(kind).replace(/^demo-/, '');
-    var keys = [], rnd = function () { return Math.random() < 0.45; };
-    function add(sid, sfx, cards) { (cards || []).forEach(function (c) { getSlots(c, sid).forEach(function (v) { if (rnd()) keys.push(slotKey(sid + sfx + ':', c.n, v.ver)); }); }); }
-    if (kind === 'set') { add('me04', '-en', SET_CARDS_MAP.me04()); return { set_key: 'me04-en', view_mode: 'binder', layout: 3, slot_keys: keys, card_ids: null }; }
-    var refs = [];
-    ['me06', 'me05', 'me04'].forEach(function (sid) { var cs = SET_CARDS_MAP[sid]() || []; for (var i = 0; i < 5; i++) { var c = cs[i * 7 + 2]; if (c) { refs.push({ set: sid, n: String(c.n) }); add(sid, '', [c]); } } });
-    if (kind === 'cb') return { set_key: null, view_mode: 'grid', layout: 3, slot_keys: keys, card_ids: refs, binder_name: 'Minhas favoritas (demonstração)' };
-    var dx = [], d = 1; refs.forEach(function (r) { if (d === 5) d++; dx.push({ set: r.set, n: r.n, dex: d++ }); });
-    dx.push({ dex: 5, name: 'Charmeleon', empty: true }); dx.push({ dex: 40, name: 'Wigglytuff', empty: true });
-    return { set_key: null, view_mode: 'grid', layout: 3, slot_keys: keys, card_ids: dx, binder_name: 'Pokédex compartilhada (demonstração)' };
-  }
-  async function loadShare() {
-    var row = null;
-    if (DEMO) row = demoShareRow(SHARE_TOKEN);
-    else try { var r = await sbClient.rpc('get_share_collection', { p_token: SHARE_TOKEN }); row = Array.isArray(r.data) ? r.data[0] : r.data; if (r.error) row = null; } catch (e) { row = null; }
-    document.body.classList.add('fn-share');
-    if (!row || (!row.set_key && !row.card_ids)) { $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>Link inválido ou expirado</h1><p class="fn-hero-sub">Peça um link novo para quem compartilhou, ou <a href="./">entre no MyDeck</a>.</p></div></div>'; $('#fn-body').innerHTML = ''; SHARE = { keys: new Set(), dead: true }; return false; }
-    var keys = new Set(row.slot_keys || []), layoutMap = { 2: '4', 3: '9', 7: '12', 4: '16', 5: '20b', 6: '20b' };
-    SHARE = { keys: keys, row: row, dex: false, binder: null };
-    st.pocket = layoutMap[row.layout] || '9'; st.status = 'all'; st.q = ''; st.view = row.view_mode === 'binder' ? 'binder' : 'grid';
-    if (row.card_ids) {
-      var refs = row.card_ids || [], hasDex = refs.some(function (r) { return r && (r.empty || r.dex != null); });
-      var nm = row.binder_name || 'Fichário compartilhado';
-      if (hasDex) {
-        var ds = refs.map(function (r) { return Number(r.dex); }).filter(function (n) { return n > 0; });
-        SHARE.dex = true; SHARE.binder = { id: 'shared', name: nm, emoji: '🌐', cover_color: '#118ab2', filter_config: { type: 'masterdex', dexFrom: Math.min.apply(null, ds), dexTo: Math.max.apply(null, ds) }, card_ids: refs.filter(function (r) { return r && !r.empty; }) };
-        st.set = 'dex:shared';
-      } else { SHARE.binder = { id: 'shared', name: nm, emoji: '📚', cover_color: '#a855f7', filter_config: { type: 'manual' }, card_ids: refs }; st.set = 'cb:shared'; st.view = 'grid'; }
-    } else {
-      var m = /^(.+)-(en|jp|cn)$/.exec(row.set_key), base = m ? m[1] : row.set_key;
-      st.set = SET_CATALOG.some(function (x) { return x.id === base; }) ? base : 'me06'; st.lang = m ? m[2] : 'pt';
-    }
-    return true;
+      var keys = new Set();
+      var entries = new Map();
+      var dexAnyKeys = new Map();
+
+      function registerSlot(slotKeyStr, qtyVal, originsVal) {
+        if (!slotKeyStr) return;
+        var k = String(slotKeyStr);
+        var q = Number(qtyVal);
+        if (!isFinite(q) || q <= 0) q = 1;
+        var orig = Array.isArray(originsVal) ? originsVal.slice() : [];
+        keys.add(k);
+        entries.set(k, { qty: q, origins: orig });
+        if (k.indexOf('dex-') === 0) {
+          var colonIdx = k.indexOf(':');
+          if (colonIdx > 0) {
+            var basePart = k.slice(colonIdx + 1);
+            if (!dexAnyKeys.has(basePart)) dexAnyKeys.set(basePart, k);
+          }
+        }
+      }
+
+      // 1. Lê slot_keys (array de strings ou objetos)
+      (row.slot_keys || []).forEach(function (it) {
+        if (typeof it === 'string') {
+          registerSlot(it, 1, []);
+        } else if (it && typeof it === 'object') {
+          registerSlot(it.slot_key || it.key, it.quantity != null ? it.quantity : it.qty, it.origins);
+        }
+      });
+
+      // 2. Se a RPC também retornar registros detalhados (slots / collection / items / slot_details), mescla quantidade e origins (qualidade e lotes)
+      var richList = row.slots || row.collection || row.items || row.slot_details || [];
+      if (Array.isArray(richList)) {
+        richList.forEach(function (it) {
+          if (!it || typeof it !== 'object') return;
+          registerSlot(it.slot_key || it.key, it.quantity != null ? it.quantity : it.qty, it.origins);
+        });
+      }
+
+      var raw = row.set_key || '';
+      var ids = row.card_ids;
+      var hasCards = Array.isArray(ids) && ids.length > 0;
+      var isDexShare = hasCards && ids.some(function (x) { return x && (x.dex != null || x.empty); });
+      var binder = hasCards ? {
+        id: 'shared',
+        name: row.binder_name || (isDexShare ? 'Pokédex compartilhada' : 'Fichário compartilhado'),
+        emoji: isDexShare ? '🌐' : '📚',
+        filter_config: isDexShare ? { type: 'masterdex', dexFrom: ids[0].dex, dexTo: ids[ids.length - 1].dex } : { type: 'manual' },
+        card_ids: ids.filter(function (x) { return x && !x.empty && x.set; })
+      } : null;
+
+      SHARE = { keys: keys, entries: entries, dexAnyKeys: dexAnyKeys, dex: isDexShare, binder: binder };
+      if (binder) {
+        st.set = (isDexShare ? 'dex:' : 'cb:') + 'shared';
+        st.view = 'grid';
+      } else {
+        var m = raw.match(/^(.*?)(?:-(en|jp|cn))?$/);
+        var base = (m && m[1]) || 'me04';
+        var lang = (m && m[2]) || 'pt';
+        st.set = SET_CATALOG.some(function (x) { return x.id === base; }) ? base : 'me04';
+        st.lang = lang;
+        st.view = row.view_mode === 'binder' ? 'binder' : 'grid';
+        st.pocket = { 2: '4', 3: '9', 4: '16', 6: '20b', 7: '12' }[row.layout] || '9';
+      }
+      document.body.classList.add('fn-share');
+      return true;
+    } catch (e) { console.error(e); return false; }
   }
 
+  // ── arranque ───────────────────────────────────────────────
   function boot() {
-    if (!engineReady()) { return setTimeout(boot, 80); }
-    if (SHARE_TOKEN && !SHARE) {
-      if (typeof sbClient === 'undefined' || !sbClient) return setTimeout(boot, 80);
-      loadShare().then(function (ok) { if (ok) boot(); else { bind(); banner(); } }, function () { bind(); banner(); }); SHARE = SHARE || { keys: new Set(), loading: true }; return;
+    if (!engineReady()) { setTimeout(boot, 50); return; }
+    var tok = new URLSearchParams(location.search).get('s');
+    if (tok) {
+      bind();
+      loadShare(tok).then(function (ok) { banner(); if (ok) renderAll(); else $('#fn-body').innerHTML = '<div class="fn-empty">Este link de compartilhamento não é válido ou foi apagado. <a href="./">Ir para o MyDeck</a></div>'; });
+      return;
     }
-    neutralizeOldRenderers();
-    if (!isHome(st.set) && !isDex(st.set) && !isCb(st.set) && !isPk(st.set) && !SET_CATALOG.some(function (s) { return s.id === st.set; })) st.set = 'home';
-    bind(); banner(); renderAll(); cleanupAndEnsureNatDex();
-    window.addEventListener('lazy-sets-loaded', function () { dexIdx = null; cbAllIdx = null; onData(); });
-    setTimeout(banner, 2500);
-    (function () {
-      var sig = function () { try { return (customBinders || []).length; } catch (e) { return -1; } }, s0 = sig(), tries = 0;
-      var iv = setInterval(function () { tries++; if (sig() !== s0) { clearInterval(iv); onData(); } else if (tries > 25) clearInterval(iv); }, 800);
-      if (typeof window.loadCustomBinders === 'function' && !window.loadCustomBinders.__fn) {
-        var o = window.loadCustomBinders; window.loadCustomBinders = function () { var r = o.apply(this, arguments); Promise.resolve(r).then(onData, onData); return r; }; window.loadCustomBinders.__fn = true;
+    var saved = LS.get('set', 'home');
+    if (!location.hash && (saved === 'home' || SET_CATALOG.some(function (s) { return s.id === saved; }))) st.set = saved;
+    if (FAMILY.indexOf(st.set) >= 0) {
+      try { var fl = localStorage.getItem('ficLang'); if (fl === 'en' || fl === 'pt') st.lang = fl; } catch (e) { }
+    }
+    if (!SET_CATALOG.some(function (s) { return s.id === setKey(st.set); }) && !isDex(st.set) && !isCb(st.set) && !isPk(st.set) && !isHome(st.set)) st.set = 'home';
+    bind(); banner(); renderAll();
+    var tries = 0;
+    var poll = setInterval(function () {
+      tries++;
+      banner();
+      var ready = loggedIn() && (typeof collected !== 'undefined') && (collected.size > 0 || (typeof customBinders !== 'undefined' && customBinders.length > 0) || tries > 20);
+      if (ready) {
+        progCache = {};
+        renderAll();
+        cleanupAndEnsureNatDex();
+        clearInterval(poll);
+      } else if (tries > 60) {
+        clearInterval(poll);
       }
-    })();
-    window.__fn = { st: st, renderAll: renderAll, mark: mark };
+    }, 300);
   }
-
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();
-
