@@ -1228,7 +1228,9 @@
     return (cbAllIdx = out);
   }
   var cbPickBid = null;
-  function openCbAdd() {
+ function openCbAdd() {
+    if (SHARE) { toast('Somente leitura: este link só mostra a coleção.'); return; }
+    if (!DEMO && !loggedIn()) { toast('Entre no MyDeck para adicionar cartas.'); return; }
     var b = cur.binder; if (!b || cbType(b) !== 'manual') return;
     cbPickBid = String(b.id);
     openSheet(
@@ -1428,8 +1430,8 @@
       var pg = pages[i];
       return '<div class="fn-page"><div class="fn-page-lbl">Página ' + (i + 1) + '</div><div class="fn-pocket-grid" style="--pc:' + d.cols + '">' +
         pg.map(function (sl, j) {
-          if (!sl) {
-            return pkEdit
+         if (!sl) {
+            return !SHARE
               ? '<button type="button" class="fn-pocket is-empty" data-act="pkslot" data-pkpage="' + i + '" data-pkslot="' + j + '" aria-label="Vaga ' + (j + 1) + ' vazia"><span class="fn-slotn">' + (j + 1) + '</span><span>+</span></button>'
               : '<div class="fn-pocket is-empty is-placeholder" aria-hidden="true"><span class="fn-slotn">' + (j + 1) + '</span></div>';
           }
@@ -1465,6 +1467,8 @@
     if (await pkSavePages(pages)) { st.bpage = pages.length - 1; pkRefresh(); }
   }
   function pkSlotTap(pg, j) {
+    if (SHARE) { toast('Somente leitura: este link só mostra a coleção.'); return; }
+    if (!DEMO && !loggedIn()) { toast('Entre no MyDeck para editar este fichário.'); return; }
     var b = cur.binder; if (!b) return; var sl = pkPages(b)[pg][j]; pkTarget = { page: pg, slot: j };
     if (!sl) { openPkPicker(); return; }
     var card = cur.pk.pages[pg][j] && cur.pk.pages[pg][j].c;
@@ -1859,12 +1863,28 @@
     st.bpage = st.bpage - (st.bpage % step);
     var p0 = st.bpage;
 
-    function emptyPocket(idx) {
+    function emptyPocket(idx, pageIdx) {
+      var canAddManual = !SHARE && isCb(id) && cur.binder && cbType(cur.binder) === 'manual';
+      var canAddPk = !SHARE && isPk(id) && cur.binder;
+
+      if (canAddManual) {
+        return '<button type="button" class="fn-pocket is-empty" data-act="cbadd" aria-label="Adicionar carta">' +
+          '<span class="fn-slotn">' + (idx + 1) + '</span>' +
+          '<span aria-hidden="true">+</span>' +
+          '</button>';
+      }
+
+      if (canAddPk) {
+        return '<button type="button" class="fn-pocket is-empty" data-act="pkslot" data-pkpage="' + pageIdx + '" data-pkslot="' + idx + '" aria-label="Escolher carta para a vaga ' + (idx + 1) + '">' +
+          '<span class="fn-slotn">' + (idx + 1) + '</span>' +
+          '<span aria-hidden="true">+</span>' +
+          '</button>';
+      }
+
       return '<div class="fn-pocket is-empty is-placeholder" aria-hidden="true">' +
         '<span class="fn-slotn">' + (idx + 1) + '</span>' +
         '</div>';
     }
-
     function page(i) {
       if (i >= pages) return '<div></div>';
       var chunk = items.slice(i * per, i * per + per);
