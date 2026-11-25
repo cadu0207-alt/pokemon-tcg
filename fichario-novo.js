@@ -2541,7 +2541,12 @@
     var meta = (typeof SERIES_META !== 'undefined' && SERIES_META && SERIES_META[k]) || null;
     return plainName(meta ? (meta.sub || meta.t) : (GROUP_NAME[k] || k));
   }
-  function openBlocks() { var v = LS.get('open', null); return v || [(SET_CATALOG.filter(function (s) { return s.id === st.set; })[0] || {}).series]; }
+function openBlocks() {
+  var v = LS.get('open', null);
+  if (v) return v;
+  if (isHome(st.set)) return ['__cb', '__dex'];
+  return [(SET_CATALOG.filter(function (s) { return s.id === st.set; })[0] || {}).series];
+}
   function treeHtml() {
     var open = openBlocks(), by = {};
     SET_CATALOG.forEach(function (s) { (by[s.series || 'Outros'] = by[s.series || 'Outros'] || []).push(s); });
@@ -3046,32 +3051,55 @@
     
     bind(); banner(); renderAll();
 
-    // 2. Monitora a chegada tanto da coleção quanto dos fichários personalizados
+    // 2. Monitora a chegada da coleção, dos fichários personalizados e dos catálogos
     var tries = 0;
-    var lastColSize = -1;
-    var lastCbCount = -1;
+    var lastSig = '';
+    var askedBinders = false;
+
+    function getSyncSignature() {
+      var colSize = (typeof collected !== 'undefined' && collected) ? collected.size : 0;
+      var cbs = (typeof customBinders !== 'undefined' && Array.isArray(customBinders)) ? customBinders : [];
+      var cbSig = cbs.map(function (b) {
+        var len = Array.isArray(b.card_ids) ? b.card_ids.length : (Array.isArray(b.pages) ? b.pages.length : 0);
+        return b.id + ':' + (b.name || '') + ':' + len;
+      }).join('|');
+      var mapKeys = (typeof SET_CARDS_MAP !== 'undefined' && SET_CARDS_MAP) ? Object.keys(SET_CARDS_MAP).length : 0;
+      return colSize + '#' + cbs.length + '#' + cbSig + '#' + mapKeys;
+    }
 
     var poll = setInterval(function () {
       tries++;
       banner();
 
       if (loggedIn()) {
-        var colSize = (typeof collected !== 'undefined' && collected) ? collected.size : 0;
-        var cbCount = (typeof customBinders !== 'undefined' && Array.isArray(customBinders)) ? customBinders.length : 0;
+        // Se o app.js tiver função para carregar os fichários e ainda não estiverem na memória, força o carregamento
+        var hasBinders = typeof customBinders !== 'undefined' && Array.isArray(customBinders) && customBinders.length > 0;
+if (!askedBinders && !hasBinders) {
+          askedBinders = true;
+          if (typeof loadCustomBinders === 'function') {
+            Promise.resolve(loadCustomBinders()).then(function () {
+              progCache = {};
+              renderAll();
+            });
+          }
+        }
 
-        // Sempre que o tamanho da coleção OU a quantidade de fichários mudar, re-renderiza
-        if (colSize !== lastColSize || cbCount !== lastCbCount) {
-          lastColSize = colSize;
-          lastCbCount = cbCount;
+        var sig = getSyncSignature();
+        if (sig !== lastSig) {
+          lastSig = sig;
           progCache = {};
           renderAll();
-          if (cbCount > 0) cleanupAndEnsureNatDex();
+          if (typeof customBinders !== 'undefined' && customBinders.length > 0) {
+            cleanupAndEnsureNatDex();
+          }
         }
       }
 
-      // Continua observando nos primeiros ~9 segundos (30 * 300ms) para pegar cargas assíncronas tardias
-      if (tries >= 30) {
+      if (tries >= 40) {
         clearInterval(poll);
       }
-    }, 300);
+    }, 250);
   }
+
+  boot();
+})();
