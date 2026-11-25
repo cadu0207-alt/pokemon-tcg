@@ -1,8 +1,8 @@
 /* Fichário (beta) — interface nova do MyDeck.
-- Usa o MESMO motor do site (app.js): login, leitura da coleção, toggleSlot() e catálogos.
-- Esta página só troca o visual. Nada aqui grava no banco por conta própria: toda marcação passa
-- por toggleSlot(), a mesma função do fichário atual — então o que se marca aqui aparece lá e vice-versa.
-- Modo demonstração (?demo): coleção fictícia só na tela, não grava nada. */
+ - Usa o MESMO motor do site (app.js): login, leitura da coleção, toggleSlot() e catálogos.
+ - Esta página só troca o visual. Nada aqui grava no banco por conta própria: toda marcação passa
+ - por toggleSlot(), a mesma função do fichário atual — então o que se marca aqui aparece lá e vice-versa.
+ - Modo demonstração (?demo): coleção fictícia só na tela, não grava nada. */
 (function () {
   'use strict';
 
@@ -50,12 +50,12 @@
   // ── qualidade / estado da carta ────────────────────────────
   var COND_PREFIX = 'cond:';
   var CARD_CONDITIONS = [
-    { code: 'M',  label: 'Nova' },
+    { code: 'M', label: 'Nova' },
     { code: 'NM', label: 'Praticamente Nova' },
     { code: 'SP', label: 'Usada Levemente' },
     { code: 'MP', label: 'Usada Moderadamente' },
     { code: 'HP', label: 'Muito Usada' },
-    { code: 'D',  label: 'Danificada' }
+    { code: 'D', label: 'Danificada' }
   ];
   var condMap = LS.get('conds', {});
   var extraLotsMap = LS.get('ver_lots', {});
@@ -80,13 +80,13 @@
     LS.set('ver_lots', extraLotsMap);
   }
 
-function totalQtyOf(baseKey) {
-  var baseE = entryOf(baseKey);
-  var baseQty = baseE.qty || 0;
-  if (baseQty <= 0) return 0; // garante consistência com has(baseKey)
-  var extraQty = lotsOf(baseKey).reduce(function (acc, l) { return acc + l.qty; }, 0);
-  return baseQty + extraQty;
-}
+  function totalQtyOf(baseKey) {
+    var baseE = entryOf(baseKey);
+    var baseQty = baseE.qty || 0;
+    if (baseQty <= 0) return 0;
+    var extraQty = lotsOf(baseKey).reduce(function (acc, l) { return acc + l.qty; }, 0);
+    return baseQty + extraQty;
+  }
 
   function condOf(key) {
     if (SHARE) return '';
@@ -129,41 +129,38 @@ function totalQtyOf(baseKey) {
     setCond(key, nextCode);
     setEntry(n, ver, e.qty, nextOrigins);
   }
-function cardCondBadge(id, c, ver) {
-  var sl = ver ? [{ ver: ver }] : slotsOf(id, c);
-  var codes = [];
+  function cardCondBadge(id, c, ver) {
+    var sl = ver ? [{ ver: ver }] : slotsOf(id, c);
+    var codes = [];
 
-  for (var i = 0; i < sl.length; i++) {
-    var k = keyOf(id, c, sl[i].ver);
+    for (var i = 0; i < sl.length; i++) {
+      var k = keyOf(id, c, sl[i].ver);
 
-    // 1. Condição da cópia principal da versão
-    var cd = condOf(k);
-    if (cd && codes.indexOf(cd) < 0) {
-      codes.push(cd);
-    }
+      var cd = condOf(k);
+      if (cd && codes.indexOf(cd) < 0) {
+        codes.push(cd);
+      }
 
-    // 2. Condições das cópias extras (+1 cópia) desta versão
-    var lots = lotsOf(k);
-    for (var j = 0; j < lots.length; j++) {
-      var lcd = lots[j].cond;
-      if (lcd && codes.indexOf(lcd) < 0) {
-        codes.push(lcd);
+      var lots = lotsOf(k);
+      for (var j = 0; j < lots.length; j++) {
+        var lcd = lots[j].cond;
+        if (lcd && codes.indexOf(lcd) < 0) {
+          codes.push(lcd);
+        }
       }
     }
+
+    if (!codes.length) return '';
+
+    var rank = { M: 0, NM: 1, SP: 2, MP: 3, HP: 4, D: 5 };
+    codes.sort(function (a, b) {
+      return (rank[a] != null ? rank[a] : 99) - (rank[b] != null ? rank[b] : 99);
+    });
+
+    return '<div class="fn-conds">' + codes.map(function (code) {
+      return '<span class="fn-cond c-' + esc(code) + '" title="' + esc(condLabel(code)) + '">' + esc(code) + '</span>';
+    }).join('') + '</div>';
   }
-
-  if (!codes.length) return '';
-
-  // Ordena da melhor (M) até a pior (D)
-  var rank = { M: 0, NM: 1, SP: 2, MP: 3, HP: 4, D: 5 };
-  codes.sort(function (a, b) {
-    return (rank[a] != null ? rank[a] : 99) - (rank[b] != null ? rank[b] : 99);
-  });
-
-  return '<div class="fn-conds">' + codes.map(function (code) {
-    return '<span class="fn-cond c-' + esc(code) + '" title="' + esc(condLabel(code)) + '">' + esc(code) + '</span>';
-  }).join('') + '</div>';
-}
 
   // ── estado ─────────────────────────────────────────────────
   var defCols = innerWidth < 480 ? 3 : innerWidth < 800 ? 4 : innerWidth < 1200 ? 6 : 7;
@@ -491,7 +488,7 @@ function cardCondBadge(id, c, ver) {
       '<span class="fn-dexn">#' + sp.dex + '</span></button><div class="fn-meta"><span class="fn-name">' + esc(sp.name) + '</span></div>' +
       '<div class="fn-sub"><span>sem carta escolhida</span></div><div class="fn-vers"><button type="button" class="fn-ver" data-dexpick="' + sp.dex + '">+ Escolher carta</button></div></article>';
   }
-function renderDex() {
+  function renderDex() {
     if (!cur.binder) return '<div class="fn-empty">' + (loggedIn() || DEMO ? 'Carregando a sua Pokédex…' : 'Entre no MyDeck para ver a sua Pokédex.') + '</div>';
     var vis = dexVisible(); if (!vis.length) return '<div class="fn-empty">Nenhuma espécie com esse filtro.</div>';
     if (st.view === 'binder') return renderBinder(vis);
@@ -771,7 +768,7 @@ function renderDex() {
       var own = dexOwned(x.c); if (own) got++;
       return (own ? '✅' : '❌') + ' *' + x.sp.dex + '* ' + x.sp.name + (x.c ? ' — ' + i18n(x.c, st.set).name + ' _(' + setLabelOf(x.c._set).split('—')[0].trim() + ' #' + x.c.n + ')_' : '');
     });
-    return '🎴✨ *' + (b ? b.name : 'Pokédex') + '* ✨🎴\n' + filterLabel() + '\n📅 ' + new Date().toLocaleDateString('pt-BR') + '\n━━━━━━━━━━━━━━━━━━\n' + rows.join('\n') + '\n━━━━━━━━━━━━━━━━━━\n📦 Espécies: *' + got + '/' + vis.length + '*';
+    return '🎩✨ *' + (b ? b.name : 'Pokédex') + '* ✨🎩\n' + filterLabel() + '\n📅 ' + new Date().toLocaleDateString('pt-BR') + '\n━━━━━━━━━━━━━━━━━━\n' + rows.join('\n') + '\n━━━━━━━━━━━━━━━━━━\n📦 Espécies: *' + got + '/' + vis.length + '*';
   }
   function dexShareRefs() {
     var byDex = {};
@@ -897,8 +894,7 @@ function renderDex() {
     var isOpen = openBlocks().indexOf('__art') >= 0 || isCurArt;
     var rows = bs.map(function (b) {
       var p = cbProg(b), nm = plainName(b.name) || (b.filter_config && b.filter_config.artist) || 'Artista';
-      return '<button type="button" class="fn-set' + ('cb:' + b.id === st.set ? ' is-cur' : '') + '" data-pick="cb:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' artista ilustrador')) + '">' +
-        '<span class="em">' + bIco(b, 18, 'artist') + '</span><span class="tx"><b>' + esc(nm) + '</b><small>' + p.cards + ' carta' + (p.cards === 1 ? '' : 's') + ' · ilustrador</small>' +
+      return '<button type="button" class="fn-set' + ('cb:' + b.id === st.set ? ' is-cur' : '') + '" data-pick="cb:' + esc(b.id) + '" data-find="' + esc(normTxt(nm + ' artista ilustrador')) + '"><span class="em">' + bIco(b, 18, 'artist') + '</span><span class="tx"><b>' + esc(nm) + '</b><small>' + p.cards + ' carta' + (p.cards === 1 ? '' : 's') + ' · ilustrador</small>' +
         '<div class="mini"><i style="width:' + p.pct + '%"></i></div></span><span class="pc' + (p.pct ? '' : ' z') + '">' + p.pct + '%</span></button>';
     }).join('');
     rows += '<button type="button" class="fn-set" data-act="artists" data-find="adicionar artista ilustrador meus artistas"><span class="em">' + MD_ICO('plus', { size: 18 }) + '</span><span class="tx"><b>Adicionar artista</b><small>Escolher ilustrador</small></span></button>';
@@ -1510,214 +1506,213 @@ function renderDex() {
         '<div class="fn-grid">' + s.items.map(cardHtml).join('') + '</div>';
     }).join('');
   }
-function verCondsHtml(id, c, ver) {
-  var k = keyOf(id, c, ver);
-  var e = entryOf(k);
-  var lots = lotsOf(k);
-  var rank = { M: 0, NM: 1, SP: 2, MP: 3, HP: 4, D: 5 };
+  function verCondsHtml(id, c, ver) {
+    var k = keyOf(id, c, ver);
+    var e = entryOf(k);
+    var lots = lotsOf(k);
+    var rank = { M: 0, NM: 1, SP: 2, MP: 3, HP: 4, D: 5 };
 
-  var entries = [];
+    var entries = [];
 
-  if (e.qty > 0) {
-    entries.push({
-      cond: condOf(k) || '',
-      qty: e.qty
-    });
-  }
-
-  for (var j = 0; j < lots.length; j++) {
-    var lq = Number(lots[j].qty) || 0;
-    if (lq > 0) {
+    if (e.qty > 0) {
       entries.push({
-        cond: lots[j].cond || '',
-        qty: lq
+        cond: condOf(k) || '',
+        qty: e.qty
       });
     }
-  }
 
-  if (!entries.length) return '<span class="t-dash">—</span>';
-
-  // Agrupa por condição para ficar ex.: SP ×1, NM ×3
-  var grouped = {};
-  var orderKeys = [];
-  entries.forEach(function (it) {
-    var grpKey = it.cond || '__NONE__';
-    if (!grouped[grpKey]) {
-      grouped[grpKey] = { cond: it.cond, qty: 0 };
-      orderKeys.push(grpKey);
-    }
-    grouped[grpKey].qty += it.qty;
-  });
-
-  var rows = orderKeys.map(function (gk) { return grouped[gk]; });
-  rows.sort(function (a, b) {
-    if (!a.cond && !b.cond) return 0;
-    if (!a.cond) return 1;
-    if (!b.cond) return -1;
-    return (rank[a.cond] != null ? rank[a.cond] : 99) - (rank[b.cond] != null ? rank[b.cond] : 99);
-  });
-
-  return '<div class="fn-qcond-stack">' + rows.map(function (r) {
-    var badge = r.cond
-      ? '<span class="fn-cond c-' + esc(r.cond) + '" title="' + esc(condLabel(r.cond)) + '">' + esc(r.cond) + '</span>'
-      : '<span class="fn-cond c-none" title="Sem qualidade definida">—</span>';
-    return '<div class="fn-qcond-row">' + badge + '<span class="fn-qcond-x">×' + r.qty + '</span></div>';
-  }).join('') + '</div>';
-}
-
-function verPriceFmt(id, c, sl) {
-  var val = priceOf(id, c, sl);
-  if (val == null || isNaN(Number(val)) || Number(val) <= 0) return priceFmt(c, id);
-  var i = i18n(c, id);
-  if (i.symbol === '$') {
-    return '$ ' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-  return money0(Number(val));
-}
-
-function collectVerCols(id, cards) {
-  var seen = {}, list = [];
-  (cards || []).forEach(function (c) {
-    if (!c) return;
-    slotsOf(id, c).forEach(function (s) {
-      if (!seen[s.ver]) {
-        seen[s.ver] = true;
-        list.push(s.ver);
+    for (var j = 0; j < lots.length; j++) {
+      var lq = Number(lots[j].qty) || 0;
+      if (lq > 0) {
+        entries.push({
+          cond: lots[j].cond || '',
+          qty: lq
+        });
       }
-    });
-  });
-  return list.length ? list : ['N'];
-}
-
-function renderVersionCells(id, c, kId, nm0, versList) {
-  var sl = slotsOf(id, c);
-  var byVer = {};
-  sl.forEach(function (s) { byVer[s.ver] = s; });
-
-  return versList.map(function (ver) {
-    var slot = byVer[ver];
-    if (!slot) {
-      return (
-        '<td class="t-ver-empty t-grp-start t-col-cond"><span class="t-dash">—</span></td>' +
-        '<td class="t-ver-empty t-col-qty"><span class="t-dash">—</span></td>' +
-        '<td class="t-ver-empty t-col-price"><span class="t-dash">—</span></td>'
-      );
     }
 
-    var key = keyOf(id, c, ver);
-    var totQ = totalQtyOf(key);
-    var on = totQ > 0;
-    var vName = VERSION_NAME[ver] || ver;
-    var qtyNum = on ? totQ : 0;
+    if (!entries.length) return '<span class="t-dash">—</span>';
 
-    var condCell = '<td class="t-grp-start t-col-cond">' + verCondsHtml(id, c, ver) + '</td>';
+    var grouped = {};
+    var orderKeys = [];
+    entries.forEach(function (it) {
+      var grpKey = it.cond || '__NONE__';
+      if (!grouped[grpKey]) {
+        grouped[grpKey] = { cond: it.cond, qty: 0 };
+        orderKeys.push(grpKey);
+      }
+      grouped[grpKey].qty += it.qty;
+    });
 
-    var qtyCell =
-      '<td class="t-col-qty">' +
-      '<div class="t-qty-box">' +
-      '<span class="t-qty-num' + (on ? ' is-have' : ' is-zero') + '">' + qtyNum + '</span>' +
-      '<button type="button" class="fn-ver t-ver-btn' + (on ? ' is-on' : '') + '"' +
-      ' data-mark="' + esc(kId) + '"' +
-      ' data-ver="' + esc(ver) + '"' +
-      ' aria-pressed="' + on + '"' +
-      ' title="' + esc(on ? 'Coletada (' + qtyNum + ' cópia' + (qtyNum === 1 ? '' : 's') + ')' : 'Marcar ' + vName) + '"' +
-      ' aria-label="' + esc(nm0 + ' — ' + vName + (on ? ' (coletada, ' + qtyNum + ' cópias)' : ' (faltando)')) + '">' +
-      (on ? '✓ ' + esc(ver) : '+ ' + esc(ver)) +
-      '</button>' +
-      '</div>' +
-      '</td>';
+    var rows = orderKeys.map(function (gk) { return grouped[gk]; });
+    rows.sort(function (a, b) {
+      if (!a.cond && !b.cond) return 0;
+      if (!a.cond) return 1;
+      if (!b.cond) return -1;
+      return (rank[a.cond] != null ? rank[a.cond] : 99) - (rank[b.cond] != null ? rank[b.cond] : 99);
+    });
 
-    var priceCell = '<td class="t-price t-col-price">' + esc(verPriceFmt(id, c, slot)) + '</td>';
+    return '<div class="fn-qcond-stack">' + rows.map(function (r) {
+      var badge = r.cond
+        ? '<span class="fn-cond c-' + esc(r.cond) + '" title="' + esc(condLabel(r.cond)) + '">' + esc(r.cond) + '</span>'
+        : '<span class="fn-cond c-none" title="Sem qualidade definida">—</span>';
+      return '<div class="fn-qcond-row">' + badge + '<span class="fn-qcond-x">×' + r.qty + '</span></div>';
+    }).join('') + '</div>';
+  }
 
-    return condCell + qtyCell + priceCell;
-  }).join('');
-}
+  function verPriceFmt(id, c, sl) {
+    var val = priceOf(id, c, sl);
+    if (val == null || isNaN(Number(val)) || Number(val) <= 0) return priceFmt(c, id);
+    var i = i18n(c, id);
+    if (i.symbol === '$') {
+      return '$ ' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    return money0(Number(val));
+  }
 
-function renderTable(dexVis) {
-  var id = st.set;
+  function collectVerCols(id, cards) {
+    var seen = {}, list = [];
+    (cards || []).forEach(function (c) {
+      if (!c) return;
+      slotsOf(id, c).forEach(function (s) {
+        if (!seen[s.ver]) {
+          seen[s.ver] = true;
+          list.push(s.ver);
+        }
+      });
+    });
+    return list.length ? list : ['N'];
+  }
 
-  if (dexVis) {
-    if (!dexVis.length) return '<div class="fn-empty">Nenhuma espécie com esse filtro.</div>';
-    var shownDex = dexVis.slice(0, dexLimit);
-    var dexCards = shownDex.map(function (x) { return x.c; }).filter(Boolean);
-    var dVers = collectVerCols(id, dexCards);
+  function renderVersionCells(id, c, kId, nm0, versList) {
+    var sl = slotsOf(id, c);
+    var byVer = {};
+    sl.forEach(function (s) { byVer[s.ver] = s; });
 
-    var dHead1 = '<tr>' +
+    return versList.map(function (ver) {
+      var slot = byVer[ver];
+      if (!slot) {
+        return (
+          '<td class="t-ver-empty t-grp-start t-col-cond"><span class="t-dash">—</span></td>' +
+          '<td class="t-ver-empty t-col-qty"><span class="t-dash">—</span></td>' +
+          '<td class="t-ver-empty t-col-price"><span class="t-dash">—</span></td>'
+        );
+      }
+
+      var key = keyOf(id, c, ver);
+      var totQ = totalQtyOf(key);
+      var on = totQ > 0;
+      var vName = VERSION_NAME[ver] || ver;
+      var qtyNum = on ? totQ : 0;
+
+      var condCell = '<td class="t-grp-start t-col-cond">' + verCondsHtml(id, c, ver) + '</td>';
+
+      var qtyCell =
+        '<td class="t-col-qty">' +
+        '<div class="t-qty-box">' +
+        '<span class="t-qty-num' + (on ? ' is-have' : ' is-zero') + '">' + qtyNum + '</span>' +
+        '<button type="button" class="fn-ver t-ver-btn' + (on ? ' is-on' : '') + '"' +
+        ' data-mark="' + esc(kId) + '"' +
+        ' data-ver="' + esc(ver) + '"' +
+        ' aria-pressed="' + on + '"' +
+        ' title="' + esc(on ? 'Coletada (' + qtyNum + ' cópia' + (qtyNum === 1 ? '' : 's') + ')' : 'Marcar ' + vName) + '"' +
+        ' aria-label="' + esc(nm0 + ' — ' + vName + (on ? ' (coletada, ' + qtyNum + ' cópias)' : ' (faltando)')) + '">' +
+        (on ? '✓ ' + esc(ver) : '+ ' + esc(ver)) +
+        '</button>' +
+        '</div>' +
+        '</td>';
+
+      var priceCell = '<td class="t-price t-col-price">' + esc(verPriceFmt(id, c, slot)) + '</td>';
+
+      return condCell + qtyCell + priceCell;
+    }).join('');
+  }
+
+  function renderTable(dexVis) {
+    var id = st.set;
+
+    if (dexVis) {
+      if (!dexVis.length) return '<div class="fn-empty">Nenhuma espécie com esse filtro.</div>';
+      var shownDex = dexVis.slice(0, dexLimit);
+      var dexCards = shownDex.map(function (x) { return x.c; }).filter(Boolean);
+      var dVers = collectVerCols(id, dexCards);
+
+      var dHead1 = '<tr>' +
+        '<th rowspan="2" class="t-col-img">Imagem</th>' +
+        '<th rowspan="2" class="t-col-num">Dex</th>' +
+        '<th rowspan="2" class="t-col-name">Espécie / Carta</th>' +
+        '<th rowspan="2" class="t-col-rare">Raridade</th>' +
+        dVers.map(function (v) {
+          var vLbl = VERSION_NAME[v] ? (v + ' · ' + VERSION_NAME[v]) : v;
+          return '<th colspan="3" class="t-grp-th t-grp-start">' + esc(vLbl) + '</th>';
+        }).join('') +
+        '</tr>';
+
+      var dHead2 = '<tr class="t-subhead">' +
+        dVers.map(function () {
+          return '<th class="t-grp-start t-col-cond">Qualidade</th>' +
+            '<th class="t-col-qty">Quantidade</th>' +
+            '<th class="t-col-price">Preço</th>';
+        }).join('') +
+        '</tr>';
+
+      return '<div class="fn-tablewrap"><table class="fn-table fn-table-lg fn-table-matrix"><thead>' + dHead1 + dHead2 + '</thead><tbody>' +
+        shownDex.map(function (x) {
+          var sp = x.sp, c = x.c;
+          if (!c) {
+            return '<tr class="t-miss fn-ph" data-dexph="' + sp.dex + '">' +
+              '<td class="t-thumb t-col-img">' + artImg(sp.dex) + '</td>' +
+              '<td class="t-col-num">#' + sp.dex + '</td>' +
+              '<td class="t-col-name"><button type="button" class="t-name-btn" data-dexpick="' + sp.dex + '">' + esc(sp.name) + '</button><br><small style="color:var(--muted)">sem carta escolhida</small></td>' +
+              '<td class="t-col-rare">—</td>' +
+              '<td colspan="' + (dVers.length * 3) + '" class="t-grp-start"><button type="button" class="fn-ver" data-dexpick="' + sp.dex + '">+ Escolher carta</button></td></tr>';
+          }
+          var own = dexOwned(c), kId = ck(c), nm0 = i18n(c, id).name;
+          return '<tr data-n="' + esc(kId) + '" class="' + (!own ? 't-miss' : '') + '">' +
+            '<td class="t-thumb t-col-img"><img loading="lazy" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '"></td>' +
+            '<td class="t-col-num">#' + sp.dex + '</td>' +
+            '<td class="t-col-name"><button type="button" class="t-name-btn" data-open="' + esc(kId) + '">' + esc(sp.name) + '</button><br><small style="color:var(--muted)">' + esc(nm0) + ' · #' + esc(c.n) + '</small></td>' +
+            '<td class="t-col-rare ' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</td>' +
+            renderVersionCells(id, c, kId, nm0, dVers) +
+            '</tr>';
+        }).join('') + '</tbody></table></div>' +
+        (dexVis.length > shownDex.length ? '<div class="fn-more"><button type="button" class="fn-btn" data-act="dexmore">Mostrar mais (' + (dexVis.length - shownDex.length) + ' espécies)</button></div>' : '');
+    }
+
+    if (!cur.view.length) return emptyMsg();
+
+    var vers = collectVerCols(id, cur.view);
+    var head1 = '<tr>' +
       '<th rowspan="2" class="t-col-img">Imagem</th>' +
-      '<th rowspan="2" class="t-col-num">Dex</th>' +
-      '<th rowspan="2" class="t-col-name">Espécie / Carta</th>' +
+      '<th rowspan="2" class="t-col-num">Número</th>' +
+      '<th rowspan="2" class="t-col-name">Nome</th>' +
       '<th rowspan="2" class="t-col-rare">Raridade</th>' +
-      dVers.map(function (v) {
+      vers.map(function (v) {
         var vLbl = VERSION_NAME[v] ? (v + ' · ' + VERSION_NAME[v]) : v;
         return '<th colspan="3" class="t-grp-th t-grp-start">' + esc(vLbl) + '</th>';
       }).join('') +
       '</tr>';
 
-    var dHead2 = '<tr class="t-subhead">' +
-      dVers.map(function () {
+    var head2 = '<tr class="t-subhead">' +
+      vers.map(function () {
         return '<th class="t-grp-start t-col-cond">Qualidade</th>' +
-               '<th class="t-col-qty">Quantidade</th>' +
-               '<th class="t-col-price">Preço</th>';
+          '<th class="t-col-qty">Quantidade</th>' +
+          '<th class="t-col-price">Preço</th>';
       }).join('') +
       '</tr>';
 
-    return '<div class="fn-tablewrap"><table class="fn-table fn-table-lg fn-table-matrix"><thead>' + dHead1 + dHead2 + '</thead><tbody>' +
-      shownDex.map(function (x) {
-        var sp = x.sp, c = x.c;
-        if (!c) {
-          return '<tr class="t-miss fn-ph" data-dexph="' + sp.dex + '">' +
-            '<td class="t-thumb t-col-img">' + artImg(sp.dex) + '</td>' +
-            '<td class="t-col-num">#' + sp.dex + '</td>' +
-            '<td class="t-col-name"><button type="button" class="t-name-btn" data-dexpick="' + sp.dex + '">' + esc(sp.name) + '</button><br><small style="color:var(--muted)">sem carta escolhida</small></td>' +
-            '<td class="t-col-rare">—</td>' +
-            '<td colspan="' + (dVers.length * 3) + '" class="t-grp-start"><button type="button" class="fn-ver" data-dexpick="' + sp.dex + '">+ Escolher carta</button></td></tr>';
-        }
-        var own = dexOwned(c), kId = ck(c), nm0 = i18n(c, id).name;
-        return '<tr data-n="' + esc(kId) + '" class="' + (!own ? 't-miss' : '') + '">' +
+    return '<div class="fn-tablewrap"><table class="fn-table fn-table-lg fn-table-matrix"><thead>' + head1 + head2 + '</thead><tbody>' +
+      cur.view.map(function (c) {
+        var s = stateOf(id, c), kId = ck(c), nm0 = i18n(c, id).name;
+        return '<tr data-n="' + esc(kId) + '" class="' + (s.st === 'miss' ? 't-miss' : '') + '">' +
           '<td class="t-thumb t-col-img"><img loading="lazy" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '"></td>' +
-          '<td class="t-col-num">#' + sp.dex + '</td>' +
-          '<td class="t-col-name"><button type="button" class="t-name-btn" data-open="' + esc(kId) + '">' + esc(sp.name) + '</button><br><small style="color:var(--muted)">' + esc(nm0) + ' · #' + esc(c.n) + '</small></td>' +
+          '<td class="t-col-num">#' + esc(c.n) + '</td>' +
+          '<td class="t-col-name"><button type="button" class="t-name-btn" data-open="' + esc(kId) + '">' + esc(nm0) + '</button></td>' +
           '<td class="t-col-rare ' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</td>' +
-          renderVersionCells(id, c, kId, nm0, dVers) +
+          renderVersionCells(id, c, kId, nm0, vers) +
           '</tr>';
-      }).join('') + '</tbody></table></div>' +
-      (dexVis.length > shownDex.length ? '<div class="fn-more"><button type="button" class="fn-btn" data-act="dexmore">Mostrar mais (' + (dexVis.length - shownDex.length) + ' espécies)</button></div>' : '');
+      }).join('') + '</tbody></table></div>';
   }
-
-  if (!cur.view.length) return emptyMsg();
-
-  var vers = collectVerCols(id, cur.view);
-  var head1 = '<tr>' +
-    '<th rowspan="2" class="t-col-img">Imagem</th>' +
-    '<th rowspan="2" class="t-col-num">Número</th>' +
-    '<th rowspan="2" class="t-col-name">Nome</th>' +
-    '<th rowspan="2" class="t-col-rare">Raridade</th>' +
-    vers.map(function (v) {
-      var vLbl = VERSION_NAME[v] ? (v + ' · ' + VERSION_NAME[v]) : v;
-      return '<th colspan="3" class="t-grp-th t-grp-start">' + esc(vLbl) + '</th>';
-    }).join('') +
-    '</tr>';
-
-  var head2 = '<tr class="t-subhead">' +
-    vers.map(function () {
-      return '<th class="t-grp-start t-col-cond">Qualidade</th>' +
-             '<th class="t-col-qty">Quantidade</th>' +
-             '<th class="t-col-price">Preço</th>';
-    }).join('') +
-    '</tr>';
-
-  return '<div class="fn-tablewrap"><table class="fn-table fn-table-lg fn-table-matrix"><thead>' + head1 + head2 + '</thead><tbody>' +
-    cur.view.map(function (c) {
-      var s = stateOf(id, c), kId = ck(c), nm0 = i18n(c, id).name;
-      return '<tr data-n="' + esc(kId) + '" class="' + (s.st === 'miss' ? 't-miss' : '') + '">' +
-        '<td class="t-thumb t-col-img"><img loading="lazy" alt="" src="' + esc(imgSrc(cur.d, id, c)) + '"></td>' +
-        '<td class="t-col-num">#' + esc(c.n) + '</td>' +
-        '<td class="t-col-name"><button type="button" class="t-name-btn" data-open="' + esc(kId) + '">' + esc(nm0) + '</button></td>' +
-        '<td class="t-col-rare ' + rareCls(c.rare) + '">' + esc(rareLabel(c.rare)) + '</td>' +
-        renderVersionCells(id, c, kId, nm0, vers) +
-        '</tr>';
-    }).join('') + '</tbody></table></div>';
-}
   function renderBinder(dexVis) {
     var id = st.set, P = pocketCfg(), per = P.per, cols = P.cols, items = [];
     if (dexVis) {
@@ -1735,7 +1730,7 @@ function renderTable(dexVis) {
       if (i >= pages) return '<div></div>';
       var chunk = items.slice(i * per, i * per + per);
       return '<div class="fn-page"><div class="fn-page-lbl">Página ' + (i + 1) + '</div><div class="fn-pocket-grid" style="--pc:' + cols + '">' +
-          chunk.map(function (it) {
+        chunk.map(function (it) {
           if (dexVis && !it.c) return '<button type="button" class="fn-pocket is-miss fn-ph" data-dexpick="' + it.sp.dex + '" aria-label="Escolher a carta de ' + esc(it.sp.name) + '">' + artImg(it.sp.dex) + '<span class="fn-slotn">#' + it.sp.dex + '</span></button>';
           if (dexVis) {
             var cd = it.c;
@@ -1823,7 +1818,7 @@ function renderTable(dexVis) {
       (t.sT ? '<span>Base <b>' + t.bG + '</b>/' + t.bT + '</span><span>Secretas <b>' + t.sG + '</b>/' + t.sT + '</span>' : '') +
       (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : done ? '<span><b style="color:var(--teal)">Coleção completa</b></span>' : '<span><b>' + rem + '</b> ' + (isCardMode ? 'cartas restantes' : 'slots restantes') + '</span>') + '</div>';
   }
-function renderBody() {
+  function renderBody() {
     computeView();
     var html = isHome(st.set) ? renderHome() : isPk(st.set) ? renderPk() : isDex(st.set) && (st.view === 'grid' || st.view === 'binder' || st.view === 'table') ? renderDex() :
       st.view === 'table' ? renderTable() : st.view === 'binder' ? renderBinder() : st.view === 'dash' ? renderDashView() : renderGrid();
@@ -1849,48 +1844,48 @@ function renderBody() {
     $('#fn-cols-grp').style.display = st.view === 'grid' ? '' : 'none';
     document.documentElement.style.setProperty('--cols', st.cols);
   }
-function applyFocus() {
- var canBinder = st.view === 'binder' && innerWidth >= 700;
- var canTable = st.view === 'table' && innerWidth >= 700;
- var onBinder = canBinder && st.focus;
- var onTable = canTable && st.tableFocus;
+  function applyFocus() {
+    var canBinder = st.view === 'binder' && innerWidth >= 700;
+    var canTable = st.view === 'table' && innerWidth >= 700;
+    var onBinder = canBinder && st.focus;
+    var onTable = canTable && st.tableFocus;
 
- document.body.classList.toggle('fn-focus', onBinder);
- document.body.classList.toggle('fn-table-focus', onTable);
+    document.body.classList.toggle('fn-focus', onBinder);
+    document.body.classList.toggle('fn-table-focus', onTable);
 
- var b = $('#fn-focus');
- if (!b) return;
+    var b = $('#fn-focus');
+    if (!b) return;
 
- if (canBinder) {
- b.hidden = false;
- b.classList.toggle('is-on', onBinder);
- b.innerHTML = onBinder ? I('x') + ' Sair do foco' : I('maximize') + ' Foco';
- } else if (canTable) {
- b.hidden = false;
- b.classList.toggle('is-on', onTable);
- b.innerHTML = onTable ? I('x') + ' Sair do foco' : I('maximize') + ' Foco';
- } else {
- b.hidden = true;
- b.classList.remove('is-on');
- }
- }
+    if (canBinder) {
+      b.hidden = false;
+      b.classList.toggle('is-on', onBinder);
+      b.innerHTML = onBinder ? I('x') + ' Sair do foco' : I('maximize') + ' Foco';
+    } else if (canTable) {
+      b.hidden = false;
+      b.classList.toggle('is-on', onTable);
+      b.innerHTML = onTable ? I('x') + ' Sair do foco' : I('maximize') + ' Foco';
+    } else {
+      b.hidden = true;
+      b.classList.remove('is-on');
+    }
+  }
 
- function exitFocus() {
- var hadBinder = document.body.classList.contains('fn-focus');
- var hadTable = document.body.classList.contains('fn-table-focus');
- if (hadBinder) {
- st.focus = false;
- LS.set('focus', false);
- }
- if (hadTable) {
- st.tableFocus = false;
- LS.set('tableFocus', false);
- }
- applyFocus();
- }
+  function exitFocus() {
+    var hadBinder = document.body.classList.contains('fn-focus');
+    var hadTable = document.body.classList.contains('fn-table-focus');
+    if (hadBinder) {
+      st.focus = false;
+      LS.set('focus', false);
+    }
+    if (hadTable) {
+      st.tableFocus = false;
+      LS.set('tableFocus', false);
+    }
+    applyFocus();
+  }
   function renderAll() { loadCur(); renderHero(); renderControls(); renderBody(); renderSide(); }
 
-function patchOne(n) {
+  function patchOne(n) {
     var c = findCard(n); if (!c) return;
     var kId = ck(c);
     if (st.status !== 'all') { renderBody(); renderHero(); delete progCache[st.set]; dropMultiProg(); renderSide(); return; }
@@ -1959,14 +1954,14 @@ function patchOne(n) {
       return '<div class="fn-vb' + (on ? ' is-on' : '') + '"><div class="fn-vb-h"><span class="fn-vb-n"><b>' + esc(s.ver) + '</b>' + esc(VERSION_NAME[s.ver] || s.ver) + '</span><span class="fn-q"><output>' + (on ? '✓ Tem' : 'Falta') + '</output></span></div></div>';
     }).join('') + '</div>';
   }
-function renderCondBar(curCond, extraAttrs) {
-  return '<div class="fn-cond-box"><div class="fn-cond-list">' +
-    CARD_CONDITIONS.map(function (q) {
-      var isOn = curCond === q.code;
-      return '<button type="button" class="fn-cond-btn' + (isOn ? ' is-on' : '') + '" data-act="setcond"' + extraAttrs + ' data-cond="' + esc(q.code) + '" title="' + esc(q.label) + '">' + esc(q.code) + '</button>';
-    }).join('') +
-    '</div></div>';
-}
+  function renderCondBar(curCond, extraAttrs) {
+    return '<div class="fn-cond-box"><div class="fn-cond-list">' +
+      CARD_CONDITIONS.map(function (q) {
+        var isOn = curCond === q.code;
+        return '<button type="button" class="fn-cond-btn' + (isOn ? ' is-on' : '') + '" data-act="setcond"' + extraAttrs + ' data-cond="' + esc(q.code) + '" title="' + esc(q.label) + '">' + esc(q.code) + '</button>';
+      }).join('') +
+      '</div></div>';
+  }
   function renderOriginBar(origins, extraAttrs) {
     var curOrig = '';
     for (var i = 0; i < (origins || []).length; i++) {
@@ -2009,13 +2004,13 @@ function renderCondBar(curCond, extraAttrs) {
 
     return '<div class="fn-orig" style="margin-top:8px">' +
       '<div class="origem-control" data-origem-select>' +
-        '<button type="button" class="origem-trigger" aria-haspopup="listbox" aria-expanded="false"' + (extraAttrs || '') + '>' +
-          '<span class="origem-valor">' + esc(activeOpt.label) + '</span>' +
-          '<span class="origem-chevron" aria-hidden="true">⌄</span>' +
-        '</button>' +
-        '<ul class="origem-menu" role="listbox" hidden>' + menuHtml + '</ul>' +
+      '<button type="button" class="origem-trigger" aria-haspopup="listbox" aria-expanded="false"' + (extraAttrs || '') + '>' +
+      '<span class="origem-valor">' + esc(activeOpt.label) + '</span>' +
+      '<span class="origem-chevron" aria-hidden="true">⌄</span>' +
+      '</button>' +
+      '<ul class="origem-menu" role="listbox" hidden>' + menuHtml + '</ul>' +
       '</div>' +
-    '</div>';
+      '</div>';
   }
 
   function verBlocks(id, c) {
@@ -2034,14 +2029,14 @@ function renderCondBar(curCond, extraAttrs) {
         return '<div class="fn-vb-sub" style="margin-top:10px;padding-top:10px;border-top:1px dashed rgba(255,255,255,.14)">' +
           '<div class="fn-vb-h"><span class="fn-vb-n"><b>' + esc(s.ver) + '</b> (outra condição #' + (idx + 2) + ')</span>' +
           '<span class="fn-q">' +
-            '<button type="button" data-lotqty="-1"' + lotAt + ' aria-label="Menos uma cópia">−</button>' +
-            '<output aria-live="polite">' + lot.qty + '</output>' +
-            '<button type="button" data-lotqty="1"' + lotAt + ' aria-label="Mais uma cópia">+</button>' +
-            '<button type="button" data-dellot="1"' + lotAt + ' aria-label="Remover esta condição">×</button>' +
+          '<button type="button" data-lotqty="-1"' + lotAt + ' aria-label="Menos uma cópia">−</button>' +
+          '<output aria-live="polite">' + lot.qty + '</output>' +
+          '<button type="button" data-lotqty="1"' + lotAt + ' aria-label="Mais uma cópia">+</button>' +
+          '<button type="button" data-dellot="1"' + lotAt + ' aria-label="Remover esta condição">×</button>' +
           '</span></div>' +
           renderCondBar(lot.cond, lotAt) +
           renderOriginBar(lot.origins, lotAt) +
-        '</div>';
+          '</div>';
       }).join('');
 
       var addLotBtn = on
@@ -2074,7 +2069,7 @@ function renderCondBar(curCond, extraAttrs) {
       return (s.st === 'have' ? '✅' : s.st === 'part' ? '🟡' : '❌') + ' ' + (icons[c.type || ''] || '🃏') + ' *' + c.n + '* ' + i18n(c, id).name + (c.rare ? ' _(' + rareLabel(c.rare) + ')_' : '') + (multi ? ' _(' + setLabelOf(c._set).split('—')[0].trim() + ')_' : '') + ' [' + parts + ']' + (dp ? ' — 💰 ' + money(dp) : '');
     });
     var pct = slotsTotal ? Math.round(slotsCol / slotsTotal * 100) : 0;
-    var head = '🎴✨ *' + label + '* ✨🎴\n' + filterLabel() + (st.q ? ' · busca: "' + st.q + '"' : '') + '\n📅 ' + new Date().toLocaleDateString('pt-BR') + '\n━━━━━━━━━━━━━━━━━━';
+    var head = '🎩✨ *' + label + '* ✨🎩\n' + filterLabel() + (st.q ? ' · busca: "' + st.q + '"' : '') + '\n📅 ' + new Date().toLocaleDateString('pt-BR') + '\n━━━━━━━━━━━━━━━━━━';
     return head + '\n' + rows.join('\n') + '\n━━━━━━━━━━━━━━━━━━\n📦 Cartas completas: *' + complete + '/' + rows.length + '*\n🎯 Versões (master set): *' + slotsCol + '/' + slotsTotal + '* (' + pct + '%)';
   }
   function openActions() {
@@ -2144,7 +2139,7 @@ function renderCondBar(curCond, extraAttrs) {
       var payload = isDex(st.set)
         ? { user_id: uid(), view_mode: 'grid', layout: layout, card_ids: dexShareRefs(), binder_name: cur.binder.name }
         : (isCb(st.set) || isPk(st.set)) ? { user_id: uid(), view_mode: 'grid', layout: layout, card_ids: cbRefs(), binder_name: cur.binder.name }
-        : { user_id: uid(), set_key: setKey(st.set) + langSfx(st.set), view_mode: mode, layout: layout };
+          : { user_id: uid(), set_key: setKey(st.set) + langSfx(st.set), view_mode: mode, layout: layout };
       var r = await sbClient.from('binder_shares').insert(payload).select('token').single();
       if (r.error || !r.data) throw new Error('x');
       shareUrl = new URL('?s=' + r.data.token, location.href).href;
@@ -2378,8 +2373,8 @@ function renderCondBar(curCond, extraAttrs) {
     var bObj = isCb(id) ? cbBinder(id) : null;
     var ser = isDex(id) ? '__dex'
       : isPk(id) ? '__cb'
-      : bObj ? (cbType(bObj) === 'artist' ? '__art' : '__cb')
-      : (SET_CATALOG.filter(function (x) { return x.id === setKey(id); })[0] || {}).series;
+        : bObj ? (cbType(bObj) === 'artist' ? '__art' : '__cb')
+          : (SET_CATALOG.filter(function (x) { return x.id === setKey(id); })[0] || {}).series;
     var ob = openBlocks();
     if (ser && ob.indexOf(ser) < 0) { ob.push(ser); LS.set('open', ob); }
     closeSheet(); renderAll(); window.scrollTo({ top: 0 });
@@ -2436,21 +2431,21 @@ function renderCondBar(curCond, extraAttrs) {
     $('#fn-cols-plus').addEventListener('click', function () { st.cols = Math.min(10, st.cols + 1); LS.set('cols', st.cols); renderControls(); });
     $('#fn-setbtn').addEventListener('click', openDrawer);
     $('#fn-more').addEventListener('click', openActions);
-$('#fn-focus').addEventListener('click', function () {
- if (st.view === 'table') {
- st.tableFocus = !st.tableFocus;
- LS.set('tableFocus', st.tableFocus);
- applyFocus();
- window.scrollTo({ top: 0 });
- if (st.tableFocus) toast('Modo foco na tabela: pressione Esc para sair.');
- } else {
- st.focus = !st.focus;
- LS.set('focus', st.focus);
- applyFocus();
- window.scrollTo({ top: 0 });
- if (st.focus) toast('Modo foco: use as setas ← → para trocar de página e Esc para sair.');
- }
- });
+    $('#fn-focus').addEventListener('click', function () {
+      if (st.view === 'table') {
+        st.tableFocus = !st.tableFocus;
+        LS.set('tableFocus', st.tableFocus);
+        applyFocus();
+        window.scrollTo({ top: 0 });
+        if (st.tableFocus) toast('Modo foco na tabela: pressione Esc para sair.');
+      } else {
+        st.focus = !st.focus;
+        LS.set('focus', st.focus);
+        applyFocus();
+        window.scrollTo({ top: 0 });
+        if (st.focus) toast('Modo foco: use as setas ← → para trocar de página e Esc para sair.');
+      }
+    });
     window.addEventListener('resize', applyFocus);
     $('#fn-artist').addEventListener('change', function (e) { st.artist = e.target.value; st.bpage = 0; renderBody(); });
     $('#fn-theme').addEventListener('click', function () {
@@ -2458,14 +2453,14 @@ $('#fn-focus').addEventListener('click', function () {
       document.documentElement.setAttribute('data-theme', n); try { localStorage.setItem('mydeck-theme', n); } catch (e) { }
     });
 
-document.addEventListener('click', function (e) {
- if (!document.body.classList.contains('fn-focus') && !document.body.classList.contains('fn-table-focus')) return;
- var homeLink = e.target && e.target.closest ? e.target.closest('a[href="./"], a[href="index.html"], a[href="/"], #fn-home, .fn-brand, .fn-logo') : null;
- if (!homeLink) return;
- e.preventDefault();
- e.stopPropagation();
- exitFocus();
- }, true);
+    document.addEventListener('click', function (e) {
+      if (!document.body.classList.contains('fn-focus') && !document.body.classList.contains('fn-table-focus')) return;
+      var homeLink = e.target && e.target.closest ? e.target.closest('a[href="./"], a[href="index.html"], a[href="/"], #fn-home, .fn-brand, .fn-logo') : null;
+      if (!homeLink) return;
+      e.preventDefault();
+      e.stopPropagation();
+      exitFocus();
+    }, true);
 
     document.addEventListener('click', function (e) {
       // 1. Tratamento do dropdown customizado de origem
@@ -2519,25 +2514,24 @@ document.addEventListener('click', function (e) {
       if (t.dataset.mark != null) { e.preventDefault(); mark(t.dataset.mark, t.dataset.ver); }
       else if (t.dataset.open != null) openDetail(t.dataset.open);
       else if (t.dataset.dexpick != null) { if (!SHARE) openDexPicker(Number(t.dataset.dexpick)); }
-else if (t.dataset.qty != null) {
-  var cc = findCard(t.dataset.n);
-  if (cc) {
-    var kQty = keyOf(st.set, cc, t.dataset.ver), ee = entryOf(kQty), q = Math.max(0, ee.qty + Number(t.dataset.qty));
-    var curLots = lotsOf(kQty);
-    if (q === 0 && curLots.length > 0) {
-      // Promove o primeiro lote extra para a cópia principal
-      var promoted = curLots.shift();
-      saveLots(kQty, curLots);
-      setCond(kQty, promoted.cond || '');
-      var nextOrig = (promoted.origins || []).slice();
-      if (promoted.cond) nextOrig.push(COND_PREFIX + promoted.cond);
-      setEntry(t.dataset.n, t.dataset.ver, promoted.qty, nextOrig);
-    } else {
-      if (q === 0) { setCond(kQty, ''); saveLots(kQty, []); }
-      setEntry(t.dataset.n, t.dataset.ver, q, q > 0 ? ee.origins : []);
-    }
-  }
-}
+      else if (t.dataset.qty != null) {
+        var cc = findCard(t.dataset.n);
+        if (cc) {
+          var kQty = keyOf(st.set, cc, t.dataset.ver), ee = entryOf(kQty), q = Math.max(0, ee.qty + Number(t.dataset.qty));
+          var curLots = lotsOf(kQty);
+          if (q === 0 && curLots.length > 0) {
+            var promoted = curLots.shift();
+            saveLots(kQty, curLots);
+            setCond(kQty, promoted.cond || '');
+            var nextOrig = (promoted.origins || []).slice();
+            if (promoted.cond) nextOrig.push(COND_PREFIX + promoted.cond);
+            setEntry(t.dataset.n, t.dataset.ver, promoted.qty, nextOrig);
+          } else {
+            if (q === 0) { setCond(kQty, ''); saveLots(kQty, []); }
+            setEntry(t.dataset.n, t.dataset.ver, q, q > 0 ? ee.origins : []);
+          }
+        }
+      }
       else if (t.dataset.lotqty != null) {
         var cLot = findCard(t.dataset.n);
         if (cLot) {
@@ -2660,8 +2654,8 @@ else if (t.dataset.qty != null) {
         var openMenu = $('.origem-menu:not([hidden])');
         if (openMenu) { closeAllOriginMenus(); return; }
         var ov = $('#fn-overlay');
- if (ov && !ov.hidden) closeSheet();
- else if (document.body.classList.contains('fn-focus') || document.body.classList.contains('fn-table-focus')) exitFocus();
+        if (ov && !ov.hidden) closeSheet();
+        else if (document.body.classList.contains('fn-focus') || document.body.classList.contains('fn-table-focus')) exitFocus();
         return;
       }
       var tg = e.target && e.target.tagName; if (/INPUT|SELECT|TEXTAREA/.test(tg || '')) return;
@@ -2751,5 +2745,8 @@ else if (t.dataset.qty != null) {
     })();
     window.__fn = { st: st, renderAll: renderAll, mark: mark };
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();
+
