@@ -61,6 +61,7 @@
   var extraLotsMap = LS.get('ver_lots', {});
 
   function lotsOf(baseKey) {
+    if (SHARE) return [];
     var list = extraLotsMap && Array.isArray(extraLotsMap[baseKey]) ? extraLotsMap[baseKey] : [];
     return list.map(function (it) {
       return {
@@ -79,14 +80,16 @@
     LS.set('ver_lots', extraLotsMap);
   }
 
-  function totalQtyOf(baseKey) {
-    var baseE = entryOf(baseKey);
-    var baseQty = baseE.qty || 0;
-    var extraQty = lotsOf(baseKey).reduce(function (acc, l) { return acc + l.qty; }, 0);
-    return (baseQty > 0 || extraQty > 0) ? (Math.max(baseQty, 1) + extraQty) : 0;
-  }
+function totalQtyOf(baseKey) {
+  var baseE = entryOf(baseKey);
+  var baseQty = baseE.qty || 0;
+  if (baseQty <= 0) return 0; // garante consistência com has(baseKey)
+  var extraQty = lotsOf(baseKey).reduce(function (acc, l) { return acc + l.qty; }, 0);
+  return baseQty + extraQty;
+}
 
   function condOf(key) {
+    if (SHARE) return '';
     var e = entryOf(key);
     if (e && Array.isArray(e.origins)) {
       for (var i = 0; i < e.origins.length; i++) {
@@ -162,31 +165,6 @@ function cardCondBadge(id, c, ver) {
   }).join('') + '</div>';
 }
 
-function tableCondsHtml(id, c, ver) {
-    var k = keyOf(id, c, ver);
-    var codes = [];
-
-    var cd = condOf(k);
-    if (cd && codes.indexOf(cd) < 0) codes.push(cd);
-
-    var lots = lotsOf(k);
-    for (var j = 0; j < lots.length; j++) {
-      var lcd = lots[j].cond;
-      if (lcd && codes.indexOf(lcd) < 0) codes.push(lcd);
-    }
-
-    if (!codes.length) return '';
-
-    var rank = { M: 0, NM: 1, SP: 2, MP: 3, HP: 4, D: 5 };
-    codes.sort(function (a, b) {
-      return (rank[a] != null ? rank[a] : 99) - (rank[b] != null ? rank[b] : 99);
-    });
-
-    return '<div class="fn-tconds">' + codes.map(function (code) {
-      return '<span class="fn-cond c-' + esc(code) + '" title="' + esc(condLabel(code)) + '">' + esc(code) + '</span>';
-    }).join('') + '</div>';
-  }
-
   // ── estado ─────────────────────────────────────────────────
   var defCols = innerWidth < 480 ? 3 : innerWidth < 800 ? 4 : innerWidth < 1200 ? 6 : 7;
   var st = {
@@ -198,6 +176,7 @@ function tableCondsHtml(id, c, ver) {
     progMode: LS.get('progMode', 'slots'),
     pocket: (function () { var p = String(LS.get('pocket', '9')); return p === '20a' ? '20b' : p; })(),
     focus: false,
+    tableFocus: LS.get('tableFocus', false),
     artist: '',
     bpage: 0
   };
@@ -1870,17 +1849,45 @@ function renderBody() {
     $('#fn-cols-grp').style.display = st.view === 'grid' ? '' : 'none';
     document.documentElement.style.setProperty('--cols', st.cols);
   }
-  function applyFocus() {
-    var can = st.view === 'binder' && innerWidth >= 700, on = can && st.focus;
-    document.body.classList.toggle('fn-focus', on);
-    var b = $('#fn-focus'); if (!b) return;
-    b.hidden = !can; b.classList.toggle('is-on', on); b.innerHTML = on ? I('x') + ' Sair do foco' : I('maximize') + ' Foco';
-  }
-  function exitFocus() {
-    st.focus = false;
-    LS.set('focus', false);
-    applyFocus();
-  }
+function applyFocus() {
+ var canBinder = st.view === 'binder' && innerWidth >= 700;
+ var canTable = st.view === 'table' && innerWidth >= 700;
+ var onBinder = canBinder && st.focus;
+ var onTable = canTable && st.tableFocus;
+
+ document.body.classList.toggle('fn-focus', onBinder);
+ document.body.classList.toggle('fn-table-focus', onTable);
+
+ var b = $('#fn-focus');
+ if (!b) return;
+
+ if (canBinder) {
+ b.hidden = false;
+ b.classList.toggle('is-on', onBinder);
+ b.innerHTML = onBinder ? I('x') + ' Sair do foco' : I('maximize') + ' Foco';
+ } else if (canTable) {
+ b.hidden = false;
+ b.classList.toggle('is-on', onTable);
+ b.innerHTML = onTable ? I('x') + ' Sair do foco' : I('maximize') + ' Foco';
+ } else {
+ b.hidden = true;
+ b.classList.remove('is-on');
+ }
+ }
+
+ function exitFocus() {
+ var hadBinder = document.body.classList.contains('fn-focus');
+ var hadTable = document.body.classList.contains('fn-table-focus');
+ if (hadBinder) {
+ st.focus = false;
+ LS.set('focus', false);
+ }
+ if (hadTable) {
+ st.tableFocus = false;
+ LS.set('tableFocus', false);
+ }
+ applyFocus();
+ }
   function renderAll() { loadCur(); renderHero(); renderControls(); renderBody(); renderSide(); }
 
 function patchOne(n) {
@@ -2429,10 +2436,21 @@ function renderCondBar(curCond, extraAttrs) {
     $('#fn-cols-plus').addEventListener('click', function () { st.cols = Math.min(10, st.cols + 1); LS.set('cols', st.cols); renderControls(); });
     $('#fn-setbtn').addEventListener('click', openDrawer);
     $('#fn-more').addEventListener('click', openActions);
-    $('#fn-focus').addEventListener('click', function () {
-      st.focus = !st.focus; LS.set('focus', st.focus); applyFocus(); window.scrollTo({ top: 0 });
-      if (st.focus) toast('Modo foco: use as setas ← → para trocar de página e Esc para sair.');
-    });
+$('#fn-focus').addEventListener('click', function () {
+ if (st.view === 'table') {
+ st.tableFocus = !st.tableFocus;
+ LS.set('tableFocus', st.tableFocus);
+ applyFocus();
+ window.scrollTo({ top: 0 });
+ if (st.tableFocus) toast('Modo foco na tabela: pressione Esc para sair.');
+ } else {
+ st.focus = !st.focus;
+ LS.set('focus', st.focus);
+ applyFocus();
+ window.scrollTo({ top: 0 });
+ if (st.focus) toast('Modo foco: use as setas ← → para trocar de página e Esc para sair.');
+ }
+ });
     window.addEventListener('resize', applyFocus);
     $('#fn-artist').addEventListener('change', function (e) { st.artist = e.target.value; st.bpage = 0; renderBody(); });
     $('#fn-theme').addEventListener('click', function () {
@@ -2440,14 +2458,14 @@ function renderCondBar(curCond, extraAttrs) {
       document.documentElement.setAttribute('data-theme', n); try { localStorage.setItem('mydeck-theme', n); } catch (e) { }
     });
 
-    document.addEventListener('click', function (e) {
-      if (!document.body.classList.contains('fn-focus')) return;
-      var homeLink = e.target && e.target.closest ? e.target.closest('a[href="./"], a[href="index.html"], a[href="/"], #fn-home, .fn-brand, .fn-logo') : null;
-      if (!homeLink) return;
-      e.preventDefault();
-      e.stopPropagation();
-      exitFocus();
-    }, true);
+document.addEventListener('click', function (e) {
+ if (!document.body.classList.contains('fn-focus') && !document.body.classList.contains('fn-table-focus')) return;
+ var homeLink = e.target && e.target.closest ? e.target.closest('a[href="./"], a[href="index.html"], a[href="/"], #fn-home, .fn-brand, .fn-logo') : null;
+ if (!homeLink) return;
+ e.preventDefault();
+ e.stopPropagation();
+ exitFocus();
+ }, true);
 
     document.addEventListener('click', function (e) {
       // 1. Tratamento do dropdown customizado de origem
@@ -2501,14 +2519,25 @@ function renderCondBar(curCond, extraAttrs) {
       if (t.dataset.mark != null) { e.preventDefault(); mark(t.dataset.mark, t.dataset.ver); }
       else if (t.dataset.open != null) openDetail(t.dataset.open);
       else if (t.dataset.dexpick != null) { if (!SHARE) openDexPicker(Number(t.dataset.dexpick)); }
-      else if (t.dataset.qty != null) {
-        var cc = findCard(t.dataset.n);
-        if (cc) {
-          var kQty = keyOf(st.set, cc, t.dataset.ver), ee = entryOf(kQty), q = Math.max(0, ee.qty + Number(t.dataset.qty));
-          if (q === 0) { setCond(kQty, ''); saveLots(kQty, []); }
-          setEntry(t.dataset.n, t.dataset.ver, q, q > 0 ? ee.origins : []);
-        }
-      }
+else if (t.dataset.qty != null) {
+  var cc = findCard(t.dataset.n);
+  if (cc) {
+    var kQty = keyOf(st.set, cc, t.dataset.ver), ee = entryOf(kQty), q = Math.max(0, ee.qty + Number(t.dataset.qty));
+    var curLots = lotsOf(kQty);
+    if (q === 0 && curLots.length > 0) {
+      // Promove o primeiro lote extra para a cópia principal
+      var promoted = curLots.shift();
+      saveLots(kQty, curLots);
+      setCond(kQty, promoted.cond || '');
+      var nextOrig = (promoted.origins || []).slice();
+      if (promoted.cond) nextOrig.push(COND_PREFIX + promoted.cond);
+      setEntry(t.dataset.n, t.dataset.ver, promoted.qty, nextOrig);
+    } else {
+      if (q === 0) { setCond(kQty, ''); saveLots(kQty, []); }
+      setEntry(t.dataset.n, t.dataset.ver, q, q > 0 ? ee.origins : []);
+    }
+  }
+}
       else if (t.dataset.lotqty != null) {
         var cLot = findCard(t.dataset.n);
         if (cLot) {
@@ -2631,8 +2660,8 @@ function renderCondBar(curCond, extraAttrs) {
         var openMenu = $('.origem-menu:not([hidden])');
         if (openMenu) { closeAllOriginMenus(); return; }
         var ov = $('#fn-overlay');
-        if (ov && !ov.hidden) closeSheet();
-        else if (document.body.classList.contains('fn-focus')) exitFocus();
+ if (ov && !ov.hidden) closeSheet();
+ else if (document.body.classList.contains('fn-focus') || document.body.classList.contains('fn-table-focus')) exitFocus();
         return;
       }
       var tg = e.target && e.target.tagName; if (/INPUT|SELECT|TEXTAREA/.test(tg || '')) return;
