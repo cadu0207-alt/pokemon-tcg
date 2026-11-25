@@ -59,10 +59,37 @@
   ];
   var condMap = LS.get('conds', {});
   var extraLotsMap = LS.get('ver_lots', {});
+ var cbDataMap = LS.get('cb_slots', {});
+  var cbLotsMap = LS.get('cb_lots', {});
 
-  function lotsOf(baseKey) {
+  function isCbKey(key) {
+    return typeof key === 'string' && key.indexOf('cb-') === 0;
+  }
+
+  function saveCbSlot(key, qty, origins) {
+    if (!cbDataMap || typeof cbDataMap !== 'object') cbDataMap = {};
+    var cleanOrig = (origins || []).filter(function (o) {
+      return String(o).indexOf(COND_PREFIX) !== 0;
+    });
+    var condTag = '';
+    for (var i = 0; i < (origins || []).length; i++) {
+      if (String(origins[i]).indexOf(COND_PREFIX) === 0) condTag = String(origins[i]);
+    }
+    if (qty <= 0) {
+      delete cbDataMap[key];
+    } else {
+      cbDataMap[key] = {
+        qty: Number(qty) || 1,
+        origins: condTag ? cleanOrig.concat([condTag]) : cleanOrig
+      };
+    }
+    LS.set('cb_slots', cbDataMap);
+  }
+
+ function lotsOf(baseKey) {
     if (SHARE) return [];
-    var list = extraLotsMap && Array.isArray(extraLotsMap[baseKey]) ? extraLotsMap[baseKey] : [];
+    var src = isCbKey(baseKey) ? cbLotsMap : extraLotsMap;
+    var list = src && Array.isArray(src[baseKey]) ? src[baseKey] : [];
     return list.map(function (it) {
       return {
         qty: Math.max(1, Number(it.qty) || 1),
@@ -73,8 +100,15 @@
   }
 
   function saveLots(baseKey, list) {
-    if (!extraLotsMap || typeof extraLotsMap !== 'object') extraLotsMap = {};
     var clean = (list || []).filter(function (it) { return (Number(it.qty) || 0) > 0; });
+    if (isCbKey(baseKey)) {
+      if (!cbLotsMap || typeof cbLotsMap !== 'object') cbLotsMap = {};
+      if (clean.length) cbLotsMap[baseKey] = clean;
+      else delete cbLotsMap[baseKey];
+      LS.set('cb_lots', cbLotsMap);
+      return;
+    }
+    if (!extraLotsMap || typeof extraLotsMap !== 'object') extraLotsMap = {};
     if (clean.length) extraLotsMap[baseKey] = clean;
     else delete extraLotsMap[baseKey];
     LS.set('ver_lots', extraLotsMap);
@@ -214,7 +248,13 @@
   function engineReady() { return typeof getSetData === 'function' && typeof getSlots === 'function' && typeof SET_CATALOG !== 'undefined'; }
   function loggedIn() { try { return !!uid(); } catch (e) { return false; } }
   var SHARE = null;
-  function has(key) { return DEMO ? demoSet.has(key) : SHARE ? SHARE.keys.has(key) : (typeof collected !== 'undefined' && collected.has(key)); }
+ function has(key) {
+    if (isCbKey(key)) {
+      if (SHARE) return SHARE.keys.has(key);
+      return !!(cbDataMap && cbDataMap[key] && (Number(cbDataMap[key].qty) || 0) > 0);
+    }
+    return DEMO ? demoSet.has(key) : SHARE ? SHARE.keys.has(key) : (typeof collected !== 'undefined' && collected.has(key));
+  }
   function ck(c) { return c._k || c.n; }
   function sidOf(id, c) { return (c && (c._set || c._setId)) || id; }
   function findCard(k) {
@@ -236,14 +276,23 @@
     if (has('dex-shared:' + base)) return true;
     return false;
   }
-  function keyOf(id, c, ver) {
-    var sid = sidOf(id, c);
-    if (isDex(id)) {
-      var bid = (cur.binder && cur.binder.id) || String(id).replace(/^dex:/, '') || 'shared';
-      return dexSlotKey(bid, sid, String(c.n), ver);
-    }
-    return slotKey(sid + (c._k ? '' : langSfx(sid)) + ':', String(c.n), ver);
+function cbSlotKey(cbId, sid, n, ver) {
+  var base = slotKey(sid + ':', String(n), ver);
+  return 'cb-' + String(cbId || 'shared') + ':' + base;
+}
+
+function keyOf(id, c, ver) {
+  var sid = sidOf(id, c);
+  if (isDex(id)) {
+    var bid = (cur.binder && cur.binder.id) || String(id).replace(/^dex:/, '') || 'shared';
+    return dexSlotKey(bid, sid, String(c.n), ver);
   }
+  if (isCb(id)) {
+    var cbId = (cur.binder && cur.binder.id) || String(id).replace(/^cb:/, '') || 'shared';
+    return cbSlotKey(cbId, sid, String(c.n), ver);
+  }
+  return slotKey(sid + (c._k ? '' : langSfx(sid)) + ':', String(c.n), ver);
+}
   function priceOf(id, c, sl) {
     var base = (sl && sl.price != null) ? sl.price : c.price;
     if (c._k || effLang(sidOf(id, c)) === 'pt') return base || 0;
@@ -294,8 +343,12 @@
     } catch (e) { }
     return c.img || '';
   }
-  function entryOf(key) {
+function entryOf(key) {
     if (SHARE) return { qty: SHARE.keys.has(key) ? 1 : 0, origins: [] };
+    if (isCbKey(key)) {
+      var rec = cbDataMap && cbDataMap[key];
+      return rec ? { qty: Number(rec.qty) || 1, origins: (rec.origins || []).slice() } : { qty: 0, origins: [] };
+    }
     if (DEMO) return demoSet.has(key) ? (demoQty.get(key) || { qty: 1, origins: [] }) : { qty: 0, origins: [] };
     if (typeof collectedQty !== 'undefined' && collectedQty.has(key)) { var e = collectedQty.get(key); return { qty: e.qty || 1, origins: (e.origins || []).slice() }; }
     return { qty: has(key) ? 1 : 0, origins: [] };
@@ -852,9 +905,13 @@
   function cbProg(b) {
     var key = 'cb:' + b.id + ':' + st.progMode; if (progCache[key] !== undefined) return progCache[key];
     var r = cbResolve(b), tot = 0, got = 0, cardsAny = 0;
-    r.cards.forEach(function (c) {
+r.cards.forEach(function (c) {
       var any = false;
-      slotsOf('', c).forEach(function (s) { tot++; if (has(keyOf('', c, s.ver))) { got++; any = true; } });
+      slotsOf('', c).forEach(function (s) {
+        tot++;
+        var kCb = cbSlotKey(b.id, c._set || sidOf('', c), c.n, s.ver);
+        if (has(kCb)) { got++; any = true; }
+      });
       if (any) cardsAny++;
     });
     var num = st.progMode === 'cards' ? cardsAny : got;
@@ -1917,6 +1974,18 @@
     var kId = ck(c);
     if (SHARE) { toast('Somente leitura: este link só mostra a coleção.'); openDetail(kId); return; }
     var key = keyOf(st.set, c, ver), totQ = totalQtyOf(key);
+   if (isCbKey(key)) {
+      if (totQ > 1) { toast('Você tem ' + totQ + ' cópias. Ajuste a quantidade no detalhe da carta.'); openDetail(kId); return; }
+      if (totQ > 0) {
+        saveCbSlot(key, 0, []);
+        saveLots(key, []);
+        setCond(key, '');
+      } else {
+        saveCbSlot(key, 1, []);
+      }
+      patchOne(kId);
+      return;
+    }
     if (totQ > 1) { toast('Você tem ' + totQ + ' cópias. Ajuste a quantidade no detalhe da carta.'); openDetail(kId); return; }
     if (DEMO) { if (demoSet.has(key)) { demoSet.delete(key); demoQty.delete(key); setCond(key, ''); } else demoSet.add(key); patchOne(kId); return; }
     if (!loggedIn()) { toast('Entre no MyDeck para marcar suas cartas.'); return; }
@@ -1939,15 +2008,20 @@
     renderAll();
   }
 
-  function setEntry(n, ver, qty, origins) {
-    var c = findCard(n); if (!c || SHARE) return;
-    var kId = ck(c), key = keyOf(st.set, c, ver);
-    if (DEMO) { if (qty <= 0) { demoSet.delete(key); demoQty.delete(key); } else { demoSet.add(key); demoQty.set(key, { qty: qty, origins: origins }); } patchOne(kId); return; }
-    if (!loggedIn()) { toast('Entre no MyDeck para salvar suas cartas.'); return; }
-    if (typeof saveSlot !== 'function') { toast('Não foi possível salvar agora. Recarregue a página.'); return; }
-    if (busy[key]) return; busy[key] = true;
-    Promise.resolve(saveSlot(key, qty, origins)).then(function () { patchOne(kId); }, function () { toast('Não foi possível salvar. Tente de novo.'); }).then(function () { busy[key] = false; });
+function setEntry(n, ver, qty, origins) {
+  var c = findCard(n); if (!c || SHARE) return;
+  var kId = ck(c), key = keyOf(st.set, c, ver);
+  if (isCbKey(key)) {
+    saveCbSlot(key, qty, origins);
+    patchOne(kId);
+    return;
   }
+  if (DEMO) { if (qty <= 0) { demoSet.delete(key); demoQty.delete(key); } else { demoSet.add(key); demoQty.set(key, { qty: qty, origins: origins }); } patchOne(kId); return; }
+  if (!loggedIn()) { toast('Entre no MyDeck para salvar suas cartas.'); return; }
+  if (typeof saveSlot !== 'function') { toast('Não foi possível salvar agora. Recarregue a página.'); return; }
+  if (busy[key]) return; busy[key] = true;
+  Promise.resolve(saveSlot(key, qty, origins)).then(function () { patchOne(kId); }, function () { toast('Não foi possível salvar. Tente de novo.'); }).then(function () { busy[key] = false; });
+}
   function verRO(id, c) {
     return '<div class="fn-vblocks">' + slotsOf(id, c).map(function (s) {
       var on = has(keyOf(id, c, s.ver));
