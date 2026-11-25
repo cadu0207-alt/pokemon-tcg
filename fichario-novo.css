@@ -1012,22 +1012,3 @@ img.pk-ico{object-fit:contain;color:transparent}
   margin-right: 3px;
   box-shadow: none;
 }
-
-/* Complementos de sincronia */
-.fn-dp-item.is-clear {
-  border-style: dashed;
-  border-color: var(--border2);
-  justify-content: center;
-  text-align: center;
-}
-.fn-dp-item.is-clear:hover {
-  border-color: var(--accent);
-}
-
-.fn-pocket.is-empty.is-placeholder {
-  opacity: 0.55;
-}
-
-.fn-detail p [class^="rr-"] {
-  font-weight: 700;
-}
