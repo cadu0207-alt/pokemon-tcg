@@ -221,8 +221,17 @@ button{cursor:pointer}
   .fn-progress{margin:10px 0 8px;height:8px}
   .fn-stats{gap:4px 14px;font-size:12.5px}
   .fn-hero-links{margin-top:6px;font-size:12.5px}
-  .fn-bar{margin:8px -10px 0;padding:10px;gap:8px}
-  .fn-bar.is-hidden{transform:translateY(calc(-100% - var(--top-h) - 6px))}
+  .fn-bar{
+    position: static;
+    top: auto;
+    transform: none !important;
+    margin: 8px 0 0;
+    padding: 10px 0;
+    gap: 8px;
+    background: transparent;
+    backdrop-filter: none;
+    border-bottom: 0;
+  }
   .fn-bar-top .fn-search{flex:1 1 100%}
   .fn-bar-right{margin-left:0}
   .fn-search input{height:38px}
