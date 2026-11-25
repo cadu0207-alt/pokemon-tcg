@@ -3141,7 +3141,7 @@ function openBlocks() {
     }, 250);
 
     // Também escuta mudança de sessão do Supabase (essencial no reload da página)
-    try {
+  try {
       if (typeof sbClient !== 'undefined' && sbClient && sbClient.auth && typeof sbClient.auth.onAuthStateChange === 'function') {
         sbClient.auth.onAuthStateChange(function (_event, session) {
           if (session && session.user) {
@@ -3149,8 +3149,9 @@ function openBlocks() {
             syncTick();
           }
         });
-    }
-  } catch (e) { }
-}
+      }
+    } catch (e) { }
+  }
 
-boot();
+  boot();
+})();
