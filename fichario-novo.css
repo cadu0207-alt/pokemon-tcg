@@ -665,11 +665,76 @@ img.pk-ico{object-fit:contain;color:transparent}
 
 /* Janela de detalhe / configuração no mesmo tamanho da seleção de cartas */
 .fn-sheet.fn-sheet-detail {
-  width: min(1040px, 94vw);
-  max-width: 1040px;
+  width: min(1140px, 95vw);
+  max-width: 1140px;
   max-height: 88vh;
   display: flex;
   flex-direction: column;
+}
+
+.fn-sheet.fn-sheet-detail .fn-sheet-b {
+  overflow: auto;
+}
+
+.fn-detail {
+  padding: 6px 16px 20px;
+  display: grid;
+  gap: 16px;
+}
+
+.fn-detail-img {
+  width: min(72%, 300px);
+  margin: 0 auto;
+  aspect-ratio: 63 / 88;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  background: var(--surface2);
+}
+
+.fn-detail-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.fn-detail-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.fn-detail-top .fn-detail-img {
+  width: min(68%, 280px);
+  max-width: none;
+  margin: 0 auto;
+  flex: 0 0 auto;
+}
+
+.fn-detail-top .fn-detail-info {
+  min-width: 0;
+  width: 100%;
+}
+
+.fn-detail h4,
+.fn-detail-top h4 {
+  margin: 0;
+  font-family: var(--f-head);
+  font-size: 20px;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.fn-detail p,
+.fn-detail-top p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.55;
+  text-align: center;
 }
 
 .fn-dexact {
@@ -679,20 +744,39 @@ img.pk-ico{object-fit:contain;color:transparent}
   gap: 8px;
 }
 
-@media (min-width: 700px) {
-  .fn-dexact:has(> :nth-child(2)) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (min-width: 820px) {
+  .fn-sheet.fn-sheet-detail .fn-sheet-b {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
+  .fn-sheet.fn-sheet-detail .fn-detail {
+    flex: 1;
+    min-height: 0;
+    grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
+    align-items: start;
+    gap: 22px;
+    padding: 8px 20px 22px;
+  }
+
+  /* Coluna esquerda: imagem maior + descrição/informações da carta */
   .fn-sheet.fn-sheet-detail .fn-detail-top {
     flex-direction: column;
     align-items: center;
     text-align: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
   }
 
   .fn-sheet.fn-sheet-detail .fn-detail-top .fn-detail-img {
     width: 100%;
-    max-width: 220px;
+    max-width: 340px;
+  }
+
+  .fn-sheet.fn-sheet-detail .fn-detail-top .fn-detail-info {
+    width: 100%;
   }
 
   .fn-sheet.fn-sheet-detail .fn-detail-top h4,
@@ -700,11 +784,25 @@ img.pk-ico{object-fit:contain;color:transparent}
     text-align: center;
   }
 
+  /* Coluna direita: versões, condições, quantidades e botões */
+  .fn-sheet.fn-sheet-detail > .fn-sheet-b .fn-detail > :not(.fn-detail-top) {
+    min-width: 0;
+    max-height: calc(88vh - 88px);
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
   .fn-sheet.fn-sheet-detail .fn-vblocks {
-    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     align-items: start;
+    gap: 12px;
+  }
+
+  .fn-dexact:has(> :nth-child(2)) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
 .origem-control {
   position: relative;
   width: 100%;
@@ -921,12 +1019,6 @@ img.pk-ico{object-fit:contain;color:transparent}
  .fn-table-focus .fn-bar-right{margin-left:0}
  .fn-table-focus .fn-body{margin-top:8px}
  .fn-table-focus .fn-tablewrap{max-height:calc(100vh - var(--top-h) - 86px);overflow:auto}
-}
-
-.fn-sheet-detail .fn-vblocks {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 12px;
 }
 
 /* ── Ajustes de sincronia com o JS atual ───────────────────────────── */
