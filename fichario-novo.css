@@ -136,6 +136,11 @@ button{cursor:pointer}
 
 /* raridades */
 .rr-hyper{color:#b8860b}.rr-sir{color:#c026d3}.rr-ir{color:#2563eb}.rr-ur{color:#d97706}.rr-dr{color:#0d9488}
+[data-theme="dark"] .rr-hyper{color:#facc15}
+[data-theme="dark"] .rr-sir{color:#e879f9}
+[data-theme="dark"] .rr-ir{color:#60a5fa}
+[data-theme="dark"] .rr-ur{color:#fbbf24}
+[data-theme="dark"] .rr-dr{color:#2dd4bf}
 
 /* ── tabela ───────────────────────────────────────── */
 .fn-tablewrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);overflow:auto;box-shadow:var(--shadow)}
@@ -637,7 +642,8 @@ img.pk-ico{object-fit:contain;color:transparent}
   transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
 }
 
-.fn-cond-btn:hover {
+.fn-binder-nav button:not(:disabled):hover,
+#fn-focus:not(.is-on):hover {
   border-color: var(--border2);
   background: var(--surface2);
 }
@@ -997,4 +1003,12 @@ img.pk-ico{object-fit:contain;color:transparent}
 .fn-table-matrix td.t-price {
   font-weight: 700;
   color: var(--teal);
+}
+
+/* Badges de condição dentro do cabeçalho (.fn-hero) */
+.fn-stats .fn-cond {
+  display: inline-block;
+  vertical-align: baseline;
+  margin-right: 3px;
+  box-shadow: none;
 }
