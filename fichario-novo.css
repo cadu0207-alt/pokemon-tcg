@@ -939,3 +939,21 @@ img.pk-ico{object-fit:contain;color:transparent}
   font-size: 12px;
 }
 
+/* ── Modo foco: tabela na tela ── */
+@media (min-width:700px){
+ body.fn-table-focus{--top-h:46px}
+ .fn-table-focus .fn-banner,
+ .fn-table-focus .fn-hero,
+ .fn-table-focus .fn-side,
+ .fn-table-focus .fn-bar-top,
+ .fn-table-focus .fn-user,
+ .fn-table-focus #fn-cols-grp,
+ .fn-table-focus .fn-op{display:none}
+ .fn-table-focus .fn-layout{display:block;max-width:none}
+ .fn-table-focus .fn-main{padding:6px 14px 10px;max-width:none}
+ .fn-table-focus .fn-bar{position:static;margin:0 -14px;padding:8px 16px;transform:none}
+ .fn-table-focus .fn-bar-bottom{justify-content:center}
+ .fn-table-focus .fn-bar-right{margin-left:0}
+ .fn-table-focus .fn-body{margin-top:8px}
+ .fn-table-focus .fn-tablewrap{max-height:calc(100vh - var(--top-h) - 86px);overflow:auto}
+}
