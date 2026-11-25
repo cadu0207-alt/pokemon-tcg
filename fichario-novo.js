@@ -196,6 +196,68 @@
     }).join('') + '</div>';
   }
 
+ function condCountsHtml(scope) {
+    var counts = {};
+    CARD_CONDITIONS.forEach(function (q) { counts[q.code] = 0; });
+
+    function addQty(code, qty) {
+      var qNum = Number(qty) || 0;
+      if (!code || qNum <= 0 || counts[code] == null) return;
+      counts[code] += qNum;
+    }
+
+    function tallySlot(id, c, ver) {
+      var key = keyOf(id, c, ver);
+      var e = entryOf(key);
+      if (e && e.qty > 0) {
+        addQty(condOf(key), e.qty);
+      }
+      var lots = lotsOf(key);
+      for (var i = 0; i < lots.length; i++) {
+        addQty(lots[i].cond, lots[i].qty);
+      }
+    }
+
+    if (scope && scope.kind === 'dex') {
+      var bid = scope.bid || 'shared';
+      (scope.species || []).forEach(function (sp) {
+        var c = scope.byDex && scope.byDex[sp.dex];
+        if (!c) return;
+        slotsOf(scope.id, c).forEach(function (s) {
+          var sid = c._set || sidOf(scope.id, c);
+          if (hasDexSlot(bid, sid, c.n, s.ver) || has(keyOf(scope.id, c, s.ver))) {
+            tallySlot(scope.id, c, s.ver);
+          }
+        });
+      });
+    } else if (scope && scope.kind === 'pk') {
+      (scope.pages || []).forEach(function (pg) {
+        (pg || []).forEach(function (sl) {
+          if (!sl || !sl.c || !sl.r) return;
+          tallySlot('', sl.c, sl.r.ver);
+        });
+      });
+    } else {
+      var id = (scope && scope.id) || st.set;
+      var cards = (scope && scope.cards) || cur.cards || [];
+      cards.forEach(function (c) {
+        slotsOf(id, c).forEach(function (s) {
+          tallySlot(id, c, s.ver);
+        });
+      });
+    }
+
+    var parts = [];
+    CARD_CONDITIONS.forEach(function (q) {
+      var n = counts[q.code] || 0;
+      if (n > 0) {
+        parts.push('<span><b class="fn-cond c-' + esc(q.code) + '" style="padding:1px 5px;border-radius:4px">' + esc(q.code) + '</b> ' + n + '</span>');
+      }
+    });
+
+    return parts.join('');
+  }
+
   // ── estado ─────────────────────────────────────────────────
   var defCols = innerWidth < 480 ? 3 : innerWidth < 800 ? 4 : innerWidth < 1200 ? 6 : 7;
   var st = {
@@ -572,8 +634,7 @@ function entryOf(key) {
     var delLbl = b && isRegionalDexBinder(b) ? I('trash') + ' Excluir região' : I('trash') + ' Excluir Pokédex';
     $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>' + esc(name) + '</h1><p class="fn-hero-sub">Pokédex · ' + t + ' espécies · progresso isolado desta Pokédex</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
-      '<div class="fn-stats">' + (b ? '<span><b>' + own + '</b>/' + t + ' espécies</span><span>Com carta escolhida <b>' + chosen + '</b></span>' + (empty ? '<span>Vagas sem carta <b>' + empty + '</b></span>' : '') : '<span>' + (loggedIn() || DEMO ? 'Carregando a sua Pokédex…' : 'Entre no MyDeck para carregar a sua Pokédex.') + '</span>') + '</div>' +
-      (b ? '<div class="fn-hero-links"><a href="#" data-act="dexaskdelete" data-bid="' + esc(b.id) + '">' + delLbl + '</a></div>' : '');
+'<div class="fn-stats">' + (b ? '<span><b>' + own + '</b>/' + t + ' espécies</span><span>Com carta escolhida <b>' + chosen + '</b></span>' + (empty ? '<span>Vagas sem carta <b>' + empty + '</b></span>' : '') : '<span>' + (loggedIn() || DEMO ? 'Carregando a sua Pokédex…' : 'Entre no MyDeck para carregar a sua Pokédex.') + '</span>') + condCountsHtml({ kind: 'dex', id: st.set, bid: bid, species: cur.species, byDex: cur.byDex }) + '</div>' +      (b ? '<div class="fn-hero-links"><a href="#" data-act="dexaskdelete" data-bid="' + esc(b.id) + '">' + delLbl + '</a></div>' : '');
     $('#fn-setbtn-emoji').innerHTML = b ? bIco(b, 22, 'masterdex') : MD_ICO('pokedex', { size: 22 }); $('#fn-setbtn-code').textContent = 'Pokédex'; $('#fn-setbtn-name').textContent = name;
   }
 
@@ -979,7 +1040,7 @@ r.cards.forEach(function (c) {
       '</div></div></div>' +
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats">' + (t.slots ? '<span' + (!isCardMode ? ' class="is-active-metric"' : '') + '><b>' + t.got + '</b>/' + t.slots + ' slots</span><span' + (isCardMode ? ' class="is-active-metric"' : '') + '><b>' + t.cardsAny + '</b>/' + t.cards + ' cartas</span>' + ((isCardMode ? t.cardsAny >= t.cards : t.got >= t.slots) ? '<span><b style="color:var(--teal)">Fichário completo</b></span>' : '<span><b>' + (isCardMode ? (t.cards - t.cardsAny) + '</b> cartas restantes' : (t.slots - t.got) + '</b> slots restantes') + '</span>')
-        : '<span>' + (manual ? (cur.pending ? 'Carregando as cartas…' : 'Este fichário ainda não tem cartas. Use “Adicionar cartas” ou o botão “Guardar em fichário” de qualquer carta.') : 'Nenhuma carta nas suas coleções ativas para esta sugestão.') + '</span>') + '</div>' +
+        : '<span>' + (manual ? (cur.pending ? 'Carregando as cartas…' : 'Este fichário ainda não tem cartas. Use “Adicionar cartas” ou o botão “Guardar em fichário” de qualquer carta.') : 'Nenhuma carta nas suas coleções ativas para esta sugestão.') + '</span>') + condCountsHtml({ kind: 'set', id: st.set, cards: cur.cards }) + '</div>' +
       '<div class="fn-hero-links">' + (manual ? '<a href="#" data-act="cbadd">' + I('plus', 14) + ' Adicionar cartas</a>' : '') + (isArtistBinder ? '<a href="#" data-act="artists">' + I('palette', 14) + ' Outros artistas</a>' : '') + '<a href="#" data-act="cbedit">' + I('pencil', 14) + ' Editar fichário</a></div>';
     $('#fn-setbtn-emoji').innerHTML = bIco(b, 22); $('#fn-setbtn-code').textContent = cbIsFav(b) ? 'Favoritos' : isArtistBinder ? 'Artista' : 'Personalizado'; $('#fn-setbtn-name').textContent = nm;
   }
@@ -1355,8 +1416,7 @@ r.cards.forEach(function (c) {
     if (!b) { $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>Fichário de Pokémon</h1><p class="fn-hero-sub">' + (loggedIn() || DEMO ? 'Carregando…' : 'Entre no MyDeck para ver os seus fichários.') + '</p></div></div>'; $('#fn-setbtn-emoji').innerHTML = MD_ICO('pokeball', { size: 22 }); $('#fn-setbtn-code').textContent = 'Pokémon'; $('#fn-setbtn-name').textContent = 'Personalizados'; return; }
     var r = cur.pk, pages = pkPages(b), per = pages[0].length, total = pages.length * per, pct = r.filled ? Math.round(r.got / r.filled * 100) : 0, sp = (b.filter_config || {}).name;
     $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1><span class="h-ico">' + pkIco(b, 26) + '</span>' + esc(plainName(b.name) || 'Sem nome') + '</h1><p class="fn-hero-sub">Fichário de Pokémon' + (sp ? ' · ' + esc(sp) : '') + ' · ' + pages.length + ' página' + (pages.length === 1 ? '' : 's') + ' de ' + binderSizeLabel(b.layout || 3) + '</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
-      '<div class="fn-progress"><i style="width:' + pct + '%"></i></div><div class="fn-stats"><span><b>' + r.got + '</b>/' + r.filled + ' cartas colocadas que você tem</span><span>Vagas preenchidas <b>' + r.filled + '</b>/' + total + '</span></div>' +
-      '<div class="fn-hero-links"><a href="#" data-act="pkedit">' + (pkEdit ? I('check') + ' Terminar edição' : I('pencil') + ' Editar posições') + '</a><a href="#" data-act="cbedit">' + I('settings', 14) + ' Nome / excluir</a></div>' +
+'<div class="fn-progress"><i style="width:' + pct + '%"></i></div><div class="fn-stats"><span><b>' + r.got + '</b>/' + r.filled + ' cartas colocadas que você tem</span><span>Vagas preenchidas <b>' + r.filled + '</b>/' + total + '</span>' + condCountsHtml({ kind: 'pk', pages: r.pages }) + '</div>' +      '<div class="fn-hero-links"><a href="#" data-act="pkedit">' + (pkEdit ? I('check') + ' Terminar edição' : I('pencil') + ' Editar posições') + '</a><a href="#" data-act="cbedit">' + I('settings', 14) + ' Nome / excluir</a></div>' +
       (pkEdit ? '<div class="fn-warn" style="margin-top:10px">Modo edição: toque numa vaga vazia para escolher a carta, ou numa carta para trocá-la ou tirá-la. Tudo é salvo na hora.</div>' : '');
     $('#fn-setbtn-emoji').innerHTML = pkIco(b, 22); $('#fn-setbtn-code').textContent = 'Pokémon'; $('#fn-setbtn-name').textContent = plainName(b.name) || 'Pokémon';
   }
@@ -1870,10 +1930,12 @@ r.cards.forEach(function (c) {
       '<button type="button" data-progmode="cards" class="' + (isCardMode ? 'is-on' : '') + '" title="Contar 1 por carta, independente da versão">Cartas</button>' +
       '</div></div></div>' +
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
-      '<div class="fn-stats"><span' + (!isCardMode ? ' class="is-active-metric"' : '') + '><b>' + t.got + '</b>/' + t.slots + ' slots</span>' +
+      '<div class="fn-stats">' +
+      '<span' + (!isCardMode ? ' class="is-active-metric"' : '') + '><b>' + t.got + '</b>/' + t.slots + ' slots</span>' +
       '<span' + (isCardMode ? ' class="is-active-metric"' : '') + '><b>' + t.cardsAny + '</b>/' + t.cards + ' cartas</span>' +
       (t.sT ? '<span>Base <b>' + t.bG + '</b>/' + t.bT + '</span><span>Secretas <b>' + t.sG + '</b>/' + t.sT + '</span>' : '') +
-      (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : done ? '<span><b style="color:var(--teal)">Coleção completa</b></span>' : '<span><b>' + rem + '</b> ' + (isCardMode ? 'cartas restantes' : 'slots restantes') + '</span>') + '</div>';
+      (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : done ? '<span><b style="color:var(--teal)">Coleção completa</b></span>' : '<span><b>' + rem + '</b> ' + (isCardMode ? 'cartas restantes' : 'slots restantes') + '</span>') +
+      condCountsHtml({ kind: 'set', id: st.set, cards: cur.cards }) + '</div>';
   }
   function renderBody() {
     computeView();
