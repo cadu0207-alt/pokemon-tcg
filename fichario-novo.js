@@ -3048,15 +3048,67 @@ function openBlocks() {
       try { var fl = localStorage.getItem('ficLang'); if (fl === 'en' || fl === 'pt') st.lang = fl; } catch (e) { }
     }
     if (!SET_CATALOG.some(function (s) { return s.id === setKey(st.set); }) && !isDex(st.set) && !isCb(st.set) && !isPk(st.set) && !isHome(st.set)) st.set = 'home';
-    
+
     bind(); banner(); renderAll();
 
-    // 2. Monitora a chegada da coleção, dos fichários personalizados e dos catálogos
+    // 2. Garante o carregamento dos fichários personalizados (via motor ou direto do Supabase)
+    var bindersFetchedForUid = null;
+    var bindersFetching = false;
+
+    async function ensureCustomBindersLoaded(force) {
+      if (DEMO || SHARE || !loggedIn() || bindersFetching) return;
+      var currentUid = uid();
+      if (!currentUid) return;
+
+      var alreadyHas = typeof customBinders !== 'undefined' && Array.isArray(customBinders) && customBinders.length > 0;
+      if (!force && alreadyHas) return;
+      if (!force && bindersFetchedForUid === currentUid) return;
+
+      bindersFetching = true;
+      try {
+        // Tenta primeiro a função nativa do app.js, se existir
+        if (typeof loadCustomBinders === 'function') {
+          await Promise.resolve(loadCustomBinders());
+        }
+
+        // Se ainda estiver vazio (ex.: app.js não carregou nesta página), busca direto no Supabase
+        var stillEmpty = typeof customBinders === 'undefined' || !Array.isArray(customBinders) || customBinders.length === 0;
+        if (stillEmpty && typeof sbClient !== 'undefined' && sbClient) {
+          var res = await sbClient
+            .from('custom_binders')
+            .select('*')
+            .eq('user_id', currentUid)
+            .order('created_at', { ascending: false });
+
+          if (!res.error && Array.isArray(res.data)) {
+            if (typeof customBinders !== 'undefined' && Array.isArray(customBinders)) {
+              customBinders.splice(0, customBinders.length);
+              res.data.forEach(function (item) { customBinders.push(item); });
+            } else {
+              window.customBinders = res.data;
+            }
+          }
+        }
+
+        bindersFetchedForUid = currentUid;
+        progCache = {};
+        renderAll();
+        if (typeof customBinders !== 'undefined' && customBinders.length > 0) {
+          cleanupAndEnsureNatDex();
+        }
+      } catch (e) {
+        console.error('[fichario] erro ao carregar fichários:', e);
+      } finally {
+        bindersFetching = false;
+      }
+    }
+
+    // 3. Monitora login, coleção, fichários e catálogos (sem desistir cedo no reload)
     var tries = 0;
     var lastSig = '';
-    var askedBinders = false;
 
     function getSyncSignature() {
+      var u = loggedIn() ? uid() : '';
       var colSize = (typeof collected !== 'undefined' && collected) ? collected.size : 0;
       var cbs = (typeof customBinders !== 'undefined' && Array.isArray(customBinders)) ? customBinders : [];
       var cbSig = cbs.map(function (b) {
@@ -3064,42 +3116,41 @@ function openBlocks() {
         return b.id + ':' + (b.name || '') + ':' + len;
       }).join('|');
       var mapKeys = (typeof SET_CARDS_MAP !== 'undefined' && SET_CARDS_MAP) ? Object.keys(SET_CARDS_MAP).length : 0;
-      return colSize + '#' + cbs.length + '#' + cbSig + '#' + mapKeys;
+      return u + '#' + colSize + '#' + cbs.length + '#' + cbSig + '#' + mapKeys;
     }
 
+    function syncTick() {
+      banner();
+      if (loggedIn()) {
+        ensureCustomBindersLoaded(false);
+      }
+      var sig = getSyncSignature();
+      if (sig !== lastSig) {
+        lastSig = sig;
+        progCache = {};
+        renderAll();
+      }
+    }
+
+    // Dispara imediatamente e continua monitorando
+    syncTick();
     var poll = setInterval(function () {
       tries++;
-      banner();
-
-      if (loggedIn()) {
-        // Se o app.js tiver função para carregar os fichários e ainda não estiverem na memória, força o carregamento
-        var hasBinders = typeof customBinders !== 'undefined' && Array.isArray(customBinders) && customBinders.length > 0;
-if (!askedBinders && !hasBinders) {
-          askedBinders = true;
-          if (typeof loadCustomBinders === 'function') {
-            Promise.resolve(loadCustomBinders()).then(function () {
-              progCache = {};
-              renderAll();
-            });
-          }
-        }
-
-        var sig = getSyncSignature();
-        if (sig !== lastSig) {
-          lastSig = sig;
-          progCache = {};
-          renderAll();
-          if (typeof customBinders !== 'undefined' && customBinders.length > 0) {
-            cleanupAndEnsureNatDex();
-          }
-        }
-      }
-
-      if (tries >= 40) {
-        clearInterval(poll);
-      }
+      syncTick();
+      if (tries >= 80) clearInterval(poll); // ~20s para conexões lentas no reload
     }, 250);
-  }
 
-  boot();
-})();
+    // Também escuta mudança de sessão do Supabase (essencial no reload da página)
+    try {
+      if (typeof sbClient !== 'undefined' && sbClient && sbClient.auth && typeof sbClient.auth.onAuthStateChange === 'function') {
+        sbClient.auth.onAuthStateChange(function (_event, session) {
+          if (session && session.user) {
+            bindersFetchedForUid = null;
+            syncTick();
+          }
+        });
+    }
+  } catch (e) { }
+}
+
+boot();
