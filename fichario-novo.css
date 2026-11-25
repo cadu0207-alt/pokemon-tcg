@@ -657,16 +657,16 @@ img.pk-ico{object-fit:contain;color:transparent}
   flex-direction: column;
 }
 
-.fn-sheet.fn-sheet-detail .fn-sheet-b {
-  flex: 1;
-  overflow-y: auto;
+.fn-dexact {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
 }
 
 @media (min-width: 700px) {
-  .fn-sheet.fn-sheet-detail .fn-detail {
-    grid-template-columns: 240px minmax(0, 1fr);
-    align-items: start;
-    gap: 18px 22px;
+  .fn-dexact:has(> :nth-child(2)) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .fn-sheet.fn-sheet-detail .fn-detail-top {
@@ -690,7 +690,6 @@ img.pk-ico{object-fit:contain;color:transparent}
     align-items: start;
   }
 }
-
 .origem-control {
   position: relative;
   width: 100%;
