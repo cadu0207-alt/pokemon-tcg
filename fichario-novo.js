@@ -2976,7 +2976,7 @@ function openBlocks() {
   // ── carregamento de link compartilhado (?s=token) ──────────
   async function loadShare(tok) {
     try {
-      var r = await sbClient.rpc('get_share_collection', { share_token: tok });
+      var r = await sbClient.rpc('get_share_collection', { p_token: tok }); // o nome do parâmetro é o da função no banco
       var row = Array.isArray(r.data) ? r.data[0] : r.data;
       if (r.error || !row) { toast('Este link não existe ou foi removido.'); return false; }
 
@@ -3049,9 +3049,35 @@ function openBlocks() {
     } catch (e) { console.error(e); return false; }
   }
 
+  // ── desligar os desenhos do site antigo ────────────────────
+  // app.js e fichario_patch.js redesenham telas que não existem nesta página. Sem isto, marcar uma carta grava no banco,
+  // mas o redesenho antigo quebra logo depois e aparece "Não foi possível salvar". NÃO remover.
+  function neutralizeOldRenderers() {
+    ['renderBinder', 'updateDashProgress', 'renderFicDashboard'].forEach(function (n) {
+      if (typeof window[n] === 'function') window[n] = function () { };
+    });
+    ['renderAll', 'renderDash', 'renderGastos', 'renderCartas', 'renderTabs', 'renderEvolucao', 'renderPatrimonio', 'renderCustomBindersHome'].forEach(function (n) {
+      if (typeof window[n] === 'function') window[n] = function () { onData(); };
+    });
+    if (typeof window.loadAll === 'function') {
+      var orig = window.loadAll;
+      window.loadAll = function () { var r = orig.apply(this, arguments); Promise.resolve(r).then(onData, onData); return r; };
+    }
+  }
+  var dataT;
+  function onData() {
+    clearTimeout(dataT);
+    dataT = setTimeout(function () {
+      if (new URLSearchParams(location.search).get('s') && !SHARE) return; // link compartilhado ainda carregando
+      banner();
+      if (engineReady()) { cleanupAndEnsureNatDex(); progCache = {}; loadCur(); renderHero(); renderBody(); renderSide(); }
+    }, 60);
+  }
+
   // ── arranque ───────────────────────────────────────────────
   function boot() {
     if (!engineReady()) { setTimeout(boot, 50); return; }
+    neutralizeOldRenderers();
     var tok = new URLSearchParams(location.search).get('s');
     if (tok) {
       bind();
