@@ -180,7 +180,8 @@ async function paOpenList() {
   const names = new Map((t.data || []).map(function (x) { return [x.id, x.label || x.term]; }));
   const boosts = new Map((t.data || []).map(function (x) { return [x.id, +x.boosters || 0]; }));
   const now = new Map();
-  (h.data || []).forEach(function (r) { if (!now.has(r.term_id)) now.set(r.term_id, +r.price); });
+  // leitura com mais de 24 h não é o preço de "agora" (mostra "—")
+  (h.data || []).forEach(function (r) { if (!now.has(r.term_id)) now.set(r.term_id, Date.now() - new Date(r.found_at).getTime() <= 86400000 ? +r.price : null); });
   const rows = ids.map(function (id) {
     const a = paAlerts.get(id), p = now.get(id), isB = a.mode === 'booster' && boosts.get(id) > 0;
     const pv = p != null ? (isB ? p / boosts.get(id) : p) : null;

@@ -56,9 +56,10 @@ if (typeof window.loadSearchTerms === 'function') {
     if (!withMsrp.length) return terms;
     try {
       const latest = await Promise.all(withMsrp.map(t =>
-        sbClient.from('ml_price_history').select('price')
+        sbClient.from('ml_price_history').select('price,found_at')
           .eq('term_id', t.id).order('found_at', { ascending: false }).limit(1)
-          .then(r => (r.data && r.data[0]) ? +r.data[0].price : null)
+          // preço com mais de 24 h não conta como "preço de tabela" (ver lojas_precos_velhos.js)
+          .then(r => (r.data && r.data[0] && Date.now() - new Date(r.data[0].found_at).getTime() <= 86400000) ? +r.data[0].price : null)
       ));
       withMsrp.forEach((t, i) => {
         const info = msrpInfo(t, latest[i]);
