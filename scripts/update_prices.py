@@ -614,7 +614,7 @@ def _update_singlequote_style(content: str, norm_prices: dict) -> tuple:
     lines = content.splitlines(keepends=True)
     new_lines = []
     for line in lines:
-        m = re.search(r"n:'(\d+)'", line)
+        m = re.search(r"""\bn:['"](\d+)['"]""", line)  # cards_me2pt5.js usa aspas duplas
         if m and "price:" in line:
             num = normalize_num(m.group(1))
             if num in norm_prices:
@@ -664,7 +664,7 @@ def _update_price_en_singlequote(content: str, norm_prices: dict) -> tuple:
     lines = content.splitlines(keepends=True)
     new_lines = []
     for line in lines:
-        m = re.search(r"n:'(\d+)'", line)
+        m = re.search(r"""\bn:['"](\d+)['"]""", line)
         if m and "price:" in line:
             num = normalize_num(m.group(1))
             if num in norm_prices:
@@ -785,7 +785,12 @@ def _run_liga(repo_root: str, dry: bool) -> tuple:
     print(f"Atualizando preços — fonte: Liga Pokémon (menor preço, BRL)")
     total, all_ok = 0, True
 
+    # --only me06,me2pt5  → atualiza só essas coleções
+    only = [k.strip() for k in _arg_value("--only", "").split(",") if k.strip()]
+
     for s in cfg["sets"]:
+        if only and s["key"] not in only:
+            continue
         filepath = os.path.join(repo_root, s["file"])
         if not s.get("url"):
             print(f"  ⏭️  [{s['key'].upper()}] sem URL em liga_sets.json — pulado (preços atuais preservados)")
