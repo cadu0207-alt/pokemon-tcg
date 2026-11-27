@@ -2122,7 +2122,7 @@
     if (!wpEventIsAdmin()) { container.innerHTML = ''; return; }
     const speciesOpts = [...WP_KANTO151].sort((a, b) => a.d - b.d).map(m => `<option value="${m.s}">#${m.d} ${esc(m.n)}</option>`).join('');
     container.innerHTML = `
-      <div class="wp-sub" style="margin-bottom:10px">Agende uma aparição extraordinária. O banner aparece pra todos; o aviso no sino (e o push no começo) vai pra quem capturou nos últimos 30 dias e não desligou esses avisos.</div>
+      <div class="wp-sub" style="margin-bottom:10px">Agende uma aparição extraordinária. O banner aparece pra todos; o aviso no sino (e o push no começo) vai pra quem capturou nos últimos 90 dias e não desligou esses avisos.</div>
       <div class="wp-ev-form">
         <label>O que vai aparecer<select id="wp-ev-kind"><option value="rarity:ultra_rara">Pokémon ultra-raro</option><option value="rarity:rara">Pokémon raro</option><option value="species">Pokémon específico</option></select></label>
         <label id="wp-ev-sp-wrap" style="display:none">Pokémon<select id="wp-ev-sp">${speciesOpts}</select></label>

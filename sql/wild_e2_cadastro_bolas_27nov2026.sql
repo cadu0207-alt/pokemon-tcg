@@ -9,7 +9,7 @@
 --   2) BOLAS ONDE FALTA: marcos novos (25, 75, 100 e 125 espécies) e recompensa em marcos que já existiam
 --      (10 e 50 espécies, 1ª ultra-rara, 1ª vitória). Quem já tinha essas quatro conquistas recebe UMA vez
 --      agora. Kit de 2 Great Balls na primeira aparição de cada evento.
---   3) AVISOS SÓ PARA QUEM JOGA: o aviso de evento vai para quem capturou nos últimos 30 dias e está com
+--   3) AVISOS SÓ PARA QUEM JOGA: o aviso de evento vai para quem capturou nos últimos 90 dias e está com
 --      "Novidades" e "Avisos do minigame" ligados.
 --   4) BOTÕES DO SINO: libera a gravação das preferências de aviso (vale para todos os botões, não só o novo).
 --
@@ -428,7 +428,7 @@ begin
       left join public.notification_prefs p on p.user_id = u.id
      where coalesce(p.news_enabled, true) and coalesce(p.minigame_enabled, true)
        and exists (select 1 from public.wild_catches c
-                    where c.user_id = u.id and c.last_caught_at > now() - interval '30 days');
+                    where c.user_id = u.id and c.last_caught_at > now() - interval '90 days');
     perform public.release_broadcast_pushes();
   elsif p_phase = 'soon' then
     update public.wild_events set announced_at = now() where id = e.id and announced_at is null;
@@ -446,7 +446,7 @@ begin
       left join public.notification_prefs p on p.user_id = u.id
      where coalesce(p.news_enabled, true) and coalesce(p.minigame_enabled, true)
        and exists (select 1 from public.wild_catches c
-                    where c.user_id = u.id and c.last_caught_at > now() - interval '30 days');
+                    where c.user_id = u.id and c.last_caught_at > now() - interval '90 days');
   end if;
 exception when others then
   raise warning 'wild_event_notify: %', sqlerrm;
