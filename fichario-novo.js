@@ -1273,14 +1273,14 @@ sl.forEach(function (s) {
     } finally { cbBusy = false; }
   }
 
-  // ── criar / editar / excluir ──
+ // ── criar / editar / excluir ──
   function openCbNew(withN) {
     if (!DEMO && !loggedIn()) { toast('Entre no MyDeck para criar fichários.'); return; }
     openSheet(
       '<div class="fn-form">' +
         '<label>Nome<input type="text" id="fn-cb-name" maxlength="40" placeholder="Ex.: Meus Pikachus" autocomplete="off"></label>' +
         '<div class="fn-row"><label>Cor<input type="color" id="fn-cb-color" value="#a855f7"></label></div>' +
-        '<button type="button" class="fn-btn" data-act="cbcreate"' + (withN ? ' data-withn="' + esc(withN) + '"' : '') + '>Criar fichário vazio</button>' +
+        '<button type="button" class="fn-btn" style="background:var(--teal, #06d6a0);border-color:var(--teal, #06d6a0);color:#0a0b10" data-act="cbcreate"' + (withN ? ' data-withn="' + esc(withN) + '"' : '') + '>Criar fichário</button>' +
       '</div>',
       'Novo fichário'
     );
