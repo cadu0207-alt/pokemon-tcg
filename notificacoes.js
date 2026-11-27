@@ -23,6 +23,8 @@ let notifDropsEnabled=null; // novos leilões e rifas (notification_prefs.drops_
 let notifDropsBusy=false;
 let notifLotsEnabled=null;  // e-mails de novos leilões (notification_prefs.lots_email_enabled); null = carregando
 let notifLotsBusy=false;
+let notifMinigameEnabled=null; // avisos de evento do minigame (notification_prefs.minigame_enabled); null = carregando ou coluna ausente
+let notifMinigameBusy=false;
 
 const NOTIF_LIMIT=30;
 const NOTIF_ICON={auction_outbid:'🔔',auction_closed:'🏁',auction_won:'🏆',auction_ending:'⏰',site_update:'🆕',news:'🗞️',new_auction:'🔨',new_raffle:'🎟️',mk_order_new:'🛒',mk_consign:'📦',mk_order_update:'📦',wild_event:'⚡',wild_event_info:'⚡'};
@@ -83,6 +85,7 @@ function notifTeardown(){
   notifNewsEnabled=null;
   notifDropsEnabled=null;
   notifLotsEnabled=null;
+  notifMinigameEnabled=null;
   notifClosePanel();
   notifRender();
 }
@@ -246,6 +249,7 @@ function notifRenderPanel(){
     ${notifEmailRowHtml()}
     ${notifLotsRowHtml()}
     ${notifNewsRowHtml()}
+    ${notifMinigameRowHtml()}
     ${notifDropsRowHtml()}
     ${notifPushRowHtml()}`;
 }
@@ -562,11 +566,11 @@ async function notifEmailLoad(){
   if(!sbClient||!notifUserId)return;
   const uidAtStart=notifUserId;
   // tenta com todas as colunas; se o banco ainda não tem alguma (migração pendente), cai pro conjunto menor
-  let data=null,error=null;
-  for(const cols of['email_enabled,news_enabled,drops_enabled,lots_email_enabled','email_enabled,news_enabled,drops_enabled','email_enabled,news_enabled','email_enabled']){
+  let data=null,error=null,loaded='';
+  for(const cols of['email_enabled,news_enabled,drops_enabled,lots_email_enabled,minigame_enabled','email_enabled,news_enabled,drops_enabled,lots_email_enabled','email_enabled,news_enabled,drops_enabled','email_enabled,news_enabled','email_enabled']){
     const r=await sbClient.from('notification_prefs').select(cols).maybeSingle();
     data=r.data;error=r.error;
-    if(!error)break;
+    if(!error){loaded=cols;break;}
   }
   if(uidAtStart!==notifUserId)return;
   if(error){console.warn('[notif] preferência de e-mail',error);return;} // fica sem a linha em vez de mostrar estado falso
@@ -574,6 +578,8 @@ async function notifEmailLoad(){
   notifNewsEnabled=data?('news_enabled' in data?data.news_enabled!==false:null):true;
   notifDropsEnabled=data?('drops_enabled' in data?data.drops_enabled!==false:null):true;
   notifLotsEnabled=data?('lots_email_enabled' in data?data.lots_email_enabled!==false:null):true;
+  // só mostra o botão se a coluna existe no banco (com ou sem linha salva)
+  notifMinigameEnabled=loaded.includes('minigame_enabled')?(data?data.minigame_enabled!==false:true):null;
   if(notifPanelOpen)notifRenderPanel();
 }
 
@@ -628,6 +634,34 @@ async function notifNewsSet(on){
     toast('Não consegui salvar agora. Tente de novo.','error');
   }else{
     toast(on?'Novidades e notícias ativadas':'Novidades e notícias desativadas');
+  }
+  if(notifPanelOpen)notifRenderPanel();
+}
+
+// Avisos do minigame (E2, 27/11/2026): sino + push dos eventos de aparição, sem desligar as novidades do site.
+// Com as novidades desligadas o aviso de evento já não chega, então a linha some.
+function notifMinigameRowHtml(){
+  if(notifMinigameEnabled===null||notifNewsEnabled===false)return'';
+  return notifMinigameEnabled
+    ?`<div class="notif-push-row"><span>🎮 Eventos do minigame: <strong>ativados</strong></span><button type="button" class="notif-push-btn ghost" onclick="notifMinigameSet(false)">Desativar</button></div>`
+    :`<div class="notif-push-row"><span>🎮 Eventos do minigame: desativados</span><button type="button" class="notif-push-btn" onclick="notifMinigameSet(true)">Ativar</button></div>`;
+}
+
+async function notifMinigameSet(on){
+  if(notifMinigameBusy||!sbClient||!notifUserId)return;
+  notifMinigameBusy=true;
+  const prev=notifMinigameEnabled;
+  notifMinigameEnabled=on;
+  if(notifPanelOpen)notifRenderPanel();
+  const{error}=await sbClient.from('notification_prefs')
+    .upsert({user_id:notifUserId,minigame_enabled:on,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+  notifMinigameBusy=false;
+  if(error){
+    console.error('[notif] salvar preferência do minigame',error);
+    notifMinigameEnabled=prev;
+    toast('Não consegui salvar agora. Tente de novo.','error');
+  }else{
+    toast(on?'Avisos de eventos do minigame ativados':'Avisos de eventos do minigame desativados');
   }
   if(notifPanelOpen)notifRenderPanel();
 }

@@ -434,6 +434,35 @@
   // pra tabela wild_daily.
   // (wpDbSaveDaily removida no pacote B — teto diário e bônus de login agora vivem em wild_daily, no servidor)
 
+  // ── Capturas do visitante (E2, 27/11/2026) ──────────────────────
+  // Quem jogou sem login e depois cria a conta leva até 10 Pokémon comuns. Quem decide é o servidor
+  // (wild_import_guest: conta nova, sem capturas, uma única vez). A lista é separada ANTES de a nuvem sobrescrever o
+  // aparelho, só quando ele nunca sincronizou conta nenhuma, e fica guardada até o servidor responder.
+  const WP_STORAGE_SYNCED_FOR = 'wp_balls_synced_for'; // última conta sincronizada neste aparelho
+  const WP_STORAGE_GUEST = 'wp_guest_import_v1';       // { uid, slugs, total } esperando resposta do servidor
+  const WP_STORAGE_GUEST_TIP = 'wp_guest_tip_v1';      // convite pra criar conta já mostrado
+  function wpDeviceNeverSynced() { return wpLoadJSON(WP_STORAGE_SYNCED_FOR, null) === null; }
+  function wpKeepGuestCatches(uid) {
+    if (!wpDeviceNeverSynced() || wpLoadJSON(WP_STORAGE_GUEST, null)) return;
+    const slugs = Object.keys(wpCatches)
+      .filter(s => (WP_KANTO151.find(m => m.s === s) || {}).r === 'comum')
+      .sort((a, b) => (wpCatches[a].firstCaughtAt || 0) - (wpCatches[b].firstCaughtAt || 0));
+    if (slugs.length) wpSaveJSON(WP_STORAGE_GUEST, { uid, slugs, total: Object.keys(wpCatches).length });
+  }
+  async function wpImportGuest() {
+    const pending = wpLoadJSON(WP_STORAGE_GUEST, null);
+    if (!pending || pending.uid !== wpUid()) return;
+    try {
+      const { data, error } = await sbClient.rpc('wild_import_guest', { p_slugs: pending.slugs });
+      if (error || !data) { console.warn('[wp] não importei as capturas do visitante (tento de novo depois):', error && error.message); return; }
+      localStorage.removeItem(WP_STORAGE_GUEST); // respondeu (aceitou ou recusou): não pergunta mais
+      if (data.ok && data.imported > 0) {
+        const fora = pending.total > data.imported ? ' Só vão os comuns, até 10.' : '';
+        wpToastRaw('🎒', `${data.imported} Pokémon que você pegou sem conta ${data.imported === 1 ? 'foi' : 'foram'} pra sua conta.${fora}`, true);
+      }
+    } catch (e) { console.warn('[wp] importação do visitante — falha de conexão:', e); }
+  }
+
   // Puxa a coleção/inventário da nuvem quando o usuário está logado.
   // IMPORTANTE: não sobrescreve o localStorage às cegas — quem já
   // jogava antes dessa migração tem captura só local, então isso faz
@@ -445,6 +474,8 @@
   async function wpSyncFromCloud() {
     if (!wpHasClient() || !wpUid()) return; // visitante — só localStorage mesmo
     try {
+      wpKeepGuestCatches(wpUid());
+      await wpImportGuest(); // antes de ler a nuvem, pra o que for importado já vir na leitura
       const [catchesRes, ballsRes] = await Promise.all([
         sbClient.from('wild_catches').select('pokemon_slug,count,first_caught_at').eq('user_id', wpUid()),
         sbClient.from('wild_balls').select('pokeball,greatball,ultraball,masterball').eq('user_id', wpUid()).maybeSingle(),
@@ -463,7 +494,7 @@
 
       if (!ballsRes.error) {
         const prevBalls = { ...wpBalls };
-        const wasSynced = wpLoadJSON('wp_balls_synced_for', null) === wpUid();
+        const wasSynced = wpLoadJSON(WP_STORAGE_SYNCED_FOR, null) === wpUid();
         if (ballsRes.data) {
           wpBalls = {
             pokeball: ballsRes.data.pokeball || 0, greatball: ballsRes.data.greatball || 0,
@@ -481,7 +512,7 @@
           const gains = WP_BALL_ORDER.map(t => [t, (wpBalls[t] || 0) - (prevBalls[t] || 0)]).filter(x => x[1] > 0);
           if (gains.length) wpToastRaw('🎁', `Bolas novas na sua conta: ${gains.map(([t, n]) => `+${n} ${WP_BALL_META[t].label}`).join(', ')}`, true);
         }
-        wpSaveJSON('wp_balls_synced_for', wpUid());
+        wpSaveJSON(WP_STORAGE_SYNCED_FOR, wpUid());
       }
 
       wpUpdateBadge();
@@ -1048,6 +1079,7 @@
       try {
         const { data, error } = await sbClient.rpc('wild_spawn');
         if (error || !data || !data.ok) return;
+        if (data.event_gift) wpReceiveEventGift(data.event_gift); // vale mesmo se o Pokémon não chegar a ser mostrado
         mon = WP_KANTO151.find(m => m.s === data.slug);
         spawnId = data.spawn_id;
       } catch (e) { return; }
@@ -1282,8 +1314,11 @@
 
     // Saldo real de bolas, direto do servidor (substitui o otimista).
     if (result.balls) {
+      // 27/11/2026: se o saldo veio maior, foi uma conquista desta captura que pagou bola — avisa (depois do toast dela)
+      const gains = WP_BALL_ORDER.map(t => [t, (result.balls[t] || 0) - (wpBalls[t] || 0)]).filter(x => x[1] > 0);
       wpBalls = result.balls;
       wpSaveBalls();
+      if (gains.length) setTimeout(() => wpToastRaw('🎁', `Bolas novas: ${gains.map(([t, n]) => `+${n} ${WP_BALL_META[t].label}`).join(', ')}`, true), 2400);
     }
     wpUpdateBadge();
 
@@ -1292,6 +1327,12 @@
       wpCatches[mon.s].count = result.count || (wpCatches[mon.s].count + 1);
       wpCatches[mon.s].firstCaughtAt = wpCatches[mon.s].firstCaughtAt || Date.now();
       wpSaveCatches();
+
+      // Convite pra criar conta, uma vez, no 1º comum que o visitante guarda neste aparelho
+      if (!(wpHasClient() && wpUid()) && mon.r === 'comum' && wpDeviceNeverSynced() && !wpLoadJSON(WP_STORAGE_GUEST_TIP, false)) {
+        wpSaveJSON(WP_STORAGE_GUEST_TIP, true);
+        setTimeout(() => wpToastRaw('💾', 'Crie sua conta neste aparelho pra guardar: até 10 Pokémon comuns vão junto.', true), 3900);
+      }
 
       // Mochila — o indivíduo já rolado/persistido volta pronto no
       // mesmo retorno da RPC (ver wild_backpack_setup.sql); só
@@ -1377,6 +1418,13 @@
     document.body.appendChild(el);
     requestAnimationFrame(() => el.classList.add('wp-show'));
     setTimeout(() => { el.classList.remove('wp-show'); setTimeout(() => el.remove(), 350); }, 3600);
+  }
+
+  // Kit do evento (E2): o servidor dá na primeira aparição de cada evento, uma vez por conta.
+  function wpReceiveEventGift(gift) {
+    if (!gift || !WP_BALL_META[gift.tier]) return;
+    if (gift.balls) { wpBalls = gift.balls; wpSaveBalls(); wpUpdateBadge(); }
+    wpToastRaw(wpBallIconHtml(gift.tier, 22), `Kit do evento: +${gift.qty} ${WP_BALL_META[gift.tier].label}`, true);
   }
 
   // ── Ganho de pokébolas (uso do site) ────────────────────────
@@ -1514,7 +1562,7 @@
     const rows = WP_BALL_ORDER.map(tier => `<tr><th scope="row">${wpBallIconHtml(tier, 18)} ${WP_BALL_META[tier].label}</th>${rarities.map(r => `<td>${Math.round(WP_CATCH_RATES[tier][r] * 100)}%</td>`).join('')}</tr>`).join('');
     const guest = !(wpHasClient() && wpUid());
     return `<div class="wp-help">
-      ${guest ? '<div class="wp-bp-full-banner">Sem conta, as capturas ficam só neste aparelho e não passam para a conta. Mochila e batalha precisam de login.</div>' : ''}
+      ${guest ? `<div class="wp-bp-full-banner">Sem conta, as capturas ficam só neste aparelho.${wpDeviceNeverSynced() ? ' Ao criar sua conta aqui, até 10 Pokémon comuns vão junto.' : ''} Mochila e batalha precisam de login.</div>` : ''}
       <h4>Capturar</h4>
       <ul>
         <li>Com o site aberto, um Pokémon de Kanto espia de um canto de vez em quando.</li>
@@ -1530,7 +1578,9 @@
       <ul>
         <li>1 Great Ball no primeiro acesso do dia.</li>
         <li>Até 5 Poké Balls por dia, de vez em quando, enquanto você usa o site.</li>
-        <li>Algumas conquistas (coleção, master set e do próprio jogo) também dão bolas.</li>
+        <li>Com conta: 10, 25, 50, 75, 100 e 125 espécies, a primeira ultra-rara e a primeira vitória dão bolas.</li>
+        <li>Com conta: em cada evento, 2 Great Balls na sua primeira aparição.</li>
+        <li>Algumas conquistas de coleção e master set também dão bolas.</li>
       </ul>
       <h4>Mochila e batalha</h4>
       <ul>
@@ -2072,7 +2122,7 @@
     if (!wpEventIsAdmin()) { container.innerHTML = ''; return; }
     const speciesOpts = [...WP_KANTO151].sort((a, b) => a.d - b.d).map(m => `<option value="${m.s}">#${m.d} ${esc(m.n)}</option>`).join('');
     container.innerHTML = `
-      <div class="wp-sub" style="margin-bottom:10px">Agende uma aparição extraordinária. Quem tem o site aberto recebe o banner, o aviso no sino (e push quando começa).</div>
+      <div class="wp-sub" style="margin-bottom:10px">Agende uma aparição extraordinária. O banner aparece pra todos; o aviso no sino (e o push no começo) vai pra quem capturou nos últimos 30 dias e não desligou esses avisos.</div>
       <div class="wp-ev-form">
         <label>O que vai aparecer<select id="wp-ev-kind"><option value="rarity:ultra_rara">Pokémon ultra-raro</option><option value="rarity:rara">Pokémon raro</option><option value="species">Pokémon específico</option></select></label>
         <label id="wp-ev-sp-wrap" style="display:none">Pokémon<select id="wp-ev-sp">${speciesOpts}</select></label>
@@ -2100,7 +2150,7 @@
       });
       btns.forEach(b => { b.disabled = false; });
       if (error) { wpToastRaw('⚠️', esc(error.message), false); return; }
-      wpToastRaw('✅', startNow ? 'Evento começou!' : 'Evento agendado — o aviso já foi pro sino de todo mundo.', true);
+      wpToastRaw('✅', startNow ? 'Evento começou!' : 'Evento agendado — o aviso já foi pro sino de quem joga.', true);
       await wpEventRefresh();
       loadList();
     };
@@ -2118,7 +2168,7 @@
         return `<div class="wp-ev-row"><span>${wpEventEmoji(ev)} <b>${esc(ev.title)}</b><br>${wpEventDay(ev.starts_at)}, ${wpEventHm(ev.starts_at)}–${wpEventHm(ev.ends_at)} · ${ev.boost_pct}% · ${live ? '🔴 ao vivo' : (past ? 'encerrado' : 'agendado')}</span>${past ? '' : `<button type="button" class="wp-bp-btn wp-bp-btn-danger" data-cancel="${ev.id}">Cancelar</button>`}</div>`;
       }).join('');
       box.querySelectorAll('[data-cancel]').forEach(b => b.addEventListener('click', async () => {
-        if (!confirm('Cancelar este evento? O aviso ainda não lido some do sino de todo mundo.')) return;
+        if (!confirm('Cancelar este evento? O aviso ainda não lido some do sino de quem recebeu.')) return;
         const { error: e2 } = await sbClient.rpc('wild_event_cancel', { p_id: Number(b.dataset.cancel) });
         if (e2) { wpToastRaw('⚠️', esc(e2.message), false); return; }
         await wpEventRefresh();
@@ -2200,7 +2250,11 @@
   // bônus de login — senão, em usuário logado em dois aparelhos, o
   // segundo aparelho poderia rodar wpCheckDailyLoginBonus() antes de
   // saber que o outro já reclamou hoje e dar a Great Ball em dobro.
+  let wpBootedUid; // conta que já passou por esta sequência nesta página (null = visitante; undefined = ainda não rodou)
   async function wpDailyBootSequence() {
+    const bootUid = wpUid();
+    if (bootUid && bootUid === wpBootedUid) return;
+    wpBootedUid = bootUid;
     await wpSyncFromCloud();
     // 27/11/2026: quem nunca capturou vê o primeiro Pokémon entre 30 e 55 s (depois segue a cadência normal)
     if (wpIsNewcomer()) wpScheduleBase(WP_NEWCOMER_DELAY_MIN_MS + Math.random() * (WP_NEWCOMER_DELAY_MAX_MS - WP_NEWCOMER_DELAY_MIN_MS));
@@ -2214,6 +2268,16 @@
     });
   } else {
     setTimeout(wpDailyBootSequence, 900);
+  }
+
+  // 27/11/2026: entrar na conta SEM recarregar a página (e-mail e senha) também sincroniza. Sem isto as capturas do
+  // visitante só subiriam na próxima carga, e uma captura já logada antes disso faria a conta perder a importação.
+  if (wpHasClient() && sbClient.auth && sbClient.auth.onAuthStateChange) {
+    sbClient.auth.onAuthStateChange((_event, session) => {
+      if (!session) { wpBootedUid = null; return; }
+      // fora do retorno do supabase-js (chamar o banco aqui dentro pode travar) e depois do boot normal (900 ms)
+      setTimeout(() => { if (wpUid() && wpUid() !== wpBootedUid) wpDailyBootSequence(); }, 1200);
+    });
   }
 
   // ── Debug (console) ─────────────────────────────────────────
