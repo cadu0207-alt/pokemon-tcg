@@ -1271,10 +1271,12 @@
       // de verdade nesse caso) e avisa, sem fingir captura nem fuga.
       wpBalls[tier] = (wpBalls[tier] || 0) + 1;
       wpUpdateBadge();
-      el.classList.remove('wp-fled', 'wp-caught');
+      // 27/11/2026: o Pokémon sai da tela. Antes ficava parado, sem responder: este arremesso já era a vez dele.
+      el.classList.add('wp-fled');
+      setTimeout(() => el.remove(), 550);
       // 17/10/2026: o servidor agora também recusa por limite/intervalo — mostra o motivo dele (a bola não é gasta)
-      wpToastRaw('⚠️', (result.error && result.error !== 'conexão') ? `${result.error} (sua bola não foi gasta)` : 'Não deu pra confirmar agora — sua bola não foi gasta, tente de novo.', false);
-      wpActiveMon = null;
+      wpToastRaw('⚠️', (result.error && result.error !== 'conexão') ? `${result.error} (sua bola não foi gasta)` : 'Não deu pra confirmar agora e o Pokémon foi embora. Sua bola não foi gasta.', false);
+      if (!wpActiveEl) wpActiveMon = null; // outro pode ter aparecido enquanto a resposta não vinha
       return;
     }
 
@@ -1342,7 +1344,8 @@
       wpSoundFlee();
       wpToastCatch(mon, false, tier);
     }
-    wpActiveMon = null;
+    // 27/11/2026: zerar sempre deixava surdo à bola um Pokémon que nascesse durante o arremesso anterior
+    if (!wpActiveEl) wpActiveMon = null;
   }
 
   // ── Toasts ───────────────────────────────────────────────────
