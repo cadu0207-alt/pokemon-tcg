@@ -653,16 +653,27 @@ sl.forEach(function (s) {
     else img.style.display = 'none';
   };
   function artImg(d) { return '<img loading="lazy" decoding="async" referrerpolicy="no-referrer" alt="" src="' + esc(dexArt(d)) + '"' + (d > 151 ? ' onerror="__fnArtFb(this,' + d + ')"' : '') + '>'; }
+  function dexCardCollected(c) {
+    if (!c) return false;
+    var bid = (cur.binder && cur.binder.id) || String(st.set).replace(/^dex:/, '') || 'shared';
+    var sid = c._set || sidOf(st.set, c);
+    var sl = slotsOf('', c);
+    if (!sl.length) return false;
+    var check = function (s) {
+      return hasDexSlot(bid, sid, c.n, s.ver) || has(keyOf(st.set, c, s.ver));
+    };
+    return st.progMode === 'cards' ? sl.some(check) : sl.every(check);
+  }
   function dexVisible() {
     var words = normTxt(st.q).split(/\s+/).filter(Boolean), out = [];
     cur.species.forEach(function (sp) {
-      var c = cur.byDex[sp.dex], own = dexOwned(c);
+      var c = cur.byDex[sp.dex], col = dexCardCollected(c);
       if (words.length) {
         var hay = normTxt(sp.name + ' ' + sp.dex + (c ? ' ' + c.name + ' ' + c.n + ' ' + c._set + ' ' + setLabelOf(c._set) : ''));
         if (!words.every(function (w) { return hay.indexOf(w) >= 0; })) return;
       }
-      if (st.status === 'miss' && own) return;
-      if (st.status === 'have' && !own) return;
+      if (st.status === 'miss' && col) return;
+      if (st.status === 'have' && !col) return;
       out.push({ sp: sp, c: c });
     });
     return out;
@@ -1661,11 +1672,16 @@ closeSheet(); dropMultiProg(); loadCur(); renderHero(); renderBody(); renderSide
     }
   }
   function computeView() {
-    var q = st.q.trim().toLowerCase(), id = st.set;
+    var q = st.q.trim().toLowerCase(), id = st.set, isCardMode = st.progMode === 'cards';
     var arr = cur.cards.filter(function (c) {
       if (q && (c.name + ' ' + c.n + ' ' + (c.nameEn || '') + ' ' + (c.nameJp || '') + ' ' + (c.nameCn || '') + ' ' + (c.type || '') + ' ' + rareLabel(c.rare) + ' ' + (c.rare || '')).toLowerCase().indexOf(q) < 0) return false;
       if (st.artist && c.artist !== st.artist) return false;
-      if (st.status !== 'all') { var s = stateOf(id, c).st; if (st.status === 'miss' && s === 'have') return false; if (st.status === 'have' && s !== 'have') return false; }
+      if (st.status !== 'all') {
+        var s = stateOf(id, c);
+        var isCol = isCardMode ? (s.have > 0) : (s.tot > 0 && s.st === 'have');
+        if (st.status === 'miss' && isCol) return false;
+        if (st.status === 'have' && !isCol) return false;
+      }
       return true;
     });
     var by = {
@@ -2585,10 +2601,12 @@ var shareCards = cbRefs();
     try { ficBinderSize = code; if (typeof loadCollection === 'function') loadCollection(); } catch (e) { }
     var cat = SET_CATALOG.filter(function (x) { return x.id === setKey(st.set); })[0] || {};
     closeSheet();
-    var only = st.status === 'miss' ? 'missing' : st.status === 'have' ? 'collected' : undefined;
+    var useCardModeFilter = st.progMode === 'cards' && st.status !== 'all';
+    var only = useCardModeFilter ? undefined : (st.status === 'miss' ? 'missing' : st.status === 'have' ? 'collected' : undefined);
+    var listForPrint = useCardModeFilter ? cur.cards : cur.view;
     try {
-      if (isCb(st.set)) Promise.resolve(printBinder(cur.view.map(function (c) { return Object.assign({}, c, { _setId: c._set }); }), function (c) { return c._setId; }, cur.binder.name, only));
-      else Promise.resolve(printBinder(cur.view.slice(), function () { return st.set; }, (cat.label || st.set) + (langSfx(st.set) ? ' (' + effLang(st.set).toUpperCase() + ')' : ''), only, { keySetOf: function () { return st.set + langSfx(st.set); }, lang: effLang(st.set) }));
+      if (isCb(st.set)) Promise.resolve(printBinder(listForPrint.map(function (c) { return Object.assign({}, c, { _setId: c._set }); }), function (c) { return c._setId; }, cur.binder.name, only));
+      else Promise.resolve(printBinder(listForPrint.slice(), function () { return st.set; }, (cat.label || st.set) + (langSfx(st.set) ? ' (' + effLang(st.set).toUpperCase() + ')' : ''), only, { keySetOf: function () { return st.set + langSfx(st.set); }, lang: effLang(st.set) }));
     } catch (e) { toast('Não foi possível gerar o PDF.'); }
   }
   function bulkMatch(v) {
@@ -3425,8 +3443,15 @@ function openBlocks() {
       // 2. Tratamento dos demais controles da interface
       var t = e.target.closest('[data-mark],[data-open],[data-pick],[data-close],[data-bnav],[data-pocket],[data-blk],[data-qty],[data-act],[data-dexpick],[data-progmode],[data-lotqty],[data-dellot]');
       if (!t) { if (e.target.id === 'fn-overlay') closeSheet(); return; }
-      if (t.dataset.progmode != null) { st.progMode = t.dataset.progmode; LS.set('progMode', st.progMode); progCache = {}; renderHero(); renderSide(); if (isHome(st.set)) renderBody(); return; }
-      if (t.dataset.mark != null) { e.preventDefault(); mark(t.dataset.mark, t.dataset.ver); }
+if (t.dataset.progmode != null) {
+        st.progMode = t.dataset.progmode;
+        LS.set('progMode', st.progMode);
+        progCache = {};
+        renderHero();
+        renderSide();
+        if (isHome(st.set) || st.status !== 'all') renderBody();
+        return;
+      }      if (t.dataset.mark != null) { e.preventDefault(); mark(t.dataset.mark, t.dataset.ver); }
       else if (t.dataset.open != null) openDetail(t.dataset.open);
       else if (t.dataset.dexpick != null) { if (!SHARE) openDexPicker(Number(t.dataset.dexpick)); }
       else if (t.dataset.qty != null) {
