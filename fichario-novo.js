@@ -1275,18 +1275,17 @@ sl.forEach(function (s) {
 
   // ── criar / editar / excluir ──
   function openCbNew(withN) {
-    if (!DEMO && !loggedIn()) { toast('Entre no MyDeck para criar fichários.'); return; }
-    var have = cbOnlyBinders(), all = []; try { all = getAllCardsWithSet(); } catch (e) { }
-    var presets = (typeof BINDER_PRESETS !== 'undefined' ? BINDER_PRESETS : []).map(function (p) {
-      var done = have.some(function (b) { return cbType(b) === 'preset' && b.filter_config.key === p.key; }), n = 0; try { n = all.filter(p.filter).length; } catch (e) { }
-      return '<button type="button" class="fn-act" data-act="cbpreset" data-key="' + esc(p.key) + '"' + (done ? ' disabled' : '') + '><span class="em">' + esc(p.emoji) + '</span><span><b>' + esc(p.name) + '</b><small>' + (done ? 'Você já tem este fichário' : esc(p.desc) + ' · ' + n + ' cartas') + '</small></span></button>';
-    }).join('');
-    openSheet((withN ? '' : '<div class="fn-acts"><button type="button" class="fn-act" data-act="pknew"><span class="em">' + I('pokeball', 20) + '</span><span><b>Fichário de um Pokémon</b><small>Cada carta na posição que você escolher, página a página</small></span></button></div><h3 class="fn-sub-h">Ou um fichário comum</h3>') + '<div class="fn-form"><label>Nome<input type="text" id="fn-cb-name" maxlength="40" placeholder="Ex.: Meus Pikachus" autocomplete="off"></label>' +
+  if (!DEMO && !loggedIn()) { toast('Entre no MyDeck para criar fichários.'); return; }
+  openSheet(
+    '<div class="fn-form">' +
+      '<label>Nome<input type="text" id="fn-cb-name" maxlength="40" placeholder="Ex.: Meus Pikachus" autocomplete="off"></label>' +
       '<div class="fn-row"><label>Cor<input type="color" id="fn-cb-color" value="#a855f7"></label></div>' +
       '<button type="button" class="fn-btn" data-act="cbcreate"' + (withN ? ' data-withn="' + esc(withN) + '"' : '') + '>Criar fichário vazio</button>' +
-      '<p class="fn-note">Depois é só guardar as cartas nele: toque em uma carta e escolha “Guardar em fichário”, ou use “Adicionar cartas”.</p></div>' +
-      (withN ? '' : '<h3 class="fn-sub-h">Ou comece por uma sugestão temática</h3><div class="fn-acts">' + presets + '</div>'), 'Novo fichário');
-  }
+      '<p class="fn-note">Depois é só guardar as cartas nele: toque em uma carta e escolha “Guardar em fichário”, ou use “Adicionar cartas”.</p>' +
+    '</div>',
+    'Novo fichário'
+  );
+}
   async function cbCreate(withN) {
     var name = (($('#fn-cb-name') || {}).value || '').trim(); if (!name) { toast('Dê um nome ao fichário.'); return; }
     var payload = { name: name, emoji: '📚', layout: 3, filter_config: { type: 'manual' }, card_ids: [], cover_color: ($('#fn-cb-color') || {}).value || '#a855f7' };
