@@ -1275,17 +1275,16 @@ sl.forEach(function (s) {
 
   // ── criar / editar / excluir ──
   function openCbNew(withN) {
-  if (!DEMO && !loggedIn()) { toast('Entre no MyDeck para criar fichários.'); return; }
-  openSheet(
-    '<div class="fn-form">' +
-      '<label>Nome<input type="text" id="fn-cb-name" maxlength="40" placeholder="Ex.: Meus Pikachus" autocomplete="off"></label>' +
-      '<div class="fn-row"><label>Cor<input type="color" id="fn-cb-color" value="#a855f7"></label></div>' +
-      '<button type="button" class="fn-btn" data-act="cbcreate"' + (withN ? ' data-withn="' + esc(withN) + '"' : '') + '>Criar fichário vazio</button>' +
-      '<p class="fn-note">Depois é só guardar as cartas nele: toque em uma carta e escolha “Guardar em fichário”, ou use “Adicionar cartas”.</p>' +
-    '</div>',
-    'Novo fichário'
-  );
-}
+    if (!DEMO && !loggedIn()) { toast('Entre no MyDeck para criar fichários.'); return; }
+    openSheet(
+      '<div class="fn-form">' +
+        '<label>Nome<input type="text" id="fn-cb-name" maxlength="40" placeholder="Ex.: Meus Pikachus" autocomplete="off"></label>' +
+        '<div class="fn-row"><label>Cor<input type="color" id="fn-cb-color" value="#a855f7"></label></div>' +
+        '<button type="button" class="fn-btn" data-act="cbcreate"' + (withN ? ' data-withn="' + esc(withN) + '"' : '') + '>Criar fichário vazio</button>' +
+      '</div>',
+      'Novo fichário'
+    );
+  }
   async function cbCreate(withN) {
     var name = (($('#fn-cb-name') || {}).value || '').trim(); if (!name) { toast('Dê um nome ao fichário.'); return; }
     var payload = { name: name, emoji: '📚', layout: 3, filter_config: { type: 'manual' }, card_ids: [], cover_color: ($('#fn-cb-color') || {}).value || '#a855f7' };
