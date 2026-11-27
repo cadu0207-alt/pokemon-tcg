@@ -703,6 +703,70 @@ img.pk-ico{object-fit:contain;color:transparent}
   display: block;
 }
 
+/* Carta em foco: a imagem do detalhe é um botão que a amplia sobre a tela */
+button.fn-detail-img {
+  display: block;
+  border: 0;
+  padding: 0;
+  cursor: zoom-in;
+}
+
+#fn-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 16px 68px;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  background: rgba(5, 7, 14, .93);
+}
+
+#fn-zoom:focus { outline: none; }
+
+#fn-zoom img {
+  display: block;
+  flex: none;
+  height: min(calc(100vh - 96px), 880px, calc((100vw - 32px) * 88 / 63));
+  height: min(calc(100dvh - 96px), 880px, calc((100vw - 32px) * 88 / 63));
+  aspect-ratio: 63 / 88;
+  object-fit: contain;
+  border-radius: 4.5% / 3.3%;
+  cursor: zoom-in;
+  -webkit-user-drag: none;
+}
+
+#fn-zoom.is-in img { cursor: grab; }
+#fn-zoom.is-drag, #fn-zoom.is-drag img { cursor: grabbing; }
+#fn-zoom.is-smooth img { transition: transform .18s ease; }
+
+.fn-zoom-x, .fn-zoom-bar {
+  position: absolute;
+  z-index: 1;
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: 99px;
+  background: rgba(20, 24, 38, .85);
+  color: #fff;
+}
+
+.fn-zoom-x { top: 12px; right: 12px; width: 44px; height: 44px; font-size: 24px; line-height: 1; }
+
+.fn-zoom-bar {
+  left: 50%;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+}
+
+.fn-zoom-bar button { width: 48px; height: 42px; border: 0; background: transparent; color: #fff; font-size: 22px; font-weight: 700; }
+.fn-zoom-bar output { min-width: 58px; text-align: center; font-size: 13.5px; font-weight: 700; }
+
 .fn-detail-top {
   display: flex;
   flex-direction: column;

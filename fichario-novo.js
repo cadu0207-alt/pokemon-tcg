@@ -2091,6 +2091,10 @@ closeSheet(); dropMultiProg(); loadCur(); renderHero(); renderBody(); renderSide
       (t.sT ? '<span>Base <b>' + t.bG + '</b>/' + t.bT + '</span><span>Secretas <b>' + t.sG + '</b>/' + t.sT + '</span>' : '') +
       (!t.slots ? '<span>' + (loggedIn() || DEMO ? 'Carregando as cartas…' : 'Entre no MyDeck para carregar esta coleção.') + '</span>' : done ? '<span><b style="color:var(--teal)">Coleção completa</b></span>' : '<span><b>' + rem + '</b> ' + (isCardMode ? 'cartas restantes' : 'slots restantes') + '</span>') +
       condCountsHtml({ kind: 'set', id: st.set, cards: cur.cards }) + '</div>';
+    // botão do topo (celular): mostra a coleção aberta
+    $('#fn-setbtn-emoji').innerHTML = setIco(st.set, cat.emoji);
+    $('#fn-setbtn-code').textContent = label.split('—')[0].trim();
+    $('#fn-setbtn-name').textContent = nameOnly;
   }
   function renderBody() {
     computeView();
@@ -2961,7 +2965,104 @@ async function runUndoBulkCond() {
     document.body.style.overflow = 'hidden';
     if (extra) extra(ov);
   }
-  function closeSheet() { var ov = $('#fn-overlay'); ov.hidden = true; ov.innerHTML = ''; ov.dataset.detail = ''; ov.classList.remove('is-drawer'); document.body.style.overflow = ''; }
+  function closeSheet() { closeZoom(); var ov = $('#fn-overlay'); ov.hidden = true; ov.innerHTML = ''; ov.dataset.detail = ''; ov.classList.remove('is-drawer'); document.body.style.overflow = ''; }
+  // carta em foco: toque na imagem do detalhe para ver grande. A tela de trás fica travada:
+  // rolar ou beliscar aproxima, arrastar move, tocar na carta alterna 100% / 250%, tocar fora (ou Esc) volta.
+  var zoomOff = null;
+  function openZoom(img) {
+    if (!img) return;
+    closeZoom();
+    var MAX = 5, TOQUE = 2.5;
+    var z = document.createElement('div');
+    z.id = 'fn-zoom'; z.tabIndex = -1;
+    z.setAttribute('role', 'dialog'); z.setAttribute('aria-modal', 'true'); z.setAttribute('aria-label', 'Carta ampliada');
+    z.innerHTML = '<img draggable="false" alt="">' +
+      '<button type="button" class="fn-zoom-x" data-z="close" aria-label="Fechar a carta ampliada">×</button>' +
+      '<div class="fn-zoom-bar"><button type="button" data-z="out" aria-label="Afastar">−</button><output aria-live="polite">100%</output><button type="button" data-z="in" aria-label="Aproximar">+</button></div>';
+    var big = z.querySelector('img'), out = z.querySelector('output');
+    big.alt = img.alt; big.src = img.currentSrc || img.src;
+    // coleções antigas: a imagem do detalhe é pequena; troca pela versão grande quando ela chegar
+    if (/images\.pokemontcg\.io\/.+\.png$/.test(big.src) && !/_hires\.png$/.test(big.src)) {
+      var hi = new Image(); hi.onload = function () { big.src = hi.src; }; hi.src = big.src.replace(/\.png$/, '_hires.png');
+    }
+    var s = 1, x = 0, y = 0, dedos = new Map(), arrastou = false;
+    // não deixa a carta sair da tela: menor que a tela fica no lugar; maior, anda só até a borda
+    function limite(v, tam, centro, tela) { return tam <= tela ? 0 : Math.max(tela - centro - tam / 2, Math.min(tam / 2 - centro, v)); }
+    function centro() { return { x: big.offsetLeft + big.offsetWidth / 2, y: big.offsetTop + big.offsetHeight / 2 }; }
+    function aplica(suave) {
+      var c = centro();
+      x = limite(x, big.offsetWidth * s, c.x, z.clientWidth); y = limite(y, big.offsetHeight * s, c.y, z.clientHeight);
+      z.classList.toggle('is-smooth', !!suave); z.classList.toggle('is-in', s > 1.001);
+      big.style.transform = 'translate(' + x + 'px,' + y + 'px) scale(' + s + ')';
+      out.textContent = Math.round(s * 100) + '%';
+    }
+    function ponto(px, py) { var r = z.getBoundingClientRect(), c = centro(); return { x: px - r.left - c.x, y: py - r.top - c.y }; }
+    // aproxima mantendo parado o ponto p (onde está o mouse ou os dedos)
+    function aproxima(novo, p, suave) {
+      novo = Math.max(1, Math.min(MAX, novo)); p = p || { x: 0, y: 0 };
+      x = p.x - (p.x - x) * novo / s; y = p.y - (p.y - y) * novo / s; s = novo; aplica(suave);
+    }
+    function inteira() { s = 1; x = y = 0; aplica(true); }
+    function par() { var v = Array.from(dedos.values()); return { d: Math.hypot(v[0].x - v[1].x, v[0].y - v[1].y), x: (v[0].x + v[1].x) / 2, y: (v[0].y + v[1].y) / 2 }; }
+
+    z.addEventListener('wheel', function (e) {
+      e.preventDefault();
+      var dy = Math.max(-200, Math.min(200, e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY));
+      aproxima(s * Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.002)), ponto(e.clientX, e.clientY));
+    }, { passive: false });
+    z.addEventListener('pointerdown', function (e) {
+      if (e.target.closest('button') || e.button > 0) return;
+      arrastou = dedos.size > 0;
+      dedos.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY });
+      try { z.setPointerCapture(e.pointerId); } catch (err) { }
+    });
+    z.addEventListener('pointermove', function (e) {
+      var p = dedos.get(e.pointerId); if (!p) return;
+      if (dedos.size > 1) { // beliscar
+        var a = par(); p.x = e.clientX; p.y = e.clientY; var b = par();
+        arrastou = true; x += b.x - a.x; y += b.y - a.y;
+        aproxima(a.d ? s * b.d / a.d : s, ponto(b.x, b.y));
+        return;
+      }
+      if (!arrastou && Math.hypot(e.clientX - p.x0, e.clientY - p.y0) < 6) return;
+      var dx = e.clientX - p.x, dy = e.clientY - p.y;
+      arrastou = true; p.x = e.clientX; p.y = e.clientY;
+      if (s > 1) { x += dx; y += dy; z.classList.add('is-drag'); aplica(); }
+    });
+    function solta(e) { dedos.delete(e.pointerId); if (!dedos.size) z.classList.remove('is-drag'); }
+    z.addEventListener('pointerup', solta);
+    z.addEventListener('pointercancel', solta);
+    z.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var bt = e.target.closest('[data-z]');
+      if (bt) { if (bt.dataset.z === 'close') closeZoom(true); else aproxima(bt.dataset.z === 'in' ? s * 1.5 : s / 1.5, null, true); return; }
+      if (arrastou) { arrastou = false; return; }
+      var r = big.getBoundingClientRect();
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) closeZoom(true);
+      else if (s > 1.001) inteira();
+      else aproxima(TOQUE, ponto(e.clientX, e.clientY), true);
+    });
+    z.addEventListener('keydown', function (e) {
+      var k = e.key;
+      if (k === '+' || k === '=') aproxima(s * 1.5, null, true);
+      else if (k === '-') aproxima(s / 1.5, null, true);
+      else if (k === '0') inteira();
+      else if (k.indexOf('Arrow') === 0) { x += k === 'ArrowLeft' ? 60 : k === 'ArrowRight' ? -60 : 0; y += k === 'ArrowUp' ? 60 : k === 'ArrowDown' ? -60 : 0; aplica(true); }
+      else return;
+      e.preventDefault();
+    });
+    var redimensionou = function () { aplica(); };
+    window.addEventListener('resize', redimensionou);
+    zoomOff = function () { window.removeEventListener('resize', redimensionou); };
+    document.body.appendChild(z);
+    z.focus({ preventScroll: true });
+  }
+  function closeZoom(voltaFoco) {
+    var z = $('#fn-zoom'); if (!z) return;
+    if (zoomOff) { zoomOff(); zoomOff = null; }
+    z.remove();
+    if (voltaFoco) { var b = $('#fn-overlay [data-act="zoomcard"]'); if (b) b.focus({ preventScroll: true }); }
+  }
   function openDetail(n, keep) {
     var c = findCard(n); if (!c) return;
     var id = st.set, kId = ck(c), info = i18n(c, id), r = rareCls(c.rare), title = info.name + ' · #' + c.n;
@@ -2990,7 +3091,7 @@ async function runUndoBulkCond() {
 
     var html = '<div class="fn-detail">' +
       '<div class="fn-detail-top">' +
-        '<div class="fn-detail-img"><img alt="' + esc(info.name) + '" src="' + esc(imgSrc(cur.d, id, c, true)) + '"></div>' +
+        '<button type="button" class="fn-detail-img" data-act="zoomcard" aria-label="Ampliar a carta"><img alt="' + esc(info.name) + '" src="' + esc(imgSrc(cur.d, id, c, true)) + '"></button>' +
         '<div class="fn-detail-info">' +
           '<h4>' + esc(info.name) + '</h4>' +
           '<p>' + (sub ? '<span class="' + r + '">' + esc(sub) + '</span><br>' : '') +
@@ -3420,6 +3521,7 @@ function openBlocks() {
         else if (a === 'dexfill') dexAutoFill();
         else if (a === 'dexaskdelete') askDexDelete(t.dataset.bid);
         else if (a === 'dexdelete') dexDelete(t.dataset.bid);
+        else if (a === 'zoomcard') openZoom(t.querySelector('img'));
         else if (a === 'favtoggle') toggleFav(t.dataset.n);
         else if (a === 'binderremove') removeFromCurrentBinder(t.dataset.n, t.dataset.dex);
         else if (a === 'cbmember') openCbMember(t.dataset.n);
@@ -3469,6 +3571,7 @@ function openBlocks() {
  document.addEventListener('input', function (e) { if (e.target && e.target.matches && e.target.matches('.fn-qty-input[data-qty-input]')) e.target.dataset.typed = '1'; });
  document.addEventListener('input', function (e) { if (e.target && e.target.classList && e.target.classList.contains('fn-tsearch')) applyTreeFilter(e.target.closest('.fn-drawer') || $('#fn-side')); else if (e.target && e.target.id === 'fn-dp-q') renderDexPicker(e.target.value); else if (e.target && e.target.id === 'fn-cp-q') renderCbAdd(e.target.value); else if (e.target && e.target.id === 'fn-ar-q') renderArtists(e.target.value); else if (e.target && e.target.id === 'fn-pks-q') renderPkSpecies(e.target.value); });
  document.addEventListener('keydown', function (e) {
+ if (e.key === 'Escape' && $('#fn-zoom')) { e.preventDefault(); closeZoom(true); return; } // fecha só a carta ampliada
  if (e.target && e.target.matches && e.target.matches('.fn-qty-input[data-qty-input]')) {
  if (e.key === 'Enter') {
  e.preventDefault();
