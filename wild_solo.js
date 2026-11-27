@@ -6,8 +6,8 @@
 // médio e forte) e os atributos da mochila valem na força.
 //
 // É um PROTÓTIPO: roda só no navegador, guarda o progresso no aparelho e NÃO dá bola, XP nem prêmio (por isso pode
-// ficar no navegador; quando houver prêmio, o servidor terá de conferir cada turno). Fica escondido: só aparece
-// depois de abrir o site com ?solo=1 (e some com ?solo=0).
+// ficar no navegador; quando houver prêmio, o servidor terá de conferir cada turno). Aberto a todos desde 27/11/2026,
+// ainda marcado como teste. Quem não quiser ver o botão neste aparelho abre o site com ?solo=0 (?solo=1 traz de volta).
 //
 // As regras (parte de cima) também rodam no Node, para calibrar e testar: require('./wild_solo.js').
 // ================================================================
@@ -162,9 +162,9 @@
   const query = new URLSearchParams(location.search);
   try {
     if (query.get('solo') === '1') localStorage.setItem(FLAG, '1');
-    if (query.get('solo') === '0') localStorage.removeItem(FLAG);
+    if (query.get('solo') === '0') localStorage.setItem(FLAG, '0');
   } catch (e) { }
-  const enabled = () => { try { return localStorage.getItem(FLAG) === '1'; } catch (e) { return false; } };
+  const enabled = () => { try { return localStorage.getItem(FLAG) !== '0'; } catch (e) { return true; } };
 
   const api = () => window.wpSoloApi;
   const saveKey = () => `wp_solo_v1:${(api() && api().uid()) || 'visitante'}`;
