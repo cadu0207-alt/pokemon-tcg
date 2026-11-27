@@ -74,6 +74,21 @@
   const WP_NEWCOMER_DELAY_MIN_MS = 30000;
   const WP_NEWCOMER_DELAY_MAX_MS = 55000;
 
+  // ── Página do Fichário (E3, 27/11/2026) ────────────────────────
+  // O jogo também roda em fichario-novo.html, de forma discreta: aparece só na visão geral ("Meus fichários"), sem
+  // janela da página aberta por cima. Dentro de uma coleção nada aparece (o tempo segue rendendo bolas, e os avisos
+  // esperam a volta). Em link compartilhado e no modo demonstração o jogo nem liga.
+  const WP_ON_FICHARIO = !!document.getElementById('fn-body');
+  if (WP_ON_FICHARIO) {
+    const query = new URLSearchParams(location.search);
+    if (query.has('s') || query.has('demo')) return;
+  }
+  const WP_RETURN_CHANCE_GAP_MS = 60000; // volta à visão geral: no máximo uma chance extra por minuto
+  // Horário da próxima aparição guardado: trocar de página (site ↔ Fichário) não reinicia a contagem.
+  const WP_STORAGE_NEXT = 'wp_next_spawn_v1'; // { at, saved }
+  const WP_RESUME_WINDOW_MS = 10 * 60 * 1000; // mais velho que isso, vale a cadência normal
+  const WP_RESUME_MIN_MS = 8000;
+
   // ── Dados: Kanto 151 (dex, slug PokeAPI, nome, raridade) ──────
   const WP_KANTO151 = [
     {d:1,s:"bulbasaur",n:"Bulbasaur",r:"comum"},
@@ -957,6 +972,28 @@
     .wp-ev-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
     .wp-ev-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #ffffff14; border-radius: 10px; margin-bottom: 6px; font-size: 12px; color: #c9cee6; }
     .wp-ev-row > span:first-child { flex: 1; }
+    /* Fichário (E3): lá não há barra inferior no celular, o contador não cobre o fim das listas e o botão de batalha
+       fica só no site */
+    body.wp-fichario .wp-badge, body.wp-fichario .wp-edge-tab { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+    body.wp-fichario .wp-arena-btn { display: none !important; }
+    body.wp-fichario.fn-home .fn-body, body.wp-fichario.fn-home .fn-side { padding-bottom: 72px; }
+    body.wp-oculto .wp-badge, body.wp-oculto .wp-edge-tab, body.wp-oculto .wp-spawn, body.wp-oculto .wp-ballpicker,
+    body.wp-oculto .wp-thrown-ball, body.wp-oculto .wp-intro, body.wp-oculto .wp-toast { display: none !important; }
+    /* Pokédex ligada à coleção (E3) */
+    .wp-dex-note { grid-column: 1 / -1; color: #9aa0c0; font-size: 12px; line-height: 1.5; }
+    .wp-dex-note:empty { display: none; }
+    .wp-cell.wp-has-card { cursor: pointer; }
+    .wp-cell.wp-has-card:hover { background: #181c2e; }
+    .wp-cell.wp-both { border-color: #ffd166; }
+    .wp-cards { display: inline-block; margin-top: 3px; padding: 1px 7px; border-radius: 999px; background: #ffffff14; font-size: 10px; color: #f2f2f2; }
+    .wp-showing-cards > :not(.wp-cards-detail) { display: none; }
+    .wp-cards-detail { grid-column: 1 / -1; }
+    .wp-cards-detail .wp-bp-btn { flex: none; padding: 7px 12px; }
+    .wp-cards-head { display: flex; gap: 12px; align-items: center; margin: 12px 0; font-size: 13px; line-height: 1.6; }
+    .wp-cards-head img { width: 64px; height: 64px; object-fit: contain; }
+    .wp-seal { display: inline-block; padding: 1px 9px; border-radius: 999px; border: 1px solid #ffd16688; color: #ffd166; font-size: 11px; }
+    .wp-toast-cards { display: block; margin-top: 2px; font-size: 12px; color: #c9cee6; }
+    @media print { .wp-badge, .wp-edge-tab, .wp-arena-btn, .wp-spawn, .wp-ballpicker, .wp-thrown-ball, .wp-intro, .wp-toast, .wp-modal-backdrop { display: none !important; } }
     .wp-bp-cell.wp-bp-over { opacity: .5; filter: grayscale(.5); }
     .wp-bp-tag-btn {
       flex: 1; text-align: center; padding: 8px; border-radius: 10px; cursor: pointer; font-size: 12px;
@@ -1071,6 +1108,7 @@
     // — antes o Pokémon nascia e sumia em 8s sem ninguém ver. Guarda o
     // spawn pra quando a pessoa voltar pra aba.
     if (document.hidden) { wpPendingSpawn = true; return; }
+    if (!wpPageAllows()) return; // no Fichário, fora da visão geral: nem pede a aparição ao servidor
     if (Math.random() > chance) return;
 
     let mon, spawnId = null;
@@ -1084,11 +1122,12 @@
         spawnId = data.spawn_id;
       } catch (e) { return; }
       finally { wpSpawnPending = false; }
-      if (!mon || !wpEnabled || wpActiveEl || document.hidden) return; // a tela mudou enquanto esperava: o spawn vence sozinho
+      if (!mon || !wpEnabled || wpActiveEl || document.hidden || !wpPageAllows()) return; // a tela mudou enquanto esperava: o spawn vence sozinho
     } else {
       mon = wpPickMon();
     }
     wpActiveSpawnId = spawnId;
+    if (wpCanCountCards()) wpLoadAllSets(); // deixa a contagem de cartas pronta pro aviso da captura
     const corner = WP_CORNERS[Math.floor(Math.random() * WP_CORNERS.length)];
 
     const el = document.createElement('div');
@@ -1390,7 +1429,56 @@
   }
 
   // ── Toasts ───────────────────────────────────────────────────
+  // ── Onde o jogo pode aparecer ───────────────────────────────
+  function wpPageAllows() {
+    if (!WP_ON_FICHARIO) return true;
+    const cls = document.body.classList;
+    const overlay = document.getElementById('fn-overlay');
+    return cls.contains('fn-home') && !cls.contains('fn-share') && !(overlay && !overlay.hidden);
+  }
+  // Aviso que chegou com o jogo escondido espera a volta à visão geral (guarda os 3 últimos).
+  const wpHeldToasts = [];
+  function wpHoldToast(show) {
+    if (wpPageAllows()) return false;
+    wpHeldToasts.push(show);
+    if (wpHeldToasts.length > 3) wpHeldToasts.shift();
+    return true;
+  }
+  let wpSeenHome = false;
+  let wpLeftHome = false;
+  let wpLastReturnAt = 0;
+  // Chamada a cada mudança de tela do Fichário (classes do <body> e janela da página).
+  function wpSyncPage() {
+    const allows = wpPageAllows();
+    document.body.classList.toggle('wp-oculto', !allows);
+    if (!allows) {
+      // quem saiu da visão geral perde a aparição (uma bola já no ar termina normalmente, sem nada na tela)
+      if (wpActiveEl) {
+        clearTimeout(wpActiveTimeoutId);
+        wpActiveEl.remove();
+        wpActiveEl = null;
+        wpActiveMon = null;
+        wpClosePicker();
+      }
+      wpCloseIntro();
+    } else {
+      wpHeldToasts.splice(0).forEach((show, i) => setTimeout(show, 600 + i * 3800));
+    }
+    // voltar de uma coleção pra visão geral dá a mesma chance extra que trocar de aba no site
+    if (document.body.classList.contains('fn-home')) {
+      if (wpLeftHome && Date.now() - wpLastReturnAt > WP_RETURN_CHANCE_GAP_MS) {
+        wpLastReturnAt = Date.now();
+        setTimeout(() => { wpSpawn(WP_TEST_MODE ? 0.5 : 0.15); wpMaybeGrantBallFromUsage(WP_TEST_MODE ? 0.15 : 0.05); }, 1200);
+      }
+      wpSeenHome = true;
+      wpLeftHome = false;
+    } else if (wpSeenHome) {
+      wpLeftHome = true;
+    }
+  }
+
   function wpToastRaw(emoji, text, success) {
+    if (wpHoldToast(() => wpToastRaw(emoji, text, success))) return;
     const el = document.createElement('div');
     el.className = `wp-toast ${success === false ? 'wp-fail' : ''}`;
     el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
@@ -1401,6 +1489,7 @@
   }
 
   function wpToastCatch(mon, success, tier, entry) {
+    if (wpHoldToast(() => wpToastCatch(mon, success, tier, entry))) return;
     const meta = WP_RARITY_META[mon.r];
     const el = document.createElement('div');
     el.className = `wp-toast ${success ? '' : 'wp-fail'}`;
@@ -1411,7 +1500,10 @@
       // só aparece quando o backpack_entry veio junto (sempre vem numa
       // captura normal; guard aqui é só defensivo).
       const avgHtml = entry ? ` <span class="wp-toast-avg">Média ${wpStatAvg(entry)}</span>` : '';
-      el.innerHTML = `<img src="${wpSpriteUrl(mon.d)}" alt=""><span>${isNew ? 'Você pegou!!!' : 'De novo!'} <b style="color:${meta.color}">${mon.n}</b> · ${meta.label}${avgHtml}</span>`;
+      // E3: lembra das cartas que a pessoa tem deste Pokémon (só quando dá pra contar na hora)
+      const owned = wpCanCountCards() && wpAllSetsLoaded() ? wpOwnedCards().get(mon.d) : null;
+      const cardsHtml = owned ? `<small class="wp-toast-cards">🃏 Você tem ${wpCardsWord(owned.total)} deste Pokémon</small>` : '';
+      el.innerHTML = `<img src="${wpSpriteUrl(mon.d)}" alt=""><span>${isNew ? 'Você pegou!!!' : 'De novo!'} <b style="color:${meta.color}">${mon.n}</b> · ${meta.label}${avgHtml}${cardsHtml}</span>`;
     } else {
       el.innerHTML = `<img src="${wpSpriteUrl(mon.d)}" alt=""><span><b>${mon.n}</b> fugiu com a ${WP_BALL_META[tier].label}! Foi por pouco.</span>`;
     }
@@ -1565,7 +1657,8 @@
       ${guest ? `<div class="wp-bp-full-banner">Sem conta, as capturas ficam só neste aparelho.${wpDeviceNeverSynced() ? ' Ao criar sua conta aqui, até 10 Pokémon comuns vão junto.' : ''} Mochila e batalha precisam de login.</div>` : ''}
       <h4>Capturar</h4>
       <ul>
-        <li>Com o site aberto, um Pokémon de Kanto espia de um canto de vez em quando.</li>
+        <li>Com o site aberto, um Pokémon de Kanto espia de um canto de vez em quando. No Fichário, só na visão geral (Meus fichários).</li>
+        <li>Com conta, a Pokédex mostra quantas cartas você tem de cada Pokémon.</li>
         <li>Você tem ${secs(WP_LIFETIME_MS)} segundos pra clicar nele e mais ${secs(WP_PICK_MS)} pra escolher a bola.</li>
         <li>A bola é gasta acertando ou não.</li>
       </ul>
@@ -1607,6 +1700,124 @@
     wpSyncClock();
   }
 
+  // ── Pokédex ligada à coleção (E3, 27/11/2026) ───────────────
+  // Conta as cartas que a pessoa marcou no Fichário e mostra por Pokémon. É só enfeite: não dá bola nem XP, porque
+  // marcar carta é declaração da própria pessoa.
+  const WP_CARDS_CACHE_MS = 15000;
+  let wpCardsCache = null; // { at, uid, map: Map(dex → { total, sets: Map(coleção → { qty, names }) }) }
+  function wpCanCountCards() {
+    return !!(wpHasClient() && wpUid()) && typeof getOwnedSlotsFlat === 'function' && typeof speciesFromCardName === 'function';
+  }
+  // As coleções mais antigas carregam depois da página; contar antes disso daria número menor.
+  function wpAllSetsLoaded() { return typeof _lazySetsLoaded === 'undefined' || _lazySetsLoaded; }
+  function wpLoadAllSets() {
+    if (wpAllSetsLoaded() || typeof loadLazySets !== 'function') return Promise.resolve();
+    return new Promise(resolve => {
+      const done = () => { clearTimeout(timer); document.removeEventListener('lazy-sets-loaded', done); resolve(); };
+      const timer = setTimeout(done, 20000);
+      document.addEventListener('lazy-sets-loaded', done);
+      loadLazySets();
+    });
+  }
+  // Pokémon de Kanto de uma carta (pode ter dois). O nome vem primeiro (acerta cartas sem número da Pokédex e as de
+  // dois Pokémon); sem nome reconhecido, como em muitos nomes em português, vale o número que a carta traz.
+  function wpCardDexes(card) {
+    const found = [];
+    String(card.name || '').split(/\s+(?:&|e)\s+/).forEach(part => {
+      const clean = part.replace(/\s*\([^)]*\)/g, '').replace(/-(GX|EX|VMAX|VSTAR|V)\b/g, '')
+        .replace(/\s+(GOLD|LV\.X|G)$/, '').replace(/^Special Delivery /, '').replace(/\s+(da|de|do)\s+.*$/, '').trim();
+      const species = speciesFromCardName(clean);
+      if (species && !found.includes(species.dex)) found.push(species.dex);
+    });
+    if (!found.length) {
+      // o número só vale se o nome citar a espécie: há carta de treinador com número errado no catálogo
+      const mon = WP_KANTO151.find(m => m.d === Number(card.dex));
+      if (mon && String(card.name).includes(mon.n.replace(/[♀♂]/g, ''))) found.push(mon.d);
+    }
+    return found.filter(d => d >= 1 && d <= WP_KANTO151.length);
+  }
+  function wpOwnedCards() {
+    const uid = wpUid();
+    if (wpCardsCache && wpCardsCache.uid === uid && Date.now() - wpCardsCache.at < WP_CARDS_CACHE_MS) return wpCardsCache.map;
+    const map = new Map();
+    try {
+      getOwnedSlotsFlat().forEach(slot => {
+        wpCardDexes(slot.c).forEach(dex => {
+          if (!map.has(dex)) map.set(dex, { total: 0, sets: new Map() });
+          const species = map.get(dex);
+          if (!species.sets.has(slot.sid)) species.sets.set(slot.sid, { qty: 0, names: new Set() });
+          const inSet = species.sets.get(slot.sid);
+          species.total += slot.qty;
+          inSet.qty += slot.qty;
+          inSet.names.add(slot.c.name);
+        });
+      });
+    } catch (e) { console.warn('[wp] não consegui contar as cartas:', e); return new Map(); }
+    if (map.size) wpCardsCache = { at: Date.now(), uid, map }; // vazio pode ser coleção ainda chegando: conta de novo depois
+    return map;
+  }
+  const wpCardsWord = n => (n === 1 ? '1 carta' : `${n} cartas`);
+  function wpSetLabel(sid) {
+    if (typeof SET_CATALOG === 'undefined') return sid;
+    const own = SET_CATALOG.find(s => s.id === sid);
+    if (own) return own.label;
+    const base = SET_CATALOG.find(s => s.id === String(sid).replace(/(jp|cn)$/, ''));
+    return base ? `${base.label} (${String(sid).slice(-2).toUpperCase()})` : sid;
+  }
+  function wpOpenCollection(sid, names, mon) {
+    const busca = names.size === 1 ? [...names][0] : mon.n;
+    if (WP_ON_FICHARIO && typeof window.fnAbrirColecao === 'function') {
+      document.querySelectorAll('.wp-modal-backdrop').forEach(wpCloseModal);
+      window.fnAbrirColecao(sid, busca);
+      return;
+    }
+    location.href = `fichario-novo.html?${new URLSearchParams({ abrir: sid, busca })}`;
+  }
+  function wpShowCards(backdrop, mon) {
+    const info = wpOwnedCards().get(mon.d);
+    const panel = backdrop.querySelector('.wp-panel-dex');
+    if (!info || panel.querySelector('.wp-cards-detail')) return;
+    const got = !!wpCatches[mon.s];
+    const sets = [...info.sets].sort((a, b) => b[1].qty - a[1].qty);
+    const box = document.createElement('div');
+    box.className = 'wp-cards-detail';
+    box.innerHTML = `<button type="button" class="wp-bp-btn wp-cards-back">← Pokédex</button>
+      <div class="wp-cards-head"><img src="${wpSpriteUrl(mon.d)}" alt="">
+        <div><strong>${esc(mon.n)}</strong><br>Você tem ${wpCardsWord(info.total)} deste Pokémon.<br>
+          ${got ? '<span class="wp-seal">✓ Capturou e tem carta</span>' : 'Falta capturar no jogo.'}</div></div>
+      ${sets.map(([sid, s]) => `<div class="wp-ev-row"><span><b>${esc(wpSetLabel(sid))}</b><br>${wpCardsWord(s.qty)}</span><button type="button" class="wp-bp-btn" data-set="${esc(sid)}">Ver na coleção</button></div>`).join('')}`;
+    panel.classList.add('wp-showing-cards');
+    panel.appendChild(box);
+    box.querySelector('.wp-cards-back').addEventListener('click', () => { box.remove(); panel.classList.remove('wp-showing-cards'); });
+    box.querySelectorAll('[data-set]').forEach(b => b.addEventListener('click', () => wpOpenCollection(b.dataset.set, info.sets.get(b.dataset.set).names, mon)));
+  }
+  async function wpDecorateDex(backdrop) {
+    if (!wpCanCountCards()) return;
+    const panel = backdrop.querySelector('.wp-panel-dex');
+    const note = panel.querySelector('.wp-dex-note');
+    note.textContent = 'Contando as suas cartas…';
+    await wpLoadAllSets();
+    if (!backdrop.isConnected) return;
+    const owned = wpOwnedCards();
+    let both = 0;
+    panel.querySelectorAll('.wp-cell').forEach(cell => {
+      const mon = WP_KANTO151.find(m => m.d === Number(cell.dataset.dex));
+      const info = mon && owned.get(mon.d);
+      if (!info) return;
+      const got = !!wpCatches[mon.s];
+      if (got) both++;
+      cell.classList.add('wp-has-card');
+      if (got) cell.classList.add('wp-both');
+      cell.insertAdjacentHTML('beforeend', `<span class="wp-cards">🃏 ${info.total}</span>`);
+      cell.setAttribute('role', 'button'); cell.setAttribute('tabindex', '0'); cell.setAttribute('data-wp-kb', '1');
+      cell.setAttribute('aria-label', `${got ? mon.n : 'Pokémon não capturado'}: ${wpCardsWord(info.total)} na sua coleção`);
+      cell.addEventListener('click', () => wpShowCards(backdrop, mon));
+    });
+    note.textContent = owned.size
+      ? `Você tem cartas de ${owned.size} Pokémon de Kanto. Capturados e com carta: ${both}. Toque num deles para ver.`
+      : 'Marque suas cartas no Fichário: elas aparecem aqui, junto de cada Pokémon.';
+  }
+
   function wpOpenDex(tab) {
     tab = tab || 'dex';
     wpCloseIntro();
@@ -1628,7 +1839,7 @@
     const dexHtml = WP_KANTO151.map(mon => {
       const got = !!wpCatches[mon.s];
       const meta = WP_RARITY_META[mon.r];
-      return `<div class="wp-cell ${got ? 'wp-got' : ''}">
+      return `<div class="wp-cell ${got ? 'wp-got' : ''}" data-dex="${mon.d}">
         <img src="${wpSpriteUrl(mon.d)}" alt="" loading="lazy" decoding="async">
         <div class="wp-n">${got ? mon.n : '???'}</div>
         <div class="wp-r" style="color:${got ? meta.color : '#52597a'}">${got ? meta.label : ''}</div>
@@ -1648,7 +1859,7 @@
         ${wpEventIsAdmin() ? '<div class="wp-tab" data-tab="ev">⚡ Eventos</div>' : ''}
       </div>
       <div class="wp-panel-ev" style="display:${tab === 'ev' ? 'block' : 'none'}"></div>
-      <div class="wp-panel-dex wp-grid" style="display:${tab === 'dex' ? 'grid' : 'none'}">${dexHtml}</div>
+      <div class="wp-panel-dex wp-grid" style="display:${tab === 'dex' ? 'grid' : 'none'}"><div class="wp-dex-note" role="status"></div>${dexHtml}</div>
       <div class="wp-panel-mochila" style="display:${tab === 'mochila' ? 'block' : 'none'}"></div>
       <div class="wp-panel-inv" style="display:${tab === 'inv' ? 'block' : 'none'}">${invHtml}<div class="wp-sub" style="margin-top:12px">Poké Ball: use o site (até 5 por dia) · Great Ball: primeiro acesso do dia · Great, Ultra e Master Ball também vêm de conquistas (coleção, master set e minigame).</div></div>
       <div class="wp-panel-help" style="display:${tab === 'help' ? 'block' : 'none'}">${wpHelpHtml()}</div>
@@ -1676,6 +1887,7 @@
 
     if (tab === 'mochila') wpRenderMochilaGrid(mochilaPanel);
     if (tab === 'ev') wpRenderEventAdmin(backdrop.querySelector('.wp-panel-ev'));
+    wpDecorateDex(backdrop);
     wpEventTickUI();
   }
 
@@ -2196,11 +2408,18 @@
   });
 
   let wpBaseTimer = null;
+  let wpResumedDelay = null; // o que faltava pra próxima aparição quando a página abriu
+  function wpResumeDelayMs() {
+    const next = wpLoadJSON(WP_STORAGE_NEXT, null);
+    if (!next || !next.at || Date.now() - next.saved > WP_RESUME_WINDOW_MS) return null;
+    return Math.max(WP_RESUME_MIN_MS, next.at - Date.now());
+  }
   function wpScheduleBase(firstDelayMs) {
     clearTimeout(wpBaseTimer);
     const jitter = 0.5 + Math.random(); // 0.5x–1.5x pra não ficar num ritmo mecânico
     // 17/10/2026 (pacote D): durante um evento de aparição o intervalo cai pra ~90 s
     const intervalMs = firstDelayMs != null ? firstDelayMs : (wpEventCurrent() ? WP_EVENT_INTERVAL_MS : WP_AVG_INTERVAL_MS) * jitter;
+    wpSaveJSON(WP_STORAGE_NEXT, { at: Date.now() + intervalMs, saved: Date.now() });
     wpBaseTimer = setTimeout(() => {
       wpSpawn(1);
       if (!wpEventCurrent()) wpMaybeGrantBallFromUsage(WP_TEST_MODE ? 0.03 : 0.06); // no evento o intervalo é curto: sem chance extra de bola
@@ -2231,7 +2450,16 @@
   function wpInit() {
     wpBuildBadge();
     wpBuildArenaButton();
-    wpScheduleBase();
+    wpResumedDelay = wpResumeDelayMs(); // ler antes de agendar, que grava um horário novo
+    wpScheduleBase(wpResumedDelay);
+    if (WP_ON_FICHARIO) {
+      document.body.classList.add('wp-fichario');
+      const observer = new MutationObserver(wpSyncPage);
+      observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      const overlay = document.getElementById('fn-overlay');
+      if (overlay) observer.observe(overlay, { attributes: true, attributeFilter: ['hidden'] });
+      wpSyncPage();
+    }
     // 17/10/2026 (pacote D): banner/cadência dos eventos de aparição — consulta no boot, a cada 60 s e ao voltar pra aba
     setTimeout(wpEventRefresh, 1200);
     setInterval(() => { if (!document.hidden) wpEventRefresh(); }, 60000);
@@ -2257,7 +2485,10 @@
     wpBootedUid = bootUid;
     await wpSyncFromCloud();
     // 27/11/2026: quem nunca capturou vê o primeiro Pokémon entre 30 e 55 s (depois segue a cadência normal)
-    if (wpIsNewcomer()) wpScheduleBase(WP_NEWCOMER_DELAY_MIN_MS + Math.random() * (WP_NEWCOMER_DELAY_MAX_MS - WP_NEWCOMER_DELAY_MIN_MS));
+    if (wpIsNewcomer()) {
+      const soon = WP_NEWCOMER_DELAY_MIN_MS + Math.random() * (WP_NEWCOMER_DELAY_MAX_MS - WP_NEWCOMER_DELAY_MIN_MS);
+      wpScheduleBase(wpResumedDelay === null ? soon : Math.min(soon, wpResumedDelay)); // trocar de página não adia
+    }
     wpCheckDailyLoginBonus();
     wpFetchBackpack(); // não bloqueia o boot — só pra badge/mochila já vir preenchida
     wpFetchLoadout();  // idem, pro botão de Batalhar já vir com o rótulo certo

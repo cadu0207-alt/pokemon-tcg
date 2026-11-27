@@ -3266,6 +3266,25 @@ function openBlocks() {
     closeSheet(); renderAll(); window.scrollTo({ top: 0 });
   }
 
+  // Abre uma coleção já filtrada. Usado pela Pokédex do minigame ("Ver na coleção"), aqui e vindo do site
+  // (?abrir=coleção&busca=nome).
+  function abrirColecao(id, busca) {
+    if (!SET_CATALOG.some(function (s) { return s.id === setKey(id); })) return false;
+    pickSet(id);
+    if (busca) { st.q = busca; $('#fn-q').value = busca; renderBody(); }
+    return true;
+  }
+  window.fnAbrirColecao = abrirColecao;
+  function abrirColecaoDoLink() {
+    var query = new URLSearchParams(location.search), id = query.get('abrir'), busca = query.get('busca'), tries = 0;
+    if (!id) return;
+    (function tentar() {
+      // as coleções antigas só entram no catálogo depois do login
+      if (abrirColecao(id, busca)) { try { history.replaceState(null, '', location.pathname + '#' + id); } catch (e) { } return; }
+      if (++tries < 100) setTimeout(tentar, 200);
+    })();
+  }
+
   // ── avisos ─────────────────────────────────────────────────
   var toastT;
   function toast(msg) { var t = $('#fn-toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, 3200); }
@@ -3798,7 +3817,7 @@ if (t.dataset.progmode != null) {
     }
     if (!SET_CATALOG.some(function (s) { return s.id === setKey(st.set); }) && !isDex(st.set) && !isCb(st.set) && !isPk(st.set) && !isHome(st.set)) st.set = 'home';
 
-    bind(); banner(); renderAll();
+    bind(); banner(); renderAll(); abrirColecaoDoLink();
 
     // 2. Garante o carregamento dos fichários personalizados (via motor ou direto do Supabase)
     var bindersFetchedForUid = null;
