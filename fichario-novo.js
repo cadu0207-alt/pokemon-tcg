@@ -739,11 +739,10 @@ sl.forEach(function (s) {
     var pct = t ? Math.round(Math.max((own / t) * 100, chosen > 0 ? (own / chosen) * (chosen / t) * 100 : 0)) : 0;
     if (own > 0 && pct === 0) pct = 1;
     var name = b ? b.name.replace(/^[^\wÀ-ú(]+/, '') : 'Pokédex';
-    var delLbl = b && isRegionalDexBinder(b) ? I('trash') + ' Excluir região' : I('trash') + ' Excluir Pokédex';
     $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>' + esc(name) + '</h1><p class="fn-hero-sub">Pokédex · ' + t + ' espécies · progresso isolado desta Pokédex</p></div><div class="fn-pct">' + pct + '<small>%</small></div></div>' +
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats">' + (b ? '<span><b>' + own + '</b>/' + t + ' espécies</span><span>Com carta escolhida <b>' + chosen + '</b></span>' + (empty ? '<span>Vagas sem carta <b>' + empty + '</b></span>' : '') : '<span>' + (loggedIn() || DEMO ? 'Carregando a sua Pokédex…' : 'Entre no MyDeck para carregar a sua Pokédex.') + '</span>') + condCountsHtml({ kind: 'dex', id: st.set, bid: bid, species: cur.species, byDex: cur.byDex }) + '</div>' +
-      (b && !SHARE ? '<div class="fn-hero-links"><a href="#" data-act="dexaskdelete" data-bid="' + esc(b.id) + '">' + delLbl + '</a></div>' : '');
+      (b && !SHARE ? '<div class="fn-hero-links"><a href="#" data-act="cbedit">' + I('pencil', 14) + ' Editar fichário</a></div>' : '');
     $('#fn-setbtn-emoji').innerHTML = b ? bIco(b, 22, 'masterdex') : MD_ICO('pokedex', { size: 22 }); $('#fn-setbtn-code').textContent = 'Pokédex'; $('#fn-setbtn-name').textContent = name;
   }
 
@@ -1172,8 +1171,7 @@ sl.forEach(function (s) {
       '<div class="fn-progress" role="progressbar" aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fn-stats">' + (t.slots ? '<span' + (!isCardMode ? ' class="is-active-metric"' : '') + '><b>' + t.got + '</b>/' + t.slots + ' slots</span><span' + (isCardMode ? ' class="is-active-metric"' : '') + '><b>' + t.cardsAny + '</b>/' + t.cards + ' cartas</span>' + ((isCardMode ? t.cardsAny >= t.cards : t.got >= t.slots) ? '<span><b style="color:var(--teal)">Fichário completo</b></span>' : '<span><b>' + (isCardMode ? (t.cards - t.cardsAny) + '</b> cartas restantes' : (t.slots - t.got) + '</b> slots restantes') + '</span>')
         : '<span>' + (manual ? (cur.pending ? 'Carregando as cartas…' : 'Este fichário ainda não tem cartas. Use “Adicionar cartas” ou o botão “Guardar em fichário” de qualquer carta.') : 'Nenhuma carta nas suas coleções ativas para esta sugestão.') + '</span>') + condCountsHtml({ kind: 'set', id: st.set, cards: cur.cards }) + '</div>' +
-      (!SHARE ? '<div class="fn-hero-links">' + (manual ? '<a href="#" data-act="cbadd">' + I('plus', 14) + ' Adicionar cartas</a>' : '') + (isArtistBinder ? '<a href="#" data-act="artists">' + I('palette', 14) + ' Outros artistas</a>' : '') + '<a href="#" data-act="cbedit">' + I('pencil', 14) + ' Editar fichário</a></div>' : '');
-    $('#fn-setbtn-emoji').innerHTML = bIco(b, 22); $('#fn-setbtn-code').textContent = cbIsFav(b) ? 'Favoritos' : isArtistBinder ? 'Artista' : 'Personalizado'; $('#fn-setbtn-name').textContent = nm;
+(!SHARE ? '<div class="fn-hero-links">' + (manual ? '<a href="#" data-act="cbadd">' + I('plus', 14) + ' Adicionar cartas</a>' : '') + '<a href="#" data-act="cbedit">' + I('pencil', 14) + ' Editar fichário</a></div>' : '');    $('#fn-setbtn-emoji').innerHTML = bIco(b, 22); $('#fn-setbtn-code').textContent = cbIsFav(b) ? 'Favoritos' : isArtistBinder ? 'Artista' : 'Personalizado'; $('#fn-setbtn-name').textContent = nm;
   }
 
   // ── Personalizados (tela inicial) ──
@@ -1308,7 +1306,7 @@ sl.forEach(function (s) {
     } finally { cbBusy = false; }
   }
   function openCbEdit() {
-    var b = cur.binder; if (!b || !(isCb(st.set) || isPk(st.set))) return;
+    var b = cur.binder; if (!b || !(isCb(st.set) || isPk(st.set) || isDex(st.set))) return;
     openSheet('<div class="fn-form"><label>Nome<input type="text" id="fn-cb-name" maxlength="40" value="' + esc(plainName(b.name)) + '" autocomplete="off"></label>' +
       '<div class="fn-row"><label>Cor<input type="color" id="fn-cb-color" value="' + esc(/^#[0-9a-f]{6}$/i.test(b.cover_color || '') ? b.cover_color : '#a855f7') + '"></label></div>' +
       (cbIsFav(b) ? '<p class="fn-note">⭐ Favoritos junta as favoritas de todas as coleções. Você pode renomear à vontade.</p>' : '') +
@@ -1317,9 +1315,11 @@ sl.forEach(function (s) {
   async function cbSaveEdit() {
     var b = cur.binder; if (!b || cbBusy) return;
     var name = (($('#fn-cb-name') || {}).value || '').trim(); if (!name) { toast('Dê um nome ao fichário.'); return; }
+    var emMatch = String(b.name || '').match(/^[^\wÀ-ú(]+/);
+    var prefix = emMatch ? emMatch[0].trim() + ' ' : '';
     cbBusy = true;
     try {
-      var saved = await cbSave(Object.assign({}, b, { name: name, cover_color: ($('#fn-cb-color') || {}).value || b.cover_color }));
+      var saved = await cbSave(Object.assign({}, b, { name: prefix + name, cover_color: ($('#fn-cb-color') || {}).value || b.cover_color }));
       if (!saved) { toast('Não foi possível salvar. Tente de novo.'); return; }
       closeSheet(); refreshAfterCb(); toast('Fichário atualizado.');
     } finally { cbBusy = false; }
@@ -1329,7 +1329,7 @@ sl.forEach(function (s) {
     openDeleteConfirm({
       title: 'Excluir fichário',
       name: plainName(b.name) || 'Sem nome',
-      kind: isPk(st.set) ? 'Fichário de Pokémon' : cbKind(b),
+      kind: isDex(st.set) ? 'Pokédex' : (isPk(st.set) ? 'Fichário de Pokémon' : cbKind(b)),
       note: 'As suas marcações de cartas na coleção não serão apagadas, apenas este fichário.',
       confirmAct: 'cbdelete'
     });
