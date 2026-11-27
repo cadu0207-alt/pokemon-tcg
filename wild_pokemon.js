@@ -62,7 +62,17 @@
   const WP_STORAGE_DAILY_BALLS = 'wp_daily_balls_v1'; // { date, count } — teto de Poké Ball ganha só por ficar com o site aberto
   const WP_STORAGE_DAILY_BONUS = 'wp_daily_bonus_v1'; // 'YYYY-MM-DD' do último dia em que já deu a Great Ball de primeiro acesso
   const WP_DAILY_BALL_CAP = 5; // máximo de Poké Ball/dia só pelo ganho passivo (uso do site) — não limita ganhos manuais/por ação real
-  const WP_LIFETIME_MS = 8000; // quanto tempo o Pokémon fica visível antes de sumir sozinho
+  // 27/11/2026: tempo pra capturar. O relógio PARA enquanto a pessoa escolhe a bola (antes corria junto: o Pokémon
+  // sumia com o seletor aberto e o clique na bola não fazia nada). O teto desde a aparição existe porque o servidor
+  // só aceita o arremesso por 60 s (c_ttl em wild_spawn).
+  const WP_LIFETIME_MS = 13000;     // quanto tempo o Pokémon fica visível se ninguém mexer
+  const WP_PICK_MS = 20000;         // tempo com o seletor de bola (ou uma janela do jogo) aberto
+  const WP_MAX_VISIBLE_MS = 50000;  // teto desde a aparição, somando as pausas
+  const WP_MIN_RESUME_MS = 3000;    // ao fechar o seletor, volta com pelo menos isto
+  // Quem ainda não capturou nenhum vê o primeiro Pokémon logo (a cadência normal podia passar de 5 min).
+  const WP_STORAGE_INTRO = 'wp_intro_v1'; // cartão de apresentação já mostrado neste aparelho
+  const WP_NEWCOMER_DELAY_MIN_MS = 30000;
+  const WP_NEWCOMER_DELAY_MAX_MS = 55000;
 
   // ── Dados: Kanto 151 (dex, slug PokeAPI, nome, raridade) ──────
   const WP_KANTO151 = [
@@ -821,7 +831,18 @@
     }
     .wp-modal h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: .5px; font-size: 24px; margin: 0 0 4px; color: #ffd166; }
     .wp-modal .wp-sub { color: #9aa0c0; font-size: 13px; margin-bottom: 14px; }
-    .wp-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+    .wp-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    /* Cartão de apresentação e aba "Como jogar" (27/11/2026) — o cartão fica no meio da tela pra não cobrir os cantos
+       onde o Pokémon aparece */
+    .wp-intro { position: fixed; left: 50%; top: 32%; transform: translateX(-50%); z-index: 10000; width: min(330px, 86vw); background: linear-gradient(135deg, #111422, #181c2e); border: 1px solid #ffd16688; border-radius: 14px; padding: 14px 16px; color: #f2f2f2; font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.45; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+    .wp-intro b { display: block; margin-bottom: 4px; color: #ffd166; }
+    .wp-intro-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .wp-help h4 { margin: 14px 0 6px; color: #ffd166; font-size: 14px; }
+    .wp-help ul { margin: 0; padding-left: 18px; color: #c9cee6; font-size: 13px; line-height: 1.55; }
+    .wp-help table { width: 100%; border-collapse: collapse; color: #f2f2f2; font-size: 12px; }
+    .wp-help th, .wp-help td { padding: 5px 4px; border-bottom: 1px solid #ffffff14; background: none; color: inherit; text-align: center; font-weight: 600; text-transform: none; letter-spacing: 0; }
+    .wp-help tbody th { text-align: left; white-space: nowrap; }
+    .wp-help .wp-ball-icon { vertical-align: -4px; }
     .wp-tab { background: #111422; border: 1px solid #ffffff14; border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 13px; color: #9aa0c0; }
     .wp-tab.wp-tab-active { color: #ffd166; border-color: #ffd16655; }
     .wp-inv-row { display: flex; align-items: center; gap: 12px; background: #111422; border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; }
@@ -894,6 +915,11 @@
     .wp-ev-count { font-variant-numeric: tabular-nums; font-weight: 700; color: #ffd166; }
     @keyframes wp-ev-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
     @media (prefers-reduced-motion: reduce) { .wp-ev-live .wp-ev-dot { animation: none; } }
+    /* 27/11/2026: no tema claro o banner da Início saía com texto branco em fundo claro. A janela do jogo é sempre
+       escura, então a troca de cores vale só no espaço da Início. */
+    [data-theme="light"] #inicio-wild-event-slot .wp-ev-banner { background: linear-gradient(135deg, #fff3c4, #ffe3d8); border-color: #b7791f; color: #1f2333; }
+    [data-theme="light"] #inicio-wild-event-slot .wp-ev-sub { color: #3d4257; }
+    [data-theme="light"] #inicio-wild-event-slot .wp-ev-count { color: #8a3b00; }
     .wp-ev-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 12px; }
     .wp-ev-form label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #9aa0c0; }
     .wp-ev-form select, .wp-ev-form input { padding: 7px 8px; border-radius: 8px; border: 1px solid #ffffff22; background: #111422; color: #f2f2f2; font: inherit; font-size: 13px; }
@@ -954,6 +980,10 @@
   let wpActiveEl = null;
   let wpActiveMon = null;
   let wpActiveTimeoutId = null;
+  let wpSpawnedAt = 0;       // quando o Pokémon atual apareceu (base do teto)
+  let wpDeadline = 0;        // quando o relógio atual vence
+  let wpTimeLeftMs = null;   // quanto faltava quando o relógio parou (null = correndo normal)
+  let wpPicker = null;       // { box, onDoc } do seletor de bola aberto
   const WP_CORNERS = ['wp-bl', 'wp-br', 'wp-tl'];
 
   // ── Cadência por dia (pedido do Eduardo, 18/08) ────────────────
@@ -1052,28 +1082,71 @@
       }, { once: true });
     }
 
-    wpActiveTimeoutId = setTimeout(() => wpDespawn(el), WP_LIFETIME_MS);
+    wpSpawnedAt = Date.now();
+    wpTimeLeftMs = null;
+    wpArmDespawn(el, WP_LIFETIME_MS);
+    wpSyncClock(); // se uma janela do jogo está aberta por cima, o relógio já nasce parado
+    wpMaybeShowIntro();
 
     el.addEventListener('click', (ev) => {
       wpOpenBallPicker(ev, mon, el);
     });
   }
 
+  // ── Relógio da aparição ─────────────────────────────────────
+  function wpArmDespawn(el, ms) {
+    clearTimeout(wpActiveTimeoutId);
+    const wait = Math.max(0, Math.min(ms, wpSpawnedAt + WP_MAX_VISIBLE_MS - Date.now()));
+    wpDeadline = Date.now() + wait;
+    wpActiveTimeoutId = setTimeout(() => wpDespawn(el), wait);
+  }
+
+  // Chamar sempre que o seletor de bola ou uma janela do jogo abrir ou fechar: com algum aberto, o relógio normal
+  // para e vale o tempo de escolha; com tudo fechado, volta o que faltava.
+  function wpSyncClock() {
+    const el = wpActiveEl;
+    if (!el) return;
+    const busy = !!(wpPicker || document.querySelector('.wp-modal-backdrop'));
+    if (busy && wpTimeLeftMs === null) {
+      wpTimeLeftMs = wpDeadline - Date.now();
+      wpArmDespawn(el, WP_PICK_MS);
+    } else if (!busy && wpTimeLeftMs !== null) {
+      const left = wpTimeLeftMs;
+      wpTimeLeftMs = null;
+      wpArmDespawn(el, Math.max(WP_MIN_RESUME_MS, left));
+    }
+  }
+
   function wpDespawn(el) {
     if (!el || el !== wpActiveEl) return;
+    const choosing = !!wpPicker;
+    clearTimeout(wpActiveTimeoutId);
     el.classList.remove('wp-in', 'wp-peek', 'wp-shy');
     setTimeout(() => { el.remove(); }, 400);
     wpActiveEl = null;
     wpActiveMon = null;
+    wpClosePicker();
+    // só avisa quem estava escolhendo a bola — quem ignorou o Pokémon não é incomodado
+    if (choosing) wpToastRaw('💨', 'O Pokémon foi embora antes da bola. Sua bola não foi gasta.', false);
   }
 
   // ── Seletor de pokébola ─────────────────────────────────────
+  function wpClosePicker() {
+    if (!wpPicker) return;
+    document.removeEventListener('click', wpPicker.onDoc);
+    wpPicker.box.remove();
+    wpPicker = null;
+    wpSyncClock();
+  }
+
   function wpOpenBallPicker(ev, mon, el) {
-    document.querySelectorAll('.wp-ballpicker').forEach(n => n.remove());
+    if (el !== wpActiveEl) return; // já foi embora ou a bola já está no ar
+    wpCloseIntro();
+    if (wpPicker) return; // já está aberto
 
     const totalBalls = WP_BALL_ORDER.reduce((s, t) => s + (wpBalls[t] || 0), 0);
     if (totalBalls === 0) {
-      wpToastRaw('🎒', 'Sem pokébolas! Use o site pra ganhar mais.', false);
+      wpToastRaw('🎒', 'Sem pokébolas! Você ganha 1 Great Ball no primeiro acesso do dia e até 5 Poké Balls usando o site.', false);
       return;
     }
 
@@ -1095,15 +1168,16 @@
     }).join('');
     document.body.appendChild(picker);
 
-    const closePicker = () => picker.remove();
-    setTimeout(() => document.addEventListener('click', function onDoc(e) {
-      if (!picker.contains(e.target)) { closePicker(); document.removeEventListener('click', onDoc); }
-    }), 0);
+    // clique fora fecha o seletor (e o relógio volta); clicar de novo no próprio Pokémon não fecha
+    const onDoc = (e) => { if (!picker.contains(e.target) && !el.contains(e.target)) wpClosePicker(); };
+    wpPicker = { box: picker, onDoc };
+    wpSyncClock();
+    setTimeout(() => { if (wpPicker && wpPicker.box === picker) document.addEventListener('click', onDoc); }, 0);
 
     picker.querySelectorAll('.wp-ball-btn:not(.wp-ball-disabled)').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        closePicker();
+        wpClosePicker();
         wpThrowBall(btn.dataset.tier, mon, el);
       });
     });
@@ -1328,11 +1402,13 @@
     wpEnabled = on;
     wpSaveJSON(WP_STORAGE_ENABLED, wpEnabled);
     if (!wpEnabled && wpActiveEl) {
-      document.querySelectorAll('.wp-ballpicker').forEach(n => n.remove());
+      clearTimeout(wpActiveTimeoutId);
       wpActiveEl.remove();
       wpActiveEl = null;
       wpActiveMon = null;
+      wpClosePicker();
     }
+    if (!wpEnabled) wpCloseIntro();
     wpUpdateBadge();
   }
   window.wpToggle = () => { wpSetEnabled(!wpEnabled); return wpEnabled ? 'minigame ligado' : 'minigame desligado'; };
@@ -1349,8 +1425,12 @@
     // Não existe emoji de pokébola de verdade no Unicode — reaproveita o
     // mesmo ícone (imagem) já usado no seletor de bola/inventário, só que
     // pequeno, em vez de usar um emoji genérico (bola de basebol) no lugar.
+    // 27/11/2026: quem ainda não capturou nada vê o nome do jogo no lugar dos números (eram só ícones, sem explicação)
+    const progressPart = totalCaught
+      ? `🐾 ${totalCaught}/${WP_KANTO151.length}${bagPart}`
+      : 'Pokémon escondidos';
     wpBadgeEl.querySelector('.wp-badge-text').innerHTML = wpEnabled
-      ? `${wpBallIconHtml('pokeball', 13)} ${totalBalls} · 🐾 ${totalCaught}/${WP_KANTO151.length}${bagPart}`
+      ? `${wpBallIconHtml('pokeball', 13)} ${totalBalls} · ${progressPart}`
       : `Minigame desligado`;
     const powerBtn = wpBadgeEl.querySelector('.wp-power-btn');
     if (powerBtn) { powerBtn.textContent = '🎮'; powerBtn.title = 'Minimizar minigame e batalha'; }
@@ -1371,7 +1451,7 @@
     wpBadgeEl = document.createElement('div');
     wpBadgeEl.className = 'wp-badge';
     wpBadgeEl.innerHTML = `<span class="wp-badge-text" role="button" tabindex="0" data-wp-kb="1" aria-label="Abrir Pokédex, mochila e inventário"></span><span class="wp-sound-btn" role="button" tabindex="0" data-wp-kb="1" aria-label="Ligar ou desligar o som do minigame" title="Som">${wpSoundOn ? '🔊' : '🔇'}</span><span class="wp-power-btn" role="button" tabindex="0" data-wp-kb="1" aria-label="Minimizar o minigame e a batalha" title="Minimizar minigame e batalha">🎮</span>`;
-    wpBadgeEl.querySelector('.wp-badge-text').addEventListener('click', () => wpOpenDex('dex')); // 17/10/2026: antes passava o MouseEvent como "tab" e o modal abria vazio
+    wpBadgeEl.querySelector('.wp-badge-text').addEventListener('click', () => wpOpenDex(wpIsNewcomer() ? 'help' : 'dex')); // 17/10/2026: antes passava o MouseEvent como "tab" e o modal abria vazio
     wpBadgeEl.querySelector('.wp-sound-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       wpSoundOn = !wpSoundOn;
@@ -1394,11 +1474,92 @@
     wpUpdateBadge();
   }
 
+  // ── Apresentação e "Como jogar" (27/11/2026) ────────────────
+  function wpIsNewcomer() { return Object.keys(wpCatches).length === 0; }
+
+  let wpIntroEl = null;
+  let wpIntroTimer = null;
+  function wpCloseIntro() {
+    clearTimeout(wpIntroTimer);
+    if (wpIntroEl) { wpIntroEl.remove(); wpIntroEl = null; }
+  }
+  // Cartão curto, uma única vez por aparelho, na primeira aparição de quem nunca capturou. Não bloqueia a tela.
+  function wpMaybeShowIntro() {
+    if (!wpIsNewcomer() || wpLoadJSON(WP_STORAGE_INTRO, false)) return;
+    if (document.querySelector('.wp-modal-backdrop')) return; // fica pra próxima aparição
+    wpSaveJSON(WP_STORAGE_INTRO, true);
+    wpIntroEl = document.createElement('div');
+    wpIntroEl.className = 'wp-intro';
+    wpIntroEl.setAttribute('role', 'status');
+    wpIntroEl.innerHTML = `<b>🐾 Pokémon escondidos</b>
+      Eles espiam pelos cantos da tela. Clique (ou toque) no Pokémon e escolha uma bola pra capturar.
+      <div class="wp-intro-actions">
+        <button type="button" class="wp-bp-btn" data-act="help">Como jogar</button>
+        <button type="button" class="wp-bp-btn" data-act="ok">Entendi</button>
+      </div>`;
+    // stopPropagation: mexer no cartão não conta como "clique fora" do seletor
+    wpIntroEl.addEventListener('click', (e) => e.stopPropagation());
+    wpIntroEl.querySelector('[data-act="ok"]').addEventListener('click', wpCloseIntro);
+    wpIntroEl.querySelector('[data-act="help"]').addEventListener('click', () => { wpCloseIntro(); wpOpenDex('help'); });
+    document.body.appendChild(wpIntroEl);
+    wpIntroTimer = setTimeout(wpCloseIntro, 20000);
+  }
+
+  function wpHelpHtml() {
+    const secs = (ms) => Math.round(ms / 1000);
+    const rarities = Object.keys(WP_RARITY_META);
+    const rows = WP_BALL_ORDER.map(tier => `<tr><th scope="row">${wpBallIconHtml(tier, 18)} ${WP_BALL_META[tier].label}</th>${rarities.map(r => `<td>${Math.round(WP_CATCH_RATES[tier][r] * 100)}%</td>`).join('')}</tr>`).join('');
+    const guest = !(wpHasClient() && wpUid());
+    return `<div class="wp-help">
+      ${guest ? '<div class="wp-bp-full-banner">Sem conta, as capturas ficam só neste aparelho e não passam para a conta. Mochila e batalha precisam de login.</div>' : ''}
+      <h4>Capturar</h4>
+      <ul>
+        <li>Com o site aberto, um Pokémon de Kanto espia de um canto de vez em quando.</li>
+        <li>Você tem ${secs(WP_LIFETIME_MS)} segundos pra clicar nele e mais ${secs(WP_PICK_MS)} pra escolher a bola.</li>
+        <li>A bola é gasta acertando ou não.</li>
+      </ul>
+      <h4>Chance de captura</h4>
+      <table>
+        <thead><tr><td></td>${rarities.map(r => `<th scope="col" style="color:${WP_RARITY_META[r].color}">${WP_RARITY_META[r].label}</th>`).join('')}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <h4>Como ganhar bolas</h4>
+      <ul>
+        <li>1 Great Ball no primeiro acesso do dia.</li>
+        <li>Até 5 Poké Balls por dia, de vez em quando, enquanto você usa o site.</li>
+        <li>Algumas conquistas (coleção, master set e do próprio jogo) também dão bolas.</li>
+      </ul>
+      <h4>Mochila e batalha</h4>
+      <ul>
+        <li>Cada captura vira um Pokémon seu, com 5 atributos sorteados.</li>
+        <li>Pra batalhar, escolha na mochila 1 Principal e uma Equipe de 3.</li>
+        <li>O site sorteia duelo 1x1 ou 3x3 e um rival de força parecida. A luta é automática.</li>
+        <li>Mais Agilidade ataca primeiro. O dano é o Ataque menos metade da Defesa do outro. Crítico dá chance de bater 50% mais forte. A vida é o HP vezes 3.</li>
+        <li>Até 60 batalhas por dia: vitória dá 25 XP, derrota dá 10.</li>
+      </ul>
+      <h4>Ranking e eventos</h4>
+      <ul>
+        <li>O ranking é por % de vitórias, com mínimo de 3 batalhas no dia, 10 na semana, 15 no mês e 30 no total.</li>
+        <li>Batalhas em que outra pessoa enfrenta o seu time também contam.</li>
+        <li>Nos eventos, com hora marcada e banner na Início, certos Pokémon aparecem bem mais.</li>
+      </ul>
+      <h4>Não quer jogar agora?</h4>
+      <ul><li>O botão 🎮 no contador esconde o jogo. A abinha na borda esquerda traz de volta.</li></ul>
+    </div>`;
+  }
+
+  // Fecha uma janela do jogo e devolve o relógio da aparição que estiver na tela.
+  function wpCloseModal(backdrop) {
+    backdrop.remove();
+    wpSyncClock();
+  }
+
   function wpOpenDex(tab) {
     tab = tab || 'dex';
+    wpCloseIntro();
     const backdrop = document.createElement('div');
     backdrop.className = 'wp-modal-backdrop';
-    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) backdrop.remove(); });
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) wpCloseModal(backdrop); });
 
     const totalCaught = Object.keys(wpCatches).length;
 
@@ -1430,18 +1591,21 @@
         <div class="wp-tab" data-tab="dex">Pokédex</div>
         <div class="wp-tab" data-tab="mochila">Mochila</div>
         <div class="wp-tab" data-tab="inv">Inventário</div>
+        <div class="wp-tab" data-tab="help" role="button" tabindex="0" data-wp-kb="1">Como jogar</div>
         ${wpEventIsAdmin() ? '<div class="wp-tab" data-tab="ev">⚡ Eventos</div>' : ''}
       </div>
       <div class="wp-panel-ev" style="display:${tab === 'ev' ? 'block' : 'none'}"></div>
       <div class="wp-panel-dex wp-grid" style="display:${tab === 'dex' ? 'grid' : 'none'}">${dexHtml}</div>
       <div class="wp-panel-mochila" style="display:${tab === 'mochila' ? 'block' : 'none'}"></div>
-      <div class="wp-panel-inv" style="display:${tab === 'inv' ? 'block' : 'none'}">${invHtml}<div class="wp-sub" style="margin-top:12px">Poké Ball: use o site (até 5 por dia) · Great Ball: primeiro acesso do dia · Great, Ultra e Master Ball também vêm de conquistas (coleção, leilão, loja, master set e minigame).</div></div>
+      <div class="wp-panel-inv" style="display:${tab === 'inv' ? 'block' : 'none'}">${invHtml}<div class="wp-sub" style="margin-top:12px">Poké Ball: use o site (até 5 por dia) · Great Ball: primeiro acesso do dia · Great, Ultra e Master Ball também vêm de conquistas (coleção, master set e minigame).</div></div>
+      <div class="wp-panel-help" style="display:${tab === 'help' ? 'block' : 'none'}">${wpHelpHtml()}</div>
     </div>`;
 
     document.body.appendChild(backdrop);
+    wpSyncClock();
     const mochilaPanel = backdrop.querySelector('.wp-panel-mochila');
 
-    backdrop.querySelector('.wp-close').addEventListener('click', () => backdrop.remove());
+    backdrop.querySelector('.wp-close').addEventListener('click', () => wpCloseModal(backdrop));
     backdrop.querySelectorAll('.wp-tab').forEach(t => {
       t.classList.toggle('wp-tab-active', t.dataset.tab === tab);
       t.addEventListener('click', () => {
@@ -1450,6 +1614,7 @@
         backdrop.querySelector('.wp-panel-dex').style.display = t.dataset.tab === 'dex' ? 'grid' : 'none';
         backdrop.querySelector('.wp-panel-mochila').style.display = t.dataset.tab === 'mochila' ? 'block' : 'none';
         backdrop.querySelector('.wp-panel-inv').style.display = t.dataset.tab === 'inv' ? 'block' : 'none';
+        backdrop.querySelector('.wp-panel-help').style.display = t.dataset.tab === 'help' ? 'block' : 'none';
         backdrop.querySelector('.wp-panel-ev').style.display = t.dataset.tab === 'ev' ? 'block' : 'none';
         if (t.dataset.tab === 'mochila') wpRenderMochilaGrid(mochilaPanel);
         if (t.dataset.tab === 'ev') wpRenderEventAdmin(backdrop.querySelector('.wp-panel-ev'));
@@ -1701,7 +1866,8 @@
       <div class="wp-battle-final" style="display:none"></div>
     </div>`;
     document.body.appendChild(backdrop);
-    backdrop.querySelector('.wp-close').addEventListener('click', () => backdrop.remove());
+    wpSyncClock();
+    backdrop.querySelector('.wp-close').addEventListener('click', () => wpCloseModal(backdrop));
 
     const list = backdrop.querySelector('.wp-battle-list');
     result.duels.forEach((_, i) => {
@@ -2033,6 +2199,8 @@
   // saber que o outro já reclamou hoje e dar a Great Ball em dobro.
   async function wpDailyBootSequence() {
     await wpSyncFromCloud();
+    // 27/11/2026: quem nunca capturou vê o primeiro Pokémon entre 30 e 55 s (depois segue a cadência normal)
+    if (wpIsNewcomer()) wpScheduleBase(WP_NEWCOMER_DELAY_MIN_MS + Math.random() * (WP_NEWCOMER_DELAY_MAX_MS - WP_NEWCOMER_DELAY_MIN_MS));
     wpCheckDailyLoginBonus();
     wpFetchBackpack(); // não bloqueia o boot — só pra badge/mochila já vir preenchida
     wpFetchLoadout();  // idem, pro botão de Batalhar já vir com o rótulo certo
