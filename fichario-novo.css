@@ -311,6 +311,11 @@ button{cursor:pointer}
 .fn-q button{width:40px;height:38px;border:0;background:transparent;font-size:20px;font-weight:700;line-height:1}
 .fn-q button:active{background:var(--teal-soft)}
 .fn-q output{min-width:28px;text-align:center;font-weight:800;font-size:16px}
+.fn-q .fn-qty-input{width:46px;height:36px;padding:0 2px;border:0;border-radius:6px;background:transparent;color:var(--text);text-align:center;font-weight:800;font-size:15px;line-height:1;-moz-appearance:textfield;appearance:textfield}
+.fn-q .fn-qty-input::-webkit-outer-spin-button,
+.fn-q .fn-qty-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.fn-q .fn-qty-input:focus{outline:none;background:var(--accent-soft)}
+.fn-vb-sub .fn-q .fn-qty-input{width:40px;height:32px;font-size:14px}
 .fn-orig{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 
 .fn-detail-top{display:flex;gap:14px;align-items:flex-start}
