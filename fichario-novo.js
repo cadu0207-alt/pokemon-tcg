@@ -2400,6 +2400,14 @@ function setEntryByKey(key, qty, origins, kIdOpt) {
   }
 
 // Adiciona a opção de editar a quantidade de cartas
+  // Enter, change e focusout chegam juntos (e de novo quando a tela é redesenhada):
+  // cada digitação é aplicada uma única vez, e sair do campo sem digitar não grava nada.
+  function commitQtyInput(el) {
+    if (!el.dataset.typed) return;
+    delete el.dataset.typed;
+    applyTypedQty(el.dataset, el.value);
+  }
+
   function applyTypedQty(dataset, rawValue) {
  if (!dataset) return;
  var c = findCard(dataset.n);
@@ -3447,7 +3455,7 @@ function openBlocks() {
     });
     document.addEventListener('change', function (e) {
  if (e.target && e.target.matches && e.target.matches('.fn-qty-input[data-qty-input]')) {
- applyTypedQty(e.target.dataset, e.target.value);
+ commitQtyInput(e.target);
  return;
  }
  if (e.target && e.target.id === 'fn-dp-sort' && picker) { picker.sort = e.target.value; renderDexPicker(($('#fn-dp-q') || {}).value || ''); }
@@ -3455,21 +3463,23 @@ function openBlocks() {
  });
  document.addEventListener('focusout', function (e) {
  if (e.target && e.target.matches && e.target.matches('.fn-qty-input[data-qty-input]')) {
- applyTypedQty(e.target.dataset, e.target.value);
+ commitQtyInput(e.target);
  }
  });
+ document.addEventListener('input', function (e) { if (e.target && e.target.matches && e.target.matches('.fn-qty-input[data-qty-input]')) e.target.dataset.typed = '1'; });
  document.addEventListener('input', function (e) { if (e.target && e.target.classList && e.target.classList.contains('fn-tsearch')) applyTreeFilter(e.target.closest('.fn-drawer') || $('#fn-side')); else if (e.target && e.target.id === 'fn-dp-q') renderDexPicker(e.target.value); else if (e.target && e.target.id === 'fn-cp-q') renderCbAdd(e.target.value); else if (e.target && e.target.id === 'fn-ar-q') renderArtists(e.target.value); else if (e.target && e.target.id === 'fn-pks-q') renderPkSpecies(e.target.value); });
  document.addEventListener('keydown', function (e) {
  if (e.target && e.target.matches && e.target.matches('.fn-qty-input[data-qty-input]')) {
  if (e.key === 'Enter') {
  e.preventDefault();
- applyTypedQty(e.target.dataset, e.target.value);
+ commitQtyInput(e.target);
  e.target.blur();
  return;
  }
  if (e.key === 'Escape') {
  e.preventDefault();
  e.stopPropagation();
+ delete e.target.dataset.typed; // cancelou: nada a gravar
  var cEsc = findCard(e.target.dataset.n);
  if (cEsc) {
  var kEsc = keyOf(st.set, cEsc, e.target.dataset.ver);
