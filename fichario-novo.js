@@ -2360,35 +2360,80 @@ function setEntryByKey(key, qty, origins, kIdOpt) {
       var condBar = on ? renderCondBar(curCond, at) : '';
       var origBar = on ? renderOriginBar(e.origins, at) : '';
 
-      var extraHtml = lots.map(function (lot, idx) {
-        var lotAt = at + ' data-lot="' + idx + '"';
-        return '<div class="fn-vb-sub" style="margin-top:10px;padding-top:10px;border-top:1px dashed rgba(255,255,255,.14)">' +
-          '<div class="fn-vb-h"><span class="fn-vb-n"><b>' + esc(s.ver) + '</b> (outra condição #' + (idx + 2) + ')</span>' +
-          '<span class="fn-q">' +
-          '<button type="button" data-lotqty="-1"' + lotAt + ' aria-label="Menos uma cópia">−</button>' +
-          '<output aria-live="polite">' + lot.qty + '</output>' +
-          '<button type="button" data-lotqty="1"' + lotAt + ' aria-label="Mais uma cópia">+</button>' +
-          '<button type="button" data-dellot="1"' + lotAt + ' aria-label="Remover esta condição">×</button>' +
-          '</span></div>' +
-          renderCondBar(lot.cond, lotAt) +
-          renderOriginBar(lot.origins, lotAt) +
-          '</div>';
-      }).join('');
+      function qtyInputHtml(kind, val, extraAttrs, ariaLbl) {
+ var safeVal = Math.max(0, parseInt(val, 10) || 0);
+ return '<input type="number" class="fn-qty-input" inputmode="numeric" min="0" step="1" value="' + safeVal + '" data-qty-input="' + esc(kind) + '"' + extraAttrs + ' aria-label="' + esc(ariaLbl || 'Quantidade de cópias') + '">';
+ }
 
-      var addLotBtn = on
-        ? '<button type="button" class="fn-btn is-alt" data-act="addlot"' + at + ' style="' + addCopyStyle + '">+1 cópia</button>'
-        : '';
+ var extraHtml = lots.map(function (lot, idx) {
+ var lotAt = at + ' data-lot="' + idx + '"';
+ return '<div class="fn-vb-sub" style="margin-top:10px;padding-top:10px;border-top:1px dashed rgba(255,255,255,.14)">' +
+ '<div class="fn-vb-h"><span class="fn-vb-n"><b>' + esc(s.ver) + '</b> (outra condição #' + (idx + 2) + ')</span>' +
+ '<span class="fn-q">' +
+ '<button type="button" data-lotqty="-1"' + lotAt + ' aria-label="Menos uma cópia">−</button>' +
+ qtyInputHtml('lot', lot.qty, lotAt, 'Quantidade da condição #' + (idx + 2) + ' de ' + s.ver) +
+ '<button type="button" data-lotqty="1"' + lotAt + ' aria-label="Mais uma cópia">+</button>' +
+ '<button type="button" data-dellot="1"' + lotAt + ' aria-label="Remover esta condição">×</button>' +
+ '</span></div>' +
+ renderCondBar(lot.cond, lotAt) +
+ renderOriginBar(lot.origins, lotAt) +
+ '</div>';
+ }).join('');
 
-      return '<div class="fn-vb' + (on ? ' is-on' : '') + '"><div class="fn-vb-h"><span class="fn-vb-n"><b>' + esc(s.ver) + '</b>' + esc(VERSION_NAME[s.ver] || s.ver) + '</span>' +
-        '<span class="fn-q"><button type="button" data-qty="-1"' + at + ' aria-label="Menos uma cópia">−</button><output aria-live="polite">' + e.qty + '</output><button type="button" data-qty="1"' + at + ' aria-label="Mais uma cópia">+</button></span></div>' +
-        condBar +
-        origBar +
-        extraHtml +
-        addLotBtn +
-        '</div>';
+ var addLotBtn = on
+ ? '<button type="button" class="fn-btn is-alt" data-act="addlot"' + at + ' style="' + addCopyStyle + '">+1 cópia</button>'
+ : '';
+
+ return '<div class="fn-vb' + (on ? ' is-on' : '') + '"><div class="fn-vb-h"><span class="fn-vb-n"><b>' + esc(s.ver) + '</b>' + esc(VERSION_NAME[s.ver] || s.ver) + '</span>' +
+ '<span class="fn-q"><button type="button" data-qty="-1"' + at + ' aria-label="Menos uma cópia">−</button>' +
+ qtyInputHtml('base', e.qty, at, 'Quantidade de ' + (VERSION_NAME[s.ver] || s.ver)) +
+ '<button type="button" data-qty="1"' + at + ' aria-label="Mais uma cópia">+</button></span></div>' +
+ condBar +
+ origBar +
+ extraHtml +
+ addLotBtn +
+ '</div>';
     }).join('') + '</div>';
   }
 
+// Adiciona a opção de editar a quantidade de cartas
+  function applyTypedQty(dataset, rawValue) {
+ if (!dataset) return;
+ var c = findCard(dataset.n);
+ if (!c) return;
+
+ var parsed = parseInt(String(rawValue == null ? '' : rawValue).replace(/[^\d-]/g, ''), 10);
+ var q = isNaN(parsed) ? 0 : Math.max(0, parsed);
+
+ if (dataset.qtyInput === 'lot') {
+ var kLot = keyOf(st.set, c, dataset.ver);
+ var list = lotsOf(kLot);
+ var idx = Number(dataset.lot);
+ if (!list[idx]) return;
+ if (q <= 0) {
+ list.splice(idx, 1);
+ } else {
+ list[idx].qty = q;
+ }
+ saveLots(kLot, list);
+ patchOne(ck(c));
+ return;
+ }
+
+ var kQty = keyOf(st.set, c, dataset.ver);
+ var ee = entryOf(kQty);
+ var metaQ = parseOriginsMeta(ee.origins);
+
+ if (q === 0 && metaQ.lots.length > 0) {
+ var promoted = metaQ.lots.shift();
+ var nextOrig = buildOriginsMeta(promoted.origins, promoted.cond, metaQ.lots);
+ setEntry(dataset.n, dataset.ver, promoted.qty, nextOrig);
+ } else {
+ var nextOrigQ = q > 0 ? buildOriginsMeta(metaQ.plain, metaQ.cond, metaQ.lots) : [];
+ setEntry(dataset.n, dataset.ver, q, nextOrigQ);
+ }
+ }
+  
   function filterLabel() { return st.status === 'have' ? '✅ Só coletadas' : st.status === 'miss' ? '🔍 Só faltantes' : '📚 Todas'; }
   function listText() {
     var id = st.set, cat = SET_CATALOG.filter(function (x) { return x.id === setKey(id); })[0] || {}, label = isCb(id) && cur.binder ? cur.binder.name : (cat.label || id), multi = isCb(id);
@@ -3397,22 +3442,58 @@ function openBlocks() {
       else if (t.dataset.bnav != null) { var step = innerWidth >= 700 ? 2 : 1; st.bpage = Math.max(0, st.bpage + Number(t.dataset.bnav) * step); renderBody(); }
       else if (t.dataset.pocket != null) { st.pocket = t.dataset.pocket; LS.set('pocket', st.pocket); st.bpage = 0; renderBody(); }
     });
-    document.addEventListener('change', function (e) { if (e.target && e.target.id === 'fn-dp-sort' && picker) { picker.sort = e.target.value; renderDexPicker(($('#fn-dp-q') || {}).value || ''); } else if (e.target && e.target.id === 'fn-dp-own' && picker) { picker.own = e.target.checked; renderDexPicker(($('#fn-dp-q') || {}).value || ''); } });
-    document.addEventListener('input', function (e) { if (e.target && e.target.classList && e.target.classList.contains('fn-tsearch')) applyTreeFilter(e.target.closest('.fn-drawer') || $('#fn-side')); else if (e.target && e.target.id === 'fn-dp-q') renderDexPicker(e.target.value); else if (e.target && e.target.id === 'fn-cp-q') renderCbAdd(e.target.value); else if (e.target && e.target.id === 'fn-ar-q') renderArtists(e.target.value); else if (e.target && e.target.id === 'fn-pks-q') renderPkSpecies(e.target.value); });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') {
-        var hasOpenOrig = $$('.origem-menu').some(function (m) { return !m.hidden; });
-        if (hasOpenOrig) {
-          closeAllOriginMenus();
-          return;
-        }
-        if (!$('#fn-overlay').hidden) { closeSheet(); return; }
-        if (document.body.classList.contains('fn-focus') || document.body.classList.contains('fn-table-focus')) { exitFocus(); return; }
-      }
-      if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && st.view === 'binder' && $('#fn-overlay').hidden && document.activeElement.tagName !== 'INPUT') {
-        var step = innerWidth >= 700 ? 2 : 1; st.bpage = Math.max(0, st.bpage + (e.key === 'ArrowRight' ? step : -step)); renderBody();
-      }
-    });
+    document.addEventListener('change', function (e) {
+ if (e.target && e.target.matches && e.target.matches('.fn-qty-input[data-qty-input]')) {
+ applyTypedQty(e.target.dataset, e.target.value);
+ return;
+ }
+ if (e.target && e.target.id === 'fn-dp-sort' && picker) { picker.sort = e.target.value; renderDexPicker(($('#fn-dp-q') || {}).value || ''); }
+ else if (e.target && e.target.id === 'fn-dp-own' && picker) { picker.own = e.target.checked; renderDexPicker(($('#fn-dp-q') || {}).value || ''); }
+ });
+ document.addEventListener('focusout', function (e) {
+ if (e.target && e.target.matches && e.target.matches('.fn-qty-input[data-qty-input]')) {
+ applyTypedQty(e.target.dataset, e.target.value);
+ }
+ });
+ document.addEventListener('input', function (e) { if (e.target && e.target.classList && e.target.classList.contains('fn-tsearch')) applyTreeFilter(e.target.closest('.fn-drawer') || $('#fn-side')); else if (e.target && e.target.id === 'fn-dp-q') renderDexPicker(e.target.value); else if (e.target && e.target.id === 'fn-cp-q') renderCbAdd(e.target.value); else if (e.target && e.target.id === 'fn-ar-q') renderArtists(e.target.value); else if (e.target && e.target.id === 'fn-pks-q') renderPkSpecies(e.target.value); });
+ document.addEventListener('keydown', function (e) {
+ if (e.target && e.target.matches && e.target.matches('.fn-qty-input[data-qty-input]')) {
+ if (e.key === 'Enter') {
+ e.preventDefault();
+ applyTypedQty(e.target.dataset, e.target.value);
+ e.target.blur();
+ return;
+ }
+ if (e.key === 'Escape') {
+ e.preventDefault();
+ e.stopPropagation();
+ var cEsc = findCard(e.target.dataset.n);
+ if (cEsc) {
+ var kEsc = keyOf(st.set, cEsc, e.target.dataset.ver);
+ if (e.target.dataset.qtyInput === 'lot') {
+ var lotEsc = lotsOf(kEsc)[Number(e.target.dataset.lot)];
+ e.target.value = lotEsc ? lotEsc.qty : 0;
+ } else {
+ e.target.value = entryOf(kEsc).qty || 0;
+ }
+ }
+ e.target.blur();
+ return;
+ }
+ }
+ if (e.key === 'Escape') {
+ var hasOpenOrig = $$('.origem-menu').some(function (m) { return !m.hidden; });
+ if (hasOpenOrig) {
+ closeAllOriginMenus();
+ return;
+ }
+ if (!$('#fn-overlay').hidden) { closeSheet(); return; }
+ if (document.body.classList.contains('fn-focus') || document.body.classList.contains('fn-table-focus')) { exitFocus(); return; }
+ }
+ if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && st.view === 'binder' && $('#fn-overlay').hidden && document.activeElement.tagName !== 'INPUT') {
+ var step = innerWidth >= 700 ? 2 : 1; st.bpage = Math.max(0, st.bpage + (e.key === 'ArrowRight' ? step : -step)); renderBody();
+ }
+ });
   }
 
   // ── carregamento de link compartilhado (?s=token) ──────────
