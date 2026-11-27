@@ -296,8 +296,7 @@
   function getProgMode(id) {
     var map = st.progModes || {};
     var k = progScopeId(id);
-    var v = map[k];
-    return (v === 'cards' || v === 'slots') ? v : (st.progMode || 'slots');
+    return map[k] === 'cards' ? 'cards' : 'slots';
   }
 
   function setProgMode(id, mode) {
@@ -305,9 +304,7 @@
     var next = Object.assign({}, st.progModes || {});
     next[progScopeId(id)] = m;
     st.progModes = next;
-    st.progMode = m;
     LS.set('progModes', next);
-    LS.set('progMode', m);
   }
 
   function tagDuplicateCards(cards, defaultSet) {
@@ -428,7 +425,9 @@ function entryOf(key) {
     return !!resolveDexKey(dexId, sid, n, ver);
   }
 function isManualStandaloneBinder(b) {
-  return !!(b && cbType(b) === 'manual' && !cbIsFav(b));
+  if (!b || cbIsFav(b)) return false;
+  var t = cbType(b);
+  return !t || t === 'manual';
 }
 
 function activeManualBinder(id) {
@@ -3473,13 +3472,15 @@ function openBlocks() {
       var t = e.target.closest('[data-mark],[data-open],[data-pick],[data-close],[data-bnav],[data-pocket],[data-blk],[data-qty],[data-act],[data-dexpick],[data-progmode],[data-lotqty],[data-dellot]');
       if (!t) { if (e.target.id === 'fn-overlay') closeSheet(); return; }
 if (t.dataset.progmode != null) {
+        e.preventDefault();
+        e.stopPropagation();
         setProgMode(st.set, t.dataset.progmode);
         progCache = {};
         renderHero();
         renderSide();
         if (isHome(st.set) || st.status !== 'all') renderBody();
         return;
-      }     
+      }  
       if (t.dataset.mark != null) { e.preventDefault(); mark(t.dataset.mark, t.dataset.ver); }
       else if (t.dataset.open != null) openDetail(t.dataset.open);
       else if (t.dataset.dexpick != null) { if (!SHARE) openDexPicker(Number(t.dataset.dexpick)); }
