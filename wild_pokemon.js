@@ -1071,6 +1071,7 @@
     // — antes o Pokémon nascia e sumia em 8s sem ninguém ver. Guarda o
     // spawn pra quando a pessoa voltar pra aba.
     if (document.hidden) { wpPendingSpawn = true; return; }
+    if (document.querySelector('.ws-backdrop')) return; // modo solo aberto por cima: ninguém veria a aparição
     if (Math.random() > chance) return;
 
     let mon, spawnId = null;
@@ -1639,6 +1640,7 @@
       <button class="wp-close" aria-label="Fechar">×</button>
       <h3>🐾 Pokémon Escondidos</h3>
       <div class="wp-sub">${totalCaught}/${WP_KANTO151.length} capturados — flagre os Pokémon que aparecem espiando pelo site</div>
+      ${window.wsSolo && window.wsSolo.enabled() ? '<button type="button" class="ws-open">🗺️ Modo solo: Kanto (teste)</button>' : ''}
       <div class="wp-ev-modal-banner" style="margin-top:10px">${wpEventBannerHtml()}</div>
       <div class="wp-tabs">
         <div class="wp-tab" data-tab="dex">Pokédex</div>
@@ -1659,6 +1661,8 @@
     const mochilaPanel = backdrop.querySelector('.wp-panel-mochila');
 
     backdrop.querySelector('.wp-close').addEventListener('click', () => wpCloseModal(backdrop));
+    const soloBtn = backdrop.querySelector('.ws-open');
+    if (soloBtn) soloBtn.addEventListener('click', () => { wpCloseModal(backdrop); window.wsSolo.open(); });
     backdrop.querySelectorAll('.wp-tab').forEach(t => {
       t.classList.toggle('wp-tab-active', t.dataset.tab === tab);
       t.addEventListener('click', () => {
@@ -2279,6 +2283,18 @@
       setTimeout(() => { if (wpUid() && wpUid() !== wpBootedUid) wpDailyBootSequence(); }, 1200);
     });
   }
+
+  // O que o modo solo (wild_solo.js) precisa do minigame. Só leitura.
+  window.wpSoloApi = {
+    species: () => WP_KANTO151,
+    spriteUrl: wpSpriteUrl,
+    uid: () => wpUid(),
+    backpack: async () => {
+      if (!wpHasClient() || !wpUid()) return [];
+      if (!wpBackpackLoaded) await wpFetchBackpack();
+      return wpBackpack;
+    },
+  };
 
   // ── Debug (console) ─────────────────────────────────────────
   window.wpForceSpawn = () => wpSpawn(1);
