@@ -261,6 +261,7 @@
     cols: LS.get('cols', defCols),
     lang: LS.get('lang', 'pt'),
     progMode: LS.get('progMode', 'slots'),
+    progModes: LS.get('progModes', {}),
     pocket: (function () { var p = String(LS.get('pocket', '9')); return p === '20a' ? '20b' : p; })(),
     focus: false,
     tableFocus: LS.get('tableFocus', false),
@@ -282,6 +283,32 @@
     var seed = 7; var rnd = function () { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
     window.__fnSeed = rnd;
   })();
+
+  function progScopeId(id) {
+    var target = id || st.set;
+    if (isCb(target)) {
+      var b = cbBinder(target);
+      return 'cb:' + String((b && b.id) || String(target).replace(/^cb:/, ''));
+    }
+    return 'set:' + setKey(target);
+  }
+
+  function getProgMode(id) {
+    var map = st.progModes || {};
+    var k = progScopeId(id);
+    var v = map[k];
+    return (v === 'cards' || v === 'slots') ? v : (st.progMode || 'slots');
+  }
+
+  function setProgMode(id, mode) {
+    var m = mode === 'cards' ? 'cards' : 'slots';
+    var next = Object.assign({}, st.progModes || {});
+    next[progScopeId(id)] = m;
+    st.progModes = next;
+    st.progMode = m;
+    LS.set('progModes', next);
+    LS.set('progMode', m);
+  }
 
   function tagDuplicateCards(cards, defaultSet) {
     var seen = {};
@@ -1068,19 +1095,20 @@ sl.forEach(function (s) {
     }
   }
  function cbProg(b) {
-  var key = 'cb:' + b.id + ':' + st.progMode; if (progCache[key] !== undefined) return progCache[key];
-  var r = cbResolve(b), tot = 0, got = 0, cardsAny = 0;
-  var scopeId = isManualStandaloneBinder(b) ? ('cb:' + b.id) : '';
-  r.cards.forEach(function (c) {
-    var any = false;
-    slotsOf('', c).forEach(function (s) {
-      tot++;
-      if (has(keyOf(scopeId, c, s.ver))) { got++; any = true; }
+    var mode = getProgMode('cb:' + b.id);
+    var key = 'cb:' + b.id + ':' + mode; if (progCache[key] !== undefined) return progCache[key];
+    var r = cbResolve(b), tot = 0, got = 0, cardsAny = 0;
+    var scopeId = isManualStandaloneBinder(b) ? ('cb:' + b.id) : '';
+    r.cards.forEach(function (c) {
+      var any = false;
+      slotsOf('', c).forEach(function (s) {
+        tot++;
+        if (has(keyOf(scopeId, c, s.ver))) { got++; any = true; }
+      });
+      if (any) cardsAny++;
     });
-    if (any) cardsAny++;
-  });
-  var num = st.progMode === 'cards' ? cardsAny : got;
-  var den = st.progMode === 'cards' ? r.cards.length : tot;
+    var num = mode === 'cards' ? cardsAny : got;
+    var den = mode === 'cards' ? r.cards.length : tot;
   var out = { got: got, tot: tot, cards: r.cards.length, cardsAny: cardsAny, pct: den ? Math.round(num / den * 100) : 0 };
   if (r.pending) return out;
   return (progCache[key] = out);
@@ -1133,7 +1161,7 @@ sl.forEach(function (s) {
       $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1>Personalizados</h1><p class="fn-hero-sub">' + (loggedIn() || DEMO ? 'Carregando os seus fichários…' : 'Entre no MyDeck para ver os seus fichários.') + '</p></div></div>';
       $('#fn-setbtn-emoji').innerHTML = MD_ICO('book', { size: 22 }); $('#fn-setbtn-code').textContent = 'Fichário'; $('#fn-setbtn-name').textContent = 'Personalizados'; return;
     }
-    var t = totals(), isCardMode = st.progMode === 'cards';
+    var t = totals(), isCardMode = getProgMode(st.set) === 'cards';
     var pct = isCardMode ? (t.cards ? Math.round(t.cardsAny / t.cards * 100) : 0) : (t.slots ? Math.round(t.got / t.slots * 100) : 0);
     var nm = plainName(b.name) || 'Sem nome', nsets = (cur.d.sections || []).length, manual = cbType(b) === 'manual', isArtistBinder = cbType(b) === 'artist';
     $('#fn-hero').innerHTML = '<div class="fn-hero-top"><div><h1><span class="h-ico">' + bIco(b, 26) + '</span>' + esc(nm) + '</h1><p class="fn-hero-sub">' + esc(cbKind(b)) + ' · ' + t.cards + ' carta' + (t.cards === 1 ? '' : 's') + (nsets > 1 ? ' de ' + nsets + ' coleções' : '') + '</p></div>' +
@@ -1422,7 +1450,7 @@ sl.forEach(function (s) {
   async function progressCard() {
     try {
       if (document.fonts && document.fonts.ready) await document.fonts.ready;
-      var t = totals(), isCardMode = st.progMode === 'cards';
+      var t = totals(), isCardMode = getProgMode(st.set) === 'cards';
       var curGot = isCardMode ? t.cardsAny : t.got;
       var curTot = isCardMode ? t.cards : t.slots;
       var pct = curTot ? Math.round(curGot / curTot * 100) : 0;
@@ -1672,7 +1700,7 @@ closeSheet(); dropMultiProg(); loadCur(); renderHero(); renderBody(); renderSide
     }
   }
   function computeView() {
-    var q = st.q.trim().toLowerCase(), id = st.set, isCardMode = st.progMode === 'cards';
+    var q = st.q.trim().toLowerCase(), id = st.set, isCardMode = getProgMode(id) === 'cards';
     var arr = cur.cards.filter(function (c) {
       if (q && (c.name + ' ' + c.n + ' ' + (c.nameEn || '') + ' ' + (c.nameJp || '') + ' ' + (c.nameCn || '') + ' ' + (c.type || '') + ' ' + rareLabel(c.rare) + ' ' + (c.rare || '')).toLowerCase().indexOf(q) < 0) return false;
       if (st.artist && c.artist !== st.artist) return false;
@@ -2087,7 +2115,7 @@ closeSheet(); dropMultiProg(); loadCur(); renderHero(); renderBody(); renderSide
     if (isPk(st.set)) { renderPkHero(); return; }
     var d = cur.d, meta = (typeof SET_META !== 'undefined' && SET_META[setKey(st.set)]) || {}, cat = SET_CATALOG.filter(function (s) { return s.id === setKey(st.set); })[0] || {};
     var t = totals();
-    var isCardMode = st.progMode === 'cards';
+    var isCardMode = getProgMode(st.set) === 'cards';
     var pct = isCardMode ? (t.cards ? Math.round(t.cardsAny / t.cards * 100) : 0) : (t.slots ? Math.round(t.got / t.slots * 100) : 0);
     var rem = isCardMode ? (t.cards - t.cardsAny) : (t.slots - t.got);
     var done = isCardMode ? (t.cards > 0 && t.cardsAny >= t.cards) : (t.slots > 0 && t.got >= t.slots);
@@ -2601,7 +2629,7 @@ var shareCards = cbRefs();
     try { ficBinderSize = code; if (typeof loadCollection === 'function') loadCollection(); } catch (e) { }
     var cat = SET_CATALOG.filter(function (x) { return x.id === setKey(st.set); })[0] || {};
     closeSheet();
-    var useCardModeFilter = st.progMode === 'cards' && st.status !== 'all';
+    var useCardModeFilter = getProgMode(st.set) === 'cards' && st.status !== 'all';
     var only = useCardModeFilter ? undefined : (st.status === 'miss' ? 'missing' : st.status === 'have' ? 'collected' : undefined);
     var listForPrint = useCardModeFilter ? cur.cards : cur.view;
     try {
@@ -3143,11 +3171,12 @@ async function runUndoBulkCond() {
   // ── navegação por blocos (eras) e expansões ──────────────
   var progCache = {};
   function progOf(id) {
-    var cacheKey = id + ':' + st.progMode;
+    var mode = getProgMode(id);
+    var cacheKey = id + ':' + mode;
     if (progCache[cacheKey] !== undefined) return progCache[cacheKey];
     var d = setData(id); if (!d || !d.cards || !d.cards.length) return null;
     var tot = 0, got = 0;
-    if (st.progMode === 'cards') {
+    if (mode === 'cards') {
       d.cards.forEach(function (c) {
         tot++;
         if (slotsOf(id, c).some(function (x) { return has(keyOf(id, c, x.ver)); })) got++;
@@ -3444,14 +3473,14 @@ function openBlocks() {
       var t = e.target.closest('[data-mark],[data-open],[data-pick],[data-close],[data-bnav],[data-pocket],[data-blk],[data-qty],[data-act],[data-dexpick],[data-progmode],[data-lotqty],[data-dellot]');
       if (!t) { if (e.target.id === 'fn-overlay') closeSheet(); return; }
 if (t.dataset.progmode != null) {
-        st.progMode = t.dataset.progmode;
-        LS.set('progMode', st.progMode);
+        setProgMode(st.set, t.dataset.progmode);
         progCache = {};
         renderHero();
         renderSide();
         if (isHome(st.set) || st.status !== 'all') renderBody();
         return;
-      }      if (t.dataset.mark != null) { e.preventDefault(); mark(t.dataset.mark, t.dataset.ver); }
+      }     
+      if (t.dataset.mark != null) { e.preventDefault(); mark(t.dataset.mark, t.dataset.ver); }
       else if (t.dataset.open != null) openDetail(t.dataset.open);
       else if (t.dataset.dexpick != null) { if (!SHARE) openDexPicker(Number(t.dataset.dexpick)); }
       else if (t.dataset.qty != null) {
