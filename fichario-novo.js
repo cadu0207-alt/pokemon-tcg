@@ -273,6 +273,8 @@
   var FAMILY = ['cel30', 'cel30jp', 'cel30cn'];
   var REGION = { pt: 'cel30', en: 'cel30', jp: 'cel30jp', cn: 'cel30cn' };
   function setKey(id) { return FAMILY.indexOf(id) >= 0 ? 'cel30' : id; }
+  // versões em japonês/chinês são a mesma carta em outro idioma: não contam de novo nas listas por ilustrador
+  function isLangCopy(id) { return FAMILY.indexOf(id) > 0; }
   var demoSet = new Set();
   var demoQty = new Map();
   (function seedDemo() {
@@ -1007,7 +1009,7 @@ sl.forEach(function (s) {
       return { cards: tagDuplicateCards(rawCards, ''), pending: 0 };
     }
     if (cfg.type === 'artist') {
-      try { Object.keys(SET_CARDS_MAP).forEach(function (sid) { var cs = []; try { cs = SET_CARDS_MAP[sid]() || []; } catch (e) { return; } cs.forEach(function (c) { if (c.artist === cfg.artist) rawCards.push(Object.assign({}, c, { _set: sid, _setId: sid, _k: sid + '~' + c.n })); }); }); } catch (e) { }
+      try { Object.keys(SET_CARDS_MAP).forEach(function (sid) { if (isLangCopy(sid)) return; var cs = []; try { cs = SET_CARDS_MAP[sid]() || []; } catch (e) { return; } cs.forEach(function (c) { if (c.artist === cfg.artist) rawCards.push(Object.assign({}, c, { _set: sid, _setId: sid, _k: sid + '~' + c.n })); }); }); } catch (e) { }
       return { cards: tagDuplicateCards(rawCards, ''), pending: 0 };
     }
     var memo = {};
@@ -1361,6 +1363,7 @@ sl.forEach(function (s) {
     var by = {};
     try {
       Object.keys(SET_CARDS_MAP).forEach(function (sid) {
+        if (isLangCopy(sid)) return;
         var cs = []; try { cs = SET_CARDS_MAP[sid]() || []; } catch (e) { return; }
         cs.forEach(function (c) {
           if (!c.artist) return; var a = by[c.artist] = by[c.artist] || { owned: 0, total: 0 }; a.total++;
