@@ -61,11 +61,11 @@
   const GYM1 = [{ dex: 74, level: 54 }, { dex: 75, level: 56 }, { dex: 95, level: 59 }];
   // posições do nosso mapa (desenho próprio): o caminho serpenteia na ordem em que as cidades vão abrir
   const CITIES = [
-    { name: 'Pewter', gym: 'r', x: 58, y: 66 }, { name: 'Cerulean', gym: 'w', x: 150, y: 48 },
-    { name: 'Vermilion', gym: 'e', x: 242, y: 70 }, { name: 'Celadon', gym: 'g', x: 236, y: 140 },
-    { name: 'Fuchsia', gym: 'p', x: 148, y: 128 }, { name: 'Saffron', gym: 'y', x: 62, y: 152 },
-    { name: 'Cinnabar', gym: 'f', x: 56, y: 262 }, { name: 'Viridian', gym: 't', x: 150, y: 214 },
-    { name: 'Kanto', gym: null, x: 238, y: 218 },
+    { name: 'Pewter', gym: 'r' }, { name: 'Cerulean', gym: 'w' },
+    { name: 'Vermilion', gym: 'e' }, { name: 'Celadon', gym: 'g' },
+    { name: 'Fuchsia', gym: 'p' }, { name: 'Saffron', gym: 'y' },
+    { name: 'Cinnabar', gym: 'f' }, { name: 'Viridian', gym: 't' },
+    { name: 'Kanto', gym: null },
   ];
 
   const typesOf = dex => MON_TYPES[dex - 1].split('');
@@ -175,13 +175,14 @@
   const sprite = dex => api().spriteUrl(dex);
   const typeTag = t => `<span class="ws-type" style="--c:${TYPES[t].color}">${TYPES[t].name}</span>`;
 
-  let root = null, body = null, save = null, owned = [], token = 0;
+  let root = null, body = null, save = null, owned = [], token = 0, mapa = null;
+  const dropMap = () => { if (mapa) { mapa.destroy(); mapa = null; } };
 
   const style = document.createElement('style');
   style.textContent = `
     .ws-open { display: block; width: 100%; margin: 0 0 14px; padding: 11px 14px; border-radius: 12px; border: 1px solid #ffd16688; background: linear-gradient(135deg, #ffd16622, #4cc9f022); color: #f2f2f2; font: 700 14px 'DM Sans', sans-serif; cursor: pointer; }
-    .ws-backdrop { position: fixed; inset: 0; z-index: 10005; background: rgba(0,0,0,.75); display: flex; align-items: flex-end; justify-content: center; }
-    .ws-sheet { width: 100%; max-width: 560px; height: min(94vh, 780px); height: min(94dvh, 780px); display: flex; flex-direction: column; background: #0d0f18; color: #f2f2f2; border: 1px solid #52597a55; border-bottom: 0; border-radius: 22px 22px 0 0; font-family: 'DM Sans', sans-serif; animation: ws-up .38s cubic-bezier(.2,.9,.3,1.15); overflow: hidden; }
+    .wp-modal-backdrop.ws-backdrop { position: fixed; inset: 0; z-index: 10005; background: rgba(0,0,0,.75); display: flex; align-items: flex-end; justify-content: center; padding: 24px 0 0; }
+    .ws-sheet { width: 100%; max-width: 560px; height: min(94vh, 780px); height: min(94dvh, 780px); display: flex; flex-direction: column; background: #0d0f18; color: #f2f2f2; border: 1px solid #52597a55; border-bottom: 0; border-radius: 22px 22px 0 0; font-family: 'DM Sans', sans-serif; animation: ws-up .38s cubic-bezier(.2,.9,.3,1.15); overflow: hidden; box-shadow: 0 40px 0 #0d0f18; }
     @keyframes ws-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
     .ws-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #ffffff12; }
     .ws-head h3 { flex: 1; margin: 0; font-size: 17px; color: #ffd166; }
@@ -193,10 +194,10 @@
     .ws-btn:disabled { opacity: .4; cursor: default; }
     .ws-primary { background: #ffd166; color: #1a1300; border-color: #ffd166; width: 100%; }
     .ws-sticky { position: sticky; bottom: 0; box-shadow: 0 -10px 14px #0d0f18; }
-    .ws-map { width: 100%; max-height: 62vh; display: block; margin: 0 auto; }
-    .ws-city { cursor: pointer; }
-    .ws-city.ws-locked { cursor: default; opacity: .55; }
-    .ws-city text { fill: #f2f2f2; font: 700 10px 'DM Sans', sans-serif; paint-order: stroke; stroke: #0d1a24; stroke-width: 3px; }
+    .ws-mapa .wm-caixa { max-width: min(430px, calc((94vh - 235px) * .7826)); max-width: min(430px, calc((94dvh - 235px) * .7826)); min-width: 280px; }
+    @media (pointer: coarse) { .ws-mapa .wm-caixa { max-width: min(430px, calc((94dvh - 270px) * .7826)); min-width: 270px; } }
+    .ws-mapa .ws-city.ws-locked { cursor: default; }
+    .ws-soon { text-align: center; margin: 10px 0; }
     .ws-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .ws-card { text-align: center; background: #111422; border: 2px solid #ffffff12; border-radius: 14px; padding: 10px 6px; cursor: pointer; color: inherit; font: inherit; }
     .ws-card img { width: 72px; height: 72px; object-fit: contain; }
@@ -254,7 +255,7 @@
 
   const badgeSvg = '<svg class="ws-badge" viewBox="0 0 100 100" aria-label="Insígnia de Pedra"><polygon points="50,4 90,28 90,72 50,96 10,72 10,28" fill="#8d8a80" stroke="#ffd166" stroke-width="5"/><polygon points="50,22 72,50 50,78 28,50" fill="#c9bba8"/></svg>';
 
-  function close() { token++; if (root) { root.remove(); root = null; } }
+  function close() { token++; dropMap(); if (root) { root.remove(); root = null; } }
   async function open() {
     if (root) return;
     save = loadSave();
@@ -271,36 +272,27 @@
   }
   function screen(title, html) {
     token++;
+    dropMap();
     root.querySelector('h3').textContent = title;
     body.innerHTML = html;
     body.scrollTop = 0;
   }
 
   function showMap() {
-    const spot = (c, i) => {
-      const openCity = i === 0, won = save.badges.includes(i);
-      return `<g class="ws-city ${openCity ? '' : 'ws-locked'}" data-city="${i}" role="button" tabindex="${openCity ? 0 : -1}" aria-label="${c.name}${openCity ? '' : ', em breve'}">
-        <circle cx="${c.x}" cy="${c.y}" r="${i === 8 ? 17 : 14}" fill="${c.gym ? TYPES[c.gym].color : '#ffd166'}" stroke="${openCity ? '#ffffff' : '#0d1a24'}" stroke-width="${openCity ? 3 : 2}"/>
-        <text x="${c.x}" y="${c.y + 4}" text-anchor="middle">${i === 8 ? '🏆' : won ? '★' : openCity ? i + 1 : '🔒'}</text>
-        <text x="${c.x}" y="${c.y + 27}" text-anchor="middle">${c.name}</text></g>`;
-    };
-    const path = CITIES.map((c, i) => `${i ? 'L' : 'M'}${c.x} ${c.y}`).join(' ');
     screen('Kanto', `<p class="ws-note">Versão de teste: só a primeira cidade está aberta. O progresso fica neste aparelho e ainda não há prêmios.</p>
-      <svg class="ws-map" viewBox="0 0 300 310">
-        <rect width="300" height="310" rx="18" fill="#17496b"/>
-        <path d="M20 34 C60 6 120 30 175 22 S285 30 288 100 282 180 276 215 250 262 185 252 120 245 95 215 25 215 20 175 8 60 20 34Z" fill="#3f7d46" stroke="#d9c88f" stroke-width="3"/>
-        <ellipse cx="56" cy="266" rx="40" ry="26" fill="#3f7d46" stroke="#d9c88f" stroke-width="3"/>
-        <path d="M84 48 l12 -22 12 22 z M104 50 l10 -17 10 17 z" fill="#8d8a80"/>
-        <path d="${path}" fill="none" stroke="#e9dcae" stroke-width="4" stroke-dasharray="2 7" stroke-linecap="round"/>
-        ${CITIES.map(spot).join('')}
-      </svg>
-      <p class="ws-note" style="margin-top:10px">Insígnias: ${save.badges.length} de 8</p>
+      <div class="ws-mapa"></div>
+      <p class="ws-note ws-soon" aria-live="polite">Insígnias: ${save.badges.length} de 8</p>
       <button type="button" class="ws-btn ws-primary" data-go="city">${save.starter ? 'Ir para Pewter' : 'Começar em Pewter'}</button>`);
     const enter = () => (save.starter ? showTrail() : showStarter());
     body.querySelector('[data-go="city"]').addEventListener('click', enter);
-    const first = body.querySelector('[data-city="0"]');
-    first.addEventListener('click', enter);
-    first.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); enter(); } });
+    if (!window.wsMapa) return; // sem o desenho do mapa, o botão continua levando à cidade
+    mapa = window.wsMapa.render(body.querySelector('.ws-mapa'), {
+      cities: CITIES, badges: save.badges, open: [0], types: TYPES,
+      onCity: i => {
+        if (i === 0) return enter();
+        body.querySelector('.ws-soon').textContent = `${CITIES[i].name}: abre em breve. Insígnias: ${save.badges.length} de 8`;
+      },
+    });
   }
 
   function showStarter() {
